@@ -205,42 +205,6 @@
 4. **Sử dụng colors** để phân biệt data types
 5. **Thêm icons** cho visual appeal
 
-## 🚀 Cách sử dụng
-
-### 1. Tạo ViewModel mới:
-
-```typescript
-// features/user/userSlice.ts
-const userSlice = createSlice({
-  name: 'user',
-  initialState,
-  reducers: {
-    updateProfile: (state, action) => {
-      state.profile = action.payload;
-    }
-  }
-});
-
-// viewmodels/user/UserViewModel.ts
-export class UserViewModel extends BaseViewModel<RootState['user']> {
-  updateProfile(profile: UserProfile): void {
-    this.dispatch(updateProfile(profile));
-  }
-}
-```
-
-### 2. Sử dụng trong component:
-
-```typescript
-// app/profile.tsx
-const userSelector = (state: RootState) => state.user;
-const [userState, userViewModel] = useViewModel(UserViewModel, userSelector);
-
-const handleUpdateProfile = () => {
-  userViewModel.updateProfile(newProfile);
-};
-```
-
 ## ✨ Tính năng chính
 
 - 🔐 **Authentication**: Login/logout với token management
@@ -260,37 +224,6 @@ const handleUpdateProfile = () => {
 - **Expo Router** - Navigation
 - **Axios** - HTTP client
 - **AsyncStorage** - Local storage
-
-## 📦 Cài đặt
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd moblie
-
-# Cài đặt dependencies
-npm install
-
-# Chạy ứng dụng
-npm start
-```
-
-## 🧪 Testing
-
-```bash
-# Chạy tests
-npm test
-
-# Chạy tests với coverage
-npm run test:coverage
-```
-
-## 📚 Tài liệu tham khảo
-
-- [MVVM Pattern](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel)
-- [Redux Toolkit](https://redux-toolkit.js.org/)
-- [Expo Router](https://docs.expo.dev/router/introduction/)
-- [React Native](https://reactnative.dev/)
 
 ## 🎨 Hướng dẫn tạo hình vẽ
 
@@ -316,6 +249,13 @@ npm run test:coverage
 3. **Folder Structure** - Cấu trúc thư mục
 4. **Component Interaction** - Tương tác component
 5. **State Management Flow** - Quản lý state
+
+## 📚 Tài liệu tham khảo
+
+- [MVVM Pattern](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel)
+- [Redux Toolkit](https://redux-toolkit.js.org/)
+- [Expo Router](https://docs.expo.dev/router/introduction/)
+- [React Native](https://reactnative.dev/)
 
 ## 🤝 Đóng góp
 
