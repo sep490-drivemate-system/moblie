@@ -2,7 +2,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import { Provider } from 'react-redux'
 import { store } from '@/lib/redux/store'
@@ -11,6 +11,9 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { AuthViewModel } from '@/viewmodels/auth/AuthViewModel';
 import { useViewModel } from '@/viewmodels/shared/BaseViewModel';
 import { RootState } from '@/lib/redux/store';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -48,7 +51,11 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <RootLayoutNav />
+      <GluestackUIProvider>
+        <ErrorBoundary>
+          <RootLayoutNav />
+        </ErrorBoundary>
+      </GluestackUIProvider>
     </Provider>
   )
 }
@@ -57,32 +64,120 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const router = useRouter();
 
+  // 🎯 State để track khi component đã mount xong
+  const [isMounted, setIsMounted] = useState(false);
+
   // Redux selector cho auth state
   const authSelector = (state: RootState) => state.auth;
   const [authState, authViewModel] = useViewModel(AuthViewModel, authSelector);
 
+  // ===========================================
+  // 🎯 MOUNT STATUS TRACKING
+  // ===========================================
   useEffect(() => {
-    // Kiểm tra trạng thái đăng nhập khi app khởi động
-    authViewModel.checkAuthStatus();
+    // Đánh dấu component đã mount sau một tick
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+      console.log('🎯 RootLayoutNav mounted and ready for navigation');
+    }, 100); // Delay nhỏ để đảm bảo Stack đã render
+
+    return () => clearTimeout(timer);
   }, []);
 
+  // ===========================================
+  // 🔧 SETUP NAVIGATION CALLBACK
+  // ===========================================
   useEffect(() => {
-    // Điều hướng dựa trên trạng thái đăng nhập
-    if (!authState.isLoading) {
-      if (!authState.isAuthenticated) {
-        router.replace('/login' as any);
-      } else {
-        router.replace('/(tabs)' as any);
-      }
+    /**
+     * Thiết lập callback navigation cho ViewModel chỉ một lần
+     * Điều này cho phép ViewModel có thể điều hướng khi cần thiết
+     * (ví dụ: sau khi login thành công, logout, etc.)
+     */
+    authViewModel.setNavigationCallback((route: string) => {
+      console.log(`🧭 Navigation callback triggered: ${route}`);
+      router.replace(route as any);
+    });
+  }, [authViewModel, router]);
+
+  // ===========================================
+  // 🔍 AUTH STATUS CHECK - CHỈ CHẠY MỘT LẦN
+  // ===========================================
+  useEffect(() => {
+    /**
+     * Kiểm tra trạng thái authentication khi app khởi động
+     * 
+     * ĐIỀU KIỆN CHECK:
+     * - Component đã mount (isMounted = true)
+     * - Không đang loading
+     * - Chưa có user data
+     * - Chưa authenticated
+     * 
+     * ➡️ Mục đích: Kiểm tra token trong AsyncStorage để restore session
+     */
+    console.log('🔍 Auth check conditions:', {
+      isMounted,
+      isLoading: authState.isLoading,
+      hasUser: !!authState.user,
+      isAuthenticated: authState.isAuthenticated
+    });
+
+    if (isMounted && !authState.isLoading && !authState.user && !authState.isAuthenticated) {
+      console.log('✅ Triggering auth status check...');
+      authViewModel.checkAuthStatus();
+    } else {
+      console.log('⏭️ Skipping auth check - conditions not met');
     }
-  }, [authState.isAuthenticated, authState.isLoading]);
+  }, [isMounted]); // 🚨 QUAN TRỌNG: Dependency on isMounted
 
-  if (authState.isLoading) return null;
+  // ===========================================
+  // 🧭 CONDITIONAL RENDERING INSTEAD OF NAVIGATION
+  // ===========================================
 
-  return (
-    <Stack>
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
-  );
+  /**
+   * 🎯 THAY VÌ NAVIGATE, CHÚNG TA SỬ DỤNG CONDITIONAL RENDERING
+   * 
+   * Lợi ích:
+   * - Không có navigation errors
+   * - Không cần setTimeout delays
+   * - Clean và predictable
+   * 
+   * CASE 1 & 2: isAuthenticated = true
+   * ➡️ Render Stack với (tabs) screen
+   * 
+   * CASE 3: isAuthenticated = false
+   * ➡️ Render Stack với login screen
+   * 
+   * CASE 4: isLoading = true hoặc !isMounted
+   * ➡️ Render LoadingSpinner
+   */
+
+  console.log('🧭 Conditional rendering - Current auth state:', {
+    isMounted,
+    isLoading: authState.isLoading,
+    isAuthenticated: authState.isAuthenticated,
+    hasUser: !!authState.user,
+    userEmail: authState.user?.email,
+    renderDecision: authState.isLoading || !isMounted ? 'Loading' :
+      authState.isAuthenticated ? 'Tabs' : 'Login'
+  });
+
+  // Hiển thị loading khi đang check auth hoặc chưa mount
+  if (authState.isLoading || !isMounted) {
+    return <LoadingSpinner message="Checking authentication..." />;
+  }
+
+  // Conditional rendering dựa trên auth status
+  if (authState.isAuthenticated) {
+    return (
+      <Stack>
+        <Stack.Screen name="(main)" options={{ headerShown: false }} />
+      </Stack>
+    );
+  } else {
+    return (
+      <Stack>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      </Stack>
+    );
+  }
 }

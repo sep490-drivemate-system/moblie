@@ -1,6 +1,7 @@
 import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/httpMethod";
 import { ISignInRequest, ISignInResponse } from "@/models/auth/signin";
+import { ISignUpRequest, ISignUpResponse } from "@/models/auth/signup";
 
 export const signIn = createThunk<ISignInResponse, ISignInRequest>(
     HttpMethod.POST,
@@ -13,7 +14,7 @@ export const signIn = createThunk<ISignInResponse, ISignInRequest>(
     }
 );
 
-export const signIWithGoogle = createThunk<void, void>(
+export const signInWithGoogle = createThunk<void, void>(
     HttpMethod.GET,
     "signin-google",
     `auth/signin-google`,
@@ -55,8 +56,16 @@ export const signInWithZalo = createThunk<void, void>(
     }
 );
 
-export const signUp = createThunk<boolean, ISignInRequest>(
+export const signUp = createThunk<ISignUpResponse, ISignUpRequest>(
     HttpMethod.POST,
     `signup`,
     `auth/signup`,
+    {
+        onSuccess: (res) => {
+            console.log("Sign up successful:", res);
+        },
+        onError: (error) => {
+            console.error("Sign up failed:", error);
+        },
+    }
 );

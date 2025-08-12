@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { signIn } from "./authThunk";
 import { BaseState } from "@/models/generic/baseState";
 import { ISignInRequest } from "@/models/auth/signin";
+import { ISignUpRequest } from "@/models/auth/signup";
 
 interface AuthState extends BaseState {
     isAuthenticated: boolean;
@@ -10,15 +11,32 @@ interface AuthState extends BaseState {
         name?: string;
     } | null;
     formData: ISignInRequest;
+    registerFormData: ISignUpRequest;
 }
 
+// ===========================================
+// 📋 INITIAL AUTH STATE
+// ===========================================
 const initialState: AuthState = {
-    isAuthenticated: false,
-    user: null,
+    // 🔐 Authentication status
+    isAuthenticated: true, // 🚨 QUAN TRỌNG: Mặc định false, sẽ được set true khi có token
+    user: null, // User data sẽ được set sau khi authenticate
+
+    // 📝 Form data cho login
     formData: {
         email: '',
         password: '',
     },
+
+    // 📝 Form data cho register
+    registerFormData: {
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+    },
+
+    // 🔄 Base state properties
     isLoading: false,
     errorMessage: null,
     isSuccess: false,
@@ -39,8 +57,49 @@ const authSlice = createSlice({
                 password: '',
             };
         },
+
+        // ===========================================
+        // 📝 REGISTER FORM MANAGEMENT
+        // ===========================================
+        updateRegisterFormData: (state, action: PayloadAction<{ field: keyof ISignUpRequest; value: string }>) => {
+            const { field, value } = action.payload;
+            state.registerFormData[field] = value;
+        },
+
+        resetRegisterForm: (state) => {
+            state.registerFormData = {
+                name: '',
+                email: '',
+                password: '',
+                confirmPassword: '',
+            };
+        },
+        // ===========================================
+        // 👤 SET USER & AUTO-AUTHENTICATE
+        // ===========================================
         setUser: (state, action: PayloadAction<{ email: string; name?: string }>) => {
+            /**
+             * 🎯 Khi set user data:
+             * 1. Lưu user info vào state
+             * 2. TỰ ĐỘNG set isAuthenticated = true
+             * 
+             * ➡️ Điều này trigger useEffect trong _layout.tsx để navigate
+             */
             state.user = action.payload;
+            state.isAuthenticated = true; // 🔐 Auto-authenticate khi có user data
+            console.log('🔄 setUser called → isAuthenticated = true, user =', action.payload);
+        },
+
+        // ===========================================
+        // 🔐 SET AUTHENTICATION STATUS MANUALLY
+        // ===========================================
+        setAuthenticated: (state, action: PayloadAction<boolean>) => {
+            /**
+             * 🎯 Manual override cho authentication status
+             * Dùng khi cần force logout hoặc set authenticated mà không có user data
+             */
+            state.isAuthenticated = action.payload;
+            console.log('🔄 setAuthenticated called → isAuthenticated =', action.payload);
         },
         clearError: (state) => {
             state.errorMessage = null;
@@ -78,7 +137,7 @@ const authSlice = createSlice({
             })
             .addCase(signIn.rejected, (state, action) => {
                 state.isLoading = false;
-                state.errorMessage = action.error?.message || "Đăng nhập thất bại";
+                state.errorMessage = action.payload || action.error?.message || "Đăng nhập thất bại";
             });
     },
 });
@@ -86,7 +145,10 @@ const authSlice = createSlice({
 export const {
     updateFormData,
     resetForm,
+    updateRegisterFormData, // Export new register actions
+    resetRegisterForm,
     setUser,
+    setAuthenticated,
     clearError,
     logout,
     setLoading,

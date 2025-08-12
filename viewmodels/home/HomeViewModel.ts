@@ -1,6 +1,7 @@
 import { BaseViewModel } from '@/viewmodels/shared/BaseViewModel';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootState } from '@/lib/redux/store';
+import { ENV } from '@/config/env';
 import {
     setWelcomeMessage,
     setUserInfo,
@@ -18,7 +19,7 @@ export class HomeViewModel extends BaseViewModel<HomeState> {
         await this.executeAsync(
             async () => {
                 // Giả lập API call để lấy thông tin user
-                const token = await AsyncStorage.getItem('access_token');
+                const token = await AsyncStorage.getItem(ENV.STORAGE_KEYS.ACCESS_TOKEN);
                 if (token) {
                     // Trong thực tế, bạn sẽ gọi API để lấy thông tin user
                     this.dispatch(setUserInfo({
@@ -33,6 +34,11 @@ export class HomeViewModel extends BaseViewModel<HomeState> {
             },
             (error) => {
                 console.error('Failed to load user info:', error);
+            },
+            {
+                setLoading,
+                setError,
+                setSuccess
             }
         );
     }
@@ -41,7 +47,16 @@ export class HomeViewModel extends BaseViewModel<HomeState> {
         this.dispatch(setWelcomeMessage(message));
     }
 
-    async refreshData(): Promise<void> {
+    // Handler methods để UI components gọi
+    async handleLoadUserInfo(): Promise<void> {
         await this.loadUserInfo();
+    }
+
+    async handleRefresh(): Promise<void> {
+        await this.loadUserInfo();
+    }
+
+    handleUpdateWelcomeMessage(): void {
+        this.updateWelcomeMessage('Welcome back!');
     }
 } 

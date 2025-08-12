@@ -5,4 +5,7 @@ export { BaseViewModel, useViewModel } from './shared/BaseViewModel';
 export { AuthViewModel } from './auth/AuthViewModel';
 
 // Home
-export { HomeViewModel } from './home/HomeViewModel'; 
+export { HomeViewModel } from './home/HomeViewModel';
+
+// Map
+export { MapViewModel } from './map/MapViewModel'; 

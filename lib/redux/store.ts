@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '@/features/auth/authSlice';
 import homeReducer from '@/features/home/homeSlice';
+import mapReducer from '@/features/map/mapSlice';
 
 export const store = configureStore({
     reducer: {
         auth: authReducer,
         home: homeReducer,
+        map: mapReducer,
         // Thêm các reducers khác ở đây khi cần
     },
     middleware: (getDefaultMiddleware) =>
