@@ -1,80 +1,53 @@
-import React from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
-
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
-function TabBarIcon(props: {
-    name: React.ComponentProps<typeof FontAwesome>['name'];
-    color: string;
-}) {
-    return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
-}
+import React, { useMemo } from "react";
+import { Tabs } from "expo-router";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { useAppSelector } from "@/lib/redux/hooks";
+import TabsViewModel from "@/viewmodels/TabsViewModel";
+import ModernBottomBar from "@/components/ui/bottom-bar";
+import { UserRole } from "@/models/enum/UserRole.enum";
 
 export default function TabLayout() {
-    const colorScheme = useColorScheme();
+    const role = useAppSelector((s) => s.auth.user?.role ?? null);
+
+    const vm = useMemo(() => new TabsViewModel(), []);
+
+    const tabs = vm.getTabsForRole(role);
 
     return (
         <Tabs
-            screenOptions={{
-                tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-                // Disable the static render of the header on web
-                // to prevent a hydration error in React Navigation v6.
-                headerShown: useClientOnlyValue(false, true),
-            }}>
-            <Tabs.Screen
-                name="index"
-                options={{
-                    title: 'Home',
-                    tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
-                    headerRight: () => (
-                        <Link href="../notifications" asChild>
-                            <Pressable>
-                                {({ pressed }) => (
-                                    <FontAwesome
-                                        name="bell"
-                                        size={25}
-                                        color={Colors[colorScheme ?? 'light'].text}
-                                        style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                                    />
-                                )}
-                            </Pressable>
-                        </Link>
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="map"
-                options={{
-                    title: 'Map',
-                    tabBarIcon: ({ color }) => <TabBarIcon name="map" color={color} />,
-                }}
-            />
-            <Tabs.Screen
-                name="discover"
-                options={{
-                    title: 'Discover',
-                    tabBarIcon: ({ color }) => <TabBarIcon name="search" color={color} />,
-                }}
-            />
-            <Tabs.Screen
-                name="favorites"
-                options={{
-                    title: 'Favorites',
-                    tabBarIcon: ({ color }) => <TabBarIcon name="heart" color={color} />,
-                }}
-            />
-            <Tabs.Screen
-                name="profile"
-                options={{
-                    title: 'Profile',
-                    tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
-                }}
-            />
+            key={`tabs-${role ?? 'none'}`}
+            initialRouteName={vm.getInitialRouteName(role)}
+            screenOptions={{ headerShown: false }}
+            tabBar={(props: BottomTabBarProps) => (
+                <ModernBottomBar
+                    items={tabs.map((t) => ({
+                        key: t.key,
+                        title: t.title,
+                        icon: t.icon,
+                    }))}
+                    activeKey={tabs[props.state.index]?.key}
+                    onPress={(key) => {
+                        const target = tabs.find((x) => x.key === key);
+                        if (target) {
+                            props.navigation.navigate(target.routeName as never);
+                        }
+                    }}
+                    primaryColor="#00598A"
+                    inactiveColor="#c1c7cd"
+                    containerBg="#ffffff"
+                    activeBg="rgba(46,125,50,0.12)"
+                    wrapperBg="#f3f4f6"
+                    variant="standard"
+                />
+            )}
+        >
+            {tabs.map((t) => (
+                <Tabs.Screen
+                    key={t.key}
+                    name={t.routeName}
+                    options={{ title: t.title }}
+                />
+            ))}
         </Tabs>
     );
 }

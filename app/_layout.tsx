@@ -103,17 +103,7 @@ function RootLayoutNav() {
   // 🔍 AUTH STATUS CHECK - CHỈ CHẠY MỘT LẦN
   // ===========================================
   useEffect(() => {
-    /**
-     * Kiểm tra trạng thái authentication khi app khởi động
-     * 
-     * ĐIỀU KIỆN CHECK:
-     * - Component đã mount (isMounted = true)
-     * - Không đang loading
-     * - Chưa có user data
-     * - Chưa authenticated
-     * 
-     * ➡️ Mục đích: Kiểm tra token trong AsyncStorage để restore session
-     */
+
     console.log('🔍 Auth check conditions:', {
       isMounted,
       isLoading: authState.isLoading,
@@ -170,7 +160,7 @@ function RootLayoutNav() {
   if (authState.isAuthenticated) {
     return (
       <Stack>
-        <Stack.Screen name="(main)" options={{ headerShown: false }} />
+        <Stack.Screen name="(main)/(tabs)" options={{ headerShown: false }} />
       </Stack>
     );
   } else {

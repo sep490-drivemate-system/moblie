@@ -1,5 +1,5 @@
 import { createThunk } from "../genericCreateThunk";
-import { HttpMethod } from "@/models/enum/httpMethod";
+import { HttpMethod } from "@/models/enum/HttpMethod";
 import { ISignInRequest, ISignInResponse } from "@/models/auth/signin";
 import { ISignUpRequest, ISignUpResponse } from "@/models/auth/signup";
 

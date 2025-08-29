@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { UserRole } from "@/models/enum/UserRole.enum";
 import { signIn } from "./authThunk";
 import { BaseState } from "@/models/generic/baseState";
 import { ISignInRequest } from "@/models/auth/signin";
@@ -9,6 +10,7 @@ interface AuthState extends BaseState {
     user: {
         email: string;
         name?: string;
+        role?: UserRole;
     } | null;
     formData: ISignInRequest;
     registerFormData: ISignUpRequest;
@@ -77,7 +79,7 @@ const authSlice = createSlice({
         // ===========================================
         // 👤 SET USER & AUTO-AUTHENTICATE
         // ===========================================
-        setUser: (state, action: PayloadAction<{ email: string; name?: string }>) => {
+        setUser: (state, action: PayloadAction<{ email: string; name?: string; role?: UserRole }>) => {
             /**
              * 🎯 Khi set user data:
              * 1. Lưu user info vào state
@@ -88,6 +90,13 @@ const authSlice = createSlice({
             state.user = action.payload;
             state.isAuthenticated = true; // 🔐 Auto-authenticate khi có user data
             console.log('🔄 setUser called → isAuthenticated = true, user =', action.payload);
+        },
+        setUserRole: (state, action: PayloadAction<UserRole>) => {
+            if (!state.user) {
+                state.user = { email: '', role: action.payload };
+            } else {
+                state.user.role = action.payload;
+            }
         },
 
         // ===========================================
@@ -149,6 +158,7 @@ export const {
     resetRegisterForm,
     setUser,
     setAuthenticated,
+    setUserRole,
     clearError,
     logout,
     setLoading,

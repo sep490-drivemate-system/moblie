@@ -1,5 +1,5 @@
 import axiosInstance from "@/lib/axios/axiosInstance";
-import { HttpMethod } from "@/models/enum/httpMethod";
+import { HttpMethod } from "@/models/enum/HttpMethod";
 import { GenericResponse } from "@/models/generic/genericResponse";
 import { ThunkOptions } from "@/models/generic/thunkOptions";
 import { createAsyncThunk } from "@reduxjs/toolkit";
