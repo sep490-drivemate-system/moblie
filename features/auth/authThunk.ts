@@ -1,7 +1,7 @@
 import { createThunk } from "../genericCreateThunk";
-import { HttpMethod } from "@/models/enum/HttpMethod";
 import { ISignInRequest, ISignInResponse } from "@/models/auth/signin";
 import { ISignUpRequest, ISignUpResponse } from "@/models/auth/signup";
+import { HttpMethod } from "@/models/enum/HttpMethods";
 
 export const signIn = createThunk<ISignInResponse, ISignInRequest>(
     HttpMethod.POST,
