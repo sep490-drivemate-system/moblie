@@ -5,8 +5,10 @@ import {
   listCar,
   listInstructorOptions,
 } from "@/mock_data/home_data";
+import { useRouter } from "expo-router";
 import { ChevronRight as LucideChevronRight } from "lucide-react-native";
 import {
+  Button,
   Dimensions,
   FlatList,
   Image,
@@ -14,12 +16,13 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
+  const router = useRouter();
   return (
     <ScrollView style={styles.container}>
       <View style={styles.carouselContainer}>
@@ -184,6 +187,12 @@ export default function HomeScreen() {
             />
           </View>
         </View>
+        <Button
+          title="go to reset on boarding"
+          onPress={() => {
+            router.navigate("/(onboarding)/reset-onboarding");
+          }}
+        />
       </View>
     </ScrollView>
   );
