@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import CountryCodeSelector from "./CountryCodeSelector";
+import CountryCodeSelector from "./country-code-selector";
 import { MoreVertical } from "lucide-react-native";
 
 export default function RegisterScreen() {
@@ -64,16 +64,13 @@ export default function RegisterScreen() {
       // Save user info to AsyncStorage
       await AsyncStorage.setItem("user_info", JSON.stringify(userInfo));
 
-      // Mark onboarding as completed
-      await AsyncStorage.setItem("onboarding_completed", "true");
-
       Alert.alert(
         "Thành công",
-        "Thông tin đã được lưu thành công! Chào mừng bạn đến với DriveMate.",
+        "Thông tin đã được lưu thành công! Vui lòng xác minh OTP.",
         [
           {
             text: "OK",
-            onPress: () => router.replace("/(main)/(tabs)/home"),
+            onPress: () => router.push("/(onboarding)/otp"),
           },
         ]
       );
@@ -278,7 +275,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: "#026AA7",
+    color: "#000",
     borderWidth: 1,
     borderColor: "#92929D",
   },
@@ -299,7 +296,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: "#026AA7",
+    color: "#000",
     borderWidth: 1,
     borderColor: "#92929D",
   },

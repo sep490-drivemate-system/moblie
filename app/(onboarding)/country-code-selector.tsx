@@ -1,3 +1,4 @@
+import { Check, ChevronDown } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   View,
@@ -62,7 +63,9 @@ export default function CountryCodeSelector({
       >
         <Text style={styles.flag}>{selectedCountry?.flag}</Text>
         <Text style={styles.code}>{selectedCode}</Text>
-        <Text style={styles.dropdown}>▼</Text>
+        <Text>
+          <ChevronDown color={"#026AA7"} />
+        </Text>
       </TouchableOpacity>
 
       <Modal
@@ -100,7 +103,9 @@ export default function CountryCodeSelector({
                     <Text style={styles.countryCode}>{item.code}</Text>
                   </View>
                   {selectedCode === item.code && (
-                    <Text style={styles.checkmark}>✓</Text>
+                    <Text>
+                      <Check color={"#026AA7"} />
+                    </Text>
                   )}
                 </TouchableOpacity>
               )}
@@ -130,14 +135,10 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   code: {
-    color: "#026AA7",
+    color: "#000",
     fontSize: 16,
     fontWeight: "500",
     marginRight: 8,
-  },
-  dropdown: {
-    color: "rgba(255, 255, 255, 0.6)",
-    fontSize: 12,
   },
   modalOverlay: {
     flex: 1,
@@ -204,10 +205,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginTop: 2,
-  },
-  checkmark: {
-    fontSize: 18,
-    color: "#4CAF50",
-    fontWeight: "bold",
   },
 });
