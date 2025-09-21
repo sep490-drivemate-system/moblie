@@ -8,76 +8,80 @@ import {
   Star as LucideStar,
   ShieldCheck as LucideShieldCheck,
 } from "lucide-react-native";
+import { Car } from "@/models/car/car";
+
+// type Props = {
+//   id: number;
+//   name: string;
+//   imageUrl: string;
+//   pricing: {
+//     halfDay: {
+//       price: number;
+//       duration: number;
+//     };
+//     fullDay: {
+//       price: number;
+//       duration: number;
+//     };
+//   };
+//   instructor: {
+//     experience: string;
+//   };
+//   location: string;
+//   rating: {
+//     score: number;
+//     totalStudents: number;
+//   };
+//   carDetails: {
+//     seats: number;
+//     transmission: string;
+//     fuel: string;
+//   };
+//   variant?: "compact" | "full";
+// };
 
 type Props = {
-  id: number;
-  name: string;
-  imageUrl: string;
-  pricing: {
-    halfDay: {
-      price: number;
-      duration: number;
-    };
-    fullDay: {
-      price: number;
-      duration: number;
-    };
-  };
-  instructor: {
-    experience: string;
-  };
-  location: string;
-  rating: {
-    score: number;
-    totalStudents: number;
-  };
-  carDetails: {
-    seats: number;
-    transmission: string;
-    fuel: string;
-  };
+  car: Car;
+  variant?: "compact" | "full";
 };
 
-const CarItem: React.FC<Props> = ({
-  id,
-  name,
-  imageUrl,
-  pricing,
-  instructor,
-  location,
-  rating,
-  carDetails,
-}) => {
+const CarItem: React.FC<Props> = ({ car, variant = "compact" }) => {
   return (
-    <TouchableOpacity>
+    <TouchableOpacity
+      style={{ width: variant === "full" ? "100%" : 280 }}
+      activeOpacity={0.9}
+    >
       <Image
-        style={styles.carImage}
+        style={[
+          styles.carImage,
+          variant === "full" ? styles.carImageFull : undefined,
+        ]}
         source={{
-          uri: imageUrl,
+          uri: car.imageUrl,
         }}
       />
       <View style={styles.information}>
         <View>
-          <Text style={styles.carName}>{name}</Text>
+          <Text style={styles.carName}>{car.name}</Text>
         </View>
         <View>
           <Text style={styles.halfDayPricing}>
-            {pricing.halfDay.price.toLocaleString("vi-VN")}đ/{" "}
-            {pricing.halfDay.duration} tiếng
+            {car.pricing.halfDay.price.toLocaleString("vi-VN")}đ/{" "}
+            {car.pricing.halfDay.duration} tiếng
           </Text>
           <Text style={styles.fullDayPricing}>
-            {pricing.fullDay.price.toLocaleString("vi-VN")}đ/{" "}
-            {pricing.fullDay.duration} tiếng
+            {car.pricing.fullDay.price.toLocaleString("vi-VN")}đ/{" "}
+            {car.pricing.fullDay.duration} tiếng
           </Text>
         </View>
         <View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <LucideShieldCheck width={15} height={15} color={"#026AA7"} />
-            <Text>{instructor.experience}</Text>
+            <Text>{car.instructor.experience}</Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <LucideMapPin width={15} height={15} color={"#026AA7"} />
-            <Text>{location}</Text>
+            <Text>{car.location}</Text>
           </View>
         </View>
         <View style={styles.ratingContainer}>
@@ -93,16 +97,16 @@ const CarItem: React.FC<Props> = ({
             }}
           >
             <LucideStar width={15} height={15} fill={"#EEC10A"} />
-            <Text>{rating.score}</Text>
+            <Text>{car.rating.score}</Text>
           </View>
-          <Text>Đã học {rating.totalStudents} lượt</Text>
+          <Text>Đã học {car.rating.totalStudents} lượt</Text>
         </View>
       </View>
       <View style={styles.footer}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
           <LucideUser width={15} height={15} />
           <Text style={{ fontSize: 14, fontWeight: "500" }}>
-            {carDetails.seats} chỗ
+            {car.seats} chỗ
           </Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
@@ -111,15 +115,11 @@ const CarItem: React.FC<Props> = ({
             height={15}
             transform={[{ rotate: "180deg" }]}
           />
-          <Text style={{ fontSize: 14, fontWeight: "500" }}>
-            {carDetails.transmission}
-          </Text>
+          <Text style={{ fontSize: 14, fontWeight: "500" }}>{car.type}</Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
           <LucideFuel width={15} height={15} />
-          <Text style={{ fontSize: 14, fontWeight: "500" }}>
-            {carDetails.fuel}
-          </Text>
+          <Text style={{ fontSize: 14, fontWeight: "500" }}>{car.fuel}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -133,6 +133,9 @@ const styles = StyleSheet.create({
     resizeMode: "cover",
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
+  },
+  carImageFull: {
+    width: "100%",
   },
   information: {
     borderLeftWidth: 1,
