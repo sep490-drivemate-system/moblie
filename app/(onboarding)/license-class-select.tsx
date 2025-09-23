@@ -65,16 +65,8 @@ export default function LicenseClassSelectScreen() {
       // Mark onboarding as completed
       await AsyncStorage.setItem("onboarding_completed", "true");
 
-      Alert.alert(
-        "Hoàn thành",
-        `Chào mừng bạn đến với DriveMate! Bạn sẽ hướng dẫn lái xe hạng ${selectedClass.title}.`,
-        [
-          {
-            text: "Bắt đầu",
-            onPress: () => router.replace("/(main)/(tabs)/home"),
-          },
-        ]
-      );
+      // Navigate to quiz instead of home
+      router.push("/(onboarding)/(quiz)/quiz-1");
     } catch (error) {
       Alert.alert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.");
     }
