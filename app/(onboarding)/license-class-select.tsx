@@ -8,7 +8,6 @@ import {
   Alert,
   StatusBar,
   FlatList,
-  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -17,53 +16,65 @@ import {
   ChevronDown,
   ChevronUp,
   MoreVertical,
+  ArrowLeft,
 } from "lucide-react-native";
 
-interface Role {
+interface LicenseClass {
   id: string;
   title: string;
 }
 
-const roles: Role[] = [
-  {
-    id: "instructor",
-    title: "Người hướng dẫn",
-  },
-  {
-    id: "noviceDriver",
-    title: "Người mới lái xe",
-  },
+const licenseClasses: LicenseClass[] = [
+  { id: "B", title: "Hạng B" },
+  { id: "C1", title: "Hạng C1" },
+  { id: "C", title: "Hạng C" },
+  { id: "D1", title: "Hạng D1" },
+  { id: "D2", title: "Hạng D2" },
+  { id: "D", title: "Hạng D" },
+  { id: "BE", title: "Hạng BE" },
+  { id: "C1E", title: "Hạng C1E" },
+  { id: "CE", title: "Hạng CE" },
+  { id: "D1E", title: "Hạng D1E" },
+  { id: "D2E", title: "Hạng D2E" },
+  { id: "DE", title: "Hạng DE" },
 ];
 
-export default function RoleSelectionScreen() {
+export default function LicenseClassSelectScreen() {
   const router = useRouter();
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [selectedClass, setSelectedClass] = useState<LicenseClass | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const handleRoleSelect = (role: Role) => {
-    setSelectedRole(role);
+  const handleClassSelect = (licenseClass: LicenseClass) => {
+    setSelectedClass(licenseClass);
     setShowDropdown(false);
   };
 
   const handleContinue = async () => {
-    if (!selectedRole) {
-      Alert.alert("Lỗi", "Vui lòng chọn vai trò của bạn");
+    if (!selectedClass) {
+      Alert.alert("Lỗi", "Vui lòng chọn hạng giấy phép lái xe");
       return;
     }
 
     try {
-      // Save user role
-      await AsyncStorage.setItem("user_role", JSON.stringify(selectedRole));
+      // Save license class
+      await AsyncStorage.setItem(
+        "license_class",
+        JSON.stringify(selectedClass)
+      );
 
-      // Navigate based on role
-      if (selectedRole.id === "noviceDriver") {
-        // Novice driver goes directly to home
-        await AsyncStorage.setItem("onboarding_completed", "true");
-        router.replace("/(main)/(tabs)/home");
-      } else if (selectedRole.id === "instructor") {
-        // Instructor goes to license class selection
-        router.push("/(onboarding)/license-class-select");
-      }
+      // Mark onboarding as completed
+      await AsyncStorage.setItem("onboarding_completed", "true");
+
+      Alert.alert(
+        "Hoàn thành",
+        `Chào mừng bạn đến với DriveMate! Bạn sẽ hướng dẫn lái xe hạng ${selectedClass.title}.`,
+        [
+          {
+            text: "Bắt đầu",
+            onPress: () => router.replace("/(main)/(tabs)/home"),
+          },
+        ]
+      );
     } catch (error) {
       Alert.alert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.");
     }
@@ -73,18 +84,18 @@ export default function RoleSelectionScreen() {
     router.back();
   };
 
-  const renderRoleItem = ({ item }: { item: Role }) => (
+  const renderClassItem = ({ item }: { item: LicenseClass }) => (
     <TouchableOpacity
       style={[
-        styles.roleItem,
-        selectedRole?.id === item.id && styles.selectedRoleItem,
+        styles.classItem,
+        selectedClass?.id === item.id && styles.selectedClassItem,
       ]}
-      onPress={() => handleRoleSelect(item)}
+      onPress={() => handleClassSelect(item)}
     >
-      <View style={styles.roleInfo}>
-        <Text style={styles.roleTitle}>{item.title}</Text>
+      <View style={styles.classInfo}>
+        <Text style={styles.classTitle}>{item.title}</Text>
       </View>
-      {selectedRole?.id === item.id && (
+      {selectedClass?.id === item.id && (
         <Text>
           <Check color={"#026AA7"} />
         </Text>
@@ -97,10 +108,9 @@ export default function RoleSelectionScreen() {
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <Image
-            source={require("@/assets/images/logo_blue.png")}
-            style={styles.logo}
-          />
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <ArrowLeft color="#000" size={24} />
+          </TouchableOpacity>
           <View style={styles.headerButtons}>
             <TouchableOpacity style={styles.helpButton}>
               <Text>Cần hỗ trợ ?</Text>
@@ -113,26 +123,28 @@ export default function RoleSelectionScreen() {
 
         {/* Title */}
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>Bạn muốn đăng ký với tư cách là</Text>
+          <Text style={styles.title}>
+            Hạng giấy phép lái xe bạn muốn hướng dẫn
+          </Text>
         </View>
 
-        {/* Role Selection */}
-        <View style={styles.roleContainer}>
+        {/* License Class Selection */}
+        <View style={styles.classContainer}>
           <TouchableOpacity
             style={styles.dropdownButton}
             onPress={() => setShowDropdown(!showDropdown)}
           >
             <View style={styles.dropdownContent}>
-              {selectedRole ? (
-                <View style={styles.selectedRoleContent}>
-                  <View style={styles.selectedRoleInfo}>
-                    <Text style={styles.selectedRoleTitle}>
-                      {selectedRole.title}
+              {selectedClass ? (
+                <View style={styles.selectedClassContent}>
+                  <View style={styles.selectedClassInfo}>
+                    <Text style={styles.selectedClassTitle}>
+                      {selectedClass.title}
                     </Text>
                   </View>
                 </View>
               ) : (
-                <Text style={styles.placeholderText}>Đăng ký với tư cách</Text>
+                <Text style={styles.placeholderText}>Chọn hạng giấy phép</Text>
               )}
             </View>
             <Text>
@@ -148,9 +160,9 @@ export default function RoleSelectionScreen() {
           {showDropdown && (
             <View style={styles.dropdownList}>
               <FlatList
-                data={roles}
+                data={licenseClasses}
                 keyExtractor={(item) => item.id}
-                renderItem={renderRoleItem}
+                renderItem={renderClassItem}
                 showsVerticalScrollIndicator={false}
               />
             </View>
@@ -162,12 +174,12 @@ export default function RoleSelectionScreen() {
           <TouchableOpacity
             style={[
               styles.continueButton,
-              !selectedRole && styles.disabledButton,
+              !selectedClass && styles.disabledButton,
             ]}
             onPress={handleContinue}
-            disabled={!selectedRole}
+            disabled={!selectedClass}
           >
-            <Text style={styles.continueButtonText}>Tiếp tục</Text>
+            <Text style={styles.continueButtonText}>Tiếp theo</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -189,14 +201,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: 30,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerButtons: {
     flexDirection: "row",
-  },
-  logo: {
-    width: 150,
-    height: 40,
-    resizeMode: "cover",
   },
   notificationButton: {
     paddingVertical: 8,
@@ -210,7 +225,6 @@ const styles = StyleSheet.create({
     borderColor: "#92929D",
     borderWidth: 1,
   },
-
   titleContainer: {
     marginBottom: 40,
   },
@@ -221,7 +235,7 @@ const styles = StyleSheet.create({
     color: "#000",
     marginBottom: 10,
   },
-  roleContainer: {
+  classContainer: {
     marginBottom: 40,
   },
   dropdownButton: {
@@ -237,14 +251,14 @@ const styles = StyleSheet.create({
   dropdownContent: {
     flex: 1,
   },
-  selectedRoleContent: {
+  selectedClassContent: {
     flexDirection: "row",
     alignItems: "center",
   },
-  selectedRoleInfo: {
+  selectedClassInfo: {
     flex: 1,
   },
-  selectedRoleTitle: {
+  selectedClassTitle: {
     fontSize: 16,
     color: "#000",
     marginBottom: 4,
@@ -259,30 +273,25 @@ const styles = StyleSheet.create({
     borderColor: "#E0E0E0",
     borderRadius: 12,
     backgroundColor: "#FFFFFF",
-    maxHeight: 200,
+    maxHeight: 250,
   },
-  roleItem: {
+  classItem: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
   },
-  selectedRoleItem: {
+  selectedClassItem: {
     backgroundColor: "#E3F2FD",
   },
-  roleInfo: {
+  classInfo: {
     flex: 1,
   },
-  roleTitle: {
+  classTitle: {
     fontSize: 16,
     color: "#000",
     marginBottom: 4,
-  },
-  checkmark: {
-    fontSize: 18,
-    color: "#026AA7",
-    fontWeight: "bold",
   },
   buttonContainer: {
     marginTop: "auto",
