@@ -160,7 +160,7 @@ function RootLayoutNav() {
   if (authState.isAuthenticated) {
     return (
       <Stack>
-        <Stack.Screen name="(main)/(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(main)" options={{ headerShown: false }} />
       </Stack>
     );
   } else {

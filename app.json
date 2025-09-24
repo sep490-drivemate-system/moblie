@@ -18,6 +18,9 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to location to show your position on the map.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to show your position on the map."
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyC4acQEZfwGypICzPXd_A_c89x7nrgYnZ4"
       }
     },
     "android": {
@@ -30,13 +33,14 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
-      "package": "com.anonymous.moblie"
+      "package": "com.anonymous.moblie",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyC4acQEZfwGypICzPXd_A_c89x7nrgYnZ4"
+        }
+      }
     },
     "web": {
       "bundler": "metro",
