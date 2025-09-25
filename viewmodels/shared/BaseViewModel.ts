@@ -82,7 +82,7 @@ export function useViewModel<T extends BaseState, VM extends BaseViewModel<T>>(
     // Sử dụng useMemo để tránh tạo instance mới mỗi render
     const viewModel = useMemo(() =>
         new ViewModelClass(dispatch, getCurrentState),
-        [dispatch]
+        [dispatch, state]
     );
 
     return [state, viewModel];

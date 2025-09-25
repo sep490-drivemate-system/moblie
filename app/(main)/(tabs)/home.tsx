@@ -14,7 +14,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -85,7 +85,7 @@ export default function HomeScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 20 }}
-              renderItem={({ item }) => <CarItem {...item} />}
+              renderItem={({ item }) => <CarItem car={item} />}
               ListFooterComponent={() => (
                 <View
                   style={{
