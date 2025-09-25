@@ -27,11 +27,11 @@ export default function Quiz4Screen() {
       // Mark quiz as completed
       await AsyncStorage.setItem("quiz_completed", "true");
 
-      // Navigate to home
-      router.replace("/(main)/(tabs)/home");
+      // Navigate to avatar page
+      router.push("/(onboarding)/(personal-identification)/(avatar)/avatar");
     } catch (error) {
       console.error("Error saving quiz completion:", error);
-      router.replace("/(main)/(tabs)/home");
+      router.push("/(onboarding)/(personal-identification)/(avatar)/avatar");
     }
   };
 
