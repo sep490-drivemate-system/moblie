@@ -4,7 +4,6 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useAppSelector } from "@/lib/redux/hooks";
 import TabsViewModel from "@/viewmodels/TabsViewModel";
 import ModernBottomBar from "@/components/ui/bottom-bar";
-import { UserRole } from "@/models/enum/UserRole.enum";
 
 export default function TabLayout() {
     const role = useAppSelector((s) => s.auth.user?.role ?? null);

@@ -15,6 +15,12 @@ module.exports = {
     extend: {
       colors: {
         blue: "#00598A",
+        // App custom colors
+        brand: {
+          primary: '#667eea',
+          secondary: '#764ba2',
+          accent: '#f093fb',
+        },
         primary: {
           0: 'rgb(var(--color-primary-0)/<alpha-value>)',
           50: 'rgb(var(--color-primary-50)/<alpha-value>)',

@@ -7,30 +7,23 @@ import {
   ScrollView,
   Image,
   Alert,
-  Dimensions,
   FlatList,
   Modal,
-  Animated,
-  Platform
+  TextInput
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import * as Location from 'expo-location';
+import { LucideUsers, Search, X } from 'lucide-react-native';
+import { AppColors } from '@/constants/Colors';
 import {
   instructorsData,
   Instructor,
-  getInstructorsByAvailability,
-  addDistanceToInstructors,
-  getInstructorsByDistanceRange,
   getInstructorsByExperienceRange,
   sortInstructorsByRating,
-  sortInstructorsByBookings,
   sortInstructorsByPrice,
-  sortInstructorsByDistance,
   sortInstructorsByExperience
 } from '../../../data/instructors_data';
 
-const { width, height } = Dimensions.get('window');
 
 type FilterType = 'all' | 'available' | 'busy';
 type DistanceFilter = 'all' | '1-3' | '3-5' | '5-10' | '10+';
@@ -47,10 +40,6 @@ interface FilterState {
 
 function InstructorsScreen() {
   const router = useRouter();
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
 
   // Modern filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -65,75 +54,36 @@ function InstructorsScreen() {
   const [instructorsWithDistance, setInstructorsWithDistance] = useState<Instructor[]>(instructorsData);
   const [filteredInstructors, setFilteredInstructors] = useState<Instructor[]>(instructorsData);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Modal states
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempFilters, setTempFilters] = useState<FilterState>(filters);
 
 
-  useEffect(() => {
-    getCurrentLocation();
-  }, []);
+
 
   useEffect(() => {
     applyFiltersAndSort();
-  }, [filters, sortBy, sortAscending, instructorsWithDistance]);
+  }, [filters, sortBy, sortAscending, instructorsWithDistance, searchQuery]);
 
 
-  const getCurrentLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission denied', 'Location permission is required to calculate distances.');
-        return;
-      }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const { latitude, longitude } = location.coords;
-      const userLocationData = { latitude, longitude };
-
-      setUserLocation(userLocationData);
-
-      // Add distance to all instructors
-      const instructorsWithDist = addDistanceToInstructors(latitude, longitude);
-      setInstructorsWithDistance(instructorsWithDist);
-    } catch (error) {
-      console.error('Error getting location:', error);
-      Alert.alert('Error', 'Could not get your location. Please try again.');
-    }
-  };
 
   const applyFiltersAndSort = () => {
     let filtered = [...instructorsWithDistance];
 
-    // Apply availability filter
-    if (filters.availability === 'available') {
-      filtered = filtered.filter(instructor => instructor.availability === 'available');
-    } else if (filters.availability === 'busy') {
-      filtered = filtered.filter(instructor => instructor.availability === 'busy');
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(instructor =>
+        instructor.name.toLowerCase().includes(query) ||
+        instructor.specialties.some(s => s.toLowerCase().includes(query)) ||
+        instructor.description.toLowerCase().includes(query)
+      );
     }
 
-    // Apply distance filter
-    if (filters.distance !== 'all' && userLocation) {
-      switch (filters.distance) {
-        case '1-3':
-          filtered = getInstructorsByDistanceRange(filtered, 1, 3);
-          break;
-        case '3-5':
-          filtered = getInstructorsByDistanceRange(filtered, 3, 5);
-          break;
-        case '5-10':
-          filtered = getInstructorsByDistanceRange(filtered, 5, 10);
-          break;
-        case '10+':
-          filtered = filtered.filter(instructor =>
-            instructor.distance !== undefined && instructor.distance > 10
-          );
-          break;
-      }
-    }
 
     // Apply experience filter
     if (filters.experience !== 'all') {
@@ -169,14 +119,8 @@ function InstructorsScreen() {
       case 'rating':
         filtered = sortInstructorsByRating(filtered, sortAscending);
         break;
-      case 'bookings':
-        filtered = sortInstructorsByBookings(filtered, sortAscending);
-        break;
       case 'price':
         filtered = sortInstructorsByPrice(filtered, sortAscending);
-        break;
-      case 'distance':
-        filtered = sortInstructorsByDistance(filtered, sortAscending);
         break;
       case 'experience':
         filtered = sortInstructorsByExperience(filtered, sortAscending);
@@ -189,28 +133,12 @@ function InstructorsScreen() {
   // Helper functions for modern filter system
   const getActiveFilterCount = () => {
     let count = 0;
-    if (filters.availability !== 'all') count++;
-    if (filters.distance !== 'all') count++;
     if (filters.experience !== 'all') count++;
     if (filters.priceRange[0] !== 200000 || filters.priceRange[1] !== 500000) count++;
     if (filters.minRating > 0) count++;
     return count;
   };
 
-  const getSortLabel = () => {
-    switch (sortBy) {
-      case 'rating': return '⭐ Đánh giá';
-      case 'bookings': return '📊 Lượt book';
-      case 'price': return '💰 Giá';
-      case 'distance': return '📍 Khoảng cách';
-      case 'experience': return '🎓 Kinh nghiệm';
-      default: return 'Sắp xếp';
-    }
-  };
-
-  const toggleSort = () => {
-    setSortAscending(!sortAscending);
-  };
 
   const clearAllFilters = () => {
     setFilters({
@@ -231,23 +159,12 @@ function InstructorsScreen() {
 
 
 
-
-  const getStatusColor = (availability: string) => {
-    switch (availability) {
-      case 'available': return '#4CAF50'; // Green
-      case 'busy': return '#FF9800'; // Orange
-      case 'offline': return '#F44336'; // Red
-      default: return '#2196F3'; // Blue
-    }
-  };
-
   const handleInstructorPress = (instructor: Instructor) => {
     Alert.alert(
       `${instructor.name}`,
       `⭐ Rating: ${instructor.rating}/5 (${instructor.totalBookings} bookings)
 💰 Pricing: ${instructor.pricing}
 📚 Experience: ${instructor.experience}
-${instructor.distance ? `📍 Distance: ${instructor.distance.toFixed(1)}km` : ''}
 📱 Phone: ${instructor.phone}
 📧 Email: ${instructor.email}
 
@@ -295,7 +212,7 @@ ${instructor.specialties.join(', ')}
               params: { instructorId: item.id }
             })}
           >
-            <Text style={styles.detailButtonText}>Chi tiết →</Text>
+            <Text style={styles.detailButtonText}>Chi tiết</Text>
           </TouchableOpacity>
         </View>
 
@@ -305,11 +222,9 @@ ${instructor.specialties.join(', ')}
 
   return (
     <View style={styles.container}>
-      {/* Premium Modern Header */}
       <View style={styles.modernHeader}>
-        {/* Premium Gradient Background */}
         <LinearGradient
-          colors={['#667eea', '#764ba2', '#f093fb']}
+          colors={[AppColors.gradientStart, AppColors.gradientMiddle, AppColors.gradientEnd]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.headerGradient}
@@ -328,135 +243,108 @@ ${instructor.specialties.join(', ')}
           {/* Top Row */}
           <View style={styles.headerTopRow}>
             <View style={styles.headerLeft}>
-              {/* Premium Icon Container */}
-              <View style={styles.premiumIconContainer}>
-                <View style={styles.iconGlowOuter} />
-                <View style={styles.iconGlowInner} />
-                <View style={styles.iconCore}>
-                  <Text style={styles.headerIcon}>👨‍🏫</Text>
-                </View>
+              {/* Icon Container */}
+              <View style={styles.iconContainer}>
+                <LucideUsers size={24} color={AppColors.white} strokeWidth={2.5} />
               </View>
 
               <View style={styles.headerTextContainer}>
                 <Text style={styles.premiumHeaderTitle}>Người hướng dẫn</Text>
                 <View style={styles.subtitleRow}>
-                  <View style={styles.liveIndicator} />
                   <Text style={styles.premiumHeaderSubtitle}>Tìm người hướng dẫn chuyên nghiệp</Text>
                 </View>
               </View>
             </View>
           </View>
 
-          {/* Premium Stats Row */}
-          <View style={styles.statsRow}>
-            {/* Stat Card 1 - Số người hướng dẫn */}
-            <View style={styles.premiumStatsCard}>
-              <View style={styles.statsGlowEffect} />
-              <View style={styles.statsIconWrapper}>
-                <View style={styles.statsIconBg}>
-                  <Text style={styles.statsIcon}>👥</Text>
-                </View>
-                <Text style={styles.statsNumber}>{filteredInstructors.length}</Text>
-              </View>
-              <Text style={styles.statsLabel}>Người dẫn</Text>
-              <View style={styles.statsShimmer} />
-            </View>
-
-            {/* Stat Card 2 - Đánh giá trung bình */}
-            <View style={styles.premiumStatsCard}>
-              <View style={styles.statsGlowEffect} />
-              <View style={styles.statsIconWrapper}>
-                <View style={styles.statsIconBg}>
-                  <Text style={styles.statsIcon}>⭐</Text>
-                </View>
-                <Text style={styles.statsNumber}>
-                  {filteredInstructors.length > 0
-                    ? (filteredInstructors.reduce((sum, i) => sum + i.rating, 0) / filteredInstructors.length).toFixed(1)
-                    : '0.0'}
-                </Text>
-              </View>
-              <Text style={styles.statsLabel}>Đánh giá TB</Text>
-              <View style={styles.statsShimmer} />
-            </View>
-
-            {/* Stat Card 3 - Kinh nghiệm trung bình */}
-            <View style={styles.premiumStatsCard}>
-              <View style={styles.statsGlowEffect} />
-              <View style={styles.statsIconWrapper}>
-                <View style={styles.statsIconBg}>
-                  <Text style={styles.statsIcon}>🎓</Text>
-                </View>
-                <Text style={styles.statsNumber}>
-                  {filteredInstructors.length > 0
-                    ? Math.round(filteredInstructors.reduce((sum, i) => sum + i.experienceYears, 0) / filteredInstructors.length)
-                    : 0}+
-                </Text>
-              </View>
-              <Text style={styles.statsLabel}>Năm KN</Text>
-              <View style={styles.statsShimmer} />
-            </View>
-          </View>
+        </View>
+      </View>
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputWrapper}>
+          <Search size={20} color={AppColors.gray400} strokeWidth={2} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Tìm kiếm người hướng dẫn..."
+            placeholderTextColor="#9ca3af"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <X size={20} color={AppColors.gray400} strokeWidth={2} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
-      {/* Modern Filter Bar */}
       <View style={styles.modernFilterBar}>
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => {
-            setTempFilters(filters);
-            setShowFilterModal(true);
-          }}
-        >
-          <Text style={styles.filterButtonText}>🔍 Bộ lọc</Text>
-          {getActiveFilterCount() > 0 && (
-            <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{getActiveFilterCount()}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.filterButton, sortBy === 'rating' && styles.filterButtonActive]}
-          onPress={() => {
-            if (sortBy === 'rating') {
-              setSortAscending(!sortAscending);
-            } else {
-              setSortBy('rating');
-              setSortAscending(false);
-            }
-          }}
-        >
-          <Text style={[styles.filterButtonText, sortBy === 'rating' && styles.filterButtonTextActive]}>
-            ⭐ Đánh giá {sortBy === 'rating' && (sortAscending ? '↑' : '↓')}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.filterButton, sortBy === 'price' && styles.filterButtonActive]}
-          onPress={() => {
-            if (sortBy === 'price') {
-              setSortAscending(!sortAscending);
-            } else {
-              setSortBy('price');
-              setSortAscending(true);
-            }
-          }}
-        >
-          <Text style={[styles.filterButtonText, sortBy === 'price' && styles.filterButtonTextActive]}>
-            💰 Giá tiền {sortBy === 'price' && (sortAscending ? '↑' : '↓')}
-          </Text>
-        </TouchableOpacity>
-
-        {getActiveFilterCount() > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScrollContent}>
           <TouchableOpacity
-            style={styles.clearButton}
-            onPress={clearAllFilters}
+            style={styles.filterButton}
+            onPress={() => {
+              setTempFilters(filters);
+              setShowFilterModal(true);
+            }}
           >
-            <Text style={styles.clearButtonText}>✕ Xóa</Text>
+            <Text style={styles.filterButtonText}>🔍 Bộ lọc</Text>
+            {getActiveFilterCount() > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{getActiveFilterCount()}</Text>
+              </View>
+            )}
           </TouchableOpacity>
-        )}
+
+          <TouchableOpacity
+            style={[styles.filterButton, sortBy === 'rating' && styles.filterButtonActive]}
+            onPress={() => {
+              if (sortBy === 'rating') {
+                setSortAscending(!sortAscending);
+              } else {
+                setSortBy('rating');
+                setSortAscending(false);
+              }
+            }}
+          >
+            <Text style={[styles.filterButtonText, sortBy === 'rating' && styles.filterButtonTextActive]}>
+              ⭐ Đánh giá {sortBy === 'rating' && (sortAscending ? '↑' : '↓')}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.filterButton, sortBy === 'price' && styles.filterButtonActive]}
+            onPress={() => {
+              if (sortBy === 'price') {
+                setSortAscending(!sortAscending);
+              } else {
+                setSortBy('price');
+                setSortAscending(true);
+              }
+            }}
+          >
+            <Text style={[styles.filterButtonText, sortBy === 'price' && styles.filterButtonTextActive]}>
+              💰 Giá tiền {sortBy === 'price' && (sortAscending ? '↑' : '↓')}
+            </Text>
+          </TouchableOpacity>
+
+          {getActiveFilterCount() > 0 && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={clearAllFilters}
+            >
+              <Text style={styles.clearButtonText}>✕ Xóa</Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
       </View>
+
+      {/* Results Count */}
+      {searchQuery.length > 0 && (
+        <View style={styles.resultsCount}>
+          <Text style={styles.resultsCountText}>
+            Tìm thấy {filteredInstructors.length} kết quả
+          </Text>
+        </View>
+      )}
 
       {/* Filter Modal */}
       <Modal
@@ -470,7 +358,7 @@ ${instructor.specialties.join(', ')}
             <TouchableOpacity onPress={() => setShowFilterModal(false)}>
               <Text style={styles.modalCloseButton}>✕</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Lọc Giảng Viên</Text>
+            <Text style={styles.modalTitle}>Lọc Người hướng dẫn</Text>
             <TouchableOpacity onPress={applyTempFilters}>
               <Text style={styles.modalApplyButton}>Áp dụng</Text>
             </TouchableOpacity>
@@ -479,7 +367,7 @@ ${instructor.specialties.join(', ')}
           <ScrollView style={styles.modalContent}>
             {/* Experience Filter */}
             <View style={styles.filterSection}>
-              <Text style={styles.sectionTitle}>🎓 Kinh nghiệm</Text>
+              <Text style={styles.sectionTitle}>Kinh nghiệm</Text>
               <View style={styles.optionGrid}>
                 {(['all', '1-3', '3-5', '5-10', '10+'] as ExperienceFilter[]).map((option) => (
                   <TouchableOpacity
@@ -504,7 +392,7 @@ ${instructor.specialties.join(', ')}
 
             {/* Rating Filter */}
             <View style={styles.filterSection}>
-              <Text style={styles.sectionTitle}>⭐ Đánh giá tối thiểu</Text>
+              <Text style={styles.sectionTitle}>Đánh giá</Text>
               <View style={styles.optionGrid}>
                 {[0, 3, 4, 4.5, 5].map((rating) => (
                   <TouchableOpacity
@@ -528,7 +416,7 @@ ${instructor.specialties.join(', ')}
 
             {/* Price Range */}
             <View style={styles.filterSection}>
-              <Text style={styles.sectionTitle}>💰 Khoảng giá</Text>
+              <Text style={styles.sectionTitle}>Khoảng giá</Text>
               <View style={styles.priceRangeContainer}>
                 <Text style={styles.priceLabel}>
                   {tempFilters.priceRange[0].toLocaleString()}đ - {tempFilters.priceRange[1].toLocaleString()}đ
@@ -589,7 +477,7 @@ ${instructor.specialties.join(', ')}
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7fafc',
+    backgroundColor: AppColors.background,
   },
   header: {
     backgroundColor: '#ffffff',
@@ -609,24 +497,28 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#4299e1',
-    justifyContent: 'center',
+  searchContainer: {
+    backgroundColor: AppColors.white,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.borderLight,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
-    shadowColor: '#4299e1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    backgroundColor: AppColors.gray100,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
   },
-  headerIcon: {
-    fontSize: 28,
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: AppColors.gray800,
+    padding: 0,
   },
   headerTextContainer: {
     flex: 1,
@@ -674,15 +566,10 @@ const styles = StyleSheet.create({
   modernHeader: {
     position: 'relative',
     paddingTop: 50,
-    paddingBottom: 24,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 12,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
 
   headerGradient: {
@@ -691,114 +578,50 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    overflow: 'hidden',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
 
   // Decorative Elements
   decorativeCircle1: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    top: -80,
-    right: -60,
+    display: 'none',
   },
 
   decorativeCircle2: {
-    position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    bottom: -40,
-    left: -30,
+    display: 'none',
   },
 
   decorativeCircle3: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    top: 40,
-    left: 50,
+    display: 'none',
   },
 
   glassOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    overflow: 'hidden',
+    display: 'none',
   },
 
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 0,
     zIndex: 2,
   },
 
-  premiumIconContainer: {
-    width: 64,
-    height: 64,
-    marginRight: 16,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  iconGlowOuter: {
-    position: 'absolute',
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    top: -10,
-    left: -10,
-  },
-
-  iconGlowInner: {
-    position: 'absolute',
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    top: -4,
-    left: -4,
-  },
-
-  iconCore: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 10,
+    marginRight: 12,
   },
 
   premiumHeaderTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#ffffff',
-    marginBottom: 6,
-    letterSpacing: -0.8,
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
-    textShadowOffset: { width: 0, height: 3 },
-    textShadowRadius: 6,
+    fontSize: 24,
+    fontWeight: '700',
+    color: AppColors.white,
+    marginBottom: 4,
   },
 
   subtitleRow: {
@@ -810,19 +633,14 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#10b981',
+    backgroundColor: AppColors.success,
     marginRight: 8,
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
   },
 
   premiumHeaderSubtitle: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.95)',
-    fontWeight: '600',
-    lineHeight: 20,
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '400',
   },
 
   headerActions: {
@@ -978,8 +796,8 @@ const styles = StyleSheet.create({
     borderColor: '#dee2e6',
   },
   filterButtonActive: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+    backgroundColor: AppColors.active,
+    borderColor: AppColors.active,
   },
   filterButtonText: {
     fontSize: 14,
@@ -1077,23 +895,25 @@ const styles = StyleSheet.create({
   instructorCard: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     marginHorizontal: 16,
-    marginVertical: 8,
+    marginVertical: 6,
     borderWidth: 0,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
   instructorAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 16,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    marginRight: 14,
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
   },
   instructorInfo: {
     flex: 1,
@@ -1115,11 +935,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   instructorName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1a202c',
     marginBottom: 0,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
+    flex: 1,
   },
   instructorRating: {
     fontSize: 12,
@@ -1274,11 +1095,6 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  resultsCount: {
-    fontSize: 16,
-    color: '#4a5568',
-    fontWeight: '600',
-  },
   refreshLocationButton: {
     backgroundColor: '#4299e1',
     paddingVertical: 8,
@@ -1296,12 +1112,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   instructorsList: {
-    paddingVertical: 8,
+    paddingVertical: 4,
+    paddingBottom: 20,
   },
   separator: {
-    height: 1,
-    backgroundColor: '#e9ecef',
-    marginHorizontal: 16,
+    height: 0,
   },
   emptyContainer: {
     flex: 1,
@@ -1451,11 +1266,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   detailButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: AppColors.active,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 12,
-    shadowColor: '#667eea',
+    shadowColor: AppColors.active,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -1468,20 +1283,21 @@ const styles = StyleSheet.create({
   },
   // Modern Filter System Styles
   modernFilterBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 2,
   },
-  filterButtonText: {
+  filterScrollContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modernFilterButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#4299e1',
@@ -1508,16 +1324,28 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   clearButton: {
-    backgroundColor: '#f87171',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: AppColors.error,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
     marginLeft: 8,
   },
   clearButtonText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  resultsCount: {
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.borderLight,
+  },
+  resultsCountText: {
+    fontSize: 13,
+    color: AppColors.success,
+    fontWeight: '600',
   },
   // Modal Styles
   modalContainer: {
@@ -1552,7 +1380,7 @@ const styles = StyleSheet.create({
   modalApplyButton: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#4299e1',
+    color: AppColors.active,
   },
   modalContent: {
     flex: 1,
@@ -1591,8 +1419,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   optionButtonActive: {
-    backgroundColor: '#4299e1',
-    borderColor: '#4299e1',
+    backgroundColor: AppColors.active,
+    borderColor: AppColors.active,
   },
   optionText: {
     fontSize: 14,
@@ -1629,8 +1457,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   priceButtonActive: {
-    backgroundColor: '#38a169',
-    borderColor: '#38a169',
+    backgroundColor: AppColors.active,
+    borderColor: AppColors.active,
   },
   priceButtonText: {
     fontSize: 14,

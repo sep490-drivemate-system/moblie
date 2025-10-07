@@ -9,36 +9,7 @@ import {
   ShieldCheck as LucideShieldCheck,
 } from "lucide-react-native";
 import { Car } from "@/models/car/car";
-
-// type Props = {
-//   id: number;
-//   name: string;
-//   imageUrl: string;
-//   pricing: {
-//     halfDay: {
-//       price: number;
-//       duration: number;
-//     };
-//     fullDay: {
-//       price: number;
-//       duration: number;
-//     };
-//   };
-//   instructor: {
-//     experience: string;
-//   };
-//   location: string;
-//   rating: {
-//     score: number;
-//     totalStudents: number;
-//   };
-//   carDetails: {
-//     seats: number;
-//     transmission: string;
-//     fuel: string;
-//   };
-//   variant?: "compact" | "full";
-// };
+import { useRouter } from "expo-router";
 
 type Props = {
   car: Car;
@@ -46,10 +17,20 @@ type Props = {
 };
 
 const CarItem: React.FC<Props> = ({ car, variant = "compact" }) => {
+  const router = useRouter();
+
+  const handlePress = () => {
+    router.push({
+      pathname: '/(main)/(no-tabs)/car-detail',
+      params: { carId: car.id.toString() }
+    });
+  };
+
   return (
     <TouchableOpacity
       style={{ width: variant === "full" ? "100%" : 280 }}
       activeOpacity={0.9}
+      onPress={handlePress}
     >
       <Image
         style={[

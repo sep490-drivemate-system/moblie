@@ -19,6 +19,7 @@ export default function ProfileScreen() {
     };
 
     const profileMenuItems = [
+        { title: 'Nạp tiền', icon: '💰', route: '/(main)/(no-tabs)/topup' },
         { title: 'Edit Profile', icon: '✏️', route: '../profile' },
         { title: 'Settings', icon: '⚙️', route: '../settings' },
         { title: 'Notifications', icon: '🔔', route: '../notifications' },
@@ -96,6 +97,31 @@ export default function ProfileScreen() {
                             </View>
                         </Card>
                     </View>
+
+                    {/* Wallet Balance Card */}
+                    <Card className="p-4 bg-gradient-to-r from-blue-500 to-purple-600 border-0">
+                        <View className="flex-row items-center justify-between">
+                            <View className="flex-1">
+                                <Text className="text-white text-sm opacity-90 mb-1">
+                                    Số dư ví
+                                </Text>
+                                <Text className="text-white text-2xl font-bold">
+                                    1,500 xu
+                                </Text>
+                                <Text className="text-white text-xs opacity-75">
+                                    Tỷ giá: 1.000 VND = 1 xu
+                                </Text>
+                            </View>
+                            <TouchableOpacity 
+                                className="bg-white bg-opacity-20 px-4 py-2 rounded-full"
+                                onPress={() => router.push('/(main)/(no-tabs)/topup')}
+                            >
+                                <Text className="text-white font-semibold text-sm">
+                                    Nạp tiền
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </Card>
 
                     {/* Menu Items */}
                     <Card className="bg-card">

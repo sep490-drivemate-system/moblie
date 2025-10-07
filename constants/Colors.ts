@@ -1,6 +1,72 @@
-const tintColorLight = '#00598A';
+const tintColorLight = '#036AA5';
 const tintColorDark = '#fff';
 
+// App Theme Colors
+export const AppColors = {
+  // Primary Colors
+  primary: '#667eea',
+  primaryDark: '#5568d3',
+  primaryLight: '#8b9cff',
+
+  // Brand Color (Blue from design system)
+  brandBlue: '#036AA5',
+  active: '#036AA5', // For active states
+
+  // Secondary Colors
+  secondary: '#764ba2',
+  accent: '#f093fb',
+
+  // Gradient Colors
+  gradientStart: '#667eea',
+  gradientMiddle: '#764ba2',
+  gradientEnd: '#f093fb',
+
+  // Status Colors
+  success: '#10b981',
+  warning: '#f59e0b',
+  error: '#ef4444',
+  info: '#3b82f6',
+
+  // Neutral Colors
+  white: '#ffffff',
+  black: '#000000',
+  gray50: '#f9fafb',
+  gray100: '#f3f4f6',
+  gray200: '#e5e7eb',
+  gray300: '#d1d5db',
+  gray400: '#9ca3af',
+  gray500: '#6b7280',
+  gray600: '#4b5563',
+  gray700: '#374151',
+  gray800: '#1f2937',
+  gray900: '#111827',
+
+  // Background Colors
+  background: '#f7fafc',
+  backgroundLight: '#ffffff',
+  backgroundDark: '#f8fafc',
+
+  // Text Colors
+  textPrimary: '#1a202c',
+  textSecondary: '#64748b',
+  textLight: '#9ca3af',
+  textWhite: '#ffffff',
+
+  // Border Colors
+  border: '#e2e8f0',
+  borderLight: '#e5e7eb',
+  borderDark: '#d1d5db',
+
+  // Card & Surface
+  cardBackground: '#ffffff',
+  cardShadow: 'rgba(0, 0, 0, 0.1)',
+
+  // Overlay
+  overlay: 'rgba(0, 0, 0, 0.5)',
+  overlayLight: 'rgba(0, 0, 0, 0.3)',
+};
+
+// Legacy theme support
 export default {
   light: {
     text: '#000',
