@@ -61,49 +61,32 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
   const router = useRouter();
 
-  // 🎯 State để track khi component đã mount xong
   const [isMounted, setIsMounted] = useState(false);
 
   // Redux selector cho auth state
   const authSelector = (state: RootState) => state.auth;
   const [authState, authViewModel] = useViewModel(AuthViewModel, authSelector);
 
-  // ===========================================
-  // 🎯 MOUNT STATUS TRACKING
-  // ===========================================
+  // MOUNT STATUS TRACKING
   useEffect(() => {
-    // Đánh dấu component đã mount sau một tick
     const timer = setTimeout(() => {
       setIsMounted(true);
-      console.log('🎯 RootLayoutNav mounted and ready for navigation');
-    }, 100); // Delay nhỏ để đảm bảo Stack đã render
-
+    }, 100); 
     return () => clearTimeout(timer);
-  }, []);
+  }, [])
 
-  // ===========================================
-  // 🔧 SETUP NAVIGATION CALLBACK
-  // ===========================================
+  // SETUP NAVIGATION CALLBACK
   useEffect(() => {
-    /**
-     * Thiết lập callback navigation cho ViewModel chỉ một lần
-     * Điều này cho phép ViewModel có thể điều hướng khi cần thiết
-     * (ví dụ: sau khi login thành công, logout, etc.)
-     */
     authViewModel.setNavigationCallback((route: string) => {
       console.log(`🧭 Navigation callback triggered: ${route}`);
       router.replace(route as any);
     });
   }, [authViewModel, router]);
 
-  // ===========================================
-  // 🔍 AUTH STATUS CHECK - CHỈ CHẠY MỘT LẦN
-  // ===========================================
+  // AUTH STATUS CHECK - CHỈ CHẠY MỘT LẦN
   useEffect(() => {
-
     console.log('🔍 Auth check conditions:', {
       isMounted,
       isLoading: authState.isLoading,
@@ -112,16 +95,11 @@ function RootLayoutNav() {
     });
 
     if (isMounted && !authState.isLoading && !authState.user && !authState.isAuthenticated) {
-      console.log('✅ Triggering auth status check...');
       authViewModel.checkAuthStatus();
-    } else {
-      console.log('⏭️ Skipping auth check - conditions not met');
     }
-  }, [isMounted]); // 🚨 QUAN TRỌNG: Dependency on isMounted
+  }, [isMounted]);
 
-  // ===========================================
-  // 🧭 CONDITIONAL RENDERING INSTEAD OF NAVIGATION
-  // ===========================================
+  // CONDITIONAL RENDERING INSTEAD OF NAVIGATION
 
   /**
    * 🎯 THAY VÌ NAVIGATE, CHÚNG TA SỬ DỤNG CONDITIONAL RENDERING

@@ -135,11 +135,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     async checkAuthStatus(): Promise<void> {
         await this.executeAsync(
             async () => {
-                console.log('🔍 Checking auth status - Reading token from storage...');
 
-                // Đọc access token từ AsyncStorage
                 const token = await AsyncStorage.getItem(ENV.STORAGE_KEYS.ACCESS_TOKEN);
-                console.log('📱 Token from storage:', token ? '✅ Found' : '❌ Not found');
 
                 if (token) {
                     /**
@@ -167,15 +164,6 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
                     console.log('🔄 User state updated → _layout.tsx will handle navigation');
                     // 🚨 QUAN TRỌNG: Không navigate ở đây!
                     // _layout.tsx sẽ detect isAuthenticated = true và tự động navigate
-                } else {
-                    /**
-                     * 🎯 TRƯỜNG HỢP: Không có token
-                     * 
-                     * - Không làm gì cả, giữ nguyên state:
-                     *   isAuthenticated = false, user = null
-                     * - _layout.tsx sẽ detect và navigate to /login
-                     */
-                    console.log('❌ No token found → User remains unauthenticated');
                 }
             },
             () => {

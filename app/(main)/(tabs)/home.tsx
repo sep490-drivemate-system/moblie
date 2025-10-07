@@ -40,23 +40,6 @@ export default function HomeScreen() {
         </View>
       </View>
       <View style={styles.contenContainer}>
-        {/* tag voucher */}
-        <View style={styles.voucherContainer}>
-          <View style={styles.voucherContent}>
-            <Text style={styles.voucherTitle}>
-              Đăng nhập ngay để nhận ưu đãi
-            </Text>
-            <Text style={styles.voucherDes}>
-              Đăng nhập ngay để{" "}
-              <Text style={{ color: "#026AA7" }}>tiết kiệm đến 30%</Text> và dễ
-              dàng tìm kiếm được người bạn đồng hành phù hợp với bạn.
-            </Text>
-          </View>
-          <Image
-            style={styles.voucherIcon}
-            source={require("@/assets/images/party-popper-icon.png")}
-          />
-        </View>
         {/* driving license */}
         <View style={styles.licenseContainer}>
           <Text style={styles.label}>Chọn xe theo giấy phép lái xe</Text>

@@ -54,6 +54,12 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow this app to access your location to show your position on the map."
         }
+      ],
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsImpl": "mapbox"
+        }
       ]
     ],
     "experiments": {

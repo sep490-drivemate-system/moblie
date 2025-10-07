@@ -21,7 +21,7 @@ interface AuthState extends BaseState {
 // ===========================================
 const initialState: AuthState = {
     // 🔐 Authentication status
-    isAuthenticated: true, // 🚨 QUAN TRỌNG: Mặc định false, sẽ được set true khi có token
+    isAuthenticated: true,
     user: null, // User data sẽ được set sau khi authenticate
 
     // 📝 Form data cho login

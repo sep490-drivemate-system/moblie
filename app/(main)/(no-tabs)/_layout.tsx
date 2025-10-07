@@ -10,6 +10,14 @@ export default function NoTabsLayout() {
                     presentation: 'modal',
                 }}
             />
+            <Stack.Screen
+                name="instructor-detail"
+                options={{
+                    headerShown: false,
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                }}
+            />
         </Stack>
     );
 }
