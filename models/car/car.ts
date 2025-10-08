@@ -6,6 +6,7 @@ export interface Car {
   type: string;
   fuel: string;
   imageUrl: string;
+  images?: string[];
   pricing: {
     halfDay: {
       price: number;
