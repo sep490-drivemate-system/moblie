@@ -10,18 +10,20 @@ import {
   FlatList,
   Alert,
   TextInput,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Calendar } from 'react-native-calendars';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { 
-  CalendarDays, 
-  Clock, 
-  MapPin, 
-  User, 
-  Car, 
-  CheckCircle, 
-  X, 
+import { LinearGradient } from 'expo-linear-gradient';
+import {
+  CalendarDays,
+  Clock,
+  MapPin,
+  User,
+  Car,
+  CheckCircle,
+  X,
   ChevronRight,
   Star,
   Timer,
@@ -32,8 +34,40 @@ import {
   Navigation,
   Plus,
   Trash2,
-  Map
+  Map,
+  Send,
+  Eye,
+  Edit3,
+  AlertCircle,
+  Check,
+  XCircle,
+  DollarSign,
+  RefreshCw,
+  AlertTriangle,
+  Info,
 } from 'lucide-react-native';
+
+const { width, height } = Dimensions.get('window');
+
+interface RoutePoint {
+  id: string;
+  address: string;
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  isStart?: boolean;
+  isEnd?: boolean;
+}
+
+interface InstructorRoute {
+  id: string;
+  bookingId: string;
+  points: RoutePoint[];
+  status: 'draft' | 'sent' | 'accepted' | 'rejected';
+  notes?: string;
+  createdAt: string;
+}
 
 interface Booking {
   id: string;
@@ -45,10 +79,36 @@ interface Booking {
   instructorRating: number;
   vehicleType: string;
   pickupLocation: string;
-  status: 'upcoming' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'upcoming' | 'in_progress' | 'completed' | 'cancelled' | 'requested' | 'pending_confirmation' | 'rejected';
   price: number;
-  packageType: 'basic' | 'standard' | 'premium';
+  packageType: 'basic' | 'standard' | 'premium' | 'instructor' | 'full';
   learningRoute?: LearningRoute;
+  hasRoute?: boolean;
+  route?: InstructorRoute;
+  studentName?: string;
+  selectedRoadTypes?: string[];
+  selectedSkills?: string[];
+  coins?: number;
+  sessions?: BookingSession[];
+  isMultiSession?: boolean;
+}
+
+interface BookingSession {
+  id: string;
+  date: string;
+  time: string;
+  status: 'upcoming' | 'completed' | 'cancelled';
+  price: number;
+}
+
+interface CancelRefundInfo {
+  refundAmount: number;
+  refundPercentage: number;
+  penaltyAmount: number;
+  hoursUntilSession: number;
+  cancellationFee: number;
+  instructorCompensation: number;
+  systemFee: number;
 }
 
 interface LearningRoute {
@@ -93,21 +153,33 @@ interface RouteSegment {
   duration: number; // in minutes
   roadType: string;
   difficulty: 'easy' | 'medium' | 'hard';
-  coordinates: Array<{latitude: number; longitude: number}>;
+  coordinates: Array<{ latitude: number; longitude: number }>;
 }
 
 export default function ScheduleScreen() {
   const router = useRouter();
-  
+
   // State management
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showBookingDetail, setShowBookingDetail] = useState(false);
   const [showRouteModal, setShowRouteModal] = useState(false);
-  
+  const [selectedTab, setSelectedTab] = useState<'all' | 'requested' | 'pending_confirmation' | 'in_progress' | 'completed'>('all');
+
+  // Cancel & Refund states
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelRefundInfo, setCancelRefundInfo] = useState<CancelRefundInfo | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // Instructor workflow states
+  const [showRouteDetailsModal, setShowRouteDetailsModal] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState<InstructorRoute | null>(null);
+  // Removed userRole state - only instructor view
+
   // Route creation states
   const [showRouteCreator, setShowRouteCreator] = useState(false);
+  const [currentBookingId, setCurrentBookingId] = useState<string | null>(null);
   const [mapPoints, setMapPoints] = useState<MapPoint[]>([]);
   const [routeSegments, setRouteSegments] = useState<RouteSegment[]>([]);
   const [isCreatingRoute, setIsCreatingRoute] = useState(false);
@@ -124,6 +196,8 @@ export default function ScheduleScreen() {
     basic: { bg: '#e0f2fe', text: '#0277bd', label: 'Cơ bản - 150xu' },
     standard: { bg: '#f3e5f5', text: '#7b1fa2', label: 'Tiêu chuẩn - 200xu' },
     premium: { bg: '#fff3e0', text: '#ef6c00', label: 'Cao cấp - 300xu' },
+    instructor: { bg: '#f0f9ff', text: '#0369a1', label: 'Thuê người hướng dẫn' },
+    full: { bg: '#fef3c7', text: '#d97706', label: 'Thuê trọn gói' },
   };
 
   const statusColors = {
@@ -131,92 +205,214 @@ export default function ScheduleScreen() {
     in_progress: { bg: '#fff3e0', text: '#f57c00', label: 'Đang học' },
     completed: { bg: '#e8f5e8', text: '#388e3c', label: 'Hoàn thành' },
     cancelled: { bg: '#ffebee', text: '#d32f2f', label: 'Đã hủy' },
+    requested: { bg: '#fef3c7', text: '#d97706', label: 'Yêu cầu' },
+    pending_confirmation: { bg: '#dbeafe', text: '#2563eb', label: 'Đợi xác nhận' },
+    rejected: { bg: '#fecaca', text: '#dc2626', label: 'Từ chối' },
   };
 
-  // Initialize with sample bookings
+  // Helper functions for instructor workflow
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'requested': return '#f59e0b';
+      case 'pending_confirmation': return '#3b82f6';
+      case 'rejected': return '#ef4444';
+      case 'in_progress': return '#8b5cf6';
+      case 'completed': return '#10b981';
+      case 'upcoming': return '#1976d2';
+      case 'cancelled': return '#d32f2f';
+      default: return '#6b7280';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'requested': return 'Yêu cầu';
+      case 'pending_confirmation': return 'Đợi xác nhận';
+      case 'rejected': return 'Từ chối';
+      case 'in_progress': return 'Đang thực hiện';
+      case 'completed': return 'Hoàn thành';
+      case 'upcoming': return 'Sắp tới';
+      case 'cancelled': return 'Đã hủy';
+      default: return 'Không xác định';
+    }
+  };
+
+  // Initialize with sample bookings for instructor
   useEffect(() => {
     const sampleBookings: Booking[] = [
+      // Yêu cầu từ NoviceDriver - chờ duyệt (cần tạo lộ trình)
       {
         id: '1',
         date: '2025-01-15',
-        time: '08:00',
-        duration: 120,
-        instructorName: 'Thầy Nguyễn Văn A',
+        time: 'Ca sáng (6:00 - 10:00)',
+        duration: 240,
+        instructorName: 'Tôi',
         instructorAvatar: '👨‍🏫',
-        instructorRating: 4.8,
+        instructorRating: 4.9,
         vehicleType: 'Toyota Vios',
-        pickupLocation: '123 Nguyễn Huệ, Q1, TP.HCM',
-        status: 'upcoming',
+        pickupLocation: 'FPT University Hồ Chí Minh',
+        status: 'requested',
         price: 200,
-        packageType: 'standard',
-        learningRoute: {
-          id: 'route-1',
-          title: 'Lộ trình học lái cơ bản',
-          description: 'Học các kỹ năng lái xe cơ bản trong môi trường an toàn',
-          totalDuration: 180,
-          difficulty: 'beginner',
-          progress: 67,
-          steps: [
-            {
-              id: 'step-1',
-              title: 'Làm quen với xe',
-              description: 'Tìm hiểu các bộ phận cơ bản của xe',
-              duration: 30,
-              roadType: 'residential',
-              skills: ['basic_control'],
-              location: 'Sân tập lái Quận 1',
-              completed: true,
-            },
-            {
-              id: 'step-2',
-              title: 'Luyện tập đỗ xe',
-              description: 'Thực hành đỗ xe song song và vuông góc',
-              duration: 60,
-              roadType: 'residential',
-              skills: ['parking'],
-              location: 'Sân tập lái Quận 1',
-              completed: true,
-            },
-            {
-              id: 'step-3',
-              title: 'Lái xe trên đường',
-              description: 'Thực hành lái xe trên đường thật',
-              duration: 90,
-              roadType: 'urban',
-              skills: ['lane_change', 'intersection'],
-              location: 'Đường Nguyễn Huệ, Q1',
-              completed: false,
-            },
-          ],
-        },
+        packageType: 'instructor',
+        studentName: 'Nguyễn Văn A',
+        selectedRoadTypes: ['urban', 'highway'],
+        selectedSkills: ['basic_control', 'parking'],
+        hasRoute: false,
+        coins: 200,
       },
       {
         id: '2',
         date: '2025-01-16',
-        time: '14:00',
-        duration: 90,
-        instructorName: 'Cô Trần Thị B',
-        instructorAvatar: '👩‍🏫',
+        time: 'Ca chiều (14:00 - 18:00)',
+        duration: 240,
+        instructorName: 'Tôi',
+        instructorAvatar: '👨‍🏫',
         instructorRating: 4.9,
         vehicleType: 'Honda City',
-        pickupLocation: '456 Lê Lợi, Q1, TP.HCM',
-        status: 'upcoming',
-        price: 150,
-        packageType: 'basic',
+        pickupLocation: 'FPT University Hà Nội',
+        status: 'requested',
+        price: 200,
+        packageType: 'full',
+        studentName: 'Trần Thị B',
+        selectedRoadTypes: ['residential', 'urban'],
+        selectedSkills: ['lane_change', 'overtaking'],
+        hasRoute: false,
+        coins: 200,
       },
+      // Đã tạo lộ trình - chờ xác nhận
       {
         id: '3',
-        date: '2025-01-12',
-        time: '10:00',
-        duration: 150,
-        instructorName: 'Thầy Lê Văn C',
+        date: '2025-01-17',
+        time: 'Ca tối (18:00 - 22:00)',
+        duration: 240,
+        instructorName: 'Tôi',
         instructorAvatar: '👨‍🏫',
-        instructorRating: 4.7,
+        instructorRating: 4.9,
         vehicleType: 'Mazda 3',
-        pickupLocation: '789 Võ Văn Tần, Q3, TP.HCM',
-        status: 'completed',
+        pickupLocation: 'FPT University Đà Nẵng',
+        status: 'pending_confirmation',
         price: 300,
-        packageType: 'premium',
+        packageType: 'instructor',
+        studentName: 'Lê Văn C',
+        selectedRoadTypes: ['highway', 'night'],
+        selectedSkills: ['night_driving', 'defensive_driving'],
+        hasRoute: true,
+        route: {
+          id: 'route_3',
+          bookingId: '3',
+          points: [
+            {
+              id: '1',
+              address: 'FPT University Đà Nẵng',
+              coordinates: { latitude: 16.0544, longitude: 108.2022 },
+              isStart: true,
+            },
+            {
+              id: '2',
+              address: 'Cầu Rồng, Đà Nẵng',
+              coordinates: { latitude: 16.0619, longitude: 108.2278 },
+            },
+            {
+              id: '3',
+              address: 'Bãi biển Mỹ Khê, Đà Nẵng',
+              coordinates: { latitude: 16.0583, longitude: 108.2431 },
+              isEnd: true,
+            },
+          ],
+          status: 'draft',
+          notes: 'Luyện tập lái xe ban đêm và kỹ năng phòng thủ',
+          createdAt: '2025-01-10T14:30:00Z',
+        },
+      },
+      // Đang thực hiện
+      {
+        id: '4',
+        date: '2025-01-18',
+        time: 'Ca sáng (6:00 - 10:00)',
+        duration: 240,
+        instructorName: 'Tôi',
+        instructorAvatar: '👨‍🏫',
+        instructorRating: 4.9,
+        vehicleType: 'Toyota Vios',
+        pickupLocation: 'FPT University Hồ Chí Minh',
+        status: 'in_progress',
+        price: 200,
+        packageType: 'instructor',
+        studentName: 'Phạm Thị D',
+        selectedRoadTypes: ['urban', 'highway'],
+        selectedSkills: ['basic_control', 'parking'],
+        hasRoute: true,
+        route: {
+          id: 'route_4',
+          bookingId: '4',
+          points: [
+            {
+              id: '1',
+              address: 'FPT University Hồ Chí Minh',
+              coordinates: { latitude: 10.8231, longitude: 106.6297 },
+              isStart: true,
+            },
+            {
+              id: '2',
+              address: 'Bến Thành, Quận 1, Hồ Chí Minh',
+              coordinates: { latitude: 10.7720, longitude: 106.6980 },
+            },
+            {
+              id: '3',
+              address: 'Bitexco Financial Tower, Quận 1, Hồ Chí Minh',
+              coordinates: { latitude: 10.7717, longitude: 106.7041 },
+              isEnd: true,
+            },
+          ],
+          status: 'accepted',
+          notes: 'Luyện tập lái xe trong khu vực trung tâm thành phố',
+          createdAt: '2025-01-08T09:00:00Z',
+        },
+      },
+      // Hoàn thành
+      {
+        id: '5',
+        date: '2025-01-12',
+        time: 'Ca chiều (14:00 - 18:00)',
+        duration: 240,
+        instructorName: 'Tôi',
+        instructorAvatar: '👨‍🏫',
+        instructorRating: 4.9,
+        vehicleType: 'Honda City',
+        pickupLocation: 'FPT University Hà Nội',
+        status: 'completed',
+        price: 200,
+        packageType: 'full',
+        studentName: 'Võ Văn E',
+        selectedRoadTypes: ['residential', 'urban'],
+        selectedSkills: ['lane_change', 'overtaking'],
+        hasRoute: true,
+        route: {
+          id: 'route_5',
+          bookingId: '5',
+          points: [
+            {
+              id: '1',
+              address: 'FPT University Hà Nội',
+              coordinates: { latitude: 21.0285, longitude: 105.8542 },
+              isStart: true,
+            },
+            {
+              id: '2',
+              address: 'Hồ Gươm, Hoàn Kiếm, Hà Nội',
+              coordinates: { latitude: 21.0285, longitude: 105.8542 },
+            },
+            {
+              id: '3',
+              address: 'Lăng Chủ tịch Hồ Chí Minh, Ba Đình, Hà Nội',
+              coordinates: { latitude: 21.0368, longitude: 105.8342 },
+              isEnd: true,
+            },
+          ],
+          status: 'accepted',
+          notes: 'Luyện tập lái xe trong khu vực lịch sử Hà Nội',
+          createdAt: '2025-01-05T10:00:00Z',
+        },
       },
     ];
     setBookings(sampleBookings);
@@ -225,6 +421,27 @@ export default function ScheduleScreen() {
   // Get bookings for selected date
   const getBookingsForDate = (date: string) => {
     return bookings.filter(booking => booking.date === date);
+  };
+
+  // Get filtered bookings based on selected tab
+  const getFilteredBookings = () => {
+    if (selectedTab === 'all') {
+      return bookings.filter(b => b.instructorName === 'Tôi');
+    }
+    return bookings.filter(booking => {
+      switch (selectedTab) {
+        case 'requested':
+          return booking.status === 'requested';
+        case 'pending_confirmation':
+          return booking.status === 'pending_confirmation';
+        case 'in_progress':
+          return booking.status === 'in_progress';
+        case 'completed':
+          return booking.status === 'completed';
+        default:
+          return true;
+      }
+    });
   };
 
   // Get marked dates for calendar
@@ -238,7 +455,7 @@ export default function ScheduleScreen() {
         selectedColor: statusColor.text,
       };
     });
-    
+
     if (selectedDate) {
       marked[selectedDate] = {
         ...marked[selectedDate],
@@ -246,7 +463,7 @@ export default function ScheduleScreen() {
         selectedColor: '#6366f1',
       };
     }
-    
+
     return marked;
   };
 
@@ -269,19 +486,208 @@ export default function ScheduleScreen() {
     setShowRouteModal(true);
   };
 
+  // Instructor workflow handlers
+  const handleViewRouteDetails = (route: InstructorRoute) => {
+    setSelectedRoute(route);
+    setShowRouteDetailsModal(true);
+  };
+
+  const handleCreateRoute = (bookingId: string) => {
+    setCurrentBookingId(bookingId);
+    setShowRouteCreator(true);
+    setMapPoints([]);
+    setRouteSegments([]);
+    setIsCreatingRoute(false);
+  };
+
+  const handleEditRoute = (routeId: string) => {
+    router.push({
+      pathname: '/(main)/(no-tabs)/create-route',
+      params: { routeId }
+    });
+  };
+
+  const handleSendRoute = (bookingId: string) => {
+    Alert.alert(
+      'Xác nhận gửi lộ trình',
+      'Bạn có chắc chắn muốn gửi lộ trình này cho học viên?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Gửi',
+          onPress: () => {
+            // Update booking status to pending_confirmation
+            setBookings(prev => prev.map(booking =>
+              booking.id === bookingId
+                ? { ...booking, status: 'pending_confirmation' as const }
+                : booking
+            ));
+            Alert.alert('Thành công', 'Lộ trình đã được gửi cho học viên');
+          }
+        }
+      ]
+    );
+  };
+
+  // Removed toggleUserRole - only instructor view
+
+  // Cancel & Refund functions for Instructor
+  const calculateInstructorPenalty = (booking: Booking): CancelRefundInfo => {
+    const sessionDate = new Date(booking.date);
+    const now = new Date();
+    const hoursUntilSession = Math.max(0, (sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+
+    let penaltyPercentage = 0;
+    let cancellationFee = 0;
+
+    if (hoursUntilSession >= 24) {
+      // Instructor hủy trước 24h: không bị penalty
+      penaltyPercentage = 0;
+    } else if (hoursUntilSession >= 4) {
+      // Instructor hủy dưới 24h: penalty 10%
+      penaltyPercentage = 10;
+    } else {
+      // Instructor hủy dưới 4h: penalty 50%
+      penaltyPercentage = 50;
+    }
+
+    const coins = booking.coins || booking.price;
+    const penaltyAmount = (coins * penaltyPercentage) / 100;
+    const instructorCompensation = coins - penaltyAmount;
+    const refundAmount = coins; // Student gets full refund
+    const systemFee = penaltyAmount * 0.5; // 50% of penalty goes to system
+    const studentBonus = penaltyAmount * 0.5; // 50% of penalty goes to student as bonus
+
+    return {
+      refundAmount,
+      refundPercentage: 100,
+      penaltyAmount,
+      hoursUntilSession,
+      cancellationFee: penaltyAmount,
+      instructorCompensation: instructorCompensation,
+      systemFee,
+    };
+  };
+
+  const calculateMultiSessionInstructorPenalty = (booking: Booking): CancelRefundInfo => {
+    if (!booking.sessions || !booking.isMultiSession) {
+      return calculateInstructorPenalty(booking);
+    }
+
+    let totalRefund = 0;
+    let totalPenalty = 0;
+    let totalInstructorComp = 0;
+    let totalSystemFee = 0;
+
+    const upcomingSessions = booking.sessions.filter(session => session.status === 'upcoming');
+
+    upcomingSessions.forEach(session => {
+      const sessionDate = new Date(session.date);
+      const now = new Date();
+      const hoursUntilSession = Math.max(0, (sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+
+      let penaltyPercentage = 0;
+
+      if (hoursUntilSession >= 24) {
+        penaltyPercentage = 0;
+      } else if (hoursUntilSession >= 4) {
+        penaltyPercentage = 10;
+      } else {
+        penaltyPercentage = 50;
+      }
+
+      const sessionCoins = session.price / 1000; // Convert to coins
+      const sessionPenalty = (sessionCoins * penaltyPercentage) / 100;
+      const sessionInstructorComp = sessionCoins - sessionPenalty;
+      const sessionSystemFee = sessionPenalty * 0.5;
+
+      totalRefund += sessionCoins; // Student gets full refund for all sessions
+      totalPenalty += sessionPenalty;
+      totalInstructorComp += sessionInstructorComp;
+      totalSystemFee += sessionSystemFee;
+    });
+
+    const avgHoursUntilSession = upcomingSessions.length > 0
+      ? upcomingSessions.reduce((sum, session) => {
+        const sessionDate = new Date(session.date);
+        const now = new Date();
+        return sum + Math.max(0, (sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+      }, 0) / upcomingSessions.length
+      : 0;
+
+    return {
+      refundAmount: totalRefund,
+      refundPercentage: 100,
+      penaltyAmount: totalPenalty,
+      hoursUntilSession: avgHoursUntilSession,
+      cancellationFee: totalPenalty,
+      instructorCompensation: totalInstructorComp,
+      systemFee: totalSystemFee,
+    };
+  };
+
+  const handleInstructorCancelBooking = (booking: Booking) => {
+    setSelectedBooking(booking);
+
+    const refundInfo = booking.isMultiSession
+      ? calculateMultiSessionInstructorPenalty(booking)
+      : calculateInstructorPenalty(booking);
+
+    setCancelRefundInfo(refundInfo);
+    setShowCancelModal(true);
+  };
+
+  const confirmInstructorCancelBooking = () => {
+    if (!selectedBooking || !cancelRefundInfo) return;
+
+    setShowCancelModal(false);
+    setShowConfirmModal(true);
+  };
+
+  const executeInstructorCancelBooking = () => {
+    if (!selectedBooking || !cancelRefundInfo) return;
+
+    // Simulate API call to cancel booking
+    Alert.alert(
+      '✅ Hủy lịch thành công!',
+      `Đã hủy lịch với học viên ${selectedBooking.studentName}\n\n` +
+      `💰 Học viên nhận hoàn lại: ${cancelRefundInfo.refundAmount.toLocaleString()} xu\n` +
+      `⚠️ Phí penalty của bạn: ${cancelRefundInfo.penaltyAmount.toLocaleString()} xu\n` +
+      `💵 Bạn nhận được: ${cancelRefundInfo.instructorCompensation.toLocaleString()} xu\n` +
+      `📧 Thông báo đã được gửi đến học viên`,
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            setShowConfirmModal(false);
+            setSelectedBooking(null);
+            setCancelRefundInfo(null);
+
+            // Update booking status to cancelled
+            setBookings(prev => prev.map(booking =>
+              booking.id === selectedBooking.id
+                ? { ...booking, status: 'cancelled' as const }
+                : booking
+            ));
+          }
+        }
+      ]
+    );
+  };
+
   // Route creation functions
   const handleMapPress = (event: any) => {
     if (!isCreatingRoute) return;
-    
+
     const coordinate = event.nativeEvent.coordinate;
-    const pointType = mapPoints.length === 0 ? 'start' : 
-                     mapPoints.length === 1 ? 'waypoint' : 'end';
-    
+    const pointType = mapPoints.length === 0 ? 'start' :
+      mapPoints.length === 1 ? 'waypoint' : 'end';
+
     const newPoint: MapPoint = {
       id: `point-${Date.now()}`,
       coordinate,
-      title: pointType === 'start' ? 'Điểm bắt đầu' : 
-             pointType === 'waypoint' ? `Điểm ${mapPoints.length}` : 'Điểm kết thúc',
+      title: pointType === 'start' ? 'Điểm bắt đầu' :
+        pointType === 'waypoint' ? `Điểm ${mapPoints.length}` : 'Điểm kết thúc',
       description: `${coordinate.latitude.toFixed(6)}, ${coordinate.longitude.toFixed(6)}`,
       type: pointType,
     };
@@ -306,20 +712,20 @@ export default function ScheduleScreen() {
         `mode=driving&` +
         `alternatives=true&` + // Get multiple route options
         `avoid=tolls&` + // Avoid toll roads for learning
-        `key=YOUR_GOOGLE_MAPS_API_KEY`; // Replace with your API key
+        `key=`; // Replace with your API key
 
       // 🚀 PRODUCTION MODE: Use real Google Directions API
       try {
         const response = await fetch(directionsUrl);
         const data = await response.json();
-        
+
         if (data.status === 'OK' && data.routes.length > 0) {
           const route = data.routes[0];
           const leg = route.legs[0];
-          
+
           // Decode polyline to get real road coordinates
           const coordinates = decodePolyline(route.overview_polyline.points);
-          
+
           const segment: RouteSegment = {
             id: `segment-${Date.now()}`,
             startPoint,
@@ -330,17 +736,17 @@ export default function ScheduleScreen() {
             difficulty: determineDifficulty(leg.distance.value, route.summary),
             coordinates: coordinates, // Real road path
           };
-          
+
           setRouteSegments(prev => [...prev, segment]);
           return;
         }
       } catch (apiError) {
         console.log('Google API not available, using simulation');
       }
-      
+
       // 🔧 FALLBACK: Simulate realistic route data if API fails
       const simulatedRoute = generateRealisticRoute(startPoint.coordinate, endPoint.coordinate);
-      
+
       const segment: RouteSegment = {
         id: `segment-${Date.now()}`,
         startPoint,
@@ -374,39 +780,39 @@ export default function ScheduleScreen() {
   // Generate realistic route simulation (mimics Google Directions API response)
   const generateRealisticRoute = (start: any, end: any) => {
     const directDistance = calculateDistance(start, end);
-    
+
     // Create realistic waypoints that follow roads
     const coordinates = [];
     const numWaypoints = Math.max(3, Math.floor(directDistance / 1000)); // More waypoints for longer routes
-    
+
     coordinates.push(start);
-    
+
     // Generate intermediate points that simulate following roads
     for (let i = 1; i < numWaypoints; i++) {
       const progress = i / numWaypoints;
-      
+
       // Add some realistic deviation from straight line (simulating roads)
       const latOffset = (Math.random() - 0.5) * 0.002; // Small random offset
       const lngOffset = (Math.random() - 0.5) * 0.002;
-      
+
       const waypoint = {
         latitude: start.latitude + (end.latitude - start.latitude) * progress + latOffset,
         longitude: start.longitude + (end.longitude - start.longitude) * progress + lngOffset,
       };
-      
+
       coordinates.push(waypoint);
     }
-    
+
     coordinates.push(end);
-    
+
     // Calculate realistic distance (usually 20-40% longer than direct distance)
     const routeDistance = directDistance * (1.2 + Math.random() * 0.2);
     const duration = Math.round(routeDistance / 1000 * 2.5); // 2.5 minutes per km (realistic city driving)
-    
+
     // Determine road type and difficulty based on distance and area
     let roadType = 'residential';
     let difficulty: 'easy' | 'medium' | 'hard' = 'easy';
-    
+
     if (routeDistance > 8000) {
       roadType = 'highway';
       difficulty = 'hard';
@@ -414,7 +820,7 @@ export default function ScheduleScreen() {
       roadType = 'urban';
       difficulty = 'medium';
     }
-    
+
     return {
       distance: routeDistance,
       duration,
@@ -426,15 +832,15 @@ export default function ScheduleScreen() {
 
   const calculateDistance = (coord1: any, coord2: any) => {
     const R = 6371e3; // Earth's radius in meters
-    const φ1 = coord1.latitude * Math.PI/180;
-    const φ2 = coord2.latitude * Math.PI/180;
-    const Δφ = (coord2.latitude-coord1.latitude) * Math.PI/180;
-    const Δλ = (coord2.longitude-coord1.longitude) * Math.PI/180;
+    const φ1 = coord1.latitude * Math.PI / 180;
+    const φ2 = coord2.latitude * Math.PI / 180;
+    const Δφ = (coord2.latitude - coord1.latitude) * Math.PI / 180;
+    const Δλ = (coord2.longitude - coord1.longitude) * Math.PI / 180;
 
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c;
   };
@@ -510,20 +916,63 @@ export default function ScheduleScreen() {
       return;
     }
 
+    if (!currentBookingId) {
+      Alert.alert('Lỗi', 'Không tìm thấy booking để tạo lộ trình');
+      return;
+    }
+
     setIsCreatingRoute(false);
-    
+
+    // Tạo route object từ mapPoints
+    const routePoints: RoutePoint[] = mapPoints.map((point, index) => ({
+      id: point.id,
+      address: point.description,
+      coordinates: point.coordinate,
+      isStart: point.type === 'start',
+      isEnd: point.type === 'end',
+    }));
+
+    const newRoute: InstructorRoute = {
+      id: `route_${currentBookingId}_${Date.now()}`,
+      bookingId: currentBookingId,
+      points: routePoints,
+      status: 'draft',
+      notes: `Lộ trình học lái xe cho ${mapPoints.length} điểm`,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Cập nhật booking với route mới
+    setBookings(prev => prev.map(booking =>
+      booking.id === currentBookingId
+        ? {
+          ...booking,
+          hasRoute: true,
+          route: newRoute,
+          status: 'pending_confirmation' as const
+        }
+        : booking
+    ));
+
     const totalDistance = routeSegments.reduce((total, segment) => total + segment.distance, 0);
     const totalDuration = routeSegments.reduce((total, segment) => total + segment.duration, 0);
-    
+
     Alert.alert(
       'Lộ trình đã tạo thành công! 🎉',
       `📍 ${mapPoints.length} điểm đã chọn\n` +
       `🛣️ ${routeSegments.length} đoạn đường thực tế\n` +
       `📏 Tổng khoảng cách: ${(totalDistance / 1000).toFixed(1)} km\n` +
       `⏱️ Thời gian ước tính: ${totalDuration} phút\n\n` +
-      `Lộ trình đã được tối ưu theo đường đi thực tế!`,
+      `Lộ trình đã được lưu và chuyển sang trạng thái "Đợi xác nhận"!`,
       [
-        { text: 'Tuyệt vời!', onPress: () => setShowRouteCreator(false) }
+        {
+          text: 'Tuyệt vời!',
+          onPress: () => {
+            setShowRouteCreator(false);
+            setCurrentBookingId(null);
+            setMapPoints([]);
+            setRouteSegments([]);
+          }
+        }
       ]
     );
   };
@@ -536,7 +985,7 @@ export default function ScheduleScreen() {
 
   const removePoint = (pointId: string) => {
     setMapPoints(prev => prev.filter(p => p.id !== pointId));
-    setRouteSegments(prev => prev.filter(s => 
+    setRouteSegments(prev => prev.filter(s =>
       s.startPoint.id !== pointId && s.endPoint.id !== pointId
     ));
   };
@@ -578,7 +1027,7 @@ export default function ScheduleScreen() {
           return coords;
         }
       }
-      
+
       throw new Error('Không tìm thấy địa chỉ');
     }
   };
@@ -591,14 +1040,14 @@ export default function ScheduleScreen() {
 
     try {
       const coordinate = await geocodeAddress(addressInput);
-      const pointType = mapPoints.length === 0 ? 'start' : 
-                       mapPoints.length === 1 ? 'waypoint' : 'end';
-      
+      const pointType = mapPoints.length === 0 ? 'start' :
+        mapPoints.length === 1 ? 'waypoint' : 'end';
+
       const newPoint: MapPoint = {
         id: `point-${Date.now()}`,
         coordinate,
-        title: pointType === 'start' ? 'Điểm bắt đầu' : 
-               pointType === 'waypoint' ? `Điểm ${mapPoints.length}` : 'Điểm kết thúc',
+        title: pointType === 'start' ? 'Điểm bắt đầu' :
+          pointType === 'waypoint' ? `Điểm ${mapPoints.length}` : 'Điểm kết thúc',
         description: addressInput,
         type: pointType,
       };
@@ -612,7 +1061,7 @@ export default function ScheduleScreen() {
 
       setAddressInput('');
       setShowAddressInput(false);
-      
+
       // Update map region to show the new point
       setMapRegion({
         latitude: coordinate.latitude,
@@ -627,9 +1076,9 @@ export default function ScheduleScreen() {
   };
 
   const renderBookingCard = ({ item: booking }: { item: Booking }) => {
-    const packageStyle = packageColors[booking.packageType];
-    const statusStyle = statusColors[booking.status];
-    
+    const packageStyle = packageColors[booking.packageType] || { bg: '#e2e8f0', text: '#64748b', label: booking.packageType };
+    const statusStyle = statusColors[booking.status] || { bg: '#e2e8f0', text: '#64748b', label: getStatusText(booking.status) };
+
     return (
       <TouchableOpacity
         style={styles.bookingCard}
@@ -651,7 +1100,9 @@ export default function ScheduleScreen() {
           <View style={styles.instructorInfo}>
             <Text style={styles.instructorAvatar}>{booking.instructorAvatar}</Text>
             <View style={styles.instructorDetails}>
-              <Text style={styles.instructorName}>{booking.instructorName}</Text>
+              <Text style={styles.instructorName}>
+                {booking.studentName}
+              </Text>
               <View style={styles.ratingContainer}>
                 <Star size={12} color="#fbbf24" fill="#fbbf24" strokeWidth={2} />
                 <Text style={styles.ratingText}>{booking.instructorRating}</Text>
@@ -672,7 +1123,50 @@ export default function ScheduleScreen() {
               <MapPin size={14} color="#64748b" strokeWidth={2} />
               <Text style={styles.infoText} numberOfLines={1}>{booking.pickupLocation}</Text>
             </View>
+            {booking.selectedRoadTypes && (
+              <View style={styles.infoRow}>
+                <Route size={14} color="#64748b" strokeWidth={2} />
+                <Text style={styles.infoText}>
+                  {booking.packageType === 'instructor' ? 'Thuê người hướng dẫn' : 'Thuê trọn gói'}
+                </Text>
+              </View>
+            )}
           </View>
+
+          {/* Instructor route section */}
+          {booking.hasRoute && booking.route && (
+            <View style={styles.routeSection}>
+              <View style={styles.routeHeader}>
+                <Text style={styles.routeTitle}>Lộ trình đã tạo</Text>
+                <TouchableOpacity
+                  style={styles.viewRouteButton}
+                  onPress={() => handleViewRouteDetails(booking.route!)}
+                >
+                  <Eye size={16} color="#3b82f6" strokeWidth={2} />
+                  <Text style={styles.viewRouteText}>Xem chi tiết</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.routePoints}>
+                {booking.route.points.map((point, index) => (
+                  <View key={point.id} style={styles.routePoint}>
+                    <View style={[
+                      styles.pointIndicator,
+                      point.isStart && styles.startPoint,
+                      point.isEnd && styles.endPoint
+                    ]}>
+                      {point.isStart && <Text style={styles.pointText}>Bắt đầu</Text>}
+                      {point.isEnd && <Text style={styles.pointText}>Kết thúc</Text>}
+                      {!point.isStart && !point.isEnd && <Text style={styles.pointText}>{index}</Text>}
+                    </View>
+                    <Text style={styles.pointAddress} numberOfLines={2}>
+                      {point.address}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           <View style={styles.bookingFooter}>
             <View style={[styles.packageBadge, { backgroundColor: packageStyle.bg }]}>
@@ -682,6 +1176,62 @@ export default function ScheduleScreen() {
             </View>
             <ChevronRight size={16} color="#94a3b8" strokeWidth={2} />
           </View>
+
+          {/* Instructor action buttons */}
+          {(
+            <View style={styles.actionButtons}>
+              {booking.hasRoute ? (
+                <View style={styles.routeActions}>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => handleEditRoute(booking.route!.id)}
+                  >
+                    <Edit3 size={16} color="#3b82f6" strokeWidth={2} />
+                    <Text style={styles.editButtonText}>Chỉnh sửa</Text>
+                  </TouchableOpacity>
+
+                  {booking.route?.status === 'draft' && (
+                    <TouchableOpacity
+                      style={styles.sendButton}
+                      onPress={() => handleSendRoute(booking.id)}
+                    >
+                      <LinearGradient
+                        colors={['#3b82f6', '#2563eb']}
+                        style={styles.sendButtonGradient}
+                      >
+                        <Send size={16} color="#ffffff" strokeWidth={2} />
+                        <Text style={styles.sendButtonText}>Gửi lộ trình</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.createButton}
+                  onPress={() => handleCreateRoute(booking.id)}
+                >
+                  <LinearGradient
+                    colors={['#10b981', '#059669']}
+                    style={styles.createButtonGradient}
+                  >
+                    <Plus size={16} color="#ffffff" strokeWidth={2} />
+                    <Text style={styles.createButtonText}>Tạo lộ trình</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+
+              {/* Cancel Button - Show for cancelable bookings */}
+              {(booking.status === 'requested' || booking.status === 'pending_confirmation' || booking.status === 'in_progress') && (
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => handleInstructorCancelBooking(booking)}
+                >
+                  <XCircle size={16} color="#ffffff" strokeWidth={2} />
+                  <Text style={styles.cancelButtonText}>Hủy lịch</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -715,20 +1265,36 @@ export default function ScheduleScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <CalendarDays size={24} color="#6366f1" strokeWidth={2} />
-          <Text style={styles.headerTitle}>Lịch học của tôi</Text>
+      {/* Ultra Modern Header */}
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle}>
+                Tổng quát lịch thuê
+              </Text>
+
+            </View>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.createRouteButton}
+              onPress={() => setShowRouteCreator(true)}
+            >
+              <Map size={18} color="#ffffff" strokeWidth={2} />
+              <Text style={styles.createRouteButtonText}>
+                Tạo lộ trình
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <TouchableOpacity
-          style={styles.createRouteButton}
-          onPress={() => setShowRouteCreator(true)}
-        >
-          <Map size={20} color="#ffffff" strokeWidth={2} />
-          <Text style={styles.createRouteButtonText}>Tạo lộ trình</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.headerCurve} />
+      </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Calendar */}
@@ -749,6 +1315,75 @@ export default function ScheduleScreen() {
             }}
             style={styles.calendar}
           />
+        </View>
+
+        {/* Modern Status Filter Tabs */}
+        <View style={styles.tabsContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabsScrollContent}
+          >
+            <TouchableOpacity
+              style={[styles.tab, selectedTab === 'all' && styles.activeTab]}
+              onPress={() => setSelectedTab('all')}
+            >
+              <View style={styles.tabContent}>
+                <CalendarDays size={16} color={selectedTab === 'all' ? '#ffffff' : '#6b7280'} strokeWidth={2} />
+                <Text style={[styles.tabText, selectedTab === 'all' && styles.activeTabText]}>
+                  Tất cả
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tab, selectedTab === 'requested' && styles.activeTab]}
+              onPress={() => setSelectedTab('requested')}
+            >
+              <View style={styles.tabContent}>
+                <Clock size={16} color={selectedTab === 'requested' ? '#ffffff' : '#6b7280'} strokeWidth={2} />
+                <Text style={[styles.tabText, selectedTab === 'requested' && styles.activeTabText]}>
+                  Yêu cầu
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tab, selectedTab === 'pending_confirmation' && styles.activeTab]}
+              onPress={() => setSelectedTab('pending_confirmation')}
+            >
+              <View style={styles.tabContent}>
+                <AlertCircle size={16} color={selectedTab === 'pending_confirmation' ? '#ffffff' : '#6b7280'} strokeWidth={2} />
+                <Text style={[styles.tabText, selectedTab === 'pending_confirmation' && styles.activeTabText]}>
+                  Đợi xác nhận
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tab, selectedTab === 'in_progress' && styles.activeTab]}
+              onPress={() => setSelectedTab('in_progress')}
+            >
+              <View style={styles.tabContent}>
+                <CheckCircle size={16} color={selectedTab === 'in_progress' ? '#ffffff' : '#6b7280'} strokeWidth={2} />
+                <Text style={[styles.tabText, selectedTab === 'in_progress' && styles.activeTabText]}>
+                  Đang thực hiện
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tab, selectedTab === 'completed' && styles.activeTab]}
+              onPress={() => setSelectedTab('completed')}
+            >
+              <View style={styles.tabContent}>
+                <Check size={16} color={selectedTab === 'completed' ? '#ffffff' : '#6b7280'} strokeWidth={2} />
+                <Text style={[styles.tabText, selectedTab === 'completed' && styles.activeTabText]}>
+                  Hoàn thành
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
         {/* Bookings for selected date */}
@@ -777,23 +1412,33 @@ export default function ScheduleScreen() {
 
         {/* All upcoming bookings */}
         <View style={styles.bookingsSection}>
-          <Text style={styles.sectionTitle}>Lịch học sắp tới</Text>
+          <Text style={styles.sectionTitle}>
+            Lịch dạy của tôi
+          </Text>
           <FlatList
-            data={bookings.filter(b => b.status === 'upcoming')}
+            data={getFilteredBookings()}
             renderItem={renderBookingCard}
             keyExtractor={item => item.id}
             scrollEnabled={false}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Clock size={48} color="#cbd5e1" strokeWidth={1} />
-                <Text style={styles.emptyTitle}>Không có lịch học sắp tới</Text>
+                <Text style={styles.emptyTitle}>
+                  {selectedTab === 'all' ? 'Chưa có lịch dạy nào' :
+                    selectedTab === 'requested' ? 'Chưa có yêu cầu nào' :
+                      selectedTab === 'pending_confirmation' ? 'Chưa có lịch chờ xác nhận' :
+                        selectedTab === 'in_progress' ? 'Chưa có lịch đang thực hiện' :
+                          'Chưa có lịch hoàn thành'
+                  }
+                </Text>
                 <Text style={styles.emptyDescription}>
-                  Hãy đặt lịch học với giảng viên
+                  Học viên sẽ gửi yêu cầu đặt lịch cho bạn
                 </Text>
               </View>
             }
           />
         </View>
+
       </ScrollView>
 
       {/* Booking Detail Modal */}
@@ -886,15 +1531,15 @@ export default function ScheduleScreen() {
                 <View style={styles.routeInfoContainer}>
                   <Text style={styles.routeTitle}>{selectedBooking.learningRoute.title}</Text>
                   <Text style={styles.routeDescription}>{selectedBooking.learningRoute.description}</Text>
-                  
+
                   <View style={styles.progressContainer}>
                     <Text style={styles.progressLabel}>Tiến độ học tập</Text>
                     <View style={styles.progressBar}>
-                      <View 
+                      <View
                         style={[
-                          styles.progressFill, 
+                          styles.progressFill,
                           { width: `${selectedBooking.learningRoute.progress}%` }
-                        ]} 
+                        ]}
                       />
                     </View>
                     <Text style={styles.progressText}>{selectedBooking.learningRoute.progress}%</Text>
@@ -925,7 +1570,16 @@ export default function ScheduleScreen() {
           <View style={styles.routeCreatorHeader}>
             <View style={styles.routeCreatorTitle}>
               <Map size={24} color="#6366f1" strokeWidth={2} />
-              <Text style={styles.routeCreatorTitleText}>Tạo lộ trình học</Text>
+              <View style={styles.routeCreatorTitleContainer}>
+                <Text style={styles.routeCreatorTitleText}>
+                  Tạo lộ trình học
+                </Text>
+                {currentBookingId && (
+                  <Text style={styles.routeCreatorSubtitle}>
+                    Cho booking #{currentBookingId}
+                  </Text>
+                )}
+              </View>
             </View>
             <TouchableOpacity onPress={() => setShowRouteCreator(false)}>
               <X size={24} color="#64748b" strokeWidth={2} />
@@ -948,7 +1602,7 @@ export default function ScheduleScreen() {
                 description={point.description}
                 pinColor={
                   point.type === 'start' ? '#10b981' :
-                  point.type === 'end' ? '#ef4444' : '#f59e0b'
+                    point.type === 'end' ? '#ef4444' : '#f59e0b'
                 }
               />
             ))}
@@ -960,7 +1614,7 @@ export default function ScheduleScreen() {
                 coordinates={segment.coordinates}
                 strokeColor={
                   segment.difficulty === 'easy' ? '#10b981' :
-                  segment.difficulty === 'medium' ? '#f59e0b' : '#ef4444'
+                    segment.difficulty === 'medium' ? '#f59e0b' : '#ef4444'
                 }
                 strokeWidth={4}
               />
@@ -984,37 +1638,39 @@ export default function ScheduleScreen() {
             </View>
 
             <View style={styles.controlButtons}>
-              {!isCreatingRoute ? (
-                <TouchableOpacity
-                  style={styles.startButton}
-                  onPress={startRouteCreation}
-                >
-                  <Plus size={20} color="#ffffff" strokeWidth={2} />
-                  <Text style={styles.startButtonText}>Bắt đầu tạo</Text>
-                </TouchableOpacity>
-              ) : (
-                <>
+              {(
+                !isCreatingRoute ? (
                   <TouchableOpacity
-                    style={styles.addressButton}
-                    onPress={() => setShowAddressInput(true)}
+                    style={styles.startButton}
+                    onPress={startRouteCreation}
                   >
-                    <MapPin size={18} color="#6366f1" strokeWidth={2} />
-                    <Text style={styles.addressButtonText}>Nhập địa chỉ</Text>
+                    <Plus size={20} color="#ffffff" strokeWidth={2} />
+                    <Text style={styles.startButtonText}>Bắt đầu tạo</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.clearButton}
-                    onPress={clearRoute}
-                  >
-                    <Trash2 size={18} color="#ef4444" strokeWidth={2} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.finishButton}
-                    onPress={finishRouteCreation}
-                  >
-                    <CheckCircle size={18} color="#ffffff" strokeWidth={2} />
-                    <Text style={styles.finishButtonText}>Hoàn thành</Text>
-                  </TouchableOpacity>
-                </>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={styles.addressButton}
+                      onPress={() => setShowAddressInput(true)}
+                    >
+                      <MapPin size={18} color="#6366f1" strokeWidth={2} />
+                      <Text style={styles.addressButtonText}>Nhập địa chỉ</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.clearButton}
+                      onPress={clearRoute}
+                    >
+                      <Trash2 size={18} color="#ef4444" strokeWidth={2} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.finishButton}
+                      onPress={finishRouteCreation}
+                    >
+                      <CheckCircle size={18} color="#ffffff" strokeWidth={2} />
+                      <Text style={styles.finishButtonText}>Hoàn thành</Text>
+                    </TouchableOpacity>
+                  </>
+                )
               )}
             </View>
           </View>
@@ -1030,9 +1686,10 @@ export default function ScheduleScreen() {
                   <View style={styles.pointItem}>
                     <View style={[
                       styles.pointMarker,
-                      { backgroundColor: 
-                        point.type === 'start' ? '#10b981' :
-                        point.type === 'end' ? '#ef4444' : '#f59e0b'
+                      {
+                        backgroundColor:
+                          point.type === 'start' ? '#10b981' :
+                            point.type === 'end' ? '#ef4444' : '#f59e0b'
                       }
                     ]}>
                       <Text style={styles.pointNumber}>{index + 1}</Text>
@@ -1069,7 +1726,7 @@ export default function ScheduleScreen() {
                 <X size={24} color="#64748b" strokeWidth={2} />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.addressInputContainer}>
               <MapPin size={20} color="#6366f1" strokeWidth={2} />
               <TextInput
@@ -1081,7 +1738,7 @@ export default function ScheduleScreen() {
                 multiline
               />
             </View>
-            
+
             <View style={styles.addressModalButtons}>
               <TouchableOpacity
                 style={styles.addressCancelButton}
@@ -1099,6 +1756,333 @@ export default function ScheduleScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Route Details Modal with Google Maps */}
+      <Modal
+        visible={showRouteDetailsModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowRouteDetailsModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowRouteDetailsModal(false)}
+            >
+              <Text style={styles.modalCloseText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Chi tiết lộ trình</Text>
+            <View style={styles.modalRight} />
+          </View>
+
+          {selectedRoute && (
+            <ScrollView style={styles.modalContent}>
+              {/* Route Info */}
+              <View style={styles.routeInfoCard}>
+                <Text style={styles.routeInfoTitle}>Thông tin lộ trình</Text>
+                <View style={styles.routeInfoRow}>
+                  <Text style={styles.routeInfoLabel}>Trạng thái:</Text>
+                  <Text style={[
+                    styles.routeInfoValue,
+                    { color: getStatusColor(selectedRoute.status) }
+                  ]}>
+                    {getStatusText(selectedRoute.status)}
+                  </Text>
+                </View>
+                {selectedRoute.notes && (
+                  <View style={styles.routeInfoRow}>
+                    <Text style={styles.routeInfoLabel}>Ghi chú:</Text>
+                    <Text style={styles.routeInfoValue}>{selectedRoute.notes}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Route Points */}
+              <View style={styles.routePointsCard}>
+                <Text style={styles.routePointsTitle}>Các điểm dừng</Text>
+                {selectedRoute.points.map((point, index) => (
+                  <View key={point.id} style={styles.routePointItem}>
+                    <View style={styles.routePointNumber}>
+                      {point.isStart ? (
+                        <Text style={styles.routePointStartText}>Bắt đầu</Text>
+                      ) : point.isEnd ? (
+                        <Text style={styles.routePointEndText}>Kết thúc</Text>
+                      ) : (
+                        <Text style={styles.routePointNumberText}>{index}</Text>
+                      )}
+                    </View>
+                    <Text style={styles.routePointAddress}>{point.address}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Google Maps */}
+              <View style={styles.mapContainer}>
+                <Text style={styles.mapTitle}>Bản đồ lộ trình</Text>
+                <MapView
+                  style={styles.map}
+                  initialRegion={{
+                    latitude: selectedRoute.points[0].coordinates.latitude,
+                    longitude: selectedRoute.points[0].coordinates.longitude,
+                    latitudeDelta: 0.05,
+                    longitudeDelta: 0.05,
+                  }}
+                >
+                  {selectedRoute.points.map((point, index) => (
+                    <Marker
+                      key={point.id}
+                      coordinate={point.coordinates}
+                      title={point.isStart ? 'Bắt đầu' : point.isEnd ? 'Kết thúc' : `Điểm ${index}`}
+                      description={point.address}
+                    >
+                      <View style={[
+                        styles.markerContainer,
+                        point.isStart && styles.startMarker,
+                        point.isEnd && styles.endMarker,
+                        !point.isStart && !point.isEnd && styles.waypointMarker
+                      ]}>
+                        <Text style={styles.markerText}>
+                          {point.isStart ? 'B' : point.isEnd ? 'K' : index}
+                        </Text>
+                      </View>
+                    </Marker>
+                  ))}
+
+                  {/* Route Line */}
+                  <Polyline
+                    coordinates={selectedRoute.points.map(point => point.coordinates)}
+                    strokeColor="#3b82f6"
+                    strokeWidth={3}
+                    lineDashPattern={[5, 5]}
+                  />
+                </MapView>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.modalEditButton}
+                  onPress={() => {
+                    setShowRouteDetailsModal(false);
+                    handleEditRoute(selectedRoute.id);
+                  }}
+                >
+                  <Edit3 size={20} color="#3b82f6" strokeWidth={2} />
+                  <Text style={styles.modalEditText}>Chỉnh sửa lộ trình</Text>
+                </TouchableOpacity>
+
+                {selectedRoute.status === 'draft' && (
+                  <TouchableOpacity
+                    style={styles.modalSendButton}
+                    onPress={() => {
+                      setShowRouteDetailsModal(false);
+                      handleSendRoute(selectedRoute.bookingId);
+                    }}
+                  >
+                    <LinearGradient
+                      colors={['#3b82f6', '#2563eb']}
+                      style={styles.modalSendGradient}
+                    >
+                      <Send size={20} color="#ffffff" strokeWidth={2} />
+                      <Text style={styles.modalSendText}>Gửi lộ trình</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
+
+      {/* Cancel Booking Modal for Instructor */}
+      <Modal
+        visible={showCancelModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCancelModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <LinearGradient
+              colors={['#ffffff', '#f8fafc']}
+              style={styles.modalContent}
+            >
+              <View style={styles.modalHeader}>
+                <View style={styles.modalIconContainer}>
+                  <AlertTriangle size={24} color="#f59e0b" strokeWidth={2} />
+                </View>
+                <Text style={styles.modalTitle}>Hủy lịch dạy</Text>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setShowCancelModal(false)}
+                >
+                  <X size={20} color="#6b7280" strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+
+              {selectedBooking && cancelRefundInfo && (
+                <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                  <View style={styles.bookingInfoSection}>
+                    <Text style={styles.sectionTitle}>Thông tin lịch dạy</Text>
+                    <View style={styles.bookingInfoCard}>
+                      <View style={styles.infoRow}>
+                        <User size={16} color="#6b7280" strokeWidth={2} />
+                        <Text style={styles.infoLabel}>Học viên:</Text>
+                        <Text style={styles.infoValue}>{selectedBooking.studentName}</Text>
+                      </View>
+                      <View style={styles.infoRow}>
+                        <CalendarDays size={16} color="#6b7280" strokeWidth={2} />
+                        <Text style={styles.infoLabel}>Ngày:</Text>
+                        <Text style={styles.infoValue}>{selectedBooking.date}</Text>
+                      </View>
+                      <View style={styles.infoRow}>
+                        <Clock size={16} color="#6b7280" strokeWidth={2} />
+                        <Text style={styles.infoLabel}>Giờ:</Text>
+                        <Text style={styles.infoValue}>{selectedBooking.time}</Text>
+                      </View>
+                      <View style={styles.infoRow}>
+                        <DollarSign size={16} color="#6b7280" strokeWidth={2} />
+                        <Text style={styles.infoLabel}>Giá:</Text>
+                        <Text style={styles.infoValue}>{selectedBooking.coins || selectedBooking.price} xu</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.refundInfoSection}>
+                    <Text style={styles.sectionTitle}>Chi tiết penalty & hoàn tiền</Text>
+                    <View style={styles.refundCard}>
+                      <View style={styles.timeInfoRow}>
+                        <Info size={16} color="#3b82f6" strokeWidth={2} />
+                        <Text style={styles.timeInfoText}>
+                          Còn {Math.round(cancelRefundInfo.hoursUntilSession)} giờ đến buổi dạy
+                        </Text>
+                      </View>
+
+                      <View style={styles.refundRow}>
+                        <Text style={styles.refundLabel}>Học viên nhận hoàn lại:</Text>
+                        <Text style={[styles.refundValue, { color: '#10b981' }]}>
+                          {cancelRefundInfo.refundAmount.toLocaleString()} xu (100%)
+                        </Text>
+                      </View>
+
+                      <View style={styles.refundRow}>
+                        <Text style={styles.refundLabel}>Phí penalty của bạn:</Text>
+                        <Text style={[styles.refundValue, { color: '#ef4444' }]}>
+                          -{cancelRefundInfo.penaltyAmount.toLocaleString()} xu
+                        </Text>
+                      </View>
+
+                      <View style={styles.refundRow}>
+                        <Text style={styles.refundLabel}>Bạn nhận được:</Text>
+                        <Text style={[styles.refundValue, styles.refundAmount]}>
+                          {cancelRefundInfo.instructorCompensation.toLocaleString()} xu
+                        </Text>
+                      </View>
+
+                      <View style={styles.refundRow}>
+                        <Text style={styles.refundLabel}>Phí hệ thống:</Text>
+                        <Text style={styles.refundValue}>
+                          {cancelRefundInfo.systemFee.toLocaleString()} xu
+                        </Text>
+                      </View>
+
+                      {selectedBooking.isMultiSession && (
+                        <View style={styles.multiSessionInfo}>
+                          <Text style={styles.multiSessionTitle}>📅 Gói nhiều buổi</Text>
+                          <Text style={styles.multiSessionText}>
+                            Penalty tính theo từng buổi học còn lại
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  <View style={styles.warningSection}>
+                    <View style={styles.warningCard}>
+                      <AlertTriangle size={20} color="#f59e0b" strokeWidth={2} />
+                      <View style={styles.warningContent}>
+                        <Text style={styles.warningTitle}>Lưu ý quan trọng</Text>
+                        <Text style={styles.warningText}>
+                          • Hành động này không thể hoàn tác{'\n'}
+                          • Học viên sẽ nhận thông báo ngay lập tức{'\n'}
+                          • Tiền sẽ được xử lý trong 5-10 phút{'\n'}
+                          {cancelRefundInfo.hoursUntilSession < 24 && '• Hủy muộn có thể ảnh hưởng đến uy tín instructor'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </ScrollView>
+              )}
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelModalButton]}
+                  onPress={() => setShowCancelModal(false)}
+                >
+                  <Text style={styles.cancelModalButtonText}>Đóng</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.confirmModalButton]}
+                  onPress={confirmInstructorCancelBooking}
+                >
+                  <Text style={styles.confirmModalButtonText}>Xác nhận hủy</Text>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Confirmation Modal for Instructor */}
+      <Modal
+        visible={showConfirmModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowConfirmModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModalContainer}>
+            <LinearGradient
+              colors={['#ffffff', '#f8fafc']}
+              style={styles.confirmModalContent}
+            >
+              <View style={styles.confirmIconContainer}>
+                <XCircle size={48} color="#ef4444" strokeWidth={2} />
+              </View>
+              <Text style={styles.confirmTitle}>Xác nhận hủy lịch dạy?</Text>
+              <Text style={styles.confirmMessage}>
+                Bạn có chắc chắn muốn hủy lịch dạy này không?{'\n'}
+                Hành động này không thể hoàn tác.
+              </Text>
+
+              {cancelRefundInfo && (
+                <View style={styles.confirmRefundInfo}>
+                  <Text style={styles.confirmRefundText}>
+                    ⚠️ Penalty: {cancelRefundInfo.penaltyAmount.toLocaleString()} xu{'\n'}
+                    💵 Bạn nhận: {cancelRefundInfo.instructorCompensation.toLocaleString()} xu
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.confirmActions}>
+                <TouchableOpacity
+                  style={[styles.confirmButton, styles.confirmCancelButton]}
+                  onPress={() => setShowConfirmModal(false)}
+                >
+                  <Text style={styles.confirmCancelButtonText}>Không</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.confirmButton, styles.confirmDeleteButton]}
+                  onPress={executeInstructorCancelBooking}
+                >
+                  <Text style={styles.confirmDeleteButtonText}>Có, hủy lịch</Text>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1106,42 +2090,84 @@ export default function ScheduleScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f1f5f9',
   },
   header: {
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    position: 'relative',
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+  },
+  headerIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
+    flex: 1,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   createRouteButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
+    borderRadius: 16,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   createRouteButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#ffffff',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1e293b',
+    color: '#ffffff',
+    marginBottom: 2,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
+  },
+  headerCurve: {
+    position: 'absolute',
+    bottom: -20,
+    left: 0,
+    right: 0,
+    height: 40,
+    backgroundColor: '#f1f5f9',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 4,
   },
   content: {
     flex: 1,
@@ -1152,10 +2178,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   calendar: {
     borderRadius: 12,
@@ -1172,14 +2198,14 @@ const styles = StyleSheet.create({
   },
   bookingCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   bookingHeader: {
     flexDirection: 'row',
@@ -1464,10 +2490,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  routeCreatorTitleContainer: {
+    flex: 1,
+  },
   routeCreatorTitleText: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1e293b',
+  },
+  routeCreatorSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
   },
   map: {
     flex: 1,
@@ -1536,6 +2570,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   finishButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  viewButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6366f1',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  viewButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
@@ -1671,5 +2720,679 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  // Header styles
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  // Removed role toggle styles
+  // Route Section Styles
+  routeSection: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  routeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  viewRouteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#eff6ff',
+    borderRadius: 8,
+    gap: 4,
+  },
+  viewRouteText: {
+    fontSize: 12,
+    color: '#3b82f6',
+    fontWeight: '500',
+  },
+  routePoints: {
+    gap: 8,
+  },
+  routePoint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  pointIndicator: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  startPoint: {
+    backgroundColor: '#10b981',
+  },
+  endPoint: {
+    backgroundColor: '#ef4444',
+  },
+  pointText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  pointAddress: {
+    flex: 1,
+    fontSize: 14,
+    color: '#4b5563',
+    lineHeight: 20,
+  },
+  // Action Buttons
+  actionButtons: {
+    marginTop: 16,
+  },
+  routeActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  createButton: {
+    flex: 1,
+    overflow: 'hidden',
+    borderRadius: 8,
+  },
+  createButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 6,
+  },
+  createButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  editButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    backgroundColor: '#eff6ff',
+    borderRadius: 8,
+    gap: 6,
+  },
+  editButtonText: {
+    color: '#3b82f6',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  sendButton: {
+    flex: 1,
+    overflow: 'hidden',
+    borderRadius: 8,
+  },
+  sendButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 6,
+  },
+  sendButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 16,
+  },
+  modalCloseText: {
+    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  modalRight: {
+    width: 32,
+  },
+  // Route Info Card
+  routeInfoCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  routeInfoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  routeInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  routeInfoLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  routeInfoValue: {
+    fontSize: 14,
+    color: '#1e293b',
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+  },
+  // Route Points Card
+  routePointsCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  routePointsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  routePointItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  routePointNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  routePointStartText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#10b981',
+  },
+  routePointEndText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#ef4444',
+  },
+  routePointNumberText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  routePointAddress: {
+    flex: 1,
+    fontSize: 14,
+    color: '#4b5563',
+    lineHeight: 20,
+  },
+  // Map Container
+  mapContainer: {
+    marginTop: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  mapTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  // Markers
+  markerContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  startMarker: {
+    backgroundColor: '#10b981',
+  },
+  endMarker: {
+    backgroundColor: '#ef4444',
+  },
+  waypointMarker: {
+    backgroundColor: '#3b82f6',
+  },
+  markerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  // Modal Actions
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 20,
+    paddingBottom: 40,
+  },
+  modalEditButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#eff6ff',
+    borderRadius: 8,
+    gap: 8,
+  },
+  modalEditText: {
+    fontSize: 14,
+    color: '#3b82f6',
+    fontWeight: '600',
+  },
+  modalSendButton: {
+    flex: 1,
+    overflow: 'hidden',
+    borderRadius: 8,
+  },
+  modalSendGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8,
+  },
+  modalSendText: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  // Guide Section Styles
+  guideSection: {
+    backgroundColor: '#ffffff',
+    margin: 16,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  guideTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  guideSteps: {
+    gap: 12,
+  },
+  guideStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  guideStepNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#6366f1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guideStepNumberText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  guideStepText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#4b5563',
+    lineHeight: 20,
+  },
+  // Ultra Modern Tabs Container
+  tabsContainer: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
+    marginTop: -20,
+    marginHorizontal: 16,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    zIndex: 1,
+  },
+  tabsScrollContent: {
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  tab: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginRight: 6,
+    borderRadius: 20,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    minWidth: 90,
+  },
+  activeTab: {
+    backgroundColor: '#667eea',
+    borderColor: '#667eea',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  activeTabText: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  // Cancel Button Styles
+  cancelButton: {
+    backgroundColor: '#ef4444',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  cancelButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  // Modal Styles for Cancel & Refund (only new styles not already existing)
+  modalIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fef3c7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookingInfoSection: {
+    marginBottom: 20,
+  },
+  bookingInfoCard: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+    minWidth: 80,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#1f2937',
+    fontWeight: '600',
+    flex: 1,
+  },
+  refundInfoSection: {
+    marginBottom: 20,
+  },
+  refundCard: {
+    backgroundColor: '#f0f9ff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  timeInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+    backgroundColor: '#dbeafe',
+    padding: 12,
+    borderRadius: 8,
+  },
+  timeInfoText: {
+    fontSize: 14,
+    color: '#1e40af',
+    fontWeight: '600',
+  },
+  refundRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  refundLabel: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  refundValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  refundAmount: {
+    color: '#10b981',
+    fontSize: 16,
+  },
+  multiSessionInfo: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#fef3c7',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+  },
+  multiSessionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400e',
+    marginBottom: 4,
+  },
+  multiSessionText: {
+    fontSize: 12,
+    color: '#92400e',
+    fontStyle: 'italic',
+  },
+  warningSection: {
+    marginBottom: 20,
+  },
+  warningCard: {
+    flexDirection: 'row',
+    backgroundColor: '#fef3c7',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+    gap: 12,
+  },
+  warningContent: {
+    flex: 1,
+  },
+  warningTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400e',
+    marginBottom: 8,
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#92400e',
+    lineHeight: 18,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelModalButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  cancelModalButtonText: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  confirmModalButton: {
+    backgroundColor: '#ef4444',
+  },
+  confirmModalButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  // Confirmation Modal Styles
+  confirmModalContainer: {
+    width: '90%',
+    maxWidth: 400,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  confirmModalContent: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  confirmIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#fee2e2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  confirmMessage: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  confirmRefundInfo: {
+    backgroundColor: '#fef3c7',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+  },
+  confirmRefundText: {
+    fontSize: 14,
+    color: '#92400e',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  confirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmCancelButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  confirmCancelButtonText: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  confirmDeleteButton: {
+    backgroundColor: '#ef4444',
+  },
+  confirmDeleteButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

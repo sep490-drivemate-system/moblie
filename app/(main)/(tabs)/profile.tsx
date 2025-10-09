@@ -1,160 +1,476 @@
-import React, { useEffect } from 'react';
-import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import React from 'react';
+import { ScrollView, View, Text, TouchableOpacity, Image, Alert, StyleSheet } from 'react-native';
+import { Check, MessageCircle, Wallet, Plus, LogOut, User, Shield, Heart, Settings, Globe, Star, FileText, Info, ArrowRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { AuthViewModel } from '@/viewmodels/auth/AuthViewModel';
-import { useViewModel } from '@/viewmodels/shared/BaseViewModel';
-import { RootState } from '@/lib/redux/store';
-import '../../../global.css';
+import { mockPerformance, mockUserProfile } from '@/data/profile-screen';
 
-const authSelector = (state: RootState) => state.auth;
+// Mock data matching the UI design
 
-export default function ProfileScreen() {
+
+function ProfileScreen() {
     const router = useRouter();
-    const [authState, authViewModel] = useViewModel(AuthViewModel, authSelector);
 
-    const handleLogout = async () => {
-        await authViewModel.logout();
+    const handleManageExams = () => {
+        Alert.alert('Manage Exams', 'Exam management coming soon!');
     };
 
-    const profileMenuItems = [
-        { title: 'Nạp tiền', icon: '💰', route: '/(main)/(no-tabs)/topup' },
-        { title: 'Edit Profile', icon: '✏️', route: '../profile' },
-        { title: 'Settings', icon: '⚙️', route: '../settings' },
-        { title: 'Notifications', icon: '🔔', route: '../notifications' },
-        { title: 'Privacy', icon: '🔒', route: null },
-        { title: 'Help & Support', icon: '❓', route: null },
-        { title: 'About', icon: 'ℹ️', route: null },
-    ];
+    const handleViewDetails = () => {
+        Alert.alert('View Details', 'Performance details coming soon!');
+    };
+
+    const handleTopup = () => {
+        router.push('/(main)/(no-tabs)/deposit');
+    };
+
+    const handleLogout = () => {
+        Alert.alert(
+            'Đăng xuất',
+            'Bạn có chắc chắn muốn đăng xuất?',
+            [
+                { text: 'Hủy', style: 'cancel' },
+                {
+                    text: 'Đăng xuất', style: 'destructive', onPress: () => {
+                        // Handle logout logic here
+                        console.log('Logout');
+                    }
+                }
+            ]
+        );
+    };
 
     return (
-        <View className="flex-1 bg-white">
-            <ScrollView className="flex-1">
-                <View className="space-y-6 p-6">
-                    {/* Profile Header */}
-                    <Card className="p-6 bg-card">
-                        <View className="items-center space-y-4">
-                            {/* Avatar */}
-                            <View className="w-24 h-24 bg-primary-600 rounded-full items-center justify-center">
-                                <Text className="text-primary-foreground font-bold text-2xl">
-                                    {authState.user?.name?.charAt(0) || authState.user?.email?.charAt(0) || 'U'}
-                                </Text>
+        <View style={styles.container}>
+            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                {/* Profile Header Card */}
+                <View style={styles.profileCard}>
+                    <View style={styles.profileHeader}>
+                        {/* Avatar */}
+                        <View style={styles.avatarContainer}>
+                            <View style={styles.avatar}>
+                                <Image
+                                    source={{ uri: mockUserProfile.avatar }}
+                                    style={styles.avatarImage}
+                                    resizeMode="cover"
+                                />
                             </View>
-
-                            {/* User Info */}
-                            <View className="items-center space-y-1">
-                                <Text className="text-xl font-bold text-foreground">
-                                    {authState.user?.name || 'User'}
-                                </Text>
-                                <Text className="text-sm text-muted-foreground">
-                                    {authState.user?.email}
-                                </Text>
-                                <View className="bg-green-100 px-3 py-1 rounded-full">
-                                    <Text className="text-green-800 text-xs font-medium">Active</Text>
-                                </View>
-                            </View>
-
-                            {/* Edit Profile Button */}
-                            <Button variant="outline" className="w-full">
-                                <Text className="text-foreground">Edit Profile</Text>
-                            </Button>
                         </View>
-                    </Card>
 
-                    {/* Stats Cards */}
-                    <View className="flex-row space-x-3">
-                        <Card className="flex-1 p-4 bg-blue-50 border-blue-200">
-                            <View className="items-center space-y-1">
-                                <Text className="text-xl font-bold text-blue-600">
-                                    142
-                                </Text>
-                                <Text className="text-xs text-blue-700 text-center">
-                                    Activities
-                                </Text>
-                            </View>
-                        </Card>
+                        {/* User Info */}
+                        <View style={styles.userInfo}>
+                            <Text style={styles.userName}>
+                                {mockUserProfile.name}
+                            </Text>
+                            <Text style={styles.userEmail}>
+                                {mockUserProfile.email}
+                            </Text>
+                            <Text style={styles.userPhone}>
+                                {mockUserProfile.phone}
+                            </Text>
+                        </View>
 
-                        <Card className="flex-1 p-4 bg-green-50 border-green-200">
-                            <View className="items-center space-y-1">
-                                <Text className="text-xl font-bold text-green-600">
-                                    24
-                                </Text>
-                                <Text className="text-xs text-green-700 text-center">
-                                    Favorites
-                                </Text>
-                            </View>
-                        </Card>
-
-                        <Card className="flex-1 p-4 bg-purple-50 border-purple-200">
-                            <View className="items-center space-y-1">
-                                <Text className="text-xl font-bold text-purple-600">
-                                    18
-                                </Text>
-                                <Text className="text-xs text-purple-700 text-center">
-                                    Friends
-                                </Text>
-                            </View>
-                        </Card>
+                        {/* Logout Button */}
+                        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                            <LogOut size={20} color="#dc2626" />
+                        </TouchableOpacity>
                     </View>
 
-                    {/* Wallet Balance Card */}
-                    <Card className="p-4 bg-gradient-to-r from-blue-500 to-purple-600 border-0">
-                        <View className="flex-row items-center justify-between">
-                            <View className="flex-1">
-                                <Text className="text-white text-sm opacity-90 mb-1">
-                                    Số dư ví
-                                </Text>
-                                <Text className="text-white text-2xl font-bold">
-                                    1,500 xu
-                                </Text>
-                                <Text className="text-white text-xs opacity-75">
-                                    Tỷ giá: 1.000 VND = 1 xu
+                    {/* Wallet Section */}
+                    <View style={styles.walletSection}>
+                        <View style={styles.walletContent}>
+                            <View style={styles.walletInfo}>
+                                <View style={styles.walletHeader}>
+                                    <Wallet size={16} color="white" />
+                                    <Text style={styles.walletLabel}>
+                                        Số dư ví
+                                    </Text>
+                                </View>
+                                <Text style={styles.walletBalance}>
+                                    {mockUserProfile.walletBalance.toLocaleString('vi-VN')} xu
                                 </Text>
                             </View>
-                            <TouchableOpacity 
-                                className="bg-white bg-opacity-20 px-4 py-2 rounded-full"
-                                onPress={() => router.push('/(main)/(no-tabs)/topup')}
+                            <TouchableOpacity
+                                style={styles.topupButton}
+                                onPress={handleTopup}
                             >
-                                <Text className="text-white font-semibold text-sm">
-                                    Nạp tiền
+                                <Text style={styles.topupButtonText}>
+                                    Nạp xu
                                 </Text>
                             </TouchableOpacity>
                         </View>
-                    </Card>
-
-                    {/* Menu Items */}
-                    <Card className="bg-card">
-                        <View className="divide-y divide-border">
-                            {profileMenuItems.map((item, index) => (
-                                <TouchableOpacity
-                                    key={index}
-                                    className="p-4 flex-row items-center justify-between"
-                                    onPress={() => item.route && router.push(item.route as any)}
-                                >
-                                    <View className="flex-row items-center space-x-3">
-                                        <Text className="text-lg">{item.icon}</Text>
-                                        <Text className="text-base text-foreground">{item.title}</Text>
-                                    </View>
-                                    <Text className="text-muted-foreground">›</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </Card>
-
-                    {/* Logout Button */}
-                    <Button
-                        variant="outline"
-                        onPress={handleLogout}
-                        className="w-full border-red-200 bg-red-50"
-                    >
-                        <Text className="text-red-600 font-semibold">Sign Out</Text>
-                    </Button>
-
-                    {/* Bottom Spacing */}
-                    <View className="h-10" />
+                    </View>
                 </View>
+
+                {/* Account Section */}
+                <View style={styles.menuCard}>
+                    <View style={styles.menuHeader}>
+                        <Text style={styles.menuTitle}>
+                            Tài khoản
+                        </Text>
+                    </View>
+                    <View style={styles.menuItemsContainer}>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <View style={styles.menuItemLeft}>
+                                <User size={20} color="#3b82f6" />
+                                <Text style={styles.menuItemText}>Thông tin tài khoản</Text>
+                            </View>
+
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <View style={styles.menuItemLeft}>
+                                <Shield size={20} color="#3b82f6" />
+                                <Text style={styles.menuItemText}>Lịch sử giao dịch</Text>
+                            </View>
+
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Overview Section */}
+                <View style={styles.menuCard}>
+                    <View style={styles.menuHeader}>
+                        <Text style={styles.menuTitle}>
+                            Tổng quát
+                        </Text>
+                    </View>
+                    <View style={styles.menuItemsContainer}>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <View style={styles.menuItemLeft}>
+                                <Heart size={20} color="#3b82f6" />
+                                <Text style={styles.menuItemText}>Yêu thích</Text>
+                            </View>
+
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <View style={styles.menuItemLeft}>
+                                <Settings size={20} color="#3b82f6" />
+                                <Text style={styles.menuItemText}>Cài đặt</Text>
+                            </View>
+
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <View style={styles.menuItemLeft}>
+                                <Globe size={20} color="#3b82f6" />
+                                <Text style={styles.menuItemText}>Ngôn ngữ</Text>
+                            </View>
+
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <View style={styles.menuItemLeft}>
+                                <Star size={20} color="#3b82f6" />
+                                <Text style={styles.menuItemText}>Đánh giá</Text>
+                            </View>
+
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Other Section */}
+                <View style={styles.menuCard}>
+                    <View style={styles.menuHeader}>
+                        <Text style={styles.menuTitle}>
+                            Thông tin khác
+                        </Text>
+                    </View>
+                    <View style={styles.menuItemsContainer}>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <View style={styles.menuItemLeft}>
+                                <FileText size={20} color="#3b82f6" />
+                                <Text style={styles.menuItemText}>Điều khoản và điều kiện</Text>
+                            </View>
+
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <View style={styles.menuItemLeft}>
+                                <Info size={20} color="#3b82f6" />
+                                <Text style={styles.menuItemText}>Thông tin về DriveMate</Text>
+                            </View>
+
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <View style={styles.menuItemLeft}>
+                                <LogOut size={20} color="#3b82f6" />
+                                <Text style={styles.menuItemText}>Đăng xuất</Text>
+                            </View>
+
+                        </TouchableOpacity>
+                    </View>
+                </View>
+                {/* Bottom spacing */}
+                <View style={styles.bottomSpacing} />
             </ScrollView>
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    // Container styles
+    container: {
+        flex: 1,
+        backgroundColor: '#f3f4f6', // gray-100
+    },
+    scrollView: {
+        flex: 1,
+    },
+    bottomSpacing: {
+        height: 32,
+    },
+
+    // Profile Card styles
+    profileCard: {
+        backgroundColor: 'white',
+        marginHorizontal: 16,
+        marginTop: 24,
+        borderRadius: 24,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    profileHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginBottom: 20,
+    },
+    avatarContainer: {
+        marginRight: 16,
+    },
+    avatar: {
+        width: 80,
+        height: 80,
+        backgroundColor: '#d1d5db',
+        borderRadius: 40,
+        overflow: 'hidden',
+    },
+    avatarImage: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+    },
+    userInfo: {
+        flex: 1,
+        paddingTop: 4,
+    },
+    userName: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#111827',
+        marginBottom: 6,
+    },
+    userEmail: {
+        fontSize: 12,
+        color: '#4b5563',
+        marginBottom: 4,
+    },
+    userPhone: {
+        fontSize: 12,
+        color: '#4b5563',
+    },
+    logoutButton: {
+        padding: 8,
+        borderRadius: 8,
+    },
+
+    // Wallet styles
+    walletSection: {
+        backgroundColor: '#3b82f6', // blue-500 to purple-600 gradient effect
+        borderRadius: 16,
+        padding: 16,
+    },
+    walletContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    walletInfo: {
+        flex: 1,
+    },
+    walletHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    walletLabel: {
+        color: 'white',
+        fontSize: 12,
+        fontWeight: '500',
+        marginLeft: 6,
+    },
+    walletBalance: {
+        color: 'white',
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    topupButton: {
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 12,
+    },
+    topupButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 14,
+    },
+
+    // Menu Card styles
+    menuCard: {
+        backgroundColor: 'white',
+        marginHorizontal: 16,
+        marginTop: 16,
+        borderRadius: 24,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    menuHeader: {
+        marginBottom: 16,
+    },
+    menuTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#2563eb',
+    },
+    menuItemsContainer: {
+        gap: 4,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 16,
+        paddingHorizontal: 4,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f3f4f6',
+    },
+    menuItemLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    menuItemText: {
+        fontSize: 14,
+        color: '#374151',
+        marginLeft: 12,
+        fontWeight: '500',
+    },
+
+    // Performance Card styles
+    performanceCard: {
+        backgroundColor: 'white',
+        marginHorizontal: 16,
+        marginTop: 16,
+        borderRadius: 24,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    performanceHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 20,
+    },
+    performanceTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#111827',
+    },
+    viewDetailsText: {
+        color: '#2563eb',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    performanceCirclesContainer: {
+        flexDirection: 'row',
+        marginBottom: 24,
+        justifyContent: 'space-between',
+        paddingHorizontal: 8,
+    },
+    performanceCircleLeft: {
+        alignItems: 'flex-start',
+        flex: 1,
+    },
+    performanceCircleRight: {
+        alignItems: 'flex-end',
+        flex: 1,
+    },
+    performanceCircle: {
+        width: 112,
+        height: 112,
+        borderRadius: 56,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 8,
+    },
+    accuracyCircle: {
+        backgroundColor: '#dbeafe',
+    },
+    timeCircle: {
+        backgroundColor: '#f3e8ff',
+    },
+    circleText: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#111827',
+    },
+    circleTextPurple: {
+        color: '#7c3aed',
+    },
+    performanceChangeGreen: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: '#059669',
+        marginBottom: 2,
+    },
+    performanceChangeRed: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: '#dc2626',
+        marginBottom: 2,
+    },
+    performanceLabel: {
+        fontSize: 12,
+        color: '#6b7280',
+    },
+    performanceStatsContainer: {
+        flexDirection: 'row',
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#f3f4f6',
+        justifyContent: 'space-between',
+        paddingHorizontal: 8,
+    },
+    performanceStat: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    performanceStatNumber: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#111827',
+        marginBottom: 4,
+    },
+    performanceStatLabel: {
+        fontSize: 12,
+        color: '#9ca3af',
+    },
+});
+
+export default React.memo(ProfileScreen);

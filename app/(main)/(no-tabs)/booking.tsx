@@ -53,6 +53,7 @@ export default function BookingScreen() {
   // Step 3: Location
   const [pickupLocation, setPickupLocation] = useState('');
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
 
   // Step 3: Road types & Skills (combined)
   const [selectedRoadTypes, setSelectedRoadTypes] = useState<string[]>([]);
@@ -99,9 +100,9 @@ export default function BookingScreen() {
   ];
 
   const shifts = [
-    { id: 'morning' as Shift, label: 'Ca sáng', time: '6:00 - 10:00', icon: '🌅' },
-    { id: 'afternoon' as Shift, label: 'Ca chiều', time: '14:00 - 18:00', icon: '☀️' },
-    { id: 'evening' as Shift, label: 'Ca tối', time: '18:00 - 22:00', icon: '🌙' },
+    { id: 'morning' as Shift, label: 'Ca sáng', time: '6:00 - 10:00' },
+    { id: 'afternoon' as Shift, label: 'Ca chiều', time: '14:00 - 18:00' },
+    { id: 'evening' as Shift, label: 'Ca tối', time: '18:00 - 22:00' },
   ];
 
   const weekDays = [
@@ -112,6 +113,15 @@ export default function BookingScreen() {
     { id: 'fri', label: 'T6' },
     { id: 'sat', label: 'T7' },
     { id: 'sun', label: 'CN' },
+  ];
+
+  const pickupLocations = [
+    { id: 'fpt_hcm', name: 'FPT University Hồ Chí Minh', address: 'Khu Công nghệ cao, Quận 9, TP.HCM' },
+    { id: 'fpt_hanoi', name: 'FPT University Hà Nội', address: 'Khu Công nghệ cao Hòa Lạc, Thạch Thất, Hà Nội' },
+    { id: 'fpt_danang', name: 'FPT University Đà Nẵng', address: 'Khu Công nghệ cao, Quận Liên Chiểu, Đà Nẵng' },
+    { id: 'fpt_cantho', name: 'FPT University Cần Thơ', address: 'Khu Công nghệ cao, Quận Ninh Kiều, Cần Thơ' },
+    { id: 'fpt_quynhon', name: 'FPT University Quy Nhơn', address: 'Khu Công nghệ cao, Quận Bình Định, Quy Nhơn' },
+    { id: 'fpt_hoian', name: 'FPT University Hội An', address: 'Khu Công nghệ cao, Quận Hội An, Quảng Nam' },
   ];
 
   const toggleDay = (dayId: string) => {
@@ -143,7 +153,7 @@ export default function BookingScreen() {
           return startDate && endDate && selectedDays.length > 0 && selectedShiftsRecurring.length > 0;
         }
       case 3:
-        return pickupLocation.trim().length > 0;
+        return selectedLocationId !== null;
       case 4:
         return selectedRoadTypes.length > 0 && selectedSkills.length > 0;
       case 5:
@@ -194,63 +204,75 @@ export default function BookingScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Đặt lịch học</Text>
-        <View style={styles.headerRight} />
-      </View>
-
-      {/* Progress Steps */}
-      <View style={styles.stepsContainer}>
-        <View style={styles.stepsRow}>
-          {steps.map((step, index) => (
-            <View key={step.number} style={styles.stepWrapper}>
-              <View style={styles.stepItem}>
-                <View style={[
-                  styles.stepCircle,
-                  step.number < currentStep && styles.stepCircleCompleted,
-                  step.number === currentStep && styles.stepCircleActive,
-                ]}>
-                  {step.number < currentStep ? (
-                    <CheckCircle size={20} color="#ffffff" strokeWidth={3} />
-                  ) : (
-                    <Text style={[
-                      styles.stepNumber,
-                      (step.number <= currentStep) && styles.stepNumberActive
-                    ]}>
-                      {step.number}
-                    </Text>
-                  )}
-                </View>
-                <Text style={[
-                  styles.stepLabel,
-                  step.number === currentStep && styles.stepLabelActive,
-                  step.number < currentStep && styles.stepLabelCompleted,
-                ]}>
-                  {step.label}
-                </Text>
-              </View>
-              {index < steps.length - 1 && (
-                <View style={styles.stepLineContainer}>
-                  <View style={[
-                    styles.stepLine,
-                    step.number < currentStep && styles.stepLineCompleted,
-                  ]} />
-                </View>
-              )}
-            </View>
-          ))}
+      {/* Modern Header with Integrated Progress */}
+      <LinearGradient
+        colors={['#667eea', '#764ba2', '#8b5fbf']}
+        style={styles.modernHeader}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <TouchableOpacity onPress={handleBack}>
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.modernHeaderTitle}>Đặt lịch thuê</Text>
+          </View>
+          <View style={styles.headerRight} />
         </View>
-      </View>
+
+        {/* Steps Navigation */}
+        <View style={styles.modernStepsContainer}>
+          <View style={styles.stepsRow}>
+            {steps.map((step, index) => (
+              <View key={step.number} style={styles.modernStepWrapper}>
+                <View style={styles.modernStepItem}>
+                  <View style={[
+                    styles.modernStepCircle,
+                    step.number < currentStep && styles.modernStepCircleCompleted,
+                    step.number === currentStep && styles.modernStepCircleActive,
+                  ]}>
+                    {step.number < currentStep ? (
+                      <CheckCircle size={18} color="#ffffff" strokeWidth={2.5} />
+                    ) : (
+                      <Text style={[
+                        styles.modernStepNumber,
+                        (step.number <= currentStep) && styles.modernStepNumberActive
+                      ]}>
+                        {step.number}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={[
+                    styles.modernStepLabel,
+                    step.number === currentStep && styles.modernStepLabelActive,
+                    step.number < currentStep && styles.modernStepLabelCompleted,
+                  ]}>
+                    {step.label}
+                  </Text>
+                </View>
+                {index < steps.length - 1 && (
+                  <View style={styles.modernStepLineContainer}>
+                    <View style={[
+                      styles.modernStepLine,
+                      step.number < currentStep && styles.modernStepLineCompleted,
+                    ]} />
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Curved Bottom */}
+        <View style={styles.curvedHeaderBottom} />
+      </LinearGradient>
 
       {/* Tracking Card */}
       <View style={styles.trackingCard}>
         <View style={styles.trackingHeader}>
           <View style={styles.trackingTitleContainer}>
-            <CalendarDays size={20} color="#4338ca" strokeWidth={2} />
             <Text style={styles.trackingTitle}>Thông tin đặt lịch</Text>
           </View>
           <View style={styles.coinBadge}>
@@ -260,9 +282,19 @@ export default function BookingScreen() {
         </View>
 
         <View style={styles.trackingContent}>
-          {bookingMode && (
+          {packageType && (
             <View style={styles.trackingRow}>
               <Text style={styles.trackingLabel}>Gói thuê</Text>
+              <Text style={styles.trackingValue}>
+                {packageType === 'instructor' ? 'Thuê người hướng dẫn' :
+                  packageType === 'full' ? 'Thuê trọn gói' : 'Chưa chọn gói'}
+              </Text>
+            </View>
+          )}
+
+          {bookingMode && (
+            <View style={styles.trackingRow}>
+              <Text style={styles.trackingLabel}>Phương thức</Text>
               <Text style={styles.trackingValue}>
                 {bookingMode === 'daily' ? 'Theo ca' : 'Theo chu kỳ'}
               </Text>
@@ -306,7 +338,6 @@ export default function BookingScreen() {
         {currentStep === 1 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <CalendarDays size={24} color="#667eea" strokeWidth={2} />
               <Text style={styles.sectionTitle}>Chọn phương thức đặt lịch</Text>
             </View>
             <View style={styles.modeContainer}>
@@ -367,14 +398,14 @@ export default function BookingScreen() {
 
                 {selectedDate && (
                   <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>⏰ Chọn ca học</Text>
+                    <Text style={styles.sectionTitle}>Chọn ca thuê</Text>
                     {shifts.map((shift) => (
                       <TouchableOpacity
                         key={shift.id}
                         style={[styles.shiftCard, selectedShift === shift.id && styles.shiftCardActive]}
                         onPress={() => setSelectedShift(shift.id)}
                       >
-                        <Text style={styles.shiftIcon}>{shift.icon}</Text>
+
                         <View style={styles.shiftInfo}>
                           <Text style={styles.shiftLabel}>{shift.label}</Text>
                           <Text style={styles.shiftTime}>{shift.time}</Text>
@@ -446,7 +477,6 @@ export default function BookingScreen() {
                           );
                         }}
                       >
-                        <Text style={styles.shiftIcon}>{shift.icon}</Text>
                         <View style={styles.shiftInfo}>
                           <Text style={styles.shiftLabel}>{shift.label}</Text>
                           <Text style={styles.shiftTime}>{shift.time}</Text>
@@ -467,22 +497,54 @@ export default function BookingScreen() {
         {currentStep === 3 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>📍 Chọn địa điểm đón</Text>
-            <Text style={styles.sectionDesc}>Địa điểm đón và trả sẽ là cùng một vị trí</Text>
+            <Text style={styles.sectionDesc}>
+              Địa điểm đón và trả sẽ là cùng một vị trí. Vui lòng chọn một địa điểm từ danh sách bên dưới.
+            </Text>
 
-            <TouchableOpacity
-              style={styles.locationInput}
-              onPress={() => setShowLocationModal(true)}
-            >
-              <MapPin size={20} color="#667eea" strokeWidth={2} />
-              <Text style={[styles.locationInputText, pickupLocation && styles.locationInputTextFilled]}>
-                {pickupLocation || 'Nhập địa chỉ đón...'}
+            <View style={styles.locationNote}>
+              <Text style={styles.locationNoteText}>
+                💡 Lưu ý: Điểm đón cũng chính là điểm thả. Bạn sẽ được đón và trả tại cùng một địa điểm đã chọn.
               </Text>
-            </TouchableOpacity>
+            </View>
+
+            <View style={styles.locationList}>
+              {pickupLocations.map((location) => (
+                <TouchableOpacity
+                  key={location.id}
+                  style={[
+                    styles.locationCard,
+                    selectedLocationId === location.id && styles.locationCardSelected
+                  ]}
+                  onPress={() => {
+                    setSelectedLocationId(location.id);
+                    setPickupLocation(location.name);
+                  }}
+                >
+                  <View style={styles.locationCardContent}>
+                    <View style={styles.locationIconContainer}>
+                      <MapPin size={20} color={selectedLocationId === location.id ? '#667eea' : '#64748b'} strokeWidth={2} />
+                    </View>
+                    <View style={styles.locationInfo}>
+                      <Text style={[
+                        styles.locationName,
+                        selectedLocationId === location.id && styles.locationNameSelected
+                      ]}>
+                        {location.name}
+                      </Text>
+                      <Text style={styles.locationAddress}>{location.address}</Text>
+                    </View>
+                    {selectedLocationId === location.id && (
+                      <CheckCircle size={20} color="#667eea" strokeWidth={2} />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             {pickupLocation && (
               <View style={styles.locationPreview}>
                 <MapPin size={16} color="#10b981" strokeWidth={2} />
-                <Text style={styles.locationPreviewText}>{pickupLocation}</Text>
+                <Text style={styles.locationPreviewText}>Đã chọn: {pickupLocation}</Text>
               </View>
             )}
           </View>
@@ -581,6 +643,14 @@ export default function BookingScreen() {
             <Text style={styles.sectionTitle}>✅ Xác nhận thông tin đặt lịch</Text>
 
             <View style={styles.summaryCard}>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>📦 Gói thuê:</Text>
+                <Text style={styles.summaryValue}>
+                  {packageType === 'instructor' ? 'Thuê người hướng dẫn' :
+                    packageType === 'full' ? 'Thuê trọn gói' : 'Chưa chọn gói'}
+                </Text>
+              </View>
+
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>📅 Phương thức:</Text>
                 <Text style={styles.summaryValue}>
@@ -738,51 +808,180 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  header: {
+  // Modern Header Styles
+  modernHeader: {
+    paddingTop: 50,
+    paddingBottom: 30,
+    position: 'relative',
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  headerSection: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
-  backButton: {
-    width: 40,
-    height: 40,
+  modernBackButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
   },
   backIcon: {
-    fontSize: 24,
-    color: '#1e293b',
+    fontSize: 30,
+    color: '#ffffff',
+    fontWeight: 'bold',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1e293b',
+  headerTitleContainer: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  modernHeaderTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginBottom: 2,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '600',
   },
   headerRight: {
-    width: 40,
+    width: 44,
   },
-  stepsContainer: {
-    backgroundColor: '#ffffff',
-    paddingVertical: 20,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+
+  // Modern Steps Styles
+  modernStepsContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
   },
   stepsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+  modernStepWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flex: 1,
+  },
+  modernStepItem: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    flex: 1,
+    maxWidth: 70,
+  },
+  modernStepCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  modernStepCircleActive: {
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  modernStepCircleCompleted: {
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  modernStepNumber: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  modernStepNumberActive: {
+    color: '#667eea',
+    fontSize: 16,
+  },
+  modernStepLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    lineHeight: 14,
+    flexWrap: 'wrap',
+  },
+  modernStepLabelActive: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+  modernStepLabelCompleted: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  modernStepLineContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 21,
+    paddingHorizontal: 4,
+    maxWidth: 40,
+  },
+  modernStepLine: {
+    width: '100%',
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    borderRadius: 2,
+  },
+  modernStepLineCompleted: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  curvedHeaderBottom: {
+    position: 'absolute',
+    bottom: -20,
+    left: 0,
+    right: 0,
+    height: 40,
+    backgroundColor: '#f8f9fa',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+  },
   trackingCard: {
     backgroundColor: '#ffffff',
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: -10,
     borderRadius: 20,
     padding: 20,
     shadowColor: '#667eea',
@@ -792,6 +991,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1,
     borderColor: '#e0e7ff',
+    zIndex: 1,
   },
   trackingHeader: {
     flexDirection: 'row',
@@ -845,82 +1045,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     flex: 1,
     textAlign: 'right',
-  },
-  stepWrapper: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    flex: 1,
-  },
-  stepItem: {
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    flex: 1,
-    maxWidth: 70,
-  },
-  stepCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#e2e8f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  stepCircleActive: {
-    backgroundColor: '#667eea',
-  },
-  stepCircleCompleted: {
-    backgroundColor: '#10b981',
-  },
-  stepNumber: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#94a3b8',
-  },
-  stepNumberActive: {
-    color: '#ffffff',
-  },
-  stepIcon: {
-    fontSize: 20,
-  },
-  stepLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#94a3b8',
-    textAlign: 'center',
-    marginTop: 4,
-    flexWrap: 'wrap',
-    lineHeight: 14,
-  },
-  stepLabelActive: {
-    color: '#667eea',
-    fontWeight: '700',
-  },
-  stepLabelCompleted: {
-    color: '#10b981',
-    fontWeight: '700',
-  },
-  stepLineContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 22,
-    paddingHorizontal: 4,
-    maxWidth: 40,
-  },
-  stepLine: {
-    width: '100%',
-    height: 3,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 2,
-  },
-  stepLineCompleted: {
-    backgroundColor: '#10b981',
   },
   content: {
     flex: 1,
@@ -1110,6 +1234,61 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#15803d',
     fontWeight: '600',
+  },
+  locationNote: {
+    backgroundColor: '#f0f9ff',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3b82f6',
+  },
+  locationNoteText: {
+    fontSize: 13,
+    color: '#1e40af',
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  locationList: {
+    gap: 12,
+  },
+  locationCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    padding: 16,
+  },
+  locationCardSelected: {
+    borderColor: '#667eea',
+    backgroundColor: '#f0f4ff',
+  },
+  locationCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  locationIconContainer: {
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationInfo: {
+    flex: 1,
+  },
+  locationName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  locationNameSelected: {
+    color: '#667eea',
+  },
+  locationAddress: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '500',
+    lineHeight: 18,
   },
   optionsGrid: {
     gap: 12,
