@@ -18,23 +18,14 @@ import {
   Route,
   Eye,
 } from 'lucide-react-native';
+import { IBookingItem } from '@/models/booking/booking';
 
-interface BookingItem {
-  id: string;
-  instructorName: string;
-  date: string;
-  time: string;
-  location: string;
-  status: 'upcoming' | 'completed' | 'cancelled';
-  hasRoute: boolean;
-  routeStatus?: 'pending' | 'accepted' | 'rejected';
-}
 
 export default function BookingsScreen() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'upcoming' | 'completed'>('upcoming');
 
-  const bookings: BookingItem[] = [
+  const bookings: IBookingItem[] = [
     {
       id: '1',
       instructorName: 'Thầy Nguyễn Văn B',

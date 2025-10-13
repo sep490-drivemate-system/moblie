@@ -4,7 +4,7 @@ import {
   drivingLicenses,
   listCar,
   listInstructorOptions,
-} from "@/mock_data/home_data";
+} from "@/data/home_data";
 import { ChevronRight as LucideChevronRight } from "lucide-react-native";
 import {
   Dimensions,

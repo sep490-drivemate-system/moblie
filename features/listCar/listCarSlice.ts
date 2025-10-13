@@ -1,4 +1,4 @@
-import { listCar } from "@/mock_data/home_data";
+import { listCar } from "@/data/home_data";
 import { Car } from "@/models/car/car";
 import { BaseState } from "@/models/generic/baseState";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";

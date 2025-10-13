@@ -1,4 +1,9 @@
-export const carousels = [
+import { ICar } from "@/models/car/car";
+import { ICarousel } from "@/models/carousel/carousel";
+import { LicenseType } from "@/models/license/license";
+import { IInstructorOption } from "@/models/package/package";
+
+export const carousels: ICarousel[] = [
   {
     id: 1,
     image:
@@ -16,7 +21,7 @@ export const carousels = [
   },
 ];
 
-export const drivingLicenses = [
+export const drivingLicenses: LicenseType[] = [
   "B1",
   "B",
   "C1",
@@ -32,7 +37,7 @@ export const drivingLicenses = [
   "DE",
 ];
 
-export const listCar = [
+export const listCar: ICar[] = [
   {
     id: 1,
     name: "KIA Carnival 2024",
@@ -374,7 +379,7 @@ export const listCar = [
   },
 ];
 
-export const listInstructorOptions = [
+export const listInstructorOptions: IInstructorOption[] = [
   {
     id: 1,
     imageUrl: require("@/assets/images/5-years-experience.png"),

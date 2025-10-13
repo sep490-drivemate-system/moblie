@@ -8,11 +8,11 @@ import {
   Star as LucideStar,
   ShieldCheck as LucideShieldCheck,
 } from "lucide-react-native";
-import { Car } from "@/models/car/car";
+import { ICar } from "@/models/car/car";
 import { useRouter } from "expo-router";
 
 type Props = {
-  car: Car;
+  car: ICar;
   variant?: "compact" | "full";
 };
 
@@ -21,8 +21,8 @@ const CarItem: React.FC<Props> = ({ car, variant = "compact" }) => {
 
   const handlePress = () => {
     router.push({
-      pathname: '/(main)/(no-tabs)/car-detail',
-      params: { carId: car.id.toString() }
+      pathname: "/(main)/(no-tabs)/car-detail",
+      params: { carId: car.id.toString() },
     });
   };
 

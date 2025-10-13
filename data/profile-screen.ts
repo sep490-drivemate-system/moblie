@@ -1,4 +1,5 @@
 import { IUserProfile } from "@/models/user/profile.types";
+import { IPerformance } from "@/models/performance/performance";
 
 export const mockUserProfile: IUserProfile = {
     name: 'Lê Minh Trí',
@@ -8,7 +9,7 @@ export const mockUserProfile: IUserProfile = {
     walletBalance: 1000000
 };
 
-export const mockPerformance = {
+export const mockPerformance: IPerformance = {
     accuracy: 70,
     accuracyChange: 5,
     avgTime: 30,
