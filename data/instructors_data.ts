@@ -1,3 +1,4 @@
+import { gender } from "@/constants/enums";
 import { IInstructor } from "@/models/instructor/instructor";
 
 export const instructorsData: IInstructor[] = [
@@ -21,7 +22,7 @@ export const instructorsData: IInstructor[] = [
       "Giảng viên giàu kinh nghiệm, chuyên dạy lái xe an toàn trong thành phố.",
     totalBookings: 245,
     pricePerHour: 300000,
-    gender: "Nam",
+    gender: gender.male,
   },
   {
     id: "2",
@@ -38,7 +39,7 @@ export const instructorsData: IInstructor[] = [
     description: "Chuyên gia dạy lái xe số sàn và kỹ thuật lái xe nâng cao.",
     totalBookings: 189,
     pricePerHour: 280000,
-    gender: "Nữ",
+    gender: gender.female,
   },
   {
     id: "3",
@@ -55,7 +56,10 @@ export const instructorsData: IInstructor[] = [
     description: "Chuyên gia dạy lái xe tải và container, có bằng lái hạng C.",
     totalBookings: 156,
     pricePerHour: 350000,
-    gender: "Nam",
+    gender: gender.male,
+    vehicels: [
+      
+    ]
   },
   {
     id: "4",
@@ -73,7 +77,7 @@ export const instructorsData: IInstructor[] = [
       "Chuyên dạy lái xe cho phụ nữ với phương pháp nhẹ nhàng, kiên trì.",
     totalBookings: 203,
     pricePerHour: 290000,
-    gender: "Nữ",
+    gender: gender.female,
   },
   {
     id: "5",
@@ -90,7 +94,7 @@ export const instructorsData: IInstructor[] = [
     description: "Giảng viên chuyên dạy lái xe cao tốc và đường xa an toàn.",
     totalBookings: 178,
     pricePerHour: 320000,
-    gender: "Nam",
+    gender: gender.male,
   },
   {
     id: "6",
@@ -107,7 +111,7 @@ export const instructorsData: IInstructor[] = [
     description: "Chuyên gia dạy lái xe trong điều kiện thời tiết khó khăn.",
     totalBookings: 134,
     pricePerHour: 270000,
-    gender: "Nữ",
+    gender: gender.female,
   },
   {
     id: "7",
@@ -124,7 +128,7 @@ export const instructorsData: IInstructor[] = [
     description: "Chuyên gia dạy lái xe thể thao và kỹ thuật lái xe nâng cao.",
     totalBookings: 298,
     pricePerHour: 340000,
-    gender: "Nam",
+    gender: gender.male,
   },
   {
     id: "8",
@@ -146,7 +150,7 @@ export const instructorsData: IInstructor[] = [
       "Giảng viên trẻ, nhiệt tình, chuyên dạy cho người mới bắt đầu.",
     totalBookings: 87,
     pricePerHour: 250000,
-    gender: "Nữ",
+    gender: gender.female,
   },
   {
     id: "9",
@@ -164,7 +168,7 @@ export const instructorsData: IInstructor[] = [
       "Giảng viên cao cấp, chuyên đào tạo giảng viên và chuẩn bị thi bằng lái.",
     totalBookings: 412,
     pricePerHour: 400000,
-    gender: "Nam",
+    gender: gender.male,
   },
   {
     id: "10",
@@ -181,7 +185,7 @@ export const instructorsData: IInstructor[] = [
     description: "Chuyên gia về công nghệ ô tô mới và lái xe thông minh.",
     totalBookings: 167,
     pricePerHour: 310000,
-    gender: "Nữ",
+    gender: gender.female,
   },
 ];
 

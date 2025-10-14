@@ -1,3 +1,4 @@
+import { gender } from "@/constants/enums";
 import { ICarNew } from "@/models/car/car";
 import { IInstructor } from "@/models/instructor/instructor";
 
@@ -21,7 +22,7 @@ export const instructorInfor: IInstructor = {
     "Giảng viên giàu kinh nghiệm, chuyên dạy lái xe an toàn trong thành phố.",
   totalBookings: 245,
   pricePerHour: 300000,
-  gender: "Nam",
+  gender: gender.male,
   vehicels: [
     {
       id: "1",

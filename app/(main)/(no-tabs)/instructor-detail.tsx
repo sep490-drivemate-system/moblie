@@ -29,6 +29,7 @@ import { instructorsData } from "@/data/instructors_data";
 import { AppColors } from "@/constants/Colors";
 import { IInstructor } from "@/models/instructor/instructor";
 import { instructorVehicles } from "@/data/instructor_detail";
+import { feedbackData } from "@/data/feedback_data";
 
 export default function InstructorDetailScreen() {
   const router = useRouter();
@@ -177,9 +178,9 @@ export default function InstructorDetailScreen() {
             </Text>
           </View>
 
-          {instructor.vehicels?.map((vehicle, index) => (
+          {instructorVehicles.map((vehicle, index) => (
             <TouchableOpacity
-              key={index}
+              key={vehicle.id}
               style={[styles.vehicleCard, index > 0 && { marginTop: 12 }]}
             >
               <Image
@@ -220,7 +221,7 @@ export default function InstructorDetailScreen() {
 
           <View style={styles.reviewSummaryCard}>
             <View style={styles.reviewSummaryLeft}>
-              <Text style={styles.ratingNumber}>{instructor.rating}</Text>
+              <Text style={styles.ratingNumber}>{feedbackData.average}</Text>
               <View style={styles.starsRow}>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
@@ -233,91 +234,57 @@ export default function InstructorDetailScreen() {
                 ))}
               </View>
               <Text style={styles.reviewCount}>
-                {instructor.totalBookings} đánh giá
+                {feedbackData.totalReviews} đánh giá
               </Text>
             </View>
 
             <View style={styles.reviewSummaryRight}>
-              <View style={styles.ratingBar}>
-                <Text style={styles.ratingBarLabel}>5★</Text>
-                <View style={styles.ratingBarTrack}>
-                  <View style={[styles.ratingBarFill, { width: "85%" }]} />
+              {feedbackData.distribution.map((item, i) => (
+                <View key={i} style={styles.ratingBar}>
+                  <Text style={styles.ratingBarLabel}>{item.stars}★</Text>
+                  <View style={styles.ratingBarTrack}>
+                    <View
+                      style={[
+                        styles.ratingBarFill,
+                        { width: `${item.percent}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.ratingBarCount}>{item.percent}%</Text>
                 </View>
-                <Text style={styles.ratingBarCount}>85%</Text>
-              </View>
-              <View style={styles.ratingBar}>
-                <Text style={styles.ratingBarLabel}>4★</Text>
-                <View style={styles.ratingBarTrack}>
-                  <View style={[styles.ratingBarFill, { width: "10%" }]} />
-                </View>
-                <Text style={styles.ratingBarCount}>10%</Text>
-              </View>
-              <View style={styles.ratingBar}>
-                <Text style={styles.ratingBarLabel}>3★</Text>
-                <View style={styles.ratingBarTrack}>
-                  <View style={[styles.ratingBarFill, { width: "5%" }]} />
-                </View>
-                <Text style={styles.ratingBarCount}>5%</Text>
-              </View>
+              ))}
             </View>
           </View>
 
           {/* Sample Reviews */}
-          <View style={styles.reviewItem}>
-            <View style={styles.reviewHeader}>
-              <Image
-                source={{ uri: "https://i.pravatar.cc/150?img=1" }}
-                style={styles.reviewAvatar}
-              />
-              <View style={styles.reviewHeaderInfo}>
-                <Text style={styles.reviewerName}>Nguyễn Văn A</Text>
-                <View style={styles.reviewStars}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      size={12}
-                      color="#f59e0b"
-                      fill="#f59e0b"
-                      strokeWidth={0}
-                    />
-                  ))}
+          {feedbackData.reviews.map((review) => (
+            <View style={styles.reviewItem} key={review.id}>
+              <View style={styles.reviewHeader}>
+                <Image
+                  source={{ uri: review.reviewer.avatarUrl }}
+                  style={styles.reviewAvatar}
+                />
+                <View style={styles.reviewHeaderInfo}>
+                  <Text style={styles.reviewerName}>
+                    {review.reviewer.name}
+                  </Text>
+                  <View style={styles.reviewStars}>
+                    {Array.from({ length: review.rating }).map((_, i) => (
+                      <Star
+                        key={i}
+                        size={12}
+                        color="#f59e0b"
+                        fill="#f59e0b"
+                        strokeWidth={0}
+                      />
+                    ))}
+                  </View>
                 </View>
+                <Text style={styles.reviewDate}>{review.date}</Text>
               </View>
-              <Text style={styles.reviewDate}>2 ngày trước</Text>
+              <Text style={styles.reviewText}>{review.comment}</Text>
             </View>
-            <Text style={styles.reviewText}>
-              Giảng viên rất nhiệt tình và kiên nhẫn. Giảng dạy dễ hiểu, giúp
-              tôi tự tin hơn khi lái xe. Rất đáng để thuê!
-            </Text>
-          </View>
-
-          <View style={styles.reviewItem}>
-            <View style={styles.reviewHeader}>
-              <Image
-                source={{ uri: "https://i.pravatar.cc/150?img=5" }}
-                style={styles.reviewAvatar}
-              />
-              <View style={styles.reviewHeaderInfo}>
-                <Text style={styles.reviewerName}>Trần Thị B</Text>
-                <View style={styles.reviewStars}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      size={12}
-                      color="#f59e0b"
-                      fill="#f59e0b"
-                      strokeWidth={0}
-                    />
-                  ))}
-                </View>
-              </View>
-              <Text style={styles.reviewDate}>1 tuần trước</Text>
-            </View>
-            <Text style={styles.reviewText}>
-              Xe đẹp, giảng viên chuyên nghiệp. Tôi đã học được rất nhiều kỹ
-              năng lái xe an toàn. Recommend!
-            </Text>
-          </View>
+          ))}
         </View>
 
         {/* Spacing for bottom buttons */}

@@ -19,6 +19,7 @@ import {
   Eye,
 } from 'lucide-react-native';
 import { IBookingItem } from '@/models/booking/booking';
+import { BookingStatus, RouteStatus } from '@/constants/enums';
 
 
 export default function BookingsScreen() {
@@ -32,9 +33,9 @@ export default function BookingsScreen() {
       date: '2025-01-15',
       time: 'Ca sáng (6:00 - 10:00)',
       location: '123 Nguyễn Văn Linh, Quận 7',
-      status: 'upcoming',
+      status: BookingStatus.Upcoming,
       hasRoute: true,
-      routeStatus: 'accepted',
+      routeStatus: RouteStatus.Accepted,
     },
     {
       id: '2',
@@ -42,9 +43,9 @@ export default function BookingsScreen() {
       date: '2025-01-18',
       time: 'Ca chiều (14:00 - 18:00)',
       location: '456 Lê Văn Việt, Quận 9',
-      status: 'upcoming',
+      status: BookingStatus.Upcoming,
       hasRoute: true,
-      routeStatus: 'pending',
+      routeStatus: RouteStatus.Pending,
     },
     {
       id: '3',
@@ -52,9 +53,9 @@ export default function BookingsScreen() {
       date: '2025-01-12',
       time: 'Ca sáng (6:00 - 10:00)',
       location: '789 Võ Văn Kiệt, Quận 5',
-      status: 'completed',
+      status: BookingStatus.Completed,
       hasRoute: true,
-      routeStatus: 'accepted',
+      routeStatus: RouteStatus.Accepted,
     },
   ];
 

@@ -1,3 +1,5 @@
+import { BookingStatus, RouteStatus } from "@/constants/enums";
+
 export type PackageType = "instructor" | "full";
 
 export type BookingMode = "daily" | "recurring";
@@ -36,9 +38,9 @@ export interface IBookingItem {
   date: string;
   time: string;
   location: string;
-  status: "upcoming" | "completed" | "cancelled";
+  status: BookingStatus;
   hasRoute: boolean;
-  routeStatus?: "pending" | "accepted" | "rejected";
+  routeStatus?: RouteStatus;
 }
 
 // For car detail screen booking
@@ -70,36 +72,36 @@ export interface InstructorRoute {
   createdAt: string;
 }
 
-export interface Booking {
-  id: string;
-  date: string;
-  time: string;
-  duration: number; // in minutes
-  instructorName: string;
-  instructorAvatar: string;
-  instructorRating: number;
-  vehicleType: string;
-  pickupLocation: string;
-  status:
-    | "upcoming"
-    | "in_progress"
-    | "completed"
-    | "cancelled"
-    | "requested"
-    | "pending_confirmation"
-    | "rejected";
-  price: number;
-  packageType: "basic" | "standard" | "premium" | "instructor" | "full";
-  learningRoute?: LearningRoute;
-  hasRoute?: boolean;
-  route?: InstructorRoute;
-  studentName?: string;
-  selectedRoadTypes?: string[];
-  selectedSkills?: string[];
-  coins?: number;
-  sessions?: BookingSession[];
-  isMultiSession?: boolean;
-}
+// export interface Booking {
+//   id: string;
+//   date: string;
+//   time: string;
+//   duration: number; // in minutes
+//   instructorName: string;
+//   instructorAvatar: string;
+//   instructorRating: number;
+//   vehicleType: string;
+//   pickupLocation: string;
+//   status:
+//     | "upcoming"
+//     | "in_progress"
+//     | "completed"
+//     | "cancelled"
+//     | "requested"
+//     | "pending_confirmation"
+//     | "rejected";
+//   price: number;
+//   packageType: "basic" | "standard" | "premium" | "instructor" | "full";
+//   learningRoute?: LearningRoute;
+//   hasRoute?: boolean;
+//   route?: InstructorRoute;
+//   studentName?: string;
+//   selectedRoadTypes?: string[];
+//   selectedSkills?: string[];
+//   coins?: number;
+//   sessions?: BookingSession[];
+//   isMultiSession?: boolean;
+// }
 
 export interface BookingSession {
   id: string;

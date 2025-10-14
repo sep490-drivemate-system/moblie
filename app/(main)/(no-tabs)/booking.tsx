@@ -72,8 +72,8 @@ export default function BookingScreen() {
   );
 
   // Step 3: Road types & Skills (combined)
-  const [selectedRoadTypes, setSelectedRoadTypes] = useState<string[]>([]);
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [selectedRoadTypes, setSelectedRoadTypes] = useState<RoadType[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
 
   // User wallet
   const [userCoins, setUserCoins] = useState(500);
@@ -206,19 +206,19 @@ export default function BookingScreen() {
     );
   };
 
-  const toggleRoadType = (roadId: string) => {
+  const toggleRoadType = (road: RoadType) => {
     setSelectedRoadTypes((prev) =>
-      prev.includes(roadId)
-        ? prev.filter((r) => r !== roadId)
-        : [...prev, roadId]
+      prev.find((r) => r.id === road.id)
+        ? prev.filter((r) => r.id !== road.id)
+        : [...prev, road]
     );
   };
 
-  const toggleSkill = (skillId: string) => {
+  const toggleSkill = (skill: Skill) => {
     setSelectedSkills((prev) =>
-      prev.includes(skillId)
-        ? prev.filter((s) => s !== skillId)
-        : [...prev, skillId]
+      prev.find((s) => s.id === skill.id)
+        ? prev.filter((s) => s.id !== skill.id)
+        : [...prev, skill]
     );
   };
 
@@ -767,17 +767,17 @@ export default function BookingScreen() {
                     key={road.id}
                     style={[
                       styles.optionCard,
-                      selectedRoadTypes.includes(road.id) &&
+                      selectedRoadTypes.find((r) => r.id === road.id) &&
                         styles.optionCardActive,
                     ]}
-                    onPress={() => toggleRoadType(road.id)}
+                    onPress={() => toggleRoadType(road)}
                   >
                     <View style={styles.optionIconContainer}>
                       {IconComponent && (
                         <IconComponent
                           size={24}
                           color={
-                            selectedRoadTypes.includes(road.id)
+                            selectedRoadTypes.find((r) => r.id === road.id)
                               ? "#667eea"
                               : "#64748b"
                           }
@@ -788,13 +788,13 @@ export default function BookingScreen() {
                     <Text
                       style={[
                         styles.optionText,
-                        selectedRoadTypes.includes(road.id) &&
+                        selectedRoadTypes.find((r) => r.id === road.id) &&
                           styles.optionTextActive,
                       ]}
                     >
                       {road.label}
                     </Text>
-                    {selectedRoadTypes.includes(road.id) && (
+                    {selectedRoadTypes.find((r) => r.id === road.id) && (
                       <CheckCircle size={20} color="#667eea" strokeWidth={2} />
                     )}
                   </TouchableOpacity>
@@ -829,17 +829,17 @@ export default function BookingScreen() {
                     key={skill.id}
                     style={[
                       styles.optionCard,
-                      selectedSkills.includes(skill.id) &&
+                      selectedSkills.find((s) => s.id === skill.id) &&
                         styles.optionCardActive,
                     ]}
-                    onPress={() => toggleSkill(skill.id)}
+                    onPress={() => toggleSkill(skill)}
                   >
                     <View style={styles.optionIconContainer}>
                       {IconComponent && (
                         <IconComponent
                           size={24}
                           color={
-                            selectedSkills.includes(skill.id)
+                            selectedSkills.find((s) => s.id === skill.id)
                               ? "#667eea"
                               : "#64748b"
                           }
@@ -850,13 +850,13 @@ export default function BookingScreen() {
                     <Text
                       style={[
                         styles.optionText,
-                        selectedSkills.includes(skill.id) &&
+                        selectedSkills.find((s) => s.id === skill.id) &&
                           styles.optionTextActive,
                       ]}
                     >
                       {skill.label}
                     </Text>
-                    {selectedSkills.includes(skill.id) && (
+                    {selectedSkills.find((s) => s.id === skill.id) && (
                       <CheckCircle size={20} color="#667eea" strokeWidth={2} />
                     )}
                   </TouchableOpacity>
@@ -913,18 +913,14 @@ export default function BookingScreen() {
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>🛣️ Loại đường:</Text>
                 <Text style={styles.summaryValue}>
-                  {selectedRoadTypes
-                    .map((id) => roadTypes.find((r) => r.id === id)?.label)
-                    .join(", ")}
+                  {selectedRoadTypes.map((road) => road.label).join(", ")}
                 </Text>
               </View>
 
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>🎯 Kỹ năng:</Text>
                 <Text style={styles.summaryValue}>
-                  {selectedSkills
-                    .map((id) => skills.find((s) => s.id === id)?.label)
-                    .join(", ")}
+                  {selectedSkills.map((skill) => skill.label).join(", ")}
                 </Text>
               </View>
 

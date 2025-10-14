@@ -1,3 +1,4 @@
+import { gender } from "@/constants/enums";
 import { ICarNew } from "../car/car";
 
 export interface IInstructor {
@@ -14,6 +15,6 @@ export interface IInstructor {
   description: string;
   totalBookings: number;
   pricePerHour: number;
-  gender: "Nam" | "Nữ";
+  gender: gender;
   vehicels?: ICarNew[];
 }

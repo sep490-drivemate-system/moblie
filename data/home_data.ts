@@ -1,9 +1,8 @@
 import { ICar } from "@/models/car/car";
-import { ICarousel } from "@/models/carousel/carousel";
 import { LicenseType } from "@/models/license/license";
 import { IInstructorOption } from "@/models/package/package";
 
-export const carousels: ICarousel[] = [
+export const carousels = [
   {
     id: 1,
     image:
@@ -22,19 +21,58 @@ export const carousels: ICarousel[] = [
 ];
 
 export const drivingLicenses: LicenseType[] = [
-  "B1",
-  "B",
-  "C1",
-  "C",
-  "D1",
-  "D2",
-  "D",
-  "BE",
-  "C1E",
-  "CE",
-  "D1E",
-  "D2E",
-  "DE",
+  {
+    id: "1",
+    name: "B1",
+  },
+  {
+    id: "2",
+    name: "B",
+  },
+  {
+    id: "3",
+    name: "C1",
+  },
+  {
+    id: "4",
+    name: "C",
+  },
+  {
+    id: "5",
+    name: "D1",
+  },
+  {
+    id: "6",
+    name: "D2",
+  },
+  {
+    id: "7",
+    name: "D",
+  },
+  {
+    id: "8",
+    name: "BE",
+  },
+  {
+    id: "9",
+    name: "C1E",
+  },
+  {
+    id: "10",
+    name: "CE",
+  },
+  {
+    id: "11",
+    name: "D1E",
+  },
+  {
+    id: "12",
+    name: "D2E",
+  },
+  {
+    id: "13",
+    name: "DE",
+  },
 ];
 
 export const listCar: ICar[] = [
