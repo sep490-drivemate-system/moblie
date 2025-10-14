@@ -7,13 +7,11 @@ import 'react-native-reanimated';
 import { Provider } from 'react-redux'
 import { store } from '@/lib/redux/store'
 import { useRouter } from 'expo-router';
-import { useColorScheme } from '@/components/useColorScheme';
 import { AuthViewModel } from '@/viewmodels/auth/AuthViewModel';
 import { useViewModel } from '@/viewmodels/shared/BaseViewModel';
 import { RootState } from '@/lib/redux/store';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -51,11 +49,9 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <GluestackUIProvider>
         <ErrorBoundary>
           <RootLayoutNav />
         </ErrorBoundary>
-      </GluestackUIProvider>
     </Provider>
   )
 }
@@ -80,7 +76,6 @@ function RootLayoutNav() {
   // SETUP NAVIGATION CALLBACK
   useEffect(() => {
     authViewModel.setNavigationCallback((route: string) => {
-      console.log(`🧭 Navigation callback triggered: ${route}`);
       router.replace(route as any);
     });
   }, [authViewModel, router]);
@@ -99,25 +94,6 @@ function RootLayoutNav() {
     }
   }, [isMounted]);
 
-  // CONDITIONAL RENDERING INSTEAD OF NAVIGATION
-
-  /**
-   * 🎯 THAY VÌ NAVIGATE, CHÚNG TA SỬ DỤNG CONDITIONAL RENDERING
-   * 
-   * Lợi ích:
-   * - Không có navigation errors
-   * - Không cần setTimeout delays
-   * - Clean và predictable
-   * 
-   * CASE 1 & 2: isAuthenticated = true
-   * ➡️ Render Stack với (tabs) screen
-   * 
-   * CASE 3: isAuthenticated = false
-   * ➡️ Render Stack với login screen
-   * 
-   * CASE 4: isLoading = true hoặc !isMounted
-   * ➡️ Render LoadingSpinner
-   */
 
   console.log('🧭 Conditional rendering - Current auth state:', {
     isMounted,
