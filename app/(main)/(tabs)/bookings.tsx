@@ -18,32 +18,24 @@ import {
   Route,
   Eye,
 } from 'lucide-react-native';
+import { IBookingItem } from '@/models/booking/booking';
+import { BookingStatus, RouteStatus } from '@/constants/enums';
 
-interface BookingItem {
-  id: string;
-  instructorName: string;
-  date: string;
-  time: string;
-  location: string;
-  status: 'upcoming' | 'completed' | 'cancelled';
-  hasRoute: boolean;
-  routeStatus?: 'pending' | 'accepted' | 'rejected';
-}
 
 export default function BookingsScreen() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'upcoming' | 'completed'>('upcoming');
 
-  const bookings: BookingItem[] = [
+  const bookings: IBookingItem[] = [
     {
       id: '1',
       instructorName: 'Thầy Nguyễn Văn B',
       date: '2025-01-15',
       time: 'Ca sáng (6:00 - 10:00)',
       location: '123 Nguyễn Văn Linh, Quận 7',
-      status: 'upcoming',
+      status: BookingStatus.Upcoming,
       hasRoute: true,
-      routeStatus: 'accepted',
+      routeStatus: RouteStatus.Accepted,
     },
     {
       id: '2',
@@ -51,9 +43,9 @@ export default function BookingsScreen() {
       date: '2025-01-18',
       time: 'Ca chiều (14:00 - 18:00)',
       location: '456 Lê Văn Việt, Quận 9',
-      status: 'upcoming',
+      status: BookingStatus.Upcoming,
       hasRoute: true,
-      routeStatus: 'pending',
+      routeStatus: RouteStatus.Pending,
     },
     {
       id: '3',
@@ -61,9 +53,9 @@ export default function BookingsScreen() {
       date: '2025-01-12',
       time: 'Ca sáng (6:00 - 10:00)',
       location: '789 Võ Văn Kiệt, Quận 5',
-      status: 'completed',
+      status: BookingStatus.Completed,
       hasRoute: true,
-      routeStatus: 'accepted',
+      routeStatus: RouteStatus.Accepted,
     },
   ];
 

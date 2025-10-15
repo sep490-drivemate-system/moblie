@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,26 +9,25 @@ import {
   Alert,
   FlatList,
   Modal,
-  TextInput
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { LucideUsers, Search, X } from 'lucide-react-native';
-import { AppColors } from '@/constants/Colors';
+  TextInput,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { LucideUsers, Search, X } from "lucide-react-native";
+import { AppColors } from "@/constants/Colors";
 import {
   instructorsData,
-  Instructor,
   getInstructorsByExperienceRange,
   sortInstructorsByRating,
   sortInstructorsByPrice,
-  sortInstructorsByExperience
-} from '../../../data/instructors_data';
+  sortInstructorsByExperience,
+} from "../../../data/instructors_data";
+import { IInstructor } from "@/models/instructor/instructor";
 
-
-type FilterType = 'all' | 'available' | 'busy';
-type DistanceFilter = 'all' | '1-3' | '3-5' | '5-10' | '10+';
-type ExperienceFilter = 'all' | '1-3' | '3-5' | '5-10' | '10+';
-type SortType = 'rating' | 'bookings' | 'price' | 'distance' | 'experience';
+type FilterType = "all" | "available" | "busy";
+type DistanceFilter = "all" | "1-3" | "3-5" | "5-10" | "10+";
+type ExperienceFilter = "all" | "1-3" | "3-5" | "5-10" | "10+";
+type SortType = "rating" | "bookings" | "price" | "distance" | "experience";
 
 interface FilterState {
   availability: FilterType;
@@ -43,33 +42,29 @@ function InstructorsScreen() {
 
   // Modern filter state
   const [filters, setFilters] = useState<FilterState>({
-    availability: 'all',
-    distance: 'all',
-    experience: 'all',
+    availability: "all",
+    distance: "all",
+    experience: "all",
     priceRange: [200000, 500000],
-    minRating: 0
+    minRating: 0,
   });
-  const [sortBy, setSortBy] = useState<SortType>('rating');
+  const [sortBy, setSortBy] = useState<SortType>("rating");
   const [sortAscending, setSortAscending] = useState(false);
-  const [instructorsWithDistance, setInstructorsWithDistance] = useState<Instructor[]>(instructorsData);
-  const [filteredInstructors, setFilteredInstructors] = useState<Instructor[]>(instructorsData);
+  const [instructorsWithDistance, setInstructorsWithDistance] =
+    useState<IInstructor[]>(instructorsData);
+  const [filteredInstructors, setFilteredInstructors] =
+    useState<IInstructor[]>(instructorsData);
 
   // Search state
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Modal states
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempFilters, setTempFilters] = useState<FilterState>(filters);
 
-
-
-
   useEffect(() => {
     applyFiltersAndSort();
   }, [filters, sortBy, sortAscending, instructorsWithDistance, searchQuery]);
-
-
-
 
   const applyFiltersAndSort = () => {
     let filtered = [...instructorsWithDistance];
@@ -77,52 +72,57 @@ function InstructorsScreen() {
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(instructor =>
-        instructor.name.toLowerCase().includes(query) ||
-        instructor.specialties.some(s => s.toLowerCase().includes(query)) ||
-        instructor.description.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (instructor) =>
+          instructor.name.toLowerCase().includes(query) ||
+          instructor.specialties.some((s) => s.toLowerCase().includes(query)) ||
+          instructor.description.toLowerCase().includes(query)
       );
     }
 
-
     // Apply experience filter
-    if (filters.experience !== 'all') {
+    if (filters.experience !== "all") {
       switch (filters.experience) {
-        case '1-3':
+        case "1-3":
           filtered = getInstructorsByExperienceRange(filtered, 1, 3);
           break;
-        case '3-5':
+        case "3-5":
           filtered = getInstructorsByExperienceRange(filtered, 3, 5);
           break;
-        case '5-10':
+        case "5-10":
           filtered = getInstructorsByExperienceRange(filtered, 5, 10);
           break;
-        case '10+':
-          filtered = filtered.filter(instructor => instructor.experienceYears > 10);
+        case "10+":
+          filtered = filtered.filter(
+            (instructor) => instructor.experienceYears > 10
+          );
           break;
       }
     }
 
     // Apply price range filter
-    filtered = filtered.filter(instructor =>
-      instructor.pricePerHour >= filters.priceRange[0] &&
-      instructor.pricePerHour <= filters.priceRange[1]
+    filtered = filtered.filter(
+      (instructor) =>
+        instructor.pricePerHour >= filters.priceRange[0] &&
+        instructor.pricePerHour <= filters.priceRange[1]
     );
 
     // Apply minimum rating filter
     if (filters.minRating > 0) {
-      filtered = filtered.filter(instructor => instructor.rating >= filters.minRating);
+      filtered = filtered.filter(
+        (instructor) => instructor.rating >= filters.minRating
+      );
     }
 
     // Apply sorting
     switch (sortBy) {
-      case 'rating':
+      case "rating":
         filtered = sortInstructorsByRating(filtered, sortAscending);
         break;
-      case 'price':
+      case "price":
         filtered = sortInstructorsByPrice(filtered, sortAscending);
         break;
-      case 'experience':
+      case "experience":
         filtered = sortInstructorsByExperience(filtered, sortAscending);
         break;
     }
@@ -133,20 +133,20 @@ function InstructorsScreen() {
   // Helper functions for modern filter system
   const getActiveFilterCount = () => {
     let count = 0;
-    if (filters.experience !== 'all') count++;
-    if (filters.priceRange[0] !== 200000 || filters.priceRange[1] !== 500000) count++;
+    if (filters.experience !== "all") count++;
+    if (filters.priceRange[0] !== 200000 || filters.priceRange[1] !== 500000)
+      count++;
     if (filters.minRating > 0) count++;
     return count;
   };
 
-
   const clearAllFilters = () => {
     setFilters({
-      availability: 'all',
-      distance: 'all',
-      experience: 'all',
+      availability: "all",
+      distance: "all",
+      experience: "all",
       priceRange: [200000, 500000],
-      minRating: 0
+      minRating: 0,
     });
   };
 
@@ -155,11 +155,7 @@ function InstructorsScreen() {
     setShowFilterModal(false);
   };
 
-
-
-
-
-  const handleInstructorPress = (instructor: Instructor) => {
+  const handleInstructorPress = (instructor: IInstructor) => {
     Alert.alert(
       `${instructor.name}`,
       `⭐ Rating: ${instructor.rating}/5 (${instructor.totalBookings} bookings)
@@ -169,20 +165,21 @@ function InstructorsScreen() {
 📧 Email: ${instructor.email}
 
 🎯 Specialties:
-${instructor.specialties.join(', ')}
+${instructor.specialties.join(", ")}
 
 📝 ${instructor.description}`,
       [
-        { text: 'Close', style: 'cancel' },
+        { text: "Close", style: "cancel" },
         {
-          text: 'Call Now',
-          onPress: () => Alert.alert('Calling...', `Calling ${instructor.phone}`)
-        }
+          text: "Call Now",
+          onPress: () =>
+            Alert.alert("Calling...", `Calling ${instructor.phone}`),
+        },
       ]
     );
   };
 
-  const renderInstructorCard = ({ item }: { item: Instructor }) => (
+  const renderInstructorCard = ({ item }: { item: IInstructor }) => (
     <TouchableOpacity
       style={styles.instructorCard}
       onPress={() => handleInstructorPress(item)}
@@ -193,7 +190,9 @@ ${instructor.specialties.join(', ')}
 
       <View style={styles.instructorInfo}>
         <View style={styles.headerRow}>
-          <Text style={styles.instructorName}>{item.name} ({item.experienceYears} năm)</Text>
+          <Text style={styles.instructorName}>
+            {item.name} ({item.experienceYears} năm)
+          </Text>
           <View style={styles.ratingContainer}>
             <Text style={styles.ratingText}>⭐ {item.rating}</Text>
           </View>
@@ -207,15 +206,16 @@ ${instructor.specialties.join(', ')}
           <Text style={styles.instructorPrice}>{item.pricing}</Text>
           <TouchableOpacity
             style={styles.detailButton}
-            onPress={() => router.push({
-              pathname: '/(main)/(no-tabs)/instructor-detail',
-              params: { instructorId: item.id }
-            })}
+            onPress={() =>
+              router.push({
+                pathname: "/(main)/(no-tabs)/instructor-detail",
+                params: { instructorId: item.id },
+              })
+            }
           >
             <Text style={styles.detailButtonText}>Chi tiết</Text>
           </TouchableOpacity>
         </View>
-
       </View>
     </TouchableOpacity>
   );
@@ -224,7 +224,11 @@ ${instructor.specialties.join(', ')}
     <View style={styles.container}>
       <View style={styles.modernHeader}>
         <LinearGradient
-          colors={[AppColors.gradientStart, AppColors.gradientMiddle, AppColors.gradientEnd]}
+          colors={[
+            AppColors.gradientStart,
+            AppColors.gradientMiddle,
+            AppColors.gradientEnd,
+          ]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.headerGradient}
@@ -245,18 +249,23 @@ ${instructor.specialties.join(', ')}
             <View style={styles.headerLeft}>
               {/* Icon Container */}
               <View style={styles.iconContainer}>
-                <LucideUsers size={24} color={AppColors.white} strokeWidth={2.5} />
+                <LucideUsers
+                  size={24}
+                  color={AppColors.white}
+                  strokeWidth={2.5}
+                />
               </View>
 
               <View style={styles.headerTextContainer}>
                 <Text style={styles.premiumHeaderTitle}>Người hướng dẫn</Text>
                 <View style={styles.subtitleRow}>
-                  <Text style={styles.premiumHeaderSubtitle}>Tìm người hướng dẫn chuyên nghiệp</Text>
+                  <Text style={styles.premiumHeaderSubtitle}>
+                    Tìm người hướng dẫn chuyên nghiệp
+                  </Text>
                 </View>
               </View>
             </View>
           </View>
-
         </View>
       </View>
       <View style={styles.searchContainer}>
@@ -270,7 +279,7 @@ ${instructor.specialties.join(', ')}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
               <X size={20} color={AppColors.gray400} strokeWidth={2} />
             </TouchableOpacity>
           )}
@@ -278,7 +287,11 @@ ${instructor.specialties.join(', ')}
       </View>
 
       <View style={styles.modernFilterBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScrollContent}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScrollContent}
+        >
           <TouchableOpacity
             style={styles.filterButton}
             onPress={() => {
@@ -289,40 +302,58 @@ ${instructor.specialties.join(', ')}
             <Text style={styles.filterButtonText}>🔍 Bộ lọc</Text>
             {getActiveFilterCount() > 0 && (
               <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{getActiveFilterCount()}</Text>
+                <Text style={styles.filterBadgeText}>
+                  {getActiveFilterCount()}
+                </Text>
               </View>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterButton, sortBy === 'rating' && styles.filterButtonActive]}
+            style={[
+              styles.filterButton,
+              sortBy === "rating" && styles.filterButtonActive,
+            ]}
             onPress={() => {
-              if (sortBy === 'rating') {
+              if (sortBy === "rating") {
                 setSortAscending(!sortAscending);
               } else {
-                setSortBy('rating');
+                setSortBy("rating");
                 setSortAscending(false);
               }
             }}
           >
-            <Text style={[styles.filterButtonText, sortBy === 'rating' && styles.filterButtonTextActive]}>
-              ⭐ Đánh giá {sortBy === 'rating' && (sortAscending ? '↑' : '↓')}
+            <Text
+              style={[
+                styles.filterButtonText,
+                sortBy === "rating" && styles.filterButtonTextActive,
+              ]}
+            >
+              ⭐ Đánh giá {sortBy === "rating" && (sortAscending ? "↑" : "↓")}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterButton, sortBy === 'price' && styles.filterButtonActive]}
+            style={[
+              styles.filterButton,
+              sortBy === "price" && styles.filterButtonActive,
+            ]}
             onPress={() => {
-              if (sortBy === 'price') {
+              if (sortBy === "price") {
                 setSortAscending(!sortAscending);
               } else {
-                setSortBy('price');
+                setSortBy("price");
                 setSortAscending(true);
               }
             }}
           >
-            <Text style={[styles.filterButtonText, sortBy === 'price' && styles.filterButtonTextActive]}>
-              💰 Giá tiền {sortBy === 'price' && (sortAscending ? '↑' : '↓')}
+            <Text
+              style={[
+                styles.filterButtonText,
+                sortBy === "price" && styles.filterButtonTextActive,
+              ]}
+            >
+              💰 Giá tiền {sortBy === "price" && (sortAscending ? "↑" : "↓")}
             </Text>
           </TouchableOpacity>
 
@@ -369,21 +400,32 @@ ${instructor.specialties.join(', ')}
             <View style={styles.filterSection}>
               <Text style={styles.sectionTitle}>Kinh nghiệm</Text>
               <View style={styles.optionGrid}>
-                {(['all', '1-3', '3-5', '5-10', '10+'] as ExperienceFilter[]).map((option) => (
+                {(
+                  ["all", "1-3", "3-5", "5-10", "10+"] as ExperienceFilter[]
+                ).map((option) => (
                   <TouchableOpacity
                     key={option}
                     style={[
                       styles.optionButton,
-                      tempFilters.experience === option && styles.optionButtonActive
+                      tempFilters.experience === option &&
+                        styles.optionButtonActive,
                     ]}
-                    onPress={() => setTempFilters({ ...tempFilters, experience: option })}
+                    onPress={() =>
+                      setTempFilters({ ...tempFilters, experience: option })
+                    }
                   >
-                    <Text style={[
-                      styles.optionText,
-                      tempFilters.experience === option && styles.optionTextActive
-                    ]}>
-                      {option === 'all' ? 'Tất cả' :
-                        option === '10+' ? '10+ năm' : `${option} năm`}
+                    <Text
+                      style={[
+                        styles.optionText,
+                        tempFilters.experience === option &&
+                          styles.optionTextActive,
+                      ]}
+                    >
+                      {option === "all"
+                        ? "Tất cả"
+                        : option === "10+"
+                        ? "10+ năm"
+                        : `${option} năm`}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -399,15 +441,21 @@ ${instructor.specialties.join(', ')}
                     key={rating}
                     style={[
                       styles.optionButton,
-                      tempFilters.minRating === rating && styles.optionButtonActive
+                      tempFilters.minRating === rating &&
+                        styles.optionButtonActive,
                     ]}
-                    onPress={() => setTempFilters({ ...tempFilters, minRating: rating })}
+                    onPress={() =>
+                      setTempFilters({ ...tempFilters, minRating: rating })
+                    }
                   >
-                    <Text style={[
-                      styles.optionText,
-                      tempFilters.minRating === rating && styles.optionTextActive
-                    ]}>
-                      {rating === 0 ? 'Tất cả' : `${rating}⭐+`}
+                    <Text
+                      style={[
+                        styles.optionText,
+                        tempFilters.minRating === rating &&
+                          styles.optionTextActive,
+                      ]}
+                    >
+                      {rating === 0 ? "Tất cả" : `${rating}⭐+`}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -419,28 +467,42 @@ ${instructor.specialties.join(', ')}
               <Text style={styles.sectionTitle}>Khoảng giá</Text>
               <View style={styles.priceRangeContainer}>
                 <Text style={styles.priceLabel}>
-                  {tempFilters.priceRange[0].toLocaleString()}đ - {tempFilters.priceRange[1].toLocaleString()}đ
+                  {tempFilters.priceRange[0].toLocaleString()}đ -{" "}
+                  {tempFilters.priceRange[1].toLocaleString()}đ
                 </Text>
                 <View style={styles.priceButtons}>
                   {[
                     [200000, 300000],
                     [300000, 400000],
                     [400000, 500000],
-                    [200000, 500000]
+                    [200000, 500000],
                   ].map(([min, max], index) => (
                     <TouchableOpacity
                       key={index}
                       style={[
                         styles.priceButton,
-                        tempFilters.priceRange[0] === min && tempFilters.priceRange[1] === max && styles.priceButtonActive
+                        tempFilters.priceRange[0] === min &&
+                          tempFilters.priceRange[1] === max &&
+                          styles.priceButtonActive,
                       ]}
-                      onPress={() => setTempFilters({ ...tempFilters, priceRange: [min, max] })}
+                      onPress={() =>
+                        setTempFilters({
+                          ...tempFilters,
+                          priceRange: [min, max],
+                        })
+                      }
                     >
-                      <Text style={[
-                        styles.priceButtonText,
-                        tempFilters.priceRange[0] === min && tempFilters.priceRange[1] === max && styles.priceButtonTextActive
-                      ]}>
-                        {index === 3 ? 'Tất cả' : `${min / 1000}k-${max / 1000}k`}
+                      <Text
+                        style={[
+                          styles.priceButtonText,
+                          tempFilters.priceRange[0] === min &&
+                            tempFilters.priceRange[1] === max &&
+                            styles.priceButtonTextActive,
+                        ]}
+                      >
+                        {index === 3
+                          ? "Tất cả"
+                          : `${min / 1000}k-${max / 1000}k`}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -465,11 +527,12 @@ ${instructor.specialties.join(', ')}
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>🔍</Text>
             <Text style={styles.emptyText}>Không tìm thấy giảng viên</Text>
-            <Text style={styles.emptySubtext}>Hãy thử điều chỉnh bộ lọc hoặc mở rộng phạm vi tìm kiếm</Text>
+            <Text style={styles.emptySubtext}>
+              Hãy thử điều chỉnh bộ lọc hoặc mở rộng phạm vi tìm kiếm
+            </Text>
           </View>
         )}
       />
-
     </View>
   );
 }
@@ -480,12 +543,12 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
   },
   header: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     paddingTop: 20,
     paddingBottom: 24,
     paddingHorizontal: 20,
     borderBottomWidth: 0,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -495,8 +558,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   searchContainer: {
     backgroundColor: AppColors.white,
@@ -506,8 +569,8 @@ const styles = StyleSheet.create({
     borderBottomColor: AppColors.borderLight,
   },
   searchInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: AppColors.gray100,
     borderRadius: 12,
     paddingHorizontal: 12,
@@ -525,46 +588,46 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#1a202c',
+    fontWeight: "800",
+    color: "#1a202c",
     marginBottom: 4,
     letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontSize: 15,
-    color: '#64748b',
-    fontWeight: '500',
+    color: "#64748b",
+    fontWeight: "500",
     lineHeight: 20,
   },
   headerRight: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   statsContainer: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: "#f1f5f9",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 16,
-    alignItems: 'center',
+    alignItems: "center",
     minWidth: 80,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   statsNumber: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#ffffff',
+    fontWeight: "800",
+    color: "#ffffff",
     lineHeight: 26,
   },
   statsLabel: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontWeight: '600',
-    textAlign: 'left',
+    color: "rgba(255, 255, 255, 0.85)",
+    fontWeight: "600",
+    textAlign: "left",
   },
 
   // Modern Header Styles
   modernHeader: {
-    position: 'relative',
+    position: "relative",
     paddingTop: 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
@@ -573,7 +636,7 @@ const styles = StyleSheet.create({
   },
 
   headerGradient: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -584,25 +647,25 @@ const styles = StyleSheet.create({
 
   // Decorative Elements
   decorativeCircle1: {
-    display: 'none',
+    display: "none",
   },
 
   decorativeCircle2: {
-    display: 'none',
+    display: "none",
   },
 
   decorativeCircle3: {
-    display: 'none',
+    display: "none",
   },
 
   glassOverlay: {
-    display: 'none',
+    display: "none",
   },
 
   headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 0,
     zIndex: 2,
   },
@@ -611,22 +674,22 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
 
   premiumHeaderTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: AppColors.white,
     marginBottom: 4,
   },
 
   subtitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
 
   liveIndicator: {
@@ -639,37 +702,37 @@ const styles = StyleSheet.create({
 
   premiumHeaderSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '400',
+    color: "rgba(255, 255, 255, 0.9)",
+    fontWeight: "400",
   },
 
   headerActions: {
-    alignItems: 'center',
+    alignItems: "center",
   },
 
   premiumNotificationButton: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    shadowColor: '#000',
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: "rgba(255, 255, 255, 0.3)",
   },
 
   notificationGlow: {
-    position: 'absolute',
+    position: "absolute",
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     top: -6,
     left: -6,
   },
@@ -679,18 +742,18 @@ const styles = StyleSheet.create({
   },
 
   premiumNotificationBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -4,
     right: -4,
-    backgroundColor: '#ef4444',
+    backgroundColor: "#ef4444",
     borderRadius: 12,
     minWidth: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 3,
-    borderColor: '#ffffff',
-    shadowColor: '#ef4444',
+    borderColor: "#ffffff",
+    shadowColor: "#ef4444",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.5,
     shadowRadius: 4,
@@ -699,55 +762,55 @@ const styles = StyleSheet.create({
 
   badgeText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontWeight: "700",
+    color: "#ffffff",
   },
 
   statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     zIndex: 2,
   },
 
   premiumStatsCard: {
     flex: 1,
-    position: 'relative',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    position: "relative",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 20,
     padding: 14,
     marginHorizontal: 4,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    shadowColor: '#000',
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 
   statsGlowEffect: {
-    position: 'absolute',
+    position: "absolute",
     top: -20,
     right: -20,
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
 
   statsShimmer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
   },
 
   statsIconWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
   },
 
@@ -755,11 +818,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -775,25 +838,25 @@ const styles = StyleSheet.create({
   },
 
   filterContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    shadowColor: '#000',
+    borderBottomColor: "#e2e8f0",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
   filterButton: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: "#dee2e6",
   },
   filterButtonActive: {
     backgroundColor: AppColors.active,
@@ -801,16 +864,16 @@ const styles = StyleSheet.create({
   },
   filterButtonText: {
     fontSize: 14,
-    color: '#6c757d',
-    fontWeight: '600',
+    color: "#6c757d",
+    fontWeight: "600",
   },
   filterButtonTextActive: {
-    color: '#ffffff',
-    fontWeight: '700',
+    color: "#ffffff",
+    fontWeight: "700",
   },
   mapContainer: {
     flex: 1,
-    position: 'relative',
+    position: "relative",
   },
   map: {
     flex: 1,
@@ -821,24 +884,24 @@ const styles = StyleSheet.create({
   },
   calloutTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2d4150',
+    fontWeight: "600",
+    color: "#2d4150",
     marginBottom: 4,
   },
   calloutText: {
     fontSize: 12,
-    color: '#6c757d',
+    color: "#6c757d",
     marginBottom: 2,
   },
   myLocationButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     left: 10,
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -846,17 +909,17 @@ const styles = StyleSheet.create({
   },
   myLocationText: {
     fontSize: 12,
-    color: '#ffffff',
-    fontWeight: '600',
+    color: "#ffffff",
+    fontWeight: "600",
   },
   legend: {
-    position: 'absolute',
+    position: "absolute",
     top: 20,
     right: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     padding: 12,
     borderRadius: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -864,13 +927,13 @@ const styles = StyleSheet.create({
   },
   legendTitle: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#2d4150',
+    fontWeight: "600",
+    color: "#2d4150",
     marginBottom: 8,
   },
   legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
   legendColor: {
@@ -881,10 +944,10 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 10,
-    color: '#6c757d',
+    color: "#6c757d",
   },
   instructorCardsContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     paddingVertical: 16,
     paddingHorizontal: 8,
     maxHeight: 140,
@@ -893,19 +956,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   instructorCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 6,
     borderWidth: 0,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 4,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   instructorAvatar: {
     width: 64,
@@ -913,52 +976,52 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     marginRight: 14,
     borderWidth: 2,
-    borderColor: '#f0f0f0',
+    borderColor: "#f0f0f0",
   },
   instructorInfo: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
   bookingsText: {
     fontSize: 12,
-    color: '#6c757d',
+    color: "#6c757d",
     marginLeft: 8,
   },
   distanceText: {
     fontSize: 12,
-    color: '#007bff',
+    color: "#007bff",
     marginBottom: 4,
   },
   instructorName: {
     fontSize: 17,
-    fontWeight: '700',
-    color: '#1a202c',
+    fontWeight: "700",
+    color: "#1a202c",
     marginBottom: 0,
     letterSpacing: -0.2,
     flex: 1,
   },
   instructorRating: {
     fontSize: 12,
-    color: '#6c757d',
+    color: "#6c757d",
     marginBottom: 4,
   },
   instructorPrice: {
     fontSize: 16,
-    color: '#38a169',
-    fontWeight: '700',
+    color: "#38a169",
+    fontWeight: "700",
     marginBottom: 0,
   },
   availabilityBadge: {
     paddingVertical: 4,
     paddingHorizontal: 12,
     borderRadius: 16,
-    alignSelf: 'flex-start',
-    shadowColor: '#000',
+    alignSelf: "flex-start",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
@@ -966,50 +1029,50 @@ const styles = StyleSheet.create({
   },
   availabilityText: {
     fontSize: 11,
-    color: '#ffffff',
-    fontWeight: '700',
-    textAlign: 'center',
+    color: "#ffffff",
+    fontWeight: "700",
+    textAlign: "center",
     letterSpacing: 0.3,
   },
   // Tracking styles (like Grab)
   trackingButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 80,
     left: 10,
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
   trackingButtonActive: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: "#FF3B30",
   },
   trackingText: {
     fontSize: 12,
-    color: '#ffffff',
-    fontWeight: '600',
+    color: "#ffffff",
+    fontWeight: "600",
   },
   trackingTextActive: {
-    color: '#ffffff',
+    color: "#ffffff",
   },
   trackingInfo: {
-    position: 'absolute',
+    position: "absolute",
     top: 80,
     left: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
     borderRadius: 8,
     padding: 8,
     minWidth: 120,
   },
   trackingInfoText: {
     fontSize: 12,
-    color: '#ffffff',
-    fontWeight: '600',
+    color: "#ffffff",
+    fontWeight: "600",
     marginBottom: 2,
   },
   // User location marker styles
@@ -1017,90 +1080,90 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     borderWidth: 3,
-    borderColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    borderColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
   userLocationMarkerTracking: {
-    backgroundColor: '#FF3B30',
-    borderColor: '#ffffff',
+    backgroundColor: "#FF3B30",
+    borderColor: "#ffffff",
   },
   userLocationDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   userLocationArrow: {
-    position: 'absolute',
+    position: "absolute",
     top: -15,
     width: 0,
     height: 0,
     borderLeftWidth: 6,
     borderRightWidth: 6,
     borderBottomWidth: 12,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#FF3B30',
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: "#FF3B30",
   },
   // New styles for list view
   sortContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: "#e9ecef",
   },
   sortButton: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: "#dee2e6",
   },
   sortButtonActive: {
-    backgroundColor: '#28a745',
-    borderColor: '#28a745',
+    backgroundColor: "#28a745",
+    borderColor: "#28a745",
   },
   sortText: {
     fontSize: 14,
-    color: '#6c757d',
-    fontWeight: '500',
+    color: "#6c757d",
+    fontWeight: "500",
   },
   sortTextActive: {
-    color: '#ffffff',
-    fontWeight: '600',
+    color: "#ffffff",
+    fontWeight: "600",
   },
   resultsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    shadowColor: '#000',
+    borderBottomColor: "#e2e8f0",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
   refreshLocationButton: {
-    backgroundColor: '#4299e1',
+    backgroundColor: "#4299e1",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    shadowColor: '#4299e1',
+    shadowColor: "#4299e1",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -1108,8 +1171,8 @@ const styles = StyleSheet.create({
   },
   refreshLocationText: {
     fontSize: 13,
-    color: '#ffffff',
-    fontWeight: '700',
+    color: "#ffffff",
+    fontWeight: "700",
   },
   instructorsList: {
     paddingVertical: 4,
@@ -1120,8 +1183,8 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 80,
     paddingHorizontal: 40,
   },
@@ -1132,137 +1195,137 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#475569',
-    textAlign: 'center',
+    fontWeight: "700",
+    color: "#475569",
+    textAlign: "center",
     marginBottom: 12,
   },
   emptySubtext: {
     fontSize: 15,
-    color: '#64748b',
-    textAlign: 'center',
+    color: "#64748b",
+    textAlign: "center",
     lineHeight: 22,
     maxWidth: 280,
   },
   // Modern UI styles
   filterLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#495057',
+    fontWeight: "600",
+    color: "#495057",
     marginBottom: 8,
     marginLeft: 4,
   },
   filterChip: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#e9ecef',
-    shadowColor: '#000',
+    borderColor: "#e9ecef",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
   filterChipActive: {
-    backgroundColor: '#007bff',
-    borderColor: '#007bff',
-    shadowColor: '#007bff',
+    backgroundColor: "#007bff",
+    borderColor: "#007bff",
+    shadowColor: "#007bff",
     shadowOpacity: 0.3,
   },
   filterChipText: {
     fontSize: 13,
-    color: '#6c757d',
-    fontWeight: '500',
+    color: "#6c757d",
+    fontWeight: "500",
   },
   filterChipTextActive: {
-    color: '#ffffff',
-    fontWeight: '600',
+    color: "#ffffff",
+    fontWeight: "600",
   },
   sortLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#495057',
+    fontWeight: "600",
+    color: "#495057",
     marginBottom: 8,
     marginLeft: 4,
   },
   sortChip: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#e9ecef',
-    shadowColor: '#000',
+    borderColor: "#e9ecef",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
   sortChipActive: {
-    backgroundColor: '#28a745',
-    borderColor: '#28a745',
-    shadowColor: '#28a745',
+    backgroundColor: "#28a745",
+    borderColor: "#28a745",
+    shadowColor: "#28a745",
     shadowOpacity: 0.3,
   },
   sortChipText: {
     fontSize: 13,
-    color: '#6c757d',
-    fontWeight: '500',
+    color: "#6c757d",
+    fontWeight: "500",
   },
   sortChipTextActive: {
-    color: '#ffffff',
-    fontWeight: '600',
+    color: "#ffffff",
+    fontWeight: "600",
   },
   // Enhanced instructor card styles
   avatarContainer: {
-    position: 'relative',
+    position: "relative",
     marginRight: 16,
   },
   statusIndicator: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 2,
     right: 2,
     width: 16,
     height: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: "#ffffff",
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 6,
   },
   ratingContainer: {
-    backgroundColor: '#fff3cd',
+    backgroundColor: "#fff3cd",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
   },
   ratingText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#856404',
+    fontWeight: "600",
+    color: "#856404",
   },
   detailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 6,
   },
   experienceText: {
     fontSize: 12,
-    color: '#6f42c1',
-    fontWeight: '500',
+    color: "#6f42c1",
+    fontWeight: "500",
   },
   priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   detailButton: {
@@ -1277,16 +1340,16 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   detailButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   // Modern Filter System Styles
   modernFilterBar: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    shadowColor: '#000',
+    borderBottomColor: "#e2e8f0",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -1295,33 +1358,33 @@ const styles = StyleSheet.create({
   filterScrollContent: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   modernFilterButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#4299e1',
+    fontWeight: "600",
+    color: "#4299e1",
   },
   filterBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -8,
     right: -8,
-    backgroundColor: '#e53e3e',
+    backgroundColor: "#e53e3e",
     borderRadius: 10,
     width: 20,
     height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   filterBadgeText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontWeight: "700",
+    color: "#ffffff",
   },
   sortButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#6b7280',
+    fontWeight: "600",
+    color: "#6b7280",
   },
   clearButton: {
     backgroundColor: AppColors.error,
@@ -1332,11 +1395,11 @@ const styles = StyleSheet.create({
   },
   clearButtonText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#ffffff',
+    fontWeight: "600",
+    color: "#ffffff",
   },
   resultsCount: {
-    backgroundColor: '#f0fdf4',
+    backgroundColor: "#f0fdf4",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
@@ -1345,23 +1408,23 @@ const styles = StyleSheet.create({
   resultsCountText: {
     fontSize: 13,
     color: AppColors.success,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   // Modal Styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#f7fafc',
+    backgroundColor: "#f7fafc",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    shadowColor: '#000',
+    borderBottomColor: "#e2e8f0",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1369,17 +1432,17 @@ const styles = StyleSheet.create({
   },
   modalCloseButton: {
     fontSize: 24,
-    fontWeight: '600',
-    color: '#6b7280',
+    fontWeight: "600",
+    color: "#6b7280",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1a202c',
+    fontWeight: "700",
+    color: "#1a202c",
   },
   modalApplyButton: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: AppColors.active,
   },
   modalContent: {
@@ -1388,10 +1451,10 @@ const styles = StyleSheet.create({
   },
   filterSection: {
     marginVertical: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -1399,24 +1462,24 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1a202c',
+    fontWeight: "700",
+    color: "#1a202c",
     marginBottom: 16,
   },
   optionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   optionButton: {
-    backgroundColor: '#f7fafc',
+    backgroundColor: "#f7fafc",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
     minWidth: 80,
-    alignItems: 'center',
+    alignItems: "center",
   },
   optionButtonActive: {
     backgroundColor: AppColors.active,
@@ -1424,37 +1487,37 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#4a5568',
+    fontWeight: "600",
+    color: "#4a5568",
   },
   optionTextActive: {
-    color: '#ffffff',
+    color: "#ffffff",
   },
   priceRangeContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   priceLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2d3748',
+    fontWeight: "600",
+    color: "#2d3748",
     marginBottom: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   priceButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   priceButton: {
-    backgroundColor: '#f7fafc',
+    backgroundColor: "#f7fafc",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
     minWidth: 80,
-    alignItems: 'center',
+    alignItems: "center",
   },
   priceButtonActive: {
     backgroundColor: AppColors.active,
@@ -1462,11 +1525,11 @@ const styles = StyleSheet.create({
   },
   priceButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#4a5568',
+    fontWeight: "600",
+    color: "#4a5568",
   },
   priceButtonTextActive: {
-    color: '#ffffff',
+    color: "#ffffff",
   },
 });
 

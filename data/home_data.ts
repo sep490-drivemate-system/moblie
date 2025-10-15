@@ -1,3 +1,7 @@
+import { ICar } from "@/models/car/car";
+import { LicenseType } from "@/models/license/license";
+import { IInstructorOption } from "@/models/package/package";
+
 export const carousels = [
   {
     id: 1,
@@ -16,23 +20,62 @@ export const carousels = [
   },
 ];
 
-export const drivingLicenses = [
-  "B1",
-  "B",
-  "C1",
-  "C",
-  "D1",
-  "D2",
-  "D",
-  "BE",
-  "C1E",
-  "CE",
-  "D1E",
-  "D2E",
-  "DE",
+export const drivingLicenses: LicenseType[] = [
+  {
+    id: "1",
+    name: "B1",
+  },
+  {
+    id: "2",
+    name: "B",
+  },
+  {
+    id: "3",
+    name: "C1",
+  },
+  {
+    id: "4",
+    name: "C",
+  },
+  {
+    id: "5",
+    name: "D1",
+  },
+  {
+    id: "6",
+    name: "D2",
+  },
+  {
+    id: "7",
+    name: "D",
+  },
+  {
+    id: "8",
+    name: "BE",
+  },
+  {
+    id: "9",
+    name: "C1E",
+  },
+  {
+    id: "10",
+    name: "CE",
+  },
+  {
+    id: "11",
+    name: "D1E",
+  },
+  {
+    id: "12",
+    name: "D2E",
+  },
+  {
+    id: "13",
+    name: "DE",
+  },
 ];
 
-export const listCar = [
+export const listCar: ICar[] = [
   {
     id: 1,
     name: "KIA Carnival 2024",
@@ -374,7 +417,7 @@ export const listCar = [
   },
 ];
 
-export const listInstructorOptions = [
+export const listInstructorOptions: IInstructorOption[] = [
   {
     id: 1,
     imageUrl: require("@/assets/images/5-years-experience.png"),

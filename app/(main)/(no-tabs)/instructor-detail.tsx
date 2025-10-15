@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,24 +10,39 @@ import {
   StatusBar,
   Linking,
   Modal,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Phone, Mail, Star, Award, Users, MapPin, Clock, CheckCircle, X } from 'lucide-react-native';
-import { instructorsData, Instructor } from '@/data/instructors_data';
-import { AppColors } from '@/constants/Colors';
-
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  ArrowLeft,
+  Phone,
+  Mail,
+  Star,
+  Award,
+  Users,
+  MapPin,
+  Clock,
+  CheckCircle,
+  X,
+} from "lucide-react-native";
+import { instructorsData } from "@/data/instructors_data";
+import { AppColors } from "@/constants/Colors";
+import { IInstructor } from "@/models/instructor/instructor";
+import { instructorVehicles } from "@/data/instructor_detail";
+import { feedbackData } from "@/data/feedback_data";
 
 export default function InstructorDetailScreen() {
   const router = useRouter();
   const { instructorId } = useLocalSearchParams();
-  const [instructor, setInstructor] = useState<Instructor | null>(null);
+  const [instructor, setInstructor] = useState<IInstructor | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<'instructor' | 'full'>('full');
+  const [selectedPackage, setSelectedPackage] = useState<"instructor" | "full">(
+    "full"
+  );
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
 
   useEffect(() => {
-    const foundInstructor = instructorsData.find(i => i.id === instructorId);
+    const foundInstructor = instructorsData.find((i) => i.id === instructorId);
     if (foundInstructor) {
       setInstructor(foundInstructor);
     }
@@ -41,37 +56,6 @@ export default function InstructorDetailScreen() {
     );
   }
 
-  // Mock vehicles data for this instructor
-  const vehicles = [
-    {
-      id: '1',
-      name: 'Toyota Vios 2023',
-      image: 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=400&h=300&fit=crop',
-      seats: 5,
-      transmission: 'Số tự động',
-      year: '2023',
-      price: 100,
-    },
-    {
-      id: '2',
-      name: 'Honda City 2024',
-      image: 'https://images.unsplash.com/photo-1619767886558-efdc259cde1a?w=400&h=300&fit=crop',
-      seats: 5,
-      transmission: 'Số sàn',
-      year: '2024',
-      price: 80,
-    },
-    {
-      id: '3',
-      name: 'Mazda CX-5 2023',
-      image: 'https://images.unsplash.com/photo-1581540222194-0def2dda95b8?w=400&h=300&fit=crop',
-      seats: 7,
-      transmission: 'Số tự động',
-      year: '2023',
-      price: 120,
-    },
-  ];
-
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -83,7 +67,7 @@ export default function InstructorDetailScreen() {
       >
         {/* Hero Section with Avatar */}
         <LinearGradient
-          colors={['#0ea5e9', '#0284c7']}
+          colors={["#0ea5e9", "#0284c7"]}
           style={styles.heroSection}
         >
           <TouchableOpacity
@@ -113,18 +97,27 @@ export default function InstructorDetailScreen() {
             {/* Quick Stats */}
             <View style={styles.quickStats}>
               <View style={styles.quickStatItem}>
-                <Star size={18} color="#fbbf24" fill="#fbbf24" strokeWidth={0} />
+                <Star
+                  size={18}
+                  color="#fbbf24"
+                  fill="#fbbf24"
+                  strokeWidth={0}
+                />
                 <Text style={styles.quickStatText}>{instructor.rating}</Text>
               </View>
               <View style={styles.quickStatDivider} />
               <View style={styles.quickStatItem}>
                 <Award size={18} color="#fff" strokeWidth={2} />
-                <Text style={styles.quickStatText}>{instructor.experienceYears} năm</Text>
+                <Text style={styles.quickStatText}>
+                  {instructor.experienceYears} năm
+                </Text>
               </View>
               <View style={styles.quickStatDivider} />
               <View style={styles.quickStatItem}>
                 <Users size={18} color="#fff" strokeWidth={2} />
-                <Text style={styles.quickStatText}>{instructor.totalBookings}+</Text>
+                <Text style={styles.quickStatText}>
+                  {instructor.totalBookings}+
+                </Text>
               </View>
             </View>
           </View>
@@ -171,17 +164,25 @@ export default function InstructorDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Giới thiệu</Text>
           <Text style={styles.aboutText}>
-            Giảng viên {instructor.name} có {instructor.experienceYears} năm kinh nghiệm trong lĩnh vực đào tạo lái xe. Với phong cách giảng dạy chuyên nghiệp và tận tâm, đã giúp hơn {instructor.totalBookings} học viên tự tin lái xe an toàn trên mọi địa hình.
+            Giảng viên {instructor.name} có {instructor.experienceYears} năm
+            kinh nghiệm trong lĩnh vực đào tạo lái xe. Với phong cách giảng dạy
+            chuyên nghiệp và tận tâm, đã giúp hơn {instructor.totalBookings} học
+            viên tự tin lái xe an toàn trên mọi địa hình.
           </Text>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Phương tiện ({vehicles.length})</Text>
+            <Text style={styles.sectionTitle}>
+              Phương tiện ({instructorVehicles.length})
+            </Text>
           </View>
 
-          {vehicles.map((vehicle, index) => (
-            <TouchableOpacity key={index} style={[styles.vehicleCard, index > 0 && { marginTop: 12 }]}>
+          {instructorVehicles.map((vehicle, index) => (
+            <TouchableOpacity
+              key={vehicle.id}
+              style={[styles.vehicleCard, index > 0 && { marginTop: 12 }]}
+            >
               <Image
                 source={{ uri: vehicle.image }}
                 style={styles.vehicleImage}
@@ -192,16 +193,22 @@ export default function InstructorDetailScreen() {
                   <View style={styles.vehicleSpecs}>
                     <View style={styles.vehicleSpecItem}>
                       <Users size={14} color="#fff" strokeWidth={2} />
-                      <Text style={styles.vehicleSpecText}>{vehicle.seats} Chỗ</Text>
+                      <Text style={styles.vehicleSpecText}>
+                        {vehicle.seats} Chỗ
+                      </Text>
                     </View>
                     <View style={styles.vehicleSpecItem}>
-                      <Text style={styles.vehicleSpecText}>{vehicle.transmission}</Text>
+                      <Text style={styles.vehicleSpecText}>
+                        {vehicle.transmission}
+                      </Text>
                     </View>
                     <View style={styles.vehicleSpecItem}>
                       <Text style={styles.vehicleSpecText}>{vehicle.year}</Text>
                     </View>
                   </View>
-                  <Text style={styles.vehiclePrice}>{vehicle.price} xu/giờ</Text>
+                  <Text style={styles.vehiclePrice}>
+                    {vehicle.price} xu/giờ
+                  </Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -214,82 +221,70 @@ export default function InstructorDetailScreen() {
 
           <View style={styles.reviewSummaryCard}>
             <View style={styles.reviewSummaryLeft}>
-              <Text style={styles.ratingNumber}>{instructor.rating}</Text>
+              <Text style={styles.ratingNumber}>{feedbackData.average}</Text>
               <View style={styles.starsRow}>
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} size={16} color="#f59e0b" fill="#f59e0b" strokeWidth={0} />
+                  <Star
+                    key={star}
+                    size={16}
+                    color="#f59e0b"
+                    fill="#f59e0b"
+                    strokeWidth={0}
+                  />
                 ))}
               </View>
-              <Text style={styles.reviewCount}>{instructor.totalBookings} đánh giá</Text>
+              <Text style={styles.reviewCount}>
+                {feedbackData.totalReviews} đánh giá
+              </Text>
             </View>
 
             <View style={styles.reviewSummaryRight}>
-              <View style={styles.ratingBar}>
-                <Text style={styles.ratingBarLabel}>5★</Text>
-                <View style={styles.ratingBarTrack}>
-                  <View style={[styles.ratingBarFill, { width: '85%' }]} />
+              {feedbackData.distribution.map((item, i) => (
+                <View key={i} style={styles.ratingBar}>
+                  <Text style={styles.ratingBarLabel}>{item.stars}★</Text>
+                  <View style={styles.ratingBarTrack}>
+                    <View
+                      style={[
+                        styles.ratingBarFill,
+                        { width: `${item.percent}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.ratingBarCount}>{item.percent}%</Text>
                 </View>
-                <Text style={styles.ratingBarCount}>85%</Text>
-              </View>
-              <View style={styles.ratingBar}>
-                <Text style={styles.ratingBarLabel}>4★</Text>
-                <View style={styles.ratingBarTrack}>
-                  <View style={[styles.ratingBarFill, { width: '10%' }]} />
-                </View>
-                <Text style={styles.ratingBarCount}>10%</Text>
-              </View>
-              <View style={styles.ratingBar}>
-                <Text style={styles.ratingBarLabel}>3★</Text>
-                <View style={styles.ratingBarTrack}>
-                  <View style={[styles.ratingBarFill, { width: '5%' }]} />
-                </View>
-                <Text style={styles.ratingBarCount}>5%</Text>
-              </View>
+              ))}
             </View>
           </View>
 
           {/* Sample Reviews */}
-          <View style={styles.reviewItem}>
-            <View style={styles.reviewHeader}>
-              <Image
-                source={{ uri: 'https://i.pravatar.cc/150?img=1' }}
-                style={styles.reviewAvatar}
-              />
-              <View style={styles.reviewHeaderInfo}>
-                <Text style={styles.reviewerName}>Nguyễn Văn A</Text>
-                <View style={styles.reviewStars}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={star} size={12} color="#f59e0b" fill="#f59e0b" strokeWidth={0} />
-                  ))}
+          {feedbackData.reviews.map((review) => (
+            <View style={styles.reviewItem} key={review.id}>
+              <View style={styles.reviewHeader}>
+                <Image
+                  source={{ uri: review.reviewer.avatarUrl }}
+                  style={styles.reviewAvatar}
+                />
+                <View style={styles.reviewHeaderInfo}>
+                  <Text style={styles.reviewerName}>
+                    {review.reviewer.name}
+                  </Text>
+                  <View style={styles.reviewStars}>
+                    {Array.from({ length: review.rating }).map((_, i) => (
+                      <Star
+                        key={i}
+                        size={12}
+                        color="#f59e0b"
+                        fill="#f59e0b"
+                        strokeWidth={0}
+                      />
+                    ))}
+                  </View>
                 </View>
+                <Text style={styles.reviewDate}>{review.date}</Text>
               </View>
-              <Text style={styles.reviewDate}>2 ngày trước</Text>
+              <Text style={styles.reviewText}>{review.comment}</Text>
             </View>
-            <Text style={styles.reviewText}>
-              Giảng viên rất nhiệt tình và kiên nhẫn. Giảng dạy dễ hiểu, giúp tôi tự tin hơn khi lái xe. Rất đáng để thuê!
-            </Text>
-          </View>
-
-          <View style={styles.reviewItem}>
-            <View style={styles.reviewHeader}>
-              <Image
-                source={{ uri: 'https://i.pravatar.cc/150?img=5' }}
-                style={styles.reviewAvatar}
-              />
-              <View style={styles.reviewHeaderInfo}>
-                <Text style={styles.reviewerName}>Trần Thị B</Text>
-                <View style={styles.reviewStars}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={star} size={12} color="#f59e0b" fill="#f59e0b" strokeWidth={0} />
-                  ))}
-                </View>
-              </View>
-              <Text style={styles.reviewDate}>1 tuần trước</Text>
-            </View>
-            <Text style={styles.reviewText}>
-              Xe đẹp, giảng viên chuyên nghiệp. Tôi đã học được rất nhiều kỹ năng lái xe an toàn. Recommend!
-            </Text>
-          </View>
+          ))}
         </View>
 
         {/* Spacing for bottom buttons */}
@@ -298,7 +293,6 @@ export default function InstructorDetailScreen() {
 
       {/* Bottom Action Buttons */}
       <View style={styles.bottomContainer}>
-
         <TouchableOpacity
           style={styles.bookButton}
           onPress={() => setShowBookingModal(true)}
@@ -328,25 +322,33 @@ export default function InstructorDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalScroll}
+              showsVerticalScrollIndicator={false}
+            >
               {/* Package Options */}
               <View style={styles.packageOptions}>
                 {/* Instructor Only Package */}
                 <TouchableOpacity
                   style={[
                     styles.packageOption,
-                    selectedPackage === 'instructor' && styles.packageOptionSelected
+                    selectedPackage === "instructor" &&
+                      styles.packageOptionSelected,
                   ]}
                   onPress={() => {
-                    setSelectedPackage('instructor');
+                    setSelectedPackage("instructor");
                     setSelectedVehicle(null);
                   }}
                 >
                   <View style={styles.radioButton}>
-                    {selectedPackage === 'instructor' && <View style={styles.radioButtonInner} />}
+                    {selectedPackage === "instructor" && (
+                      <View style={styles.radioButtonInner} />
+                    )}
                   </View>
                   <View style={styles.packageInfo}>
-                    <Text style={styles.packageTitle}>Giá tiền thuê người hướng dẫn</Text>
+                    <Text style={styles.packageTitle}>
+                      Giá tiền thuê người hướng dẫn
+                    </Text>
                     <Text style={styles.packagePrice}>200 xu/giờ</Text>
                   </View>
                 </TouchableOpacity>
@@ -355,31 +357,40 @@ export default function InstructorDetailScreen() {
                 <TouchableOpacity
                   style={[
                     styles.packageOption,
-                    selectedPackage === 'full' && styles.packageOptionSelected
+                    selectedPackage === "full" && styles.packageOptionSelected,
                   ]}
-                  onPress={() => setSelectedPackage('full')}
+                  onPress={() => setSelectedPackage("full")}
                 >
                   <View style={styles.radioButton}>
-                    {selectedPackage === 'full' && <View style={styles.radioButtonInner} />}
+                    {selectedPackage === "full" && (
+                      <View style={styles.radioButtonInner} />
+                    )}
                   </View>
                   <View style={styles.packageInfo}>
-                    <Text style={styles.packageTitle}>Giá tiền thuê trọn gói</Text>
-                    <Text style={styles.packageSubtitle}>(người hướng dẫn và xe)</Text>
+                    <Text style={styles.packageTitle}>
+                      Giá tiền thuê trọn gói
+                    </Text>
+                    <Text style={styles.packageSubtitle}>
+                      (người hướng dẫn và xe)
+                    </Text>
                     <Text style={styles.packagePrice}>300-320 xu/giờ</Text>
                   </View>
                 </TouchableOpacity>
               </View>
 
               {/* Vehicle Selection (only show if full package selected) */}
-              {selectedPackage === 'full' && (
+              {selectedPackage === "full" && (
                 <View style={styles.vehicleSelection}>
-                  <Text style={styles.vehicleSelectionTitle}>Chọn phương tiện</Text>
-                  {vehicles.map((vehicle) => (
+                  <Text style={styles.vehicleSelectionTitle}>
+                    Chọn phương tiện
+                  </Text>
+                  {instructorVehicles.map((vehicle) => (
                     <TouchableOpacity
                       key={vehicle.id}
                       style={[
                         styles.vehicleOption,
-                        selectedVehicle === vehicle.id && styles.vehicleOptionSelected
+                        selectedVehicle === vehicle.id &&
+                          styles.vehicleOptionSelected,
                       ]}
                       onPress={() => setSelectedVehicle(vehicle.id)}
                     >
@@ -388,16 +399,26 @@ export default function InstructorDetailScreen() {
                         style={styles.vehicleOptionImage}
                       />
                       <View style={styles.vehicleOptionInfo}>
-                        <Text style={styles.vehicleOptionName}>{vehicle.name}</Text>
+                        <Text style={styles.vehicleOptionName}>
+                          {vehicle.name}
+                        </Text>
                         <View style={styles.vehicleOptionSpecs}>
-                          <Text style={styles.vehicleOptionSpec}>{vehicle.seats} chỗ</Text>
+                          <Text style={styles.vehicleOptionSpec}>
+                            {vehicle.seats} chỗ
+                          </Text>
                           <Text style={styles.vehicleOptionDot}> • </Text>
-                          <Text style={styles.vehicleOptionSpec}>{vehicle.transmission}</Text>
+                          <Text style={styles.vehicleOptionSpec}>
+                            {vehicle.transmission}
+                          </Text>
                         </View>
-                        <Text style={styles.vehicleOptionPrice}>{vehicle.price} xu/giờ</Text>
+                        <Text style={styles.vehicleOptionPrice}>
+                          {vehicle.price} xu/giờ
+                        </Text>
                       </View>
                       <View style={styles.vehicleRadioButton}>
-                        {selectedVehicle === vehicle.id && <View style={styles.vehicleRadioButtonInner} />}
+                        {selectedVehicle === vehicle.id && (
+                          <View style={styles.vehicleRadioButtonInner} />
+                        )}
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -416,21 +437,23 @@ export default function InstructorDetailScreen() {
               <TouchableOpacity
                 style={[
                   styles.continueButton,
-                  (selectedPackage === 'full' && !selectedVehicle) && styles.continueButtonDisabled
+                  selectedPackage === "full" &&
+                    !selectedVehicle &&
+                    styles.continueButtonDisabled,
                 ]}
                 onPress={() => {
-                  if (selectedPackage === 'full' && !selectedVehicle) return;
+                  if (selectedPackage === "full" && !selectedVehicle) return;
                   setShowBookingModal(false);
                   router.push({
-                    pathname: '/(main)/(no-tabs)/booking',
+                    pathname: "/(main)/(no-tabs)/booking",
                     params: {
                       instructorId: instructor.id,
                       package: selectedPackage,
-                      vehicleId: selectedVehicle || ''
-                    }
+                      vehicleId: selectedVehicle || "",
+                    },
                   });
                 }}
-                disabled={selectedPackage === 'full' && !selectedVehicle}
+                disabled={selectedPackage === "full" && !selectedVehicle}
               >
                 <Text style={styles.continueButtonText}>Tiếp tục</Text>
               </TouchableOpacity>
@@ -445,18 +468,18 @@ export default function InstructorDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
   },
   loadingText: {
     fontSize: 16,
-    color: '#64748b',
-    fontWeight: '600',
+    color: "#64748b",
+    fontWeight: "600",
   },
   content: {
     flex: 1,
@@ -469,36 +492,36 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 30,
     paddingHorizontal: 20,
-    alignItems: 'center',
+    alignItems: "center",
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
   },
   backButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 50,
     left: 20,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 10,
   },
   heroContent: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
-    width: '100%',
+    width: "100%",
   },
   heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 20,
     paddingHorizontal: 10,
   },
   avatarContainer: {
-    position: 'relative',
+    position: "relative",
     marginRight: 16,
   },
   heroAvatar: {
@@ -506,72 +529,72 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: "#fff",
   },
   statusBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 2,
     right: 2,
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2.5,
-    borderColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
   },
   statusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   heroNameContainer: {
-    justifyContent: 'center',
-    alignItems: 'flex-start',
+    justifyContent: "center",
+    alignItems: "flex-start",
   },
   heroName: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: "800",
+    color: "#fff",
     marginBottom: 6,
   },
   heroStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   heroStatus: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '600',
+    color: "rgba(255, 255, 255, 0.9)",
+    fontWeight: "600",
   },
   heroStatusDot: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontWeight: '600',
+    color: "rgba(255, 255, 255, 0.6)",
+    fontWeight: "600",
   },
   quickStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 20,
   },
   quickStatItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   quickStatText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
   },
   quickStatDivider: {
     width: 1,
     height: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: "rgba(255, 255, 255, 0.4)",
     marginHorizontal: 16,
   },
   // Pricing Section
@@ -582,7 +605,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: AppColors.textPrimary,
     marginBottom: 16,
   },
@@ -591,45 +614,45 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   priceCardFeatured: {
-    borderColor: '#f59e0b',
-    position: 'relative',
+    borderColor: "#f59e0b",
+    position: "relative",
   },
   featuredBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -8,
     right: 20,
-    backgroundColor: '#f59e0b',
+    backgroundColor: "#f59e0b",
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 8,
   },
   featuredBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: "800",
+    color: "#fff",
     letterSpacing: 0.5,
   },
   priceCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
   },
   priceCardIcon: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#dbeafe',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#dbeafe",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   priceCardInfo: {
@@ -637,27 +660,27 @@ const styles = StyleSheet.create({
   },
   priceCardTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: AppColors.textPrimary,
     marginBottom: 2,
   },
   priceCardDesc: {
     fontSize: 13,
     color: AppColors.textSecondary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   priceCardBottom: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
   },
   priceAmount: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: "800",
     color: AppColors.active,
   },
   priceUnit: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: AppColors.textSecondary,
     marginLeft: 4,
   },
@@ -668,7 +691,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -678,7 +701,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColors.textSecondary,
     lineHeight: 22,
-    fontWeight: '400',
+    fontWeight: "400",
     marginBottom: 20,
   },
   specialtiesContainer: {
@@ -686,37 +709,37 @@ const styles = StyleSheet.create({
   },
   specialtiesTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: AppColors.textPrimary,
     marginBottom: 12,
   },
   specialtiesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   specialtyChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f9ff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f9ff",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
     gap: 6,
   },
   specialtyText: {
-    color: '#0369a1',
+    color: "#0369a1",
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   // Info List
   infoList: {
     gap: 0,
   },
   infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: AppColors.borderLight,
@@ -724,36 +747,36 @@ const styles = StyleSheet.create({
   infoRowLabel: {
     fontSize: 14,
     color: AppColors.textSecondary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   infoRowValue: {
     fontSize: 15,
     color: AppColors.textPrimary,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   // Vehicle Card
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   vehicleCard: {
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
     height: 160,
   },
   vehicleImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   vehicleOverlay: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     padding: 16,
   },
   vehicleInfo: {
@@ -761,71 +784,71 @@ const styles = StyleSheet.create({
   },
   vehicleName: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
   },
   vehicleSpecs: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   vehicleSpecItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   vehicleSpecText: {
     fontSize: 13,
-    color: '#fff',
-    fontWeight: '500',
+    color: "#fff",
+    fontWeight: "500",
   },
   vehiclePrice: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#fbbf24',
+    fontWeight: "700",
+    color: "#fbbf24",
     marginTop: 8,
   },
   // Reviews
   reviewSummaryCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 24,
     marginBottom: 20,
   },
   reviewSummaryLeft: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingRight: 24,
     borderRightWidth: 1,
     borderRightColor: AppColors.borderLight,
   },
   ratingNumber: {
     fontSize: 48,
-    fontWeight: '800',
+    fontWeight: "800",
     color: AppColors.textPrimary,
     marginBottom: 8,
   },
   starsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 4,
     marginBottom: 8,
   },
   reviewCount: {
     fontSize: 12,
     color: AppColors.textSecondary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   reviewSummaryRight: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     gap: 8,
   },
   ratingBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   ratingBarLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: AppColors.textSecondary,
     width: 24,
   },
@@ -834,19 +857,19 @@ const styles = StyleSheet.create({
     height: 6,
     backgroundColor: AppColors.gray100,
     borderRadius: 3,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   ratingBarFill: {
-    height: '100%',
-    backgroundColor: '#f59e0b',
+    height: "100%",
+    backgroundColor: "#f59e0b",
     borderRadius: 3,
   },
   ratingBarCount: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     color: AppColors.textSecondary,
     width: 32,
-    textAlign: 'right',
+    textAlign: "right",
   },
   reviewItem: {
     paddingTop: 16,
@@ -855,8 +878,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   reviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 10,
   },
   reviewAvatar: {
@@ -870,28 +893,28 @@ const styles = StyleSheet.create({
   },
   reviewerName: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: AppColors.textPrimary,
     marginBottom: 4,
   },
   reviewStars: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 2,
   },
   reviewDate: {
     fontSize: 12,
     color: AppColors.textLight,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   reviewText: {
     fontSize: 14,
     color: AppColors.textSecondary,
     lineHeight: 20,
-    fontWeight: '400',
+    fontWeight: "400",
   },
   // Bottom Container
   bottomContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
@@ -901,7 +924,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     borderTopWidth: 1,
     borderTopColor: AppColors.borderLight,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -911,8 +934,8 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.active,
     paddingVertical: 16,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     shadowColor: AppColors.active,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -920,28 +943,28 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   bookButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.5,
   },
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
     backgroundColor: AppColors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '85%',
+    maxHeight: "85%",
     paddingBottom: 32,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 16,
@@ -950,7 +973,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     color: AppColors.textPrimary,
   },
   closeButton: {
@@ -958,8 +981,8 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     backgroundColor: AppColors.gray100,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalScroll: {
     maxHeight: 500,
@@ -969,8 +992,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   packageOption: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
@@ -979,7 +1002,7 @@ const styles = StyleSheet.create({
   },
   packageOptionSelected: {
     borderColor: AppColors.active,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: "#f0f9ff",
   },
   radioButton: {
     width: 20,
@@ -987,8 +1010,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2,
     borderColor: AppColors.borderLight,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
     marginTop: 2,
   },
@@ -1003,7 +1026,7 @@ const styles = StyleSheet.create({
   },
   packageTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     color: AppColors.textPrimary,
     marginBottom: 4,
   },
@@ -1014,7 +1037,7 @@ const styles = StyleSheet.create({
   },
   packagePrice: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: AppColors.active,
   },
   vehicleSelection: {
@@ -1023,13 +1046,13 @@ const styles = StyleSheet.create({
   },
   vehicleSelectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: AppColors.textPrimary,
     marginBottom: 12,
   },
   vehicleOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 12,
     borderRadius: 12,
     borderWidth: 2,
@@ -1039,7 +1062,7 @@ const styles = StyleSheet.create({
   },
   vehicleOptionSelected: {
     borderColor: AppColors.active,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: "#f0f9ff",
   },
   vehicleOptionImage: {
     width: 60,
@@ -1052,18 +1075,18 @@ const styles = StyleSheet.create({
   },
   vehicleOptionName: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: AppColors.textPrimary,
     marginBottom: 4,
   },
   vehicleOptionSpecs: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   vehicleOptionSpec: {
     fontSize: 12,
     color: AppColors.textSecondary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   vehicleOptionDot: {
     fontSize: 12,
@@ -1071,7 +1094,7 @@ const styles = StyleSheet.create({
   },
   vehicleOptionPrice: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: AppColors.active,
     marginTop: 6,
   },
@@ -1081,8 +1104,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2,
     borderColor: AppColors.borderLight,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   vehicleRadioButtonInner: {
     width: 10,
@@ -1091,7 +1114,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.active,
   },
   modalActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 20,
     paddingTop: 16,
     gap: 12,
@@ -1104,12 +1127,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: AppColors.active,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cancelButtonText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
     color: AppColors.active,
   },
   continueButton: {
@@ -1117,15 +1140,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     backgroundColor: AppColors.active,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   continueButtonDisabled: {
     backgroundColor: AppColors.gray300,
   },
   continueButtonText: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
   },
 });

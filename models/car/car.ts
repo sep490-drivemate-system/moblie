@@ -1,4 +1,4 @@
-export interface Car {
+export interface ICar {
   id: number;
   name: string;
   brand: string;
@@ -25,4 +25,16 @@ export interface Car {
     score: number;
     totalStudents: number;
   };
+}
+
+export interface ICarNew {
+  id: string;
+  name: string;
+  image: string;
+  seats: number;
+  transmission: string;
+  year: number;
+  price: number;
+  fuel: string;
+  brand: string;
 }

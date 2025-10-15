@@ -4,7 +4,7 @@ import {
   drivingLicenses,
   listCar,
   listInstructorOptions,
-} from "@/mock_data/home_data";
+} from "@/data/home_data";
 import { ChevronRight as LucideChevronRight } from "lucide-react-native";
 import {
   Dimensions,
@@ -46,13 +46,13 @@ export default function HomeScreen() {
           <View style={styles.listContainer}>
             <FlatList
               data={drivingLicenses}
-              keyExtractor={(item, index) => item + index}
+              keyExtractor={(item, index) => item.id + index}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 10 }}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.licenseItem}>
-                  <Text style={styles.licenseItemText}>{item}</Text>
+                  <Text style={styles.licenseItemText}>{item.name}</Text>
                 </TouchableOpacity>
               )}
             />
@@ -146,7 +146,7 @@ export default function HomeScreen() {
                         padding: 20,
                       }}
                     >
-                      <Text>{item.description}</Text>
+                      <Text>{String(item.description)}</Text>
                       <TouchableOpacity
                         style={{
                           borderWidth: 2,
