@@ -9,6 +9,7 @@ dist/
 web-build/
 expo-env.d.ts
 .claude
+app.json
 
 # Native
 .kotlin/

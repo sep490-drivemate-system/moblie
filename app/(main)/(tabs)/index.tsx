@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Redirect } from 'expo-router';
 import { useAppSelector } from '@/lib/redux/hooks';
-import TabsViewModel from '@/viewmodels/TabsViewModel';
+import TabsViewModel from '@/viewmodels/shared/TabsViewModel';
 
 export default function TabsIndexRedirect() {
     const role = useAppSelector((s) => s.auth.user?.role ?? null);

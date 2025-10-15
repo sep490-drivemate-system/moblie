@@ -1,5 +1,5 @@
 import { listCar } from "@/data/home_data";
-import { Car } from "@/models/car/car";
+import { ICar } from "@/models/car/car";
 import { BaseState } from "@/models/generic/baseState";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
@@ -11,9 +11,9 @@ export interface Filter {
 }
 
 interface CarState extends BaseState {
-  cars: Car[];
+  cars: ICar[];
   filters: Filter;
-  filteredCars: Car[];
+  filteredCars: ICar[];
 }
 
 const initialState: CarState = {
@@ -31,7 +31,7 @@ const initialState: CarState = {
 };
 
 // Helper function to apply filters
-const applyFilters = (cars: Car[], filters: Filter): Car[] => {
+const applyFilters = (cars: ICar[], filters: Filter): ICar[] => {
   return cars.filter((car) => {
     // Check seats filter
     if (filters.seats.length > 0 && !filters.seats.includes(car.seats)) {
@@ -61,7 +61,7 @@ const listCarSlice = createSlice({
   name: "listCar",
   initialState,
   reducers: {
-    setCars: (state, action: PayloadAction<Car[]>) => {
+    setCars: (state, action: PayloadAction<ICar[]>) => {
       state.cars = action.payload;
       state.filteredCars = applyFilters(action.payload, state.filters);
     },

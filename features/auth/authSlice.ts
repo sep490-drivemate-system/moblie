@@ -25,7 +25,6 @@ const initialState: AuthState = {
     password: "",
   },
 
-  // 📝 Form data cho register
   registerFormData: {
     name: "",
     email: "",
@@ -33,7 +32,6 @@ const initialState: AuthState = {
     confirmPassword: "",
   },
 
-  // 🔄 Base state properties
   isLoading: false,
   errorMessage: null,
   isSuccess: false,
