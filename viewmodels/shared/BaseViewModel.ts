@@ -2,7 +2,7 @@ import { useAppDispatch, useAppSelector } from '@/lib/redux/hooks';
 import { BaseState } from '@/models/generic/baseState';
 import { useMemo } from 'react';
 
-// Navigation callback type
+
 export type NavigationCallback = (route: string) => void;
 
 export abstract class BaseViewModel<T extends BaseState> {
@@ -76,10 +76,7 @@ export function useViewModel<T extends BaseState, VM extends BaseViewModel<T>>(
     const dispatch = useAppDispatch();
     const state = useAppSelector(selector);
 
-    // Tạo getCurrentState function để ViewModel có thể lấy state hiện tại
     const getCurrentState = () => state;
-
-    // Sử dụng useMemo để tránh tạo instance mới mỗi render
     const viewModel = useMemo(() =>
         new ViewModelClass(dispatch, getCurrentState),
         [dispatch, state]

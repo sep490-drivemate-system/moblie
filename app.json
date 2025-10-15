@@ -20,7 +20,7 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to show your position on the map."
       },
       "config": {
-        "googleMapsApiKey": "AIzaSyC4acQEZfwGypICzPXd_A_c89x7nrgYnZ4"
+        "googleMapsApiKey": ""
       }
     },
     "android": {
