@@ -1,6 +1,17 @@
 import { gender } from "@/constants/enums";
 import { ICarNew } from "../car/car";
 
+export interface IInstructors {
+  id: string;
+  name: string;
+  avatar: string;
+  experience: string;
+  averageRating: number;
+  totalBookings: number;
+  pricePerHour: number;
+}
+
+
 export interface IInstructor {
   id: string;
   name: string;

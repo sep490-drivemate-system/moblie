@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CheckCircle, Home } from 'lucide-react-native';
+import { CheckCircle, Home, Calendar, Car } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -48,6 +48,10 @@ export default function PaymentSuccessScreen() {
 
   const handleGoHome = () => {
     router.replace('/(main)/(tabs)/home');
+  };
+
+  const handleGoToRental = () => {
+    router.replace('/(main)/(tabs)/rental');
   };
 
   return (
@@ -117,7 +121,7 @@ export default function PaymentSuccessScreen() {
             </Text>
           </Animated.View>
 
-          {/* Action Button */}
+          {/* Action Buttons */}
           <Animated.View 
             style={[
               styles.buttonContainer,
@@ -127,14 +131,27 @@ export default function PaymentSuccessScreen() {
               }
             ]}
           >
+            {/* Primary Button - Go to Rental */}
             <TouchableOpacity
-              style={styles.homeButton}
+              style={styles.primaryButton}
+              onPress={handleGoToRental}
+              activeOpacity={0.8}
+            >
+              <View style={styles.buttonContent}>
+                <Calendar size={20} color="#ffffff" strokeWidth={2} />
+                <Text style={styles.primaryButtonText}>Xem lịch thuê</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Secondary Button - Go Home */}
+            <TouchableOpacity
+              style={styles.secondaryButton}
               onPress={handleGoHome}
               activeOpacity={0.8}
             >
-              <View style={styles.homeButtonContent}>
+              <View style={styles.buttonContent}>
                 <Home size={20} color="#10b981" strokeWidth={2} />
-                <Text style={styles.homeButtonText}>Quay về trang chủ</Text>
+                <Text style={styles.secondaryButtonText}>Quay về trang chủ</Text>
               </View>
             </TouchableOpacity>
           </Animated.View>
@@ -258,8 +275,9 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: '100%',
+    gap: 12,
   },
-  homeButton: {
+  primaryButton: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
     paddingVertical: 16,
@@ -270,15 +288,28 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  homeButtonContent: {
+  secondaryButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  homeButtonText: {
+  primaryButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#10b981',
+  },
+  secondaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

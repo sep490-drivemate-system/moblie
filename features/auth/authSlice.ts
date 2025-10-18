@@ -17,7 +17,7 @@ interface AuthState extends BaseState {
 }
 
 const initialState: AuthState = {
-  isAuthenticated: false,
+  isAuthenticated: true,
   user: null,
 
   formData: {

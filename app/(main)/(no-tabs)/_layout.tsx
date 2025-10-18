@@ -2,25 +2,23 @@ import { Stack } from 'expo-router';
 
 export default function NoTabsLayout() {
     return (
-        <Stack>
+        <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen
                 name="detail"
                 options={{
-                    headerShown: false,
                     presentation: 'modal',
                 }}
             />
             <Stack.Screen
                 name="instructor-detail"
                 options={{
-                    headerShown: false,
                     presentation: 'card',
                     animation: 'slide_from_right',
                 }}
-            /> <Stack.Screen
-                name="payment-success"
+            />
+            <Stack.Screen
+                name="car-detail"
                 options={{
-                    headerShown: false,
                     presentation: 'card',
                     animation: 'slide_from_right',
                 }}
@@ -28,7 +26,20 @@ export default function NoTabsLayout() {
             <Stack.Screen
                 name="booking"
                 options={{
-                    headerShown: false,
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                }}
+            />
+            <Stack.Screen
+                name="payment-success"
+                options={{
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                }}
+            />
+            <Stack.Screen
+                name="payment-failed"
+                options={{
                     presentation: 'card',
                     animation: 'slide_from_right',
                 }}
@@ -36,7 +47,41 @@ export default function NoTabsLayout() {
             <Stack.Screen
                 name="deposit"
                 options={{
-                    headerShown: false,
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                }}
+            />
+            <Stack.Screen
+                name="cancel-booking"
+                options={{
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                }}
+            />
+            <Stack.Screen
+                name="create-route"
+                options={{
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                }}
+            />
+            <Stack.Screen
+                name="instructor-notification"
+                options={{
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                }}
+            />
+            <Stack.Screen
+                name="instructor-schedule"
+                options={{
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                }}
+            />
+            <Stack.Screen
+                name="route-notification"
+                options={{
                     presentation: 'card',
                     animation: 'slide_from_right',
                 }}
