@@ -4,8 +4,7 @@ import {
   drivingLicenses,
   listCar,
   listInstructorOptions,
-} from "@/mock_data/home_data";
-import { useRouter } from "expo-router";
+} from "@/data/home_data";
 import { ChevronRight as LucideChevronRight } from "lucide-react-native";
 import {
   Button,
@@ -43,36 +42,19 @@ export default function HomeScreen() {
         </View>
       </View>
       <View style={styles.contenContainer}>
-        {/* tag voucher */}
-        <View style={styles.voucherContainer}>
-          <View style={styles.voucherContent}>
-            <Text style={styles.voucherTitle}>
-              Đăng nhập ngay để nhận ưu đãi
-            </Text>
-            <Text style={styles.voucherDes}>
-              Đăng nhập ngay để{" "}
-              <Text style={{ color: "#026AA7" }}>tiết kiệm đến 30%</Text> và dễ
-              dàng tìm kiếm được người bạn đồng hành phù hợp với bạn.
-            </Text>
-          </View>
-          <Image
-            style={styles.voucherIcon}
-            source={require("@/assets/images/party-popper-icon.png")}
-          />
-        </View>
         {/* driving license */}
         <View style={styles.licenseContainer}>
           <Text style={styles.label}>Chọn xe theo giấy phép lái xe</Text>
           <View style={styles.listContainer}>
             <FlatList
               data={drivingLicenses}
-              keyExtractor={(item, index) => item + index}
+              keyExtractor={(item, index) => item.id + index}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 10 }}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.licenseItem}>
-                  <Text style={styles.licenseItemText}>{item}</Text>
+                  <Text style={styles.licenseItemText}>{item.name}</Text>
                 </TouchableOpacity>
               )}
             />
@@ -88,7 +70,7 @@ export default function HomeScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 20 }}
-              renderItem={({ item }) => <CarItem {...item} />}
+              renderItem={({ item }) => <CarItem car={item} />}
               ListFooterComponent={() => (
                 <View
                   style={{
@@ -166,7 +148,7 @@ export default function HomeScreen() {
                         padding: 20,
                       }}
                     >
-                      <Text>{item.description}</Text>
+                      <Text>{String(item.description)}</Text>
                       <TouchableOpacity
                         style={{
                           borderWidth: 2,

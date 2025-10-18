@@ -32,9 +32,6 @@ type MapState = RootState['map'];
 export class MapViewModel extends BaseViewModel<MapState> {
     private locationSubscription: Location.LocationSubscription | null = null;
 
-    // ===========================================
-    // 🗺️ LOCATION PERMISSION MANAGEMENT
-    // ===========================================
 
     async requestLocationPermission(): Promise<void> {
         await this.executeAsync(
@@ -78,9 +75,6 @@ export class MapViewModel extends BaseViewModel<MapState> {
         }
     }
 
-    // ===========================================
-    // 📍 LOCATION TRACKING
-    // ===========================================
 
     async getCurrentLocation(): Promise<void> {
         this.dispatch(setLocationLoading(true));
@@ -192,9 +186,7 @@ export class MapViewModel extends BaseViewModel<MapState> {
         }
     }
 
-    // ===========================================
-    // 🗺️ MAP MANAGEMENT
-    // ===========================================
+    
 
     updateMapRegion(region: IMapRegion): void {
         this.dispatch(setMapRegion(region));
@@ -225,9 +217,7 @@ export class MapViewModel extends BaseViewModel<MapState> {
         }
     }
 
-    // ===========================================
-    // 📌 MARKERS MANAGEMENT
-    // ===========================================
+    
 
     addMarker(marker: IMarker): void {
         this.dispatch(addMarker(marker));
@@ -249,9 +239,7 @@ export class MapViewModel extends BaseViewModel<MapState> {
         console.log('🧹 All markers cleared');
     }
 
-    // ===========================================
-    // 🏠 GEOCODING
-    // ===========================================
+    
 
     async getAddressFromCoordinates(latitude: number, longitude: number): Promise<void> {
         await this.executeAsync(
@@ -277,9 +265,7 @@ export class MapViewModel extends BaseViewModel<MapState> {
         );
     }
 
-    // ===========================================
-    // 🔧 UTILITY METHODS
-    // ===========================================
+    
 
     clearError(): void {
         this.dispatch(clearError());
@@ -291,7 +277,7 @@ export class MapViewModel extends BaseViewModel<MapState> {
         console.log('🔄 Map state reset');
     }
 
-    // Handler methods for UI
+    
     handleRequestLocationPermission = async (): Promise<void> => {
         await this.requestLocationPermission();
     };
@@ -319,11 +305,11 @@ export class MapViewModel extends BaseViewModel<MapState> {
 
     handleMapRegionChange = (region: IMapRegion): void => {
         this.updateMapRegion(region);
-        // Stop following user when manually changing region
+        
         this.setFollowingUser(false);
     };
 
-    // Cleanup method (call when component unmounts)
+    
     cleanup(): void {
         this.stopLocationTracking();
     }

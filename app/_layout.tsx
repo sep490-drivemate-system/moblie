@@ -1,20 +1,17 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useState } from "react";
-import "react-native-reanimated";
-import { Provider } from "react-redux";
-import { store } from "@/lib/redux/store";
-import { useRouter } from "expo-router";
-import { useColorScheme } from "@/components/useColorScheme";
-import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
-import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
-import { RootState } from "@/lib/redux/store";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useFonts } from 'expo-font';
+import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect, useState } from 'react';
+import 'react-native-reanimated';
+import { Provider } from 'react-redux'
+import { store } from '@/lib/redux/store'
+import { useRouter } from 'expo-router';
+import { AuthViewModel } from '@/viewmodels/auth/AuthViewModel';
+import { useViewModel } from '@/viewmodels/shared/BaseViewModel';
+import { RootState } from '@/lib/redux/store';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -52,17 +49,14 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <GluestackUIProvider>
         <ErrorBoundary>
           <RootLayoutNav />
         </ErrorBoundary>
-      </GluestackUIProvider>
     </Provider>
   );
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<
@@ -93,32 +87,36 @@ function RootLayoutNav() {
 
     initializeApp();
   }, []);
+
+  // MOUNT STATUS TRACKING
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+    }, 100); 
+    return () => clearTimeout(timer);
+  }, [])
+
+  // SETUP NAVIGATION CALLBACK
   useEffect(() => {
     authViewModel.setNavigationCallback((route: string) => {
-      console.log(`Navigation callback triggered: ${route}`);
       router.replace(route as any);
     });
   }, [authViewModel, router]);
+
+  // AUTH STATUS CHECK - CHỈ CHẠY MỘT LẦN
   useEffect(() => {
-    console.log("Auth check conditions:", {
+    console.log('🔍 Auth check conditions:', {
       isMounted,
       isLoading: authState.isLoading,
       hasUser: !!authState.user,
       isAuthenticated: authState.isAuthenticated,
     });
 
-    if (
-      isMounted &&
-      !authState.isLoading &&
-      !authState.user &&
-      !authState.isAuthenticated
-    ) {
-      console.log("Triggering auth status check...");
+    if (isMounted && !authState.isLoading && !authState.user && !authState.isAuthenticated) {
       authViewModel.checkAuthStatus();
-    } else {
-      console.log("⏭Skipping auth check - conditions not met");
     }
   }, [isMounted]);
+
 
   console.log("Conditional rendering - Current state:", {
     isMounted,
@@ -149,7 +147,7 @@ function RootLayoutNav() {
   if (authState.isAuthenticated) {
     return (
       <Stack>
-        <Stack.Screen name="(main)/(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(main)" options={{ headerShown: false }} />
       </Stack>
     );
   } else {
