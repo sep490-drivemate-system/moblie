@@ -5,6 +5,7 @@ import {
   listCar,
   listInstructorOptions,
 } from "@/data/home_data";
+import { useRouter } from "expo-router";
 import { ChevronRight as LucideChevronRight } from "lucide-react-native";
 import {
   Button,

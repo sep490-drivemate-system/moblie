@@ -12,6 +12,7 @@ import { useViewModel } from '@/viewmodels/shared/BaseViewModel';
 import { RootState } from '@/lib/redux/store';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export {
   // Catch any errors thrown by the Layout component.

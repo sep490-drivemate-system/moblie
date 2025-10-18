@@ -17,6 +17,7 @@ import {
 } from "@/features/auth/authSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootState } from "@/lib/redux/store";
+import { ENV } from "@/config/env";
 
 
 type AuthState = RootState["auth"];
@@ -75,57 +76,57 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   //   );
   // }
 
-  // async checkAuthStatus(): Promise<void> {
-  //   await this.executeAsync(
-  //     async () => {
-  //       const token = await AsyncStorage.getItem(ENV.STORAGE_KEYS.ACCESS_TOKEN);
+  async checkAuthStatus(): Promise<void> {
+    await this.executeAsync(
+      async () => {
+        const token = await AsyncStorage.getItem(ENV.STORAGE_KEYS.ACCESS_TOKEN);
 
-  //       if (token) {
-  //         /**
-  //          * 🎯 TRƯỜNG HỢP: Token tồn tại
-  //          *
-  //          * BƯỚC 1: Set user data vào Redux state
-  //          * - Có thể hardcode tạm hoặc fetch từ API
-  //          * - Việc gọi setUser() sẽ tự động set isAuthenticated = true
-  //          *   (xem authSlice.ts - setUser reducer)
-  //          *
-  //          * BƯỚC 2: State sẽ thay đổi:
-  //          * - isAuthenticated: false → true
-  //          * - user: null → { email, name? }
-  //          * - isLoading: true → false
-  //          *
-  //          * BƯỚC 3: _layout.tsx sẽ detect state change và navigate
-  //          */
-  //         console.log("✅ Token exists → Setting user as authenticated");
+        if (token) {
+          /**
+           * 🎯 TRƯỜNG HỢP: Token tồn tại
+           *
+           * BƯỚC 1: Set user data vào Redux state
+           * - Có thể hardcode tạm hoặc fetch từ API
+           * - Việc gọi setUser() sẽ tự động set isAuthenticated = true
+           *   (xem authSlice.ts - setUser reducer)
+           *
+           * BƯỚC 2: State sẽ thay đổi:
+           * - isAuthenticated: false → true
+           * - user: null → { email, name? }
+           * - isLoading: true → false
+           *
+           * BƯỚC 3: _layout.tsx sẽ detect state change và navigate
+           */
+          console.log("✅ Token exists → Setting user as authenticated");
 
-  //         this.dispatch(
-  //           setUser({
-  //             email: "user@example.com", // 📝 TODO: Fetch từ API profile endpoint
-  //             name: "John Doe", // 📝 TODO: Có thể thêm name từ API
-  //           })
-  //         );
+          this.dispatch(
+            setUser({
+              email: "user@example.com", // 📝 TODO: Fetch từ API profile endpoint
+              name: "John Doe", // 📝 TODO: Có thể thêm name từ API
+            })
+          );
 
-  //         console.log(
-  //           "🔄 User state updated → _layout.tsx will handle navigation"
-  //         );
-  //         // 🚨 QUAN TRỌNG: Không navigate ở đây!
-  //         // _layout.tsx sẽ detect isAuthenticated = true và tự động navigate
-  //       }
-  //     },
-  //     () => {
-  //       console.log("✅ Auth status check completed successfully");
-  //     },
-  //     (error) => {
-  //       console.error("❌ Failed to check auth status:", error);
-  //       // Nếu có lỗi, user sẽ bị redirect về login
-  //     },
-  //     {
-  //       setLoading,
-  //       setError,
-  //       setSuccess,
-  //     }
-  //   );
-  // }
+          console.log(
+            "🔄 User state updated → _layout.tsx will handle navigation"
+          );
+          // 🚨 QUAN TRỌNG: Không navigate ở đây!
+          // _layout.tsx sẽ detect isAuthenticated = true và tự động navigate
+        }
+      },
+      () => {
+        console.log("✅ Auth status check completed successfully");
+      },
+      (error) => {
+        console.error("❌ Failed to check auth status:", error);
+        // Nếu có lỗi, user sẽ bị redirect về login
+      },
+      {
+        setLoading,
+        setError,
+        setSuccess,
+      }
+    );
+  }
 
   // // Handle input change với debouncing (optional)
   // handleInputChange(field: keyof ISignInRequest, value: string): void {
