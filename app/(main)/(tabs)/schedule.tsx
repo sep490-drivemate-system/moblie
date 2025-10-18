@@ -97,7 +97,7 @@ export default function ScheduleScreen() {
 
   const statusColors = {
     upcoming: { bg: '#e3f2fd', text: '#1976d2', label: 'Sắp tới' },
-    in_progress: { bg: '#fff3e0', text: '#f57c00', label: 'Đang học' },
+    in_progress: { bg: '#fff3e0', text: '#f57c00', label: 'Đang thuê' },
     completed: { bg: '#e8f5e8', text: '#388e3c', label: 'Hoàn thành' },
     cancelled: { bg: '#ffebee', text: '#d32f2f', label: 'Đã hủy' },
     requested: { bg: '#fef3c7', text: '#d97706', label: 'Yêu cầu' },
@@ -575,24 +575,33 @@ export default function ScheduleScreen() {
     if (!isCreatingRoute) return;
 
     const coordinate = event.nativeEvent.coordinate;
-    const pointType = mapPoints.length === 0 ? 'start' :
-      mapPoints.length === 1 ? 'waypoint' : 'end';
+    
+    // Determine point type: first = start, last will be end when finished, others = waypoints
+    let pointType: 'start' | 'waypoint' | 'end';
+    let title: string;
+    
+    if (mapPoints.length === 0) {
+      pointType = 'start';
+      title = 'Điểm bắt đầu';
+    } else {
+      pointType = 'waypoint';
+      title = `Điểm trung gian ${mapPoints.length}`;
+    }
 
     const newPoint: MapPoint = {
       id: `point-${Date.now()}`,
       coordinate,
-      title: pointType === 'start' ? 'Điểm bắt đầu' :
-        pointType === 'waypoint' ? `Điểm ${mapPoints.length}` : 'Điểm kết thúc',
+      title,
       description: `${coordinate.latitude.toFixed(6)}, ${coordinate.longitude.toFixed(6)}`,
       type: pointType,
     };
 
     setMapPoints(prev => [...prev, newPoint]);
 
-    // Auto generate route segment if we have 2+ points
-    if (mapPoints.length >= 1) {
-      generateRouteSegment(mapPoints[mapPoints.length - 1], newPoint);
-    }
+    // Auto generate route segment if we have 2+ points (disabled for now)
+    // if (mapPoints.length >= 1) {
+    //   generateRouteSegment(mapPoints[mapPoints.length - 1], newPoint);
+    // }
   };
 
   const generateRouteSegment = async (startPoint: MapPoint, endPoint: MapPoint) => {
@@ -803,6 +812,22 @@ export default function ScheduleScreen() {
     setIsCreatingRoute(true);
     setMapPoints([]);
     setRouteSegments([]);
+  };
+
+  const markLastPointAsEnd = () => {
+    if (mapPoints.length < 2) return;
+    
+    setMapPoints(prev => prev.map((point, index) => {
+      if (index === prev.length - 1) {
+        // Mark last point as end
+        return {
+          ...point,
+          type: 'end' as const,
+          title: 'Điểm kết thúc'
+        };
+      }
+      return point;
+    }));
   };
 
   const finishRouteCreation = () => {
@@ -1502,8 +1527,8 @@ export default function ScheduleScreen() {
               />
             ))}
 
-            {/* Render route segments */}
-            {routeSegments.map((segment) => (
+            {/* Render route segments - DISABLED */}
+            {/* {routeSegments.map((segment) => (
               <Polyline
                 key={segment.id}
                 coordinates={segment.coordinates}
@@ -1513,23 +1538,24 @@ export default function ScheduleScreen() {
                 }
                 strokeWidth={4}
               />
-            ))}
+            ))} */}
           </MapView>
 
           {/* Route creation controls */}
           <View style={styles.routeControls}>
             <View style={styles.routeInfo}>
               <Text style={styles.routeInfoText}>
-                {isCreatingRoute ? 'Nhấn vào bản đồ để thêm điểm' : 'Lộ trình đã tạo'}
+                {isCreatingRoute ? 'Nhấn vào bản đồ để thêm điểm trung gian' : 'Lộ trình đã tạo'}
               </Text>
               <Text style={styles.routeStats}>
-                {mapPoints.length} điểm • {routeSegments.length} đoạn đường
+                {mapPoints.length} điểm đã chọn
               </Text>
-              {routeSegments.length > 0 && (
+              {/* Distance info disabled since no polylines */}
+              {/* {routeSegments.length > 0 && (
                 <Text style={styles.routeDistance}>
                   Tổng khoảng cách: {(routeSegments.reduce((total, segment) => total + segment.distance, 0) / 1000).toFixed(1)} km
                 </Text>
-              )}
+              )} */}
             </View>
 
             <View style={styles.controlButtons}>
@@ -1551,6 +1577,15 @@ export default function ScheduleScreen() {
                       <MapPin size={18} color="#6366f1" strokeWidth={2} />
                       <Text style={styles.addressButtonText}>Nhập địa chỉ</Text>
                     </TouchableOpacity>
+                    {mapPoints.length >= 2 && (
+                      <TouchableOpacity
+                        style={styles.endPointButton}
+                        onPress={markLastPointAsEnd}
+                      >
+                        <Target size={18} color="#ef4444" strokeWidth={2} />
+                        <Text style={styles.endPointButtonText}>Điểm cuối</Text>
+                      </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                       style={styles.clearButton}
                       onPress={clearRoute}
@@ -1744,13 +1779,13 @@ export default function ScheduleScreen() {
                     </Marker>
                   ))}
 
-                  {/* Route Line */}
-                  <Polyline
+                  {/* Route Line - DISABLED */}
+                  {/* <Polyline
                     coordinates={selectedRoute.points.map(point => point.coordinates)}
                     strokeColor="#3b82f6"
                     strokeWidth={3}
                     lineDashPattern={[5, 5]}
-                  />
+                  /> */}
                 </MapView>
               </View>
 
@@ -3289,5 +3324,22 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  // End Point Button
+  endPointButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  endPointButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ef4444',
   },
 });

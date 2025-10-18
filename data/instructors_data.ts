@@ -1,5 +1,5 @@
 import { gender } from "@/constants/enums";
-import { IInstructor } from "@/models/instructor/instructor";
+import { IInstructor, IInstructors } from "@/models/instructor/instructor";
 
 export const instructorsData: IInstructor[] = [
   {
@@ -188,6 +188,120 @@ export const instructorsData: IInstructor[] = [
     gender: gender.female,
   },
 ];
+
+export const instructorData: IInstructors[] = [
+  {
+    id: "1",
+    name: "Nguyễn Văn An",
+    avatar:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+    experience: "8 năm kinh nghiệm",
+    totalBookings: 245,
+    pricePerHour: 300000,
+    averageRating: 4.9,
+  },
+  {
+    id: "2",
+    name: "Trần Thị Bình",
+    avatar:
+      "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
+    experience: "5 năm kinh nghiệm",
+    averageRating: 4.7,
+    totalBookings: 189,
+    pricePerHour: 280000,
+  },
+  {
+    id: "3",
+    name: "Lê Minh Cường",
+    avatar:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+    experience: "10 năm kinh nghiệm",
+    averageRating: 4.8,
+    totalBookings: 156,
+    pricePerHour: 350000,
+  },
+  {
+    id: "4",
+    name: "Phạm Thị Dung",
+    avatar:
+      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    experience: "6 năm kinh nghiệm",
+    averageRating: 4.6,
+    totalBookings: 203,
+    pricePerHour: 290000,
+  },
+  {
+    id: "5",
+    name: "Hoàng Văn Em",
+    avatar:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
+    experience: "7 năm kinh nghiệm",
+    averageRating: 4.5,
+    totalBookings: 178,
+    pricePerHour: 320000,
+  },
+  {
+    id: "6",
+    name: "Vũ Thị Phượng",
+    avatar:
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
+    experience: "4 năm kinh nghiệm",
+    averageRating: 4.4,
+    totalBookings: 178,
+    pricePerHour: 320000,
+  },
+  {
+    id: "6",
+    name: "Vũ Thị Phượng",
+    avatar:
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
+    experience: "4 năm kinh nghiệm",
+    averageRating: 4.4,
+    totalBookings: 134,
+    pricePerHour: 270000,
+  },
+  {
+    id: "7",
+    name: "Đỗ Minh Giang",
+    avatar:
+      "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150&h=150&fit=crop&crop=face",
+    experience: "9 năm kinh nghiệm",
+    averageRating: 4.9,
+    totalBookings: 298,
+    pricePerHour: 340000,
+  },
+  {
+    id: "8",
+    name: "Ngô Thị Hạnh",
+    avatar:
+      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=150&h=150&fit=crop&crop=face",
+    experience: "3 năm kinh nghiệm",
+    averageRating: 4.3,
+    totalBookings: 87,
+    pricePerHour: 250000,
+  },
+  {
+    id: "9",
+    name: "Bùi Văn Ích",
+    avatar:
+      "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?w=150&h=150&fit=crop&crop=face",
+    experience: "12 năm kinh nghiệm",
+    averageRating: 5.0,
+    totalBookings: 412,
+    pricePerHour: 400000,
+  },
+  {
+    id: "10",
+    name: "Lý Thị Kim",
+    avatar:
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
+    experience: "6 năm kinh nghiệm",
+    averageRating: 4.7,
+    totalBookings: 167,
+    pricePerHour: 310000,
+  },
+];
+
 
 export const getInstructorById = (id: string) => {
   return instructorsData.find((instructor) => instructor.id === id);

@@ -17,7 +17,7 @@ import {
 } from "@/features/auth/authSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootState } from "@/lib/redux/store";
-import { ENV } from "@/config/env";
+
 
 type AuthState = RootState["auth"];
 
@@ -48,148 +48,148 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     return true;
   }
 
-  async logout(): Promise<void> {
-    await this.executeAsync(
-      async () => {
-        // Xóa tokens và user data
-        await AsyncStorage.multiRemove([
-          ENV.STORAGE_KEYS.ACCESS_TOKEN,
-          ENV.STORAGE_KEYS.REFRESH_TOKEN,
-          ENV.STORAGE_KEYS.USER_DATA,
-        ]);
+  // async logout(): Promise<void> {
+  //   await this.executeAsync(
+  //     async () => {
+  //       // Xóa tokens và user data
+  //       await AsyncStorage.multiRemove([
+  //         ENV.STORAGE_KEYS.ACCESS_TOKEN,
+  //         ENV.STORAGE_KEYS.REFRESH_TOKEN,
+  //         ENV.STORAGE_KEYS.USER_DATA,
+  //       ]);
 
-        // Reset state
-        this.dispatch(logout());
-      },
-      () => {
-        console.log("Logout successful");
-      },
-      (error) => {
-        console.error("Logout failed:", error);
-      },
-      {
-        setLoading,
-        setError,
-        setSuccess,
-      }
-    );
-  }
+  //       // Reset state
+  //       this.dispatch(logout());
+  //     },
+  //     () => {
+  //       console.log("Logout successful");
+  //     },
+  //     (error) => {
+  //       console.error("Logout failed:", error);
+  //     },
+  //     {
+  //       setLoading,
+  //       setError,
+  //       setSuccess,
+  //     }
+  //   );
+  // }
 
-  async checkAuthStatus(): Promise<void> {
-    await this.executeAsync(
-      async () => {
-        const token = await AsyncStorage.getItem(ENV.STORAGE_KEYS.ACCESS_TOKEN);
+  // async checkAuthStatus(): Promise<void> {
+  //   await this.executeAsync(
+  //     async () => {
+  //       const token = await AsyncStorage.getItem(ENV.STORAGE_KEYS.ACCESS_TOKEN);
 
-        if (token) {
-          /**
-           * 🎯 TRƯỜNG HỢP: Token tồn tại
-           *
-           * BƯỚC 1: Set user data vào Redux state
-           * - Có thể hardcode tạm hoặc fetch từ API
-           * - Việc gọi setUser() sẽ tự động set isAuthenticated = true
-           *   (xem authSlice.ts - setUser reducer)
-           *
-           * BƯỚC 2: State sẽ thay đổi:
-           * - isAuthenticated: false → true
-           * - user: null → { email, name? }
-           * - isLoading: true → false
-           *
-           * BƯỚC 3: _layout.tsx sẽ detect state change và navigate
-           */
-          console.log("✅ Token exists → Setting user as authenticated");
+  //       if (token) {
+  //         /**
+  //          * 🎯 TRƯỜNG HỢP: Token tồn tại
+  //          *
+  //          * BƯỚC 1: Set user data vào Redux state
+  //          * - Có thể hardcode tạm hoặc fetch từ API
+  //          * - Việc gọi setUser() sẽ tự động set isAuthenticated = true
+  //          *   (xem authSlice.ts - setUser reducer)
+  //          *
+  //          * BƯỚC 2: State sẽ thay đổi:
+  //          * - isAuthenticated: false → true
+  //          * - user: null → { email, name? }
+  //          * - isLoading: true → false
+  //          *
+  //          * BƯỚC 3: _layout.tsx sẽ detect state change và navigate
+  //          */
+  //         console.log("✅ Token exists → Setting user as authenticated");
 
-          this.dispatch(
-            setUser({
-              email: "user@example.com", // 📝 TODO: Fetch từ API profile endpoint
-              name: "John Doe", // 📝 TODO: Có thể thêm name từ API
-            })
-          );
+  //         this.dispatch(
+  //           setUser({
+  //             email: "user@example.com", // 📝 TODO: Fetch từ API profile endpoint
+  //             name: "John Doe", // 📝 TODO: Có thể thêm name từ API
+  //           })
+  //         );
 
-          console.log(
-            "🔄 User state updated → _layout.tsx will handle navigation"
-          );
-          // 🚨 QUAN TRỌNG: Không navigate ở đây!
-          // _layout.tsx sẽ detect isAuthenticated = true và tự động navigate
-        }
-      },
-      () => {
-        console.log("✅ Auth status check completed successfully");
-      },
-      (error) => {
-        console.error("❌ Failed to check auth status:", error);
-        // Nếu có lỗi, user sẽ bị redirect về login
-      },
-      {
-        setLoading,
-        setError,
-        setSuccess,
-      }
-    );
-  }
+  //         console.log(
+  //           "🔄 User state updated → _layout.tsx will handle navigation"
+  //         );
+  //         // 🚨 QUAN TRỌNG: Không navigate ở đây!
+  //         // _layout.tsx sẽ detect isAuthenticated = true và tự động navigate
+  //       }
+  //     },
+  //     () => {
+  //       console.log("✅ Auth status check completed successfully");
+  //     },
+  //     (error) => {
+  //       console.error("❌ Failed to check auth status:", error);
+  //       // Nếu có lỗi, user sẽ bị redirect về login
+  //     },
+  //     {
+  //       setLoading,
+  //       setError,
+  //       setSuccess,
+  //     }
+  //   );
+  // }
 
-  // Handle input change với debouncing (optional)
-  handleInputChange(field: keyof ISignInRequest, value: string): void {
-    this.updateFormData(field, value);
+  // // Handle input change với debouncing (optional)
+  // handleInputChange(field: keyof ISignInRequest, value: string): void {
+  //   this.updateFormData(field, value);
 
-    // Clear error khi user bắt đầu nhập
-    const currentState = this.getCurrentState();
-    if (currentState.errorMessage) {
-      this.clearError();
-    }
-  }
+  //   // Clear error khi user bắt đầu nhập
+  //   const currentState = this.getCurrentState();
+  //   if (currentState.errorMessage) {
+  //     this.clearError();
+  //   }
+  // }
 
-  // Handle login với tất cả logic
-  async handleLogin(): Promise<void> {
-    await this.executeAsync(
-      async () => {
-        const currentState = this.getCurrentState();
+  // // Handle login với tất cả logic
+  // async handleLogin(): Promise<void> {
+  //   await this.executeAsync(
+  //     async () => {
+  //       const currentState = this.getCurrentState();
 
-        // Validation logic trong ViewModel
-        // if (!this.validateLoginForm(currentState.formData)) {
-        //   throw new Error("Please fill in all required fields");
-        // }
+  //       // Validation logic trong ViewModel
+  //       // if (!this.validateLoginForm(currentState.formData)) {
+  //       //   throw new Error("Please fill in all required fields");
+  //       // }
 
-        console.log("Attempting login with", currentState.formData.email);
-        console.log("Attempting login with", currentState.formData.password);
-        // Gọi signIn thunk để call API
-        const result = await this.dispatch(
-          signIn(currentState.formData)
-        ).unwrap();
+  //       console.log("Attempting login with", currentState.formData.email);
+  //       console.log("Attempting login with", currentState.formData.password);
+  //       // Gọi signIn thunk để call API
+  //       const result = await this.dispatch(
+  //         signIn(currentState.formData)
+  //       ).unwrap();
 
-        // Lưu token vào AsyncStorage
-        if (result?.data?.accessToken) {
-          await AsyncStorage.setItem(
-            ENV.STORAGE_KEYS.ACCESS_TOKEN,
-            result.data.accessToken
-          );
-          await AsyncStorage.setItem(
-            ENV.STORAGE_KEYS.REFRESH_TOKEN,
-            result.data.refreshToken
-          );
-        }
+  //       // Lưu token vào AsyncStorage
+  //       if (result?.data?.accessToken) {
+  //         await AsyncStorage.setItem(
+  //           ENV.STORAGE_KEYS.ACCESS_TOKEN,
+  //           result.data.accessToken
+  //         );
+  //         await AsyncStorage.setItem(
+  //           ENV.STORAGE_KEYS.REFRESH_TOKEN,
+  //           result.data.refreshToken
+  //         );
+  //       }
 
-        // Cập nhật user info
-        this.dispatch(
-          setUser({
-            email: currentState.formData.email,
-          })
-        );
+  //       // Cập nhật user info
+  //       this.dispatch(
+  //         setUser({
+  //           email: currentState.formData.email,
+  //         })
+  //       );
 
-        console.log("Login successful");
-      },
-      () => {
-        console.log("Login completed successfully");
-      },
-      (error) => {
-        console.error("Login failed:", error);
-      },
-      {
-        setLoading,
-        setError,
-        setSuccess,
-      }
-    );
-  }
+  //       console.log("Login successful");
+  //     },
+  //     () => {
+  //       console.log("Login completed successfully");
+  //     },
+  //     (error) => {
+  //       console.error("Login failed:", error);
+  //     },
+  //     {
+  //       setLoading,
+  //       setError,
+  //       setSuccess,
+  //     }
+  //   );
+  // }
 
   // Handle reset form
   handleResetForm(): void {
@@ -352,9 +352,9 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   /**
    * 🧪 TEST: Force logout để test trường hợp isAuthenticated = false
    */
-  testLogout(): void {
-    console.log("🧪 TEST: Force logout...");
-    this.logout();
-    console.log("✅ TEST: User logged out - Should navigate to /login");
-  }
+  // testLogout(): void {
+  //   console.log("🧪 TEST: Force logout...");
+  //   this.logout();
+  //   console.log("✅ TEST: User logged out - Should navigate to /login");
+  // }
 }

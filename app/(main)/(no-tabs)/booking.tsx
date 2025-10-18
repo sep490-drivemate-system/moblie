@@ -278,9 +278,9 @@ export default function BookingScreen() {
         paidAmount: bookingCost,
         remainingCoins: userCoins - bookingCost,
       });
-      // Show success and navigate back
+      // Navigate to payment success page
       setTimeout(() => {
-        router.back();
+        router.replace('/(main)/(no-tabs)/payment-success');
       }, 1000);
     }
   };
