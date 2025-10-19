@@ -16,17 +16,12 @@ const { width, height } = Dimensions.get("window");
 export default function IntroScreen() {
   const router = useRouter();
 
-  const handleGoogleSignIn = async () => {
-    try {
-      // Simulate Google sign in
-      // In a real app, you would implement Google OAuth here
-      console.log("Google sign in initiated");
+  const handleSignUp = () => {
+    router.push("/(onboarding)/register");
+  };
 
-      // For now, just proceed to the next step
-      router.push("/(onboarding)/register");
-    } catch (error) {
-      console.error("Error signing in with Google:", error);
-    }
+  const handleSignIn = () => {
+    router.push("/(onboarding)/login");
   };
 
   return (
@@ -57,19 +52,16 @@ export default function IntroScreen() {
         <View style={styles.signInContainer}>
           <View style={styles.signInDivider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.signInText}>Đăng ký hoặc đăng nhập bằng</Text>
+            <Text style={styles.signInText}>Chọn phương thức đăng nhập</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogleSignIn}
-          >
-            <Image
-              source={require("@/assets/images/gg_icon.png")}
-              style={styles.googleIcon}
-            />
-            <Text style={styles.googleButtonText}>Đăng nhập bằng Google</Text>
+          <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
+            <Text style={styles.signUpButtonText}>Đăng ký</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
+            <Text style={styles.signInButtonText}>Đăng nhập</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -109,7 +101,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   appNameHighlight: {
-    color: "#026AA7",
+    color: "#70E000",
     fontWeight: "bold",
   },
   sloganLine2: {
@@ -144,9 +136,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 15,
     fontWeight: "500",
   },
-  googleButton: {
-    backgroundColor: "#026AA7",
-    flexDirection: "row",
+  signUpButton: {
+    backgroundColor: "#70E000",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
@@ -154,16 +145,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     width: "100%",
     maxWidth: 300,
-    gap: 12,
+    marginBottom: 12,
   },
-  googleButtonText: {
+  signUpButtonText: {
     color: "white",
     fontSize: 16,
     fontWeight: "600",
   },
-  googleIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: "contain",
+  signInButton: {
+    backgroundColor: "transparent",
+    borderWidth: 2,
+    borderColor: "white",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    width: "100%",
+    maxWidth: 300,
+  },
+  signInButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
