@@ -1,5 +1,5 @@
 import { gender } from "@/constants/enums";
-import { ICarNew } from "../car/car";
+import { Car } from "../car/car";
 
 export interface IInstructors {
   id: string;
@@ -11,21 +11,19 @@ export interface IInstructors {
   pricePerHour: number;
 }
 
-
-export interface IInstructor {
+export interface Instructor {
   id: string;
   name: string;
   avatar: string;
   experience: string;
   experienceYears: number;
   rating: number;
-  pricing: string;
+  price: number;
   specialties: string[];
   phone: string;
   email: string;
   description: string;
   totalBookings: number;
-  pricePerHour: number;
   gender: gender;
-  vehicels?: ICarNew[];
+  vehicels?: Car[];
 }

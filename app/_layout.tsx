@@ -74,7 +74,8 @@ function RootLayoutNav() {
         const onboardingCompleted = await AsyncStorage.getItem(
           "onboarding_completed"
         );
-        setHasCompletedOnboarding(onboardingCompleted === "true");
+        // setHasCompletedOnboarding(onboardingCompleted === "true");
+        setHasCompletedOnboarding(true);
         setTimeout(() => {
           setIsMounted(true);
           console.log("RootLayoutNav mounted and ready for navigation");

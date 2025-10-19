@@ -6,13 +6,12 @@ import {
   MapPin as LucideMapPin,
   User as LucideUser,
   Star as LucideStar,
-  ShieldCheck as LucideShieldCheck,
 } from "lucide-react-native";
-import { ICar } from "@/models/car/car";
+import { Car } from "@/models/car/car";
 import { useRouter } from "expo-router";
 
 type Props = {
-  car: ICar;
+  car: Car;
   variant?: "compact" | "full";
 };
 
@@ -28,7 +27,7 @@ const CarItem: React.FC<Props> = ({ car, variant = "compact" }) => {
 
   return (
     <TouchableOpacity
-      style={{ width: variant === "full" ? "100%" : 280 }}
+      style={[styles.container, { width: variant === "full" ? "100%" : 280 }]}
       activeOpacity={0.9}
       onPress={handlePress}
     >
@@ -42,65 +41,45 @@ const CarItem: React.FC<Props> = ({ car, variant = "compact" }) => {
         }}
       />
       <View style={styles.information}>
-        <View>
-          <Text style={styles.carName}>{car.name}</Text>
+        <Text style={styles.carName}>{car.name}</Text>
+        <View style={styles.location}>
+          <LucideMapPin color={"#70E000"} size={20} />
+          <Text style={styles.locationText}>{car.location}</Text>
         </View>
-        <View>
-          <Text style={styles.halfDayPricing}>
-            {car.pricing.halfDay.price.toLocaleString("vi-VN")}đ/{" "}
-            {car.pricing.halfDay.duration} tiếng
-          </Text>
-          <Text style={styles.fullDayPricing}>
-            {car.pricing.fullDay.price.toLocaleString("vi-VN")}đ/{" "}
-            {car.pricing.fullDay.duration} tiếng
-          </Text>
-        </View>
-        <View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <LucideShieldCheck width={15} height={15} color={"#026AA7"} />
-            <Text>{car.instructor.experience}</Text>
-          </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <LucideMapPin width={15} height={15} color={"#026AA7"} />
-            <Text>{car.location}</Text>
-          </View>
-        </View>
-        <View style={styles.ratingContainer}>
-          <View
-            style={{
-              paddingVertical: 5,
-              paddingHorizontal: 10,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 5,
-              backgroundColor: "#FFF68F",
-              borderRadius: 5,
-            }}
-          >
-            <LucideStar width={15} height={15} fill={"#EEC10A"} />
-            <Text>{car.rating.score}</Text>
-          </View>
-          <Text>Đã học {car.rating.totalStudents} lượt</Text>
-        </View>
+        <Text style={styles.price}>
+          {car.price.toLocaleString("vi-VN")} GF /{" "}
+          <Text style={{ fontWeight: "400" }}>giờ</Text>
+        </Text>
       </View>
       <View style={styles.footer}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <LucideUser width={15} height={15} />
+          <LucideUser size={18} color={"#70E000"} />
           <Text style={{ fontSize: 14, fontWeight: "500" }}>
             {car.seats} chỗ
           </Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
           <LucideAntenna
-            width={15}
-            height={15}
+            color={"#70E000"}
+            size={18}
             transform={[{ rotate: "180deg" }]}
           />
           <Text style={{ fontSize: 14, fontWeight: "500" }}>{car.type}</Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <LucideFuel width={15} height={15} />
+          <LucideFuel size={18} color={"#70E000"} />
           <Text style={{ fontSize: 14, fontWeight: "500" }}>{car.fuel}</Text>
+        </View>
+      </View>
+      <View style={styles.banner}>
+        <View style={styles.ratingContainer}>
+          <LucideStar size={15} color={"#edb435"} fill={"#edb435"} />
+          <Text style={styles.ratingText}>{car.rating}</Text>
+        </View>
+        <View style={styles.bookingContainer}>
+          <Text style={styles.bookingText}>
+            Đã thuê {car.totalRentalCount} lượt
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -108,50 +87,78 @@ const CarItem: React.FC<Props> = ({ car, variant = "compact" }) => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    backgroundColor: "#FFF",
+    elevation: 2,
+    overflow: "hidden",
+    borderRadius: 10,
+    marginBottom: 5,
+    marginLeft: 2,
+    position: "relative",
+  },
   carImage: {
     width: 280,
-    height: 180,
+    height: 150,
     resizeMode: "cover",
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
   },
   carImageFull: {
     width: "100%",
   },
   information: {
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: "#026AA7",
     padding: 10,
     gap: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: "#CCC",
   },
   carName: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  halfDayPricing: {
     fontSize: 20,
     fontWeight: "600",
-    color: "#026AA7",
   },
-  fullDayPricing: {
-    fontSize: 16,
-  },
-  ratingContainer: {
+  location: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 20,
+    gap: 10,
+  },
+  locationText: {
+    fontSize: 18,
+  },
+  price: {
+    fontSize: 20,
+    color: "#70E000",
+    fontWeight: "bold",
   },
   footer: {
     padding: 20,
-    borderWidth: 1,
-    borderColor: "#026AA7",
     flexDirection: "row",
     gap: 20,
     justifyContent: "space-between",
     alignItems: "center",
-    borderBottomRightRadius: 10,
+  },
+  banner: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    flexDirection: "row",
+    gap: 0,
+    backgroundColor: "#4a827d",
     borderBottomLeftRadius: 10,
+  },
+  ratingContainer: {
+    flexDirection: "row",
+    padding: 5,
+    alignItems: "center",
+    gap: 2,
+  },
+  ratingText: {
+    color: "#edb435",
+  },
+  bookingContainer: {
+    backgroundColor: "#026AA7",
+    padding: 5,
+    alignItems: "center",
+  },
+  bookingText: {
+    color: "#FFF",
   },
 });
 

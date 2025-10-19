@@ -1,270 +1,289 @@
 import CarItem from "@/components/ui/car-item";
+import InstructorItem from "@/components/ui/instructor-item";
+import { drivingLicenses, listCar } from "@/data/home_data";
+import { instructorData, instructorsData } from "@/data/instructors_data";
+import { LicenseType } from "@/models/license/license";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import {
-  carousels,
-  drivingLicenses,
-  listCar,
-  listInstructorOptions,
-} from "@/data/home_data";
-import { useRouter } from "expo-router";
-import { ChevronRight as LucideChevronRight } from "lucide-react-native";
+  Bell,
+  ChevronRight,
+  MessageSquareMore,
+  Wallet,
+} from "lucide-react-native";
 import {
-  Button,
-  Dimensions,
   FlatList,
-  Image,
+  ListRenderItemInfo,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
-const { width } = Dimensions.get("window");
+const headerItems = [
+  {
+    id: "1",
+    label: "Ví DriveMate",
+    value: 100000,
+    icon: Wallet,
+  },
+  {
+    id: "2",
+    label: "Thông báo",
+    value: 100,
+    icon: Bell,
+  },
+  {
+    id: "3",
+    label: "Tin nhắn",
+    value: 100,
+    icon: MessageSquareMore,
+  },
+];
 
 export default function HomeScreen() {
-  const router = useRouter();
+  const tabBarHeight = useBottomTabBarHeight();
+
+  const renderDrivingLicense = ({ item }: ListRenderItemInfo<LicenseType>) => (
+    <TouchableOpacity key={item.id} style={styles.drivingLicenseItem}>
+      <Text style={styles.drivingLicenseItemText}>{item.name}</Text>
+    </TouchableOpacity>
+  );
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.carouselContainer}>
-        <FlatList
-          data={carousels}
-          keyExtractor={(item) => item.id.toString()}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <Image style={styles.carouseItem} source={{ uri: item.image }} />
-          )}
-        />
-        <View style={styles.carouselDotContainer}>
-          <View style={styles.carouselDot}></View>
-          <View style={styles.carouselDot}></View>
-          <View style={styles.carouselDot}></View>
+    <ScrollView
+      style={[styles.container, { paddingBottom: tabBarHeight + 16 }]}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.header}>
+        <View style={styles.floatingContainer}>
+          {headerItems.map((item, index) => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.headerItem,
+                index !== headerItems.length - 1 && {
+                  borderRightWidth: 1,
+                  borderColor: "#CCC",
+                },
+              ]}
+            >
+              <item.icon
+                size={27}
+                color={"#70E000"}
+                style={index !== 0 && { marginLeft: 2 }}
+              />
+              <View>
+                <Text style={styles.headerItemLabel}>{item.label}</Text>
+                <Text style={styles.headerItemValue}>
+                  {item.value} {item.label === "Ví DriveMate" && "GF"}
+                </Text>
+              </View>
+              <View style={{ justifyContent: "flex-end" }}>
+                <ChevronRight size={20} />
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
-      <View style={styles.contenContainer}>
-        {/* driving license */}
-        <View style={styles.licenseContainer}>
-          <Text style={styles.label}>Chọn xe theo giấy phép lái xe</Text>
-          <View style={styles.listContainer}>
-            <FlatList
-              data={drivingLicenses}
-              keyExtractor={(item, index) => item.id + index}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 10 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.licenseItem}>
-                  <Text style={styles.licenseItemText}>{item.name}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </View>
-        {/* list car */}
-        <View style={styles.listCarContainer}>
-          <Text style={styles.label}>Có thể bạn sẽ quan tâm</Text>
-          <View style={styles.listContainer}>
-            <FlatList
-              data={listCar}
-              keyExtractor={(item) => item.id.toString()}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 20 }}
-              renderItem={({ item }) => <CarItem car={item} />}
-              ListFooterComponent={() => (
-                <View
-                  style={{
-                    width: "100%",
-                    height: 450,
-                    justifyContent: "center",
-                  }}
-                >
-                  <TouchableOpacity
-                    style={{
-                      width: 100,
-                      height: 100,
-                      justifyContent: "center",
-                      alignItems: "center",
-                      borderWidth: 1,
-                      borderColor: "#ccc",
-                      borderRadius: 10,
-                    }}
-                  >
-                    <Text>Xem thêm</Text>
-                    <LucideChevronRight />
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-          </View>
-        </View>
-        {/* instructor */}
-        <View style={{ paddingHorizontal: 10 }}>
-          <Text style={[styles.label, { fontSize: 19 }]}>
-            Chọn người hướng dẫn theo kinh nghiệm
+      <View style={styles.body}>
+        <View style={styles.listItemContainer}>
+          <Text style={styles.listLabel}>
+            Loại giấy phép lái xe bạn quan tâm
           </Text>
-          <View style={styles.listContainer}>
-            <FlatList
-              data={listInstructorOptions}
-              keyExtractor={(item) => item.id.toString()}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 20 }}
-              renderItem={({ item }) => (
-                <View>
-                  <Image
-                    source={item.imageUrl}
-                    style={{
-                      width: "100%",
-                      borderTopLeftRadius: 10,
-                      borderTopRightRadius: 10,
-                    }}
-                  />
-                  <View
-                    style={{
-                      borderRightWidth: 1,
-                      borderLeftWidth: 1,
-                      borderBottomWidth: 1,
-                      borderColor: "#026AA7",
-                      borderBottomLeftRadius: 10,
-                      borderBottomRightRadius: 10,
-                      padding: 10,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 16,
-                        fontWeight: "600",
-                        textAlign: "center",
-                      }}
-                    >
-                      {item.title}
-                    </Text>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: 20,
-                      }}
-                    >
-                      <Text>{String(item.description)}</Text>
-                      <TouchableOpacity
-                        style={{
-                          borderWidth: 2,
-                          borderColor: "#026AA7",
-                          borderRadius: 5,
-                          paddingHorizontal: 10,
-                          paddingVertical: 5,
-                        }}
-                      >
-                        <Text style={{ fontWeight: "600", color: "#026AA7" }}>
-                          Xem
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              )}
-            />
-          </View>
+          <FlatList
+            data={drivingLicenses}
+            keyExtractor={(item) => item.id}
+            horizontal
+            renderItem={renderDrivingLicense}
+            contentContainerStyle={styles.listItem}
+            showsHorizontalScrollIndicator={false}
+          />
         </View>
-        <Button
-          title="go to reset on boarding"
-          onPress={() => {
-            router.navigate("/(onboarding)/reset-onboarding");
-          }}
-        />
+        <View style={styles.listItemContainer}>
+          <Text style={styles.listLabel}>Xe được thuê thường xuyên</Text>
+          <FlatList
+            data={listCar}
+            keyExtractor={(item) => item.id}
+            horizontal
+            contentContainerStyle={styles.listItem}
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => <CarItem car={item} key={item.id} />}
+          />
+        </View>
+        <View style={styles.listItemContainer}>
+          <Text style={styles.listLabel}>Người hướng dẫn nổi bật</Text>
+          <FlatList
+            data={instructorsData}
+            keyExtractor={(item) => item.id}
+            horizontal
+            contentContainerStyle={styles.listItem}
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => <InstructorItem instructor={item} />}
+          />
+        </View>
       </View>
     </ScrollView>
   );
 }
 
+//   container: { flex: 1, backgroundColor: "#FAFAFA" },
+//   carouselContainer: {
+//     width: width,
+//     height: 200,
+//     position: "relative",
+//   },
+//   carouseItem: {
+//     width: width,
+//     height: 200,
+//   },
+//   carouselDotContainer: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     gap: 10,
+//     position: "absolute",
+//     left: 0,
+//     width: "100%",
+//     bottom: 10,
+//   },
+//   carouselDot: {
+//     width: 10,
+//     height: 10,
+//     borderRadius: "50%",
+//     backgroundColor: "red",
+//   },
+//   contenContainer: {
+//     flex: 1,
+//   },
+//   voucherContainer: {
+//     marginVertical: 20,
+//     marginHorizontal: 20,
+//     padding: 10,
+//     flexDirection: "row",
+//     alignItems: "center",
+//     borderWidth: 1.5,
+//     borderColor: "#026AA7",
+//     borderRadius: 10,
+//   },
+//   voucherContent: {
+//     flex: 1,
+//   },
+//   voucherTitle: {
+//     fontSize: 16,
+//     color: "#026AA7",
+//     fontWeight: 600,
+//     marginBottom: 10,
+//   },
+//   voucherDes: {
+//     fontSize: 14,
+//     color: "#333",
+//   },
+//   voucherIcon: {
+//     width: 80,
+//     height: 80,
+//   },
+//   licenseContainer: {
+//     paddingHorizontal: 10,
+//   },
+//   label: {
+//     fontSize: 20,
+//     fontWeight: 600,
+//     color: "#026AA7",
+//   },
+//   licenseItem: {
+//     width: 80,
+//     height: 80,
+//     backgroundColor: "#ffffff",
+//     borderWidth: 1,
+//     borderColor: "#026AA7",
+//     borderRadius: 10,
+//     justifyContent: "center",
+//     alignItems: "center",
+//   },
+//   licenseItemText: {
+//     fontSize: 16,
+//     fontWeight: 600,
+//     color: "#026AA7",
+//   },
+//   listCarContainer: {
+//     paddingHorizontal: 10,
+//   },
+//   listContainer: {
+//     marginVertical: 10,
+//     padding: 5,
+//   },
+// });
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FAFAFA" },
-  carouselContainer: {
-    width: width,
-    height: 200,
+  container: {
+    flex: 1,
+    backgroundColor: "#F1F1F5",
+  },
+  header: {
+    backgroundColor: "#70E000",
+    paddingTop: StatusBar.currentHeight,
+    alignItems: "center",
     position: "relative",
+    height: 80,
   },
-  carouseItem: {
-    width: width,
-    height: 200,
-  },
-  carouselDotContainer: {
+  floatingContainer: {
+    width: "95%",
     flexDirection: "row",
-    justifyContent: "center",
-    gap: 10,
-    position: "absolute",
-    left: 0,
-    width: "100%",
-    bottom: 10,
-  },
-  carouselDot: {
-    width: 10,
-    height: 10,
-    borderRadius: "50%",
-    backgroundColor: "red",
-  },
-  contenContainer: {
-    flex: 1,
-  },
-  voucherContainer: {
-    marginVertical: 20,
-    marginHorizontal: 20,
+    justifyContent: "space-between",
+    backgroundColor: "#FFF",
     padding: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "#026AA7",
-    borderRadius: 10,
+    borderRadius: 5,
+    position: "absolute",
+    top: 50,
+    elevation: 4,
   },
-  voucherContent: {
+  headerItem: {
+    flexDirection: "row",
+    gap: 5,
+    alignItems: "center",
+  },
+  headerItemLabel: {
+    fontSize: 12,
+    color: "#92929D",
+  },
+  headerItemValue: {
+    fontSize: 14,
+    fontWeight: "500",
     flex: 1,
   },
-  voucherTitle: {
-    fontSize: 16,
-    color: "#026AA7",
-    fontWeight: 600,
-    marginBottom: 10,
-  },
-  voucherDes: {
-    fontSize: 14,
-    color: "#333",
-  },
-  voucherIcon: {
-    width: 80,
-    height: 80,
-  },
-  licenseContainer: {
-    paddingHorizontal: 10,
-  },
-  label: {
-    fontSize: 20,
-    fontWeight: 600,
-    color: "#026AA7",
-  },
-  licenseItem: {
-    width: 80,
-    height: 80,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#026AA7",
-    borderRadius: 10,
-    justifyContent: "center",
+  body: {
     alignItems: "center",
+    marginTop: 50,
+    gap: 20,
   },
-  licenseItemText: {
+  listItemContainer: {
+    width: "95%",
+    backgroundColor: "#FFF",
+    paddingVertical: 15,
+    paddingLeft: 20,
+    borderRadius: 5,
+    elevation: 3,
+  },
+  listLabel: {
     fontSize: 16,
-    fontWeight: 600,
-    color: "#026AA7",
+    fontWeight: 500,
+    color: "#70E000",
+    marginBottom: 15,
   },
-  listCarContainer: {
-    paddingHorizontal: 10,
+  listItem: {
+    gap: 10,
   },
-  listContainer: {
-    marginVertical: 10,
-    padding: 5,
+  drivingLicenseItem: {
+    width: 70,
+    height: 70,
+    borderWidth: 1,
+    borderColor: "#70E000",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  drivingLicenseItemText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#70E000",
   },
 });
