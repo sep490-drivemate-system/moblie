@@ -17,11 +17,11 @@ export default function IntroScreen() {
   const router = useRouter();
 
   const handleSignUp = () => {
-    router.push("/(onboarding)/register");
+    router.push("/(auth)/signup");
   };
 
   const handleSignIn = () => {
-    router.push("/(onboarding)/login");
+    router.push("/(auth)/signin");
   };
 
   return (

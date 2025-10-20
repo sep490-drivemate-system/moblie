@@ -1,346 +1,461 @@
-import React, { useEffect, useState } from 'react';
-import { 
-    View, 
-    Text, 
-    TouchableOpacity, 
-    ScrollView, 
-    TextInput, 
-    KeyboardAvoidingView, 
-    Platform,
-    StyleSheet,
-    ActivityIndicator,
-    Alert
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { AuthViewModel } from '@/viewmodels/auth/AuthViewModel';
-import { useViewModel } from '@/viewmodels/shared/BaseViewModel';
-import { RootState } from '@/lib/redux/store';
-
-const authSelector = (state: RootState) => state.auth;
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  SafeAreaView,
+  Alert,
+  StatusBar,
+  Image,
+  ScrollView,
+} from "react-native";
+import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { MoreVertical, Eye, EyeOff } from "lucide-react-native";
 
 export default function SignUpScreen() {
-    const router = useRouter();
-    const [authState, authViewModel] = useViewModel(AuthViewModel, authSelector);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    retypePassword: "",
+    phone: "",
+  });
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRetypePassword, setShowRetypePassword] = useState(false);
 
-    useEffect(() => {
-        authViewModel.setNavigationCallback((route: string) => {
-            router.replace(route as any);
-        });
-    }, [authViewModel, router]);
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
-    const togglePasswordVisibility = () => {
-        setShowPassword(!showPassword);
-    };
+  const handleSubmit = async () => {
+    // Validation
+    if (!formData.firstName.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập tên");
+      return;
+    }
+    if (!formData.lastName.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập họ");
+      return;
+    }
+    if (!formData.email.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập email");
+      return;
+    }
+    if (!formData.password.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập mật khẩu");
+      return;
+    }
+    if (formData.password !== formData.retypePassword) {
+      Alert.alert("Lỗi", "Mật khẩu nhập lại không khớp");
+      return;
+    }
+    if (!formData.phone.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập số điện thoại");
+      return;
+    }
+    if (!acceptTerms) {
+      Alert.alert("Lỗi", "Vui lòng chấp nhận điều khoản sử dụng");
+      return;
+    }
 
-    const toggleConfirmPasswordVisibility = () => {
-        setShowConfirmPassword(!showConfirmPassword);
-    };
+    try {
+      // Simulate saving user info
+      // In a real app, you would call your API here
+      const userInfo = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        googleSignedIn: true,
+      };
 
-    const showErrorAlert = () => {
-        if (authState.errorMessage) {
-            Alert.alert('Error', authState.errorMessage);
-        }
-    };
+      // Save user info to AsyncStorage
+      await AsyncStorage.setItem("user_info", JSON.stringify(userInfo));
 
-    useEffect(() => {
-        showErrorAlert();
-    }, [authState.errorMessage]);
+      Alert.alert(
+        "Thành công",
+        "Thông tin đã được lưu thành công! Vui lòng xác minh OTP.",
+        [
+          {
+            text: "OK",
+            onPress: () => router.push("/(onboarding)/otp"),
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert("Lỗi", "Có lỗi xảy ra khi lưu thông tin. Vui lòng thử lại.");
+    }
+  };
 
-    return (
-        <KeyboardAvoidingView 
-            style={styles.container} 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
+  const handleBackToIntro = () => {
+    router.back();
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Image
+              source={require("@/assets/images/logo_drivemate_green.png")}
+              style={styles.logo}
+            />
+            <View style={styles.headerButtons}>
+              <TouchableOpacity style={styles.helpButton}>
+                <Text>Cần hỗ trợ ?</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.notificationButton}>
+                <MoreVertical color="#000" size={24} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Title */}
+          <View style={styles.titleContainer}>
+            <View style={styles.titleSectionLeft}>
+              <Text style={styles.title}>
+                Đăng ký để trở thành một phần của{" "}
+                <Text style={styles.titleHighlight}>DRIVEMATE</Text>
+              </Text>
+              <Text style={styles.titleDescription}>
+                Vui lòng cho chúng tôi biết về bạn
+              </Text>
+            </View>
+            <Image
+              style={styles.icon1}
+              source={require("@/assets/images/icon1.png")}
+            />
+          </View>
+
+          {/* Form */}
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Email <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={formData.email}
+                onChangeText={(value) => handleInputChange("email", value)}
+                placeholder="Nhập email"
+                placeholderTextColor="#92929D"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Tên <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={formData.firstName}
+                onChangeText={(value) => handleInputChange("firstName", value)}
+                placeholder="Nhập tên"
+                placeholderTextColor="#92929D"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Họ <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={formData.lastName}
+                onChangeText={(value) => handleInputChange("lastName", value)}
+                placeholder="Nhập họ"
+                placeholderTextColor="#92929D"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Mật khẩu <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={formData.password}
+                  onChangeText={(value) => handleInputChange("password", value)}
+                  placeholder="Nhập mật khẩu"
+                  placeholderTextColor="#92929D"
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color="#92929D" />
+                  ) : (
+                    <Eye size={20} color="#92929D" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Nhập lại mật khẩu <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={formData.retypePassword}
+                  onChangeText={(value) =>
+                    handleInputChange("retypePassword", value)
+                  }
+                  placeholder="Nhập lại mật khẩu"
+                  placeholderTextColor="#92929D"
+                  secureTextEntry={!showRetypePassword}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowRetypePassword(!showRetypePassword)}
+                >
+                  {showRetypePassword ? (
+                    <EyeOff size={20} color="#92929D" />
+                  ) : (
+                    <Eye size={20} color="#92929D" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Số điện thoại <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={formData.phone}
+                onChangeText={(value) => handleInputChange("phone", value)}
+                placeholder="Nhập số điện thoại"
+                placeholderTextColor="#92929D"
+                keyboardType="phone-pad"
+              />
+            </View>
+          </View>
+
+          {/* Terms */}
+          <View style={styles.termsContainer}>
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() => setAcceptTerms(!acceptTerms)}
             >
-                <View style={styles.formContainer}>
-                    {/* Card Container */}
-                    <View style={styles.card}>
-                        <View style={styles.cardContent}>
-                            {/* Header */}
-                            <View style={styles.header}>
-                                <Text style={styles.title}>
-                                    Create Account
-                                </Text>
-                                <Text style={styles.subtitle}>
-                                    Sign up to get started
-                                </Text>
-                            </View>
+              <View
+                style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}
+              >
+                {acceptTerms && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.termsText}>
+                Bằng cách tiếp tục, tôi đồng ý với việc DriveMate có thể thu
+                thập, sử dụng và tiết lộ thông tin do tôi cung cấp theo{" "}
+                <Text style={styles.termsLink}>
+                  Thông báo về quyền riêng tư
+                </Text>
+                . Tôi cũng xác nhận đã đọc, hiểu rõ và hoàn toàn tuân thủ các{" "}
+                <Text style={styles.termsLink}>Điều khoản và điều kiện</Text>.
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-                            {/* Form Section */}
-                            <View style={styles.form}>
-                                {/* Name Input */}
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.label}>
-                                        Full Name
-                                    </Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Enter your full name"
-                                        value={authState.registerFormData?.name || ''}
-                                        onChangeText={(text: string) => authViewModel.handleRegisterInputChange('name', text)}
-                                        autoComplete="name"
-                                        editable={!authState.isLoading}
-                                        placeholderTextColor="#9ca3af"
-                                    />
-                                </View>
-
-                                {/* Email Input */}
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.label}>
-                                        Email Address
-                                    </Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Enter your email"
-                                        value={authState.registerFormData?.email || ''}
-                                        onChangeText={(text: string) => authViewModel.handleRegisterInputChange('email', text)}
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        autoComplete="email"
-                                        editable={!authState.isLoading}
-                                        placeholderTextColor="#9ca3af"
-                                    />
-                                </View>
-
-                                {/* Password Input */}
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.label}>
-                                        Password
-                                    </Text>
-                                    <View style={styles.passwordContainer}>
-                                        <TextInput
-                                            style={styles.passwordInput}
-                                            placeholder="Enter your password"
-                                            value={authState.registerFormData?.password || ''}
-                                            onChangeText={(text: string) => authViewModel.handleRegisterInputChange('password', text)}
-                                            secureTextEntry={!showPassword}
-                                            autoComplete="password-new"
-                                            editable={!authState.isLoading}
-                                            placeholderTextColor="#9ca3af"
-                                        />
-                                        <TouchableOpacity 
-                                            onPress={togglePasswordVisibility}
-                                            style={styles.passwordToggle}
-                                        >
-                                            <Text style={styles.passwordToggleText}>
-                                                {showPassword ? '🙈' : '👁️'}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-
-                                {/* Confirm Password Input */}
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.label}>
-                                        Confirm Password
-                                    </Text>
-                                    <View style={styles.passwordContainer}>
-                                        <TextInput
-                                            style={styles.passwordInput}
-                                            placeholder="Confirm your password"
-                                            value={authState.registerFormData?.confirmPassword || ''}
-                                            onChangeText={(text: string) => authViewModel.handleRegisterInputChange('confirmPassword', text)}
-                                            secureTextEntry={!showConfirmPassword}
-                                            autoComplete="password-new"
-                                            editable={!authState.isLoading}
-                                            placeholderTextColor="#9ca3af"
-                                        />
-                                        <TouchableOpacity 
-                                            onPress={toggleConfirmPasswordVisibility}
-                                            style={styles.passwordToggle}
-                                        >
-                                            <Text style={styles.passwordToggleText}>
-                                                {showConfirmPassword ? '🙈' : '👁️'}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-
-                                {/* Register Button */}
-                                <TouchableOpacity
-                                    style={[
-                                        styles.registerButton,
-                                        authState.isLoading && styles.registerButtonDisabled
-                                    ]}
-                                    onPress={authViewModel.handleRegister}
-                                    disabled={authState.isLoading}
-                                >
-                                    {authState.isLoading ? (
-                                        <View style={styles.loadingContainer}>
-                                            <ActivityIndicator size="small" color="white" style={styles.spinner} />
-                                            <Text style={styles.registerButtonText}>
-                                                Creating account...
-                                            </Text>
-                                        </View>
-                                    ) : (
-                                        <Text style={styles.registerButtonText}>
-                                            Create Account
-                                        </Text>
-                                    )}
-                                </TouchableOpacity>
-
-                                {/* Sign In Link */}
-                                <TouchableOpacity
-                                    onPress={() => router.push('./signin')}
-                                    disabled={authState.isLoading}
-                                    style={styles.signInLink}
-                                >
-                                    <Text style={styles.signInText}>
-                                        Already have an account?{' '}
-                                        <Text style={styles.signInTextBold}>
-                                            Sign in
-                                        </Text>
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
-    );
+          {/* Buttons */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={handleSubmit}
+            >
+              <Text style={styles.primaryButtonText}>Tiếp theo</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f8fafc',
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        paddingVertical: 20,
-    },
-    formContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        paddingHorizontal: 24,
-    },
-    card: {
-        backgroundColor: 'white',
-        borderRadius: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        elevation: 10,
-        maxWidth: 400,
-        width: '100%',
-        alignSelf: 'center',
-    },
-    cardContent: {
-        padding: 32,
-        paddingBottom: 24,
-    },
-    header: {
-        alignItems: 'center',
-        marginBottom: 32,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#1f2937',
-        textAlign: 'center',
-        marginBottom: 8,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#6b7280',
-        textAlign: 'center',
-    },
-    form: {
-        gap: 20,
-    },
-    inputGroup: {
-        gap: 8,
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#374151',
-        marginLeft: 4,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#d1d5db',
-        borderRadius: 12,
-        backgroundColor: '#f9fafb',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        fontSize: 16,
-        color: '#1f2937',
-    },
-    passwordContainer: {
-        position: 'relative',
-    },
-    passwordInput: {
-        borderWidth: 1,
-        borderColor: '#d1d5db',
-        borderRadius: 12,
-        backgroundColor: '#f9fafb',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        paddingRight: 50,
-        fontSize: 16,
-        color: '#1f2937',
-    },
-    passwordToggle: {
-        position: 'absolute',
-        right: 16,
-        top: 0,
-        bottom: 0,
-        justifyContent: 'center',
-    },
-    passwordToggleText: {
-        fontSize: 16,
-    },
-    registerButton: {
-        backgroundColor: '#10b981',
-        borderRadius: 12,
-        paddingVertical: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 8,
-        shadowColor: '#10b981',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
-    },
-    registerButtonDisabled: {
-        opacity: 0.7,
-    },
-    loadingContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    spinner: {
-        marginRight: 8,
-    },
-    registerButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    signInLink: {
-        alignSelf: 'center',
-        marginTop: 16,
-    },
-    signInText: {
-        color: '#6b7280',
-        fontSize: 14,
-        textAlign: 'center',
-    },
-    signInTextBold: {
-        color: '#3b82f6',
-        fontWeight: '600',
-    },
+  container: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    paddingTop: StatusBar.currentHeight,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 50,
+  },
+  content: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerButtons: {
+    flexDirection: "row",
+  },
+  logo: {
+    width: 150,
+    height: 40,
+    resizeMode: "cover",
+  },
+  notificationButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  helpButton: {
+    justifyContent: "center",
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderColor: "#92929D",
+    borderWidth: 1,
+  },
+  titleContainer: {
+    paddingVertical: 30,
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 20,
+  },
+  titleSectionLeft: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "500",
+    color: "black",
+  },
+  titleHighlight: {
+    color: "#70E000",
+    fontWeight: "bold",
+    fontSize: 22,
+  },
+  titleDescription: {
+    color: "#92929D",
+  },
+  icon1: {
+    width: 100,
+    height: 100,
+  },
+  formContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    color: "#92929D",
+    marginBottom: 8,
+    fontWeight: "500",
+  },
+  required: {
+    color: "#FF0000",
+    fontSize: 16,
+  },
+  input: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: "#000",
+    borderWidth: 1,
+    borderColor: "#92929D",
+  },
+  passwordContainer: {
+    position: "relative",
+  },
+  passwordInput: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingRight: 50,
+    fontSize: 16,
+    color: "#000",
+    borderWidth: 1,
+    borderColor: "#92929D",
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 16,
+    top: 14,
+    padding: 4,
+  },
+  termsContainer: {
+    marginBottom: 30,
+    paddingHorizontal: 20,
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#70E000",
+    marginRight: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: "#70E000",
+    borderColor: "#70E000",
+  },
+  checkmark: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  termsText: {
+    fontSize: 14,
+    color: "#92929D",
+    lineHeight: 20,
+    flex: 1,
+  },
+  termsLink: {
+    color: "#70E000",
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
+  buttonContainer: {
+    paddingHorizontal: 20,
+  },
+  primaryButton: {
+    backgroundColor: "#70E000",
+    paddingVertical: 16,
+    borderRadius: 20,
+    alignItems: "center",
+  },
+  primaryButtonText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
 });

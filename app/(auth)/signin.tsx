@@ -1,414 +1,362 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from "react";
 import {
-    View,
-    Text,
-    TouchableOpacity,
-    ScrollView,
-    TextInput,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    StatusBar
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { AuthViewModel } from '@/viewmodels/auth/AuthViewModel';
-import { useViewModel } from '@/viewmodels/shared/BaseViewModel';
-import { RootState } from '@/lib/redux/store';
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  SafeAreaView,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Dimensions,
+  Image,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { Eye, EyeOff } from "lucide-react-native";
+import { Video, ResizeMode } from "expo-av";
 
-const authSelector = (state: RootState) => state.auth;
+const { width, height } = Dimensions.get("window");
 
 export default function SignInScreen() {
-    const router = useRouter();
-    const [authState, authViewModel] = useViewModel(AuthViewModel, authSelector);
-    const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ email và mật khẩu");
+      return;
+    }
 
-    useEffect(() => {
-        authViewModel.setNavigationCallback((route: string) => {
-            router.replace(route as any);
-        });
-    }, [authViewModel, router]);
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Lỗi", "Vui lòng nhập email hợp lệ");
+      return;
+    }
 
-    const togglePasswordVisibility = () => {
-        setShowPassword(!showPassword);
-    };
+    try {
+      // TODO: Implement actual login logic here
+      console.log("Login attempt:", { email, password });
 
-    const showErrorAlert = () => {
-        if (authState.errorMessage) {
-            Alert.alert('Error', authState.errorMessage);
-        }
-    };
+      // Simulate login success
+      Alert.alert("Thành công", "Đăng nhập thành công!", [
+        {
+          text: "OK",
+          onPress: () => {
+            // Navigate to main app
+            router.replace("/(main)/(tabs)/home");
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error("Login error:", error);
+      Alert.alert("Lỗi", "Đăng nhập thất bại. Vui lòng thử lại.");
+    }
+  };
 
-    useEffect(() => {
-        showErrorAlert();
-    }, [authState.errorMessage]);
+  const handleGoBack = () => {
+    router.back();
+  };
 
-    return (
-        <>
-            <StatusBar barStyle="light-content" backgroundColor="#667eea" />
-            <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                style={styles.gradientBackground}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+  const handleGoogleLogin = async () => {
+    try {
+      // TODO: Implement Google login logic here
+      console.log("Google login attempt");
+
+      // Simulate Google login success
+      Alert.alert("Thành công", "Đăng nhập với Google thành công!", [
+        {
+          text: "OK",
+          onPress: () => {
+            // Navigate to main app
+            router.replace("/(main)/(tabs)/home");
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error("Google login error:", error);
+      Alert.alert("Lỗi", "Đăng nhập với Google thất bại. Vui lòng thử lại.");
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Video Background */}
+      <View style={styles.videoContainer}>
+        <Video
+          source={require("@/assets/videos/background_intro.mp4")}
+          style={styles.backgroundVideo}
+          shouldPlay
+          isLooping
+          isMuted
+          resizeMode={ResizeMode.COVER}
+        />
+        <View style={styles.videoOverlay} />
+      </View>
+
+      {/* Login Form Section */}
+      <View style={styles.formSection}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Title */}
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>Đăng nhập</Text>
+            <Text style={styles.subtitle}>
+              Chào mừng đến với{" "}
+              <Text style={styles.highlightText}>DriveMate</Text>
+            </Text>
+          </View>
+
+          {/* Form */}
+          <View style={styles.form}>
+            {/* Email Input */}
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập email"
+                placeholderTextColor="#9ca3af"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            {/* Password Input */}
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập mật khẩu"
+                placeholderTextColor="#9ca3af"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} color="#9ca3af" />
+                ) : (
+                  <Eye size={20} color="#9ca3af" />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Forgot Password */}
+            <TouchableOpacity style={styles.forgotPasswordContainer}>
+              <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
+            </TouchableOpacity>
+
+            {/* Login Button */}
+            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+              <Text style={styles.loginButtonText}>Đăng nhập</Text>
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>hoặc</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Google Login Button */}
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={handleGoogleLogin}
             >
-                <KeyboardAvoidingView
-                    style={styles.container}
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                >
-                    <ScrollView
-                        style={styles.scrollView}
-                        contentContainerStyle={styles.scrollContent}
-                        showsVerticalScrollIndicator={false}
-                    >
-                        <View style={styles.formContainer}>
-                            {/* Logo/Brand Section - Simplified */}
-                            <View style={styles.brandSection}>
-                                <Text style={styles.brandTitle}>DriveMate</Text>
-                            </View>
+              <Image
+                source={require("@/assets/images/gg_icon.png")}
+                style={styles.googleIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.googleButtonText}>Đăng nhập với Google</Text>
+            </TouchableOpacity>
 
-                            {/* Card Container */}
-                            <View style={styles.card}>
-                                <View style={styles.cardContent}>
-                                    {/* Header - Simplified */}
-                                    <View style={styles.header}>
-                                        <Text style={styles.title}>
-                                            Sign In
-                                        </Text>
-                                    </View>
-
-                                    {/* Form Section */}
-                                    <View style={styles.form}>
-                                        {/* Email Input */}
-                                        <View style={styles.inputGroup}>
-                                            <Text style={styles.label}>
-                                                Email Address or Phone number
-                                            </Text>
-                                            <View style={styles.inputContainer}>
-                                                <Ionicons
-                                                    name="mail-outline"
-                                                    size={20}
-                                                    color="#9ca3af"
-                                                    style={styles.inputIcon}
-                                                />
-                                                <TextInput
-                                                    style={styles.input}
-                                                    placeholder="Enter your email"
-                                                    value={authState.formData.email}
-                                                    onChangeText={(text: string) => authViewModel.handleInputChange('email', text)}
-                                                    keyboardType="email-address"
-                                                    autoCapitalize="none"
-                                                    autoComplete="email"
-                                                    editable={!authState.isLoading}
-                                                    placeholderTextColor="#9ca3af"
-                                                />
-                                            </View>
-                                        </View>
-
-                                        {/* Password Input */}
-                                        <View style={styles.inputGroup}>
-                                            <Text style={styles.label}>
-                                                Password
-                                            </Text>
-                                            <View style={styles.inputContainer}>
-                                                <Ionicons
-                                                    name="lock-closed-outline"
-                                                    size={20}
-                                                    color="#9ca3af"
-                                                    style={styles.inputIcon}
-                                                />
-                                                <TextInput
-                                                    style={styles.passwordInput}
-                                                    placeholder="Enter your password"
-                                                    value={authState.formData.password}
-                                                    onChangeText={(text: string) => authViewModel.handleInputChange('password', text)}
-                                                    secureTextEntry={!showPassword}
-                                                    autoComplete="password"
-                                                    editable={!authState.isLoading}
-                                                    placeholderTextColor="#9ca3af"
-                                                />
-                                                <TouchableOpacity
-                                                    onPress={togglePasswordVisibility}
-                                                    style={styles.passwordToggle}
-                                                    activeOpacity={0.7}
-                                                >
-                                                    <Ionicons
-                                                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                                                        size={20}
-                                                        color="#667eea"
-                                                    />
-                                                </TouchableOpacity>
-                                            </View>
-                                        </View>
-
-                                        {/* Login Button */}
-                                        <LinearGradient
-                                            colors={authState.isLoading ? ['#9ca3af', '#6b7280'] : ['#667eea', '#764ba2']}
-                                            style={styles.loginButtonGradient}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 0 }}
-                                        >
-                                            <TouchableOpacity
-                                                style={styles.loginButton}
-                                                onPress={authViewModel.handleLogin}
-                                                disabled={authState.isLoading}
-                                                activeOpacity={0.8}
-                                            >
-                                                {authState.isLoading ? (
-                                                    <View style={styles.loadingContainer}>
-                                                        <ActivityIndicator size="small" color="white" style={styles.spinner} />
-                                                        <Text style={styles.loginButtonText}>
-                                                            Signing in...
-                                                        </Text>
-                                                    </View>
-                                                ) : (
-                                                  
-                                                        <View style={styles.buttonContent}>
-                                                            <Text style={styles.loginButtonText}>
-                                                                Sign In
-                                                            </Text>
-                                                        </View>
-
-
-                                                )}
-                                            </TouchableOpacity>
-                                        </LinearGradient>
-
-                                        {/* Forgot Password Link */}
-                                        <TouchableOpacity style={styles.forgotPassword} activeOpacity={0.7}>
-                                            <Text style={styles.forgotPasswordText}>
-                                                Forgot password?
-                                            </Text>
-                                        </TouchableOpacity>
-
-                                        {/* Register Link */}
-                                        <TouchableOpacity
-                                            onPress={() => router.push('./signup')}
-                                            disabled={authState.isLoading}
-                                            style={styles.registerLink}
-                                            activeOpacity={0.7}
-                                        >
-                                            <Text style={styles.registerText}>
-                                                Don't have an account?{' '}
-                                                <Text style={styles.registerTextBold}>
-                                                    Sign up here
-                                                </Text>
-                                            </Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
-                    </ScrollView>
-                </KeyboardAvoidingView>
-            </LinearGradient>
-        </>
-    );
+            {/* Sign Up Link */}
+            <View style={styles.signUpContainer}>
+              <Text style={styles.signUpText}>Chưa có tài khoản? </Text>
+              <TouchableOpacity
+                onPress={() => router.push("/(onboarding)/register")}
+              >
+                <Text style={styles.signUpLink}>Tạo mới!</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
+  );
 }
 
-const { width, height } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
-    gradientBackground: {
-        flex: 1,
-    },
-    container: {
-        flex: 1,
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        paddingVertical: 0,
-        minHeight: height,
-        justifyContent: 'center',
-    },
-    formContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        paddingHorizontal: 24,
-    },
-    // Brand Section - Simplified
-    brandSection: {
-        alignItems: 'center',
-        marginBottom: 50,
-        paddingTop: 80,
-    },
-    brandTitle: {
-        fontSize: 36,
-        fontWeight: 'bold',
-        color: 'white',
-        marginBottom: 8,
-        textShadowColor: 'rgba(0, 0, 0, 0.2)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 4,
-        letterSpacing: 1,
-    },
-    brandSubtitle: {
-        fontSize: 18,
-        color: 'rgba(255, 255, 255, 0.8)',
-        textAlign: 'center',
-        fontWeight: '400',
-    },
-    // Card Styles
-    card: {
-        backgroundColor: 'white',
-        borderRadius: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        elevation: 15,
-        maxWidth: 380,
-        width: '100%',
-        alignSelf: 'center',
-        marginBottom: 60,
-    },
-    cardContent: {
-        padding: 28,
-    },
-    header: {
-        alignItems: 'center',
-        marginBottom: 40,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#1f2937',
-        textAlign: 'center',
-    },
-    // Form Styles
-    form: {
-        gap: 24,
-    },
-    inputGroup: {
-        gap: 8,
-    },
-    label: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#374151',
-        marginLeft: 4,
-        marginBottom: 4,
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        borderRadius: 12,
-        backgroundColor: 'white',
-        paddingHorizontal: 16,
-        paddingVertical: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
-    },
-    inputIcon: {
-        marginRight: 12,
-        opacity: 0.6,
-    },
-    input: {
-        flex: 1,
-        paddingVertical: 16,
-        fontSize: 16,
-        color: '#1f2937',
-        fontWeight: '400',
-    },
-    passwordInput: {
-        flex: 1,
-        paddingVertical: 16,
-        fontSize: 16,
-        color: '#1f2937',
-        fontWeight: '400',
-    },
-    passwordToggle: {
-        padding: 8,
-        marginLeft: 4,
-    },
-    // Button Styles
-    loginButtonGradient: {
-        borderRadius: 12,
-        marginTop: 20,
-        shadowColor: '#667eea',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        elevation: 8,
-    },
-    loginButton: {
-        paddingVertical: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 12,
-    },
-    buttonContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    loadingContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    spinner: {
-        marginRight: 8,
-    },
-    loginButtonText: {
-        color: 'white',
-        fontSize: 17,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
-    },
-    // Forgot Password
-    forgotPassword: {
-        alignSelf: 'flex-end',
-        marginTop: 8,
-        marginBottom: 8,
-    },
-    forgotPasswordText: {
-        color: '#667eea',
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    // Register Link
-    registerLink: {
-        alignSelf: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-    },
-    registerText: {
-        color: '#6b7280',
-        fontSize: 15,
-        textAlign: 'center',
-        fontWeight: '500',
-    },
-    registerTextBold: {
-        color: '#667eea',
-        fontWeight: 'bold',
-    },
-    // Development Reset Button
-    resetButton: {
-        marginTop: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        alignItems: 'center',
-        backgroundColor: '#f9fafb',
-    },
-    resetButtonText: {
-        color: '#6b7280',
-        fontSize: 14,
-        fontWeight: '600',
-    },
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  videoContainer: {
+    height: height * 0.4, // 40% of screen height
+    position: "relative",
+  },
+  backgroundVideo: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+    width: "100%",
+    height: "100%",
+  },
+  videoOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  formSection: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -20,
+    zIndex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 50,
+  },
+  titleContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    marginBottom: 30,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#70E000",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#6b7280",
+    lineHeight: 24,
+  },
+  highlightText: {
+    color: "#70E000",
+    fontWeight: "bold",
+  },
+  form: {
+    paddingHorizontal: 20,
+  },
+  inputContainer: {
+    marginBottom: 20,
+    position: "relative",
+  },
+  input: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: "#000",
+    borderWidth: 1,
+    borderColor: "#70E000",
+    paddingRight: 50,
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 16,
+    top: 14,
+    padding: 4,
+  },
+  forgotPasswordContainer: {
+    alignItems: "flex-end",
+    marginBottom: 20,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: "#70E000",
+    fontWeight: "500",
+  },
+  loginButton: {
+    backgroundColor: "#70E000",
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  loginButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#d1d5db",
+  },
+  dividerText: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginHorizontal: 16,
+    fontWeight: "500",
+  },
+  googleButton: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    flexDirection: "row",
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 12,
+  },
+  googleButtonText: {
+    color: "#374151",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  signUpContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  signUpText: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  signUpLink: {
+    fontSize: 14,
+    color: "#70E000",
+    fontWeight: "600",
+  },
 });
