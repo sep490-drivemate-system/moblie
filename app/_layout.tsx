@@ -117,14 +117,14 @@ function RootLayoutNav() {
 
   if (authState.isAuthenticated) {
     return (
-      <Stack>
-        <Stack.Screen name="(main)" options={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(main)" />
       </Stack>
     );
   } else {
     return (
-      <Stack>
-        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(onboarding)" />
       </Stack>
     );
   }
