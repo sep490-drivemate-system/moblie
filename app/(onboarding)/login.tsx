@@ -10,14 +10,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Dimensions,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Mail, Lock } from "lucide-react-native";
+import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react-native";
+import { Video, ResizeMode } from "expo-av";
+
+const { width, height } = Dimensions.get("window");
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -56,19 +62,55 @@ export default function LoginScreen() {
     router.back();
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      // TODO: Implement Google login logic here
+      console.log("Google login attempt");
+
+      // Simulate Google login success
+      Alert.alert("Thành công", "Đăng nhập với Google thành công!", [
+        {
+          text: "OK",
+          onPress: () => {
+            // Navigate to main app
+            router.replace("/(main)/(tabs)/home");
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error("Google login error:", error);
+      Alert.alert("Lỗi", "Đăng nhập với Google thất bại. Vui lòng thử lại.");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Content */}
-        <View style={styles.content}>
+      {/* Video Background */}
+      <View style={styles.videoContainer}>
+        <Video
+          source={require("@/assets/videos/background_intro.mp4")}
+          style={styles.backgroundVideo}
+          shouldPlay
+          isLooping
+          isMuted
+          resizeMode={ResizeMode.COVER}
+        />
+        <View style={styles.videoOverlay} />
+      </View>
+
+      {/* Login Form Section */}
+      <View style={styles.formSection}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Chào mừng trở lại!</Text>
+            <Text style={styles.title}>Đăng nhập</Text>
             <Text style={styles.subtitle}>
-              Đăng nhập để tiếp tục sử dụng DriveMate
+              Chào mừng đến với{" "}
+              <Text style={styles.highlightText}>DriveMate</Text>
             </Text>
           </View>
 
@@ -76,7 +118,6 @@ export default function LoginScreen() {
           <View style={styles.form}>
             {/* Email Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Nhập email"
@@ -88,38 +129,73 @@ export default function LoginScreen() {
                 autoCorrect={false}
               />
             </View>
-          </View>
-          {/* Password Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Mật khẩu</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập mật khẩu"
-              placeholderTextColor="#9ca3af"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-        </View>
 
-        {/* Login Button */}
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Đăng nhập</Text>
-        </TouchableOpacity>
+            {/* Password Input */}
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập mật khẩu"
+                placeholderTextColor="#9ca3af"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} color="#9ca3af" />
+                ) : (
+                  <Eye size={20} color="#9ca3af" />
+                )}
+              </TouchableOpacity>
+            </View>
 
-        {/* Sign Up Link */}
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Chưa có tài khoản? </Text>
-          <TouchableOpacity
-            onPress={() => router.push("/(onboarding)/register")}
-          >
-            <Text style={styles.signUpLink}>Đăng ký ngay</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+            {/* Forgot Password */}
+            <TouchableOpacity style={styles.forgotPasswordContainer}>
+              <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
+            </TouchableOpacity>
+
+            {/* Login Button */}
+            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+              <Text style={styles.loginButtonText}>Đăng nhập</Text>
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>hoặc</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Google Login Button */}
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={handleGoogleLogin}
+            >
+              <Image
+                source={require("@/assets/images/gg_icon.png")}
+                style={styles.googleIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.googleButtonText}>Đăng nhập với Google</Text>
+            </TouchableOpacity>
+
+            {/* Sign Up Link */}
+            <View style={styles.signUpContainer}>
+              <Text style={styles.signUpText}>Chưa có tài khoản? </Text>
+              <TouchableOpacity
+                onPress={() => router.push("/(onboarding)/register")}
+              >
+                <Text style={styles.signUpLink}>Tạo mới!</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -129,19 +205,45 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
   },
+  videoContainer: {
+    height: height * 0.4, // 40% of screen height
+    position: "relative",
+  },
+  backgroundVideo: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+    width: "100%",
+    height: "100%",
+  },
+  videoOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  formSection: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -20,
+    zIndex: 1,
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingBottom: 50,
   },
-  content: {
-    flex: 1,
+  titleContainer: {
     paddingHorizontal: 20,
     paddingTop: 40,
-  },
-  titleContainer: {
-    marginBottom: 40,
+    marginBottom: 30,
   },
   title: {
     fontSize: 28,
@@ -154,29 +256,43 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     lineHeight: 24,
   },
+  highlightText: {
+    color: "#70E000",
+    fontWeight: "bold",
+  },
   form: {
-    flex: 1,
+    paddingHorizontal: 20,
   },
   inputContainer: {
     marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    color: "#92929D",
-    marginBottom: 8,
-    fontWeight: "500",
+    position: "relative",
   },
   input: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "#ffffff",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
     color: "#000",
     borderWidth: 1,
-    borderColor: "#92929D",
+    borderColor: "#70E000",
+    paddingRight: 50,
   },
-
+  eyeIcon: {
+    position: "absolute",
+    right: 16,
+    top: 14,
+    padding: 4,
+  },
+  forgotPasswordContainer: {
+    alignItems: "flex-end",
+    marginBottom: 20,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: "#70E000",
+    fontWeight: "500",
+  },
   loginButton: {
     backgroundColor: "#70E000",
     borderRadius: 12,
@@ -184,12 +300,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 20,
     marginBottom: 24,
-    marginHorizontal: 20,
   },
   loginButtonText: {
     color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#d1d5db",
+  },
+  dividerText: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginHorizontal: 16,
+    fontWeight: "500",
+  },
+  googleButton: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    flexDirection: "row",
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 12,
+  },
+  googleButtonText: {
+    color: "#374151",
     fontSize: 16,
     fontWeight: "600",
   },
