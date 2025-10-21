@@ -224,7 +224,9 @@ export default function FormScreen() {
   };
 
   const handleNext = () => {
-    router.push("/(onboarding)/emergency-contact");
+    router.push(
+      "/(onboarding)/(personal-identification)/(healthcare-certificate)/form"
+    );
   };
 
   // Auto exit delete mode after 3 seconds
