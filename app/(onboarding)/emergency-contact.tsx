@@ -12,20 +12,14 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  ArrowLeft,
-  MoreVertical,
-  Edit2Icon,
-  Trash2,
-} from "lucide-react-native";
+import { ArrowLeft, MoreVertical, ChevronDown } from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
 
-export default function FormScreen() {
+export default function EmergencyContactScreen() {
   const router = useRouter();
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [tempImageUri, setTempImageUri] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
-  const [showDeleteMode, setShowDeleteMode] = useState(false);
+  const [showRelationshipDropdown, setShowRelationshipDropdown] =
+    useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -39,8 +33,20 @@ export default function FormScreen() {
 
   // Form data
   const [formData, setFormData] = useState({
-    issueDate: "",
+    emergencyContactName: "",
+    relationship: "",
+    emergencyPhone: "",
+    temporaryAddress: "",
   });
+
+  const relationships = [
+    "Bố mẹ ruột",
+    "Anh chị em ruột",
+    "Cô dì chú bác",
+    "Chồng",
+    "Vợ",
+    "Khác",
+  ];
 
   useEffect(() => {
     loadUserData();
@@ -62,28 +68,18 @@ export default function FormScreen() {
 
       // If onboarding was reset, clear all data
       if (!onboardingCompleted || !quizCompleted) {
-        setImageUri(null);
-        setTempImageUri(null);
         setIsSaved(false);
-        await AsyncStorage.removeItem("temp_criminal_record");
-        await AsyncStorage.removeItem("criminal_record_data");
+        await AsyncStorage.removeItem("emergency_contact_data");
         return;
       }
 
-      const savedImage = await AsyncStorage.getItem("criminal_record");
-      const savedFormData = await AsyncStorage.getItem("criminal_record_data");
+      const savedFormData = await AsyncStorage.getItem(
+        "emergency_contact_data"
+      );
 
-      if (savedImage) {
-        setImageUri(savedImage);
-      }
       if (savedFormData) {
         setFormData(JSON.parse(savedFormData));
-      }
-
-      // Load temp image if exists
-      const tempImage = await AsyncStorage.getItem("temp_criminal_record");
-      if (tempImage) {
-        setTempImageUri(tempImage);
+        setIsSaved(true);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -92,23 +88,6 @@ export default function FormScreen() {
 
   const handleBack = () => {
     router.back();
-  };
-
-  const handleImagePress = () => {
-    if (tempImageUri || imageUri) {
-      setShowDeleteMode(true);
-    }
-  };
-
-  const handleImageUpload = () => {
-    // Reset saved state when user changes image
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
-    router.push(
-      `/(onboarding)/(personal-identification)/(criminal-record)/upload-guide`
-    );
   };
 
   const showCustomAlert = (
@@ -128,53 +107,54 @@ export default function FormScreen() {
     setShowAlert(true);
   };
 
-  const formatDateInput = (value: string) => {
-    // Remove all non-numeric characters
-    const numbers = value.replace(/\D/g, "");
-
-    // Format as DD/MM/YYYY
-    if (numbers.length <= 2) {
-      return numbers;
-    } else if (numbers.length <= 4) {
-      return `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
-    } else {
-      return `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(
-        4,
-        8
-      )}`;
-    }
-  };
-
   const handleInputChange = (field: string, value: string) => {
     // Reset saved state when user changes data
     if (isSaved) {
       setIsSaved(false);
     }
 
-    // Apply date formatting for date fields
-    if (field === "issueDate") {
-      const formattedValue = formatDateInput(value);
-      setFormData((prev) => ({
-        ...prev,
-        [field]: formattedValue,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-    }
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleRelationshipSelect = (relationship: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      relationship: relationship,
+    }));
+    setShowRelationshipDropdown(false);
   };
 
   // Check if all fields are filled
   const isFormComplete = () => {
-    return (tempImageUri || imageUri) && formData.issueDate.trim() !== "";
+    return (
+      formData.emergencyContactName.trim() !== "" &&
+      formData.relationship.trim() !== "" &&
+      formData.emergencyPhone.trim() !== "" &&
+      formData.temporaryAddress.trim() !== ""
+    );
   };
 
   const handleSave = async () => {
     // Validation
-    if (!tempImageUri && !imageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên lý lịch tư pháp", [
+    if (!formData.emergencyContactName.trim()) {
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng nhập tên người liên hệ trong trường hợp khẩn cấp",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
+      return;
+    }
+
+    if (!formData.relationship.trim()) {
+      showCustomAlert("Lỗi", "Vui lòng chọn quan hệ", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -183,38 +163,49 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.issueDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+    if (!formData.emergencyPhone.trim()) {
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng nhập số điện thoại liên hệ trong trường hợp khẩn cấp",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
+      return;
+    }
+
+    if (!formData.temporaryAddress.trim()) {
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng nhập địa chỉ tạm trú của người hướng dẫn",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
       return;
     }
 
     try {
-      const currentImage = tempImageUri || imageUri;
-
-      await AsyncStorage.setItem("criminal_record", currentImage!);
       await AsyncStorage.setItem(
-        "criminal_record_data",
+        "emergency_contact_data",
         JSON.stringify(formData)
       );
-
-      setImageUri(currentImage);
-      setTempImageUri(null);
-      await AsyncStorage.removeItem("temp_criminal_record");
       setIsSaved(true);
 
-      showCustomAlert("Thành công", "Thông tin lý lịch tư pháp đã được lưu", [
+      showCustomAlert("Thành công", "Thông tin liên hệ khẩn cấp đã được lưu", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
         },
       ]);
     } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu thông tin lý lịch tư pháp", [
+      showCustomAlert("Lỗi", "Không thể lưu thông tin liên hệ khẩn cấp", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -225,66 +216,6 @@ export default function FormScreen() {
 
   const handleNext = () => {
     router.push("/(onboarding)/emergency-contact");
-  };
-
-  // Auto exit delete mode after 3 seconds
-  useEffect(() => {
-    if (showDeleteMode) {
-      const timer = setTimeout(() => {
-        setShowDeleteMode(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showDeleteMode]);
-
-  const handleDeleteImage = () => {
-    showCustomAlert(
-      "Xóa ảnh lý lịch tư pháp",
-      "Bạn có chắc chắn muốn xóa ảnh lý lịch tư pháp?",
-      [
-        {
-          text: "Hủy",
-          style: "cancel",
-          onPress: () => {
-            setShowAlert(false);
-            setShowDeleteMode(false);
-          },
-        },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              // Reset saved state when user deletes image
-              if (isSaved) {
-                setIsSaved(false);
-              }
-
-              setTempImageUri(null);
-              setImageUri(null);
-              await AsyncStorage.removeItem("temp_criminal_record");
-              await AsyncStorage.removeItem("criminal_record");
-              setShowDeleteMode(false);
-              setShowAlert(false);
-
-              showCustomAlert("Thành công", "Ảnh đã được xóa", [
-                {
-                  text: "OK",
-                  onPress: () => setShowAlert(false),
-                },
-              ]);
-            } catch (error) {
-              showCustomAlert("Lỗi", "Không thể xóa ảnh", [
-                {
-                  text: "OK",
-                  onPress: () => setShowAlert(false),
-                },
-              ]);
-            }
-          },
-        },
-      ]
-    );
   };
 
   return (
@@ -318,78 +249,118 @@ export default function FormScreen() {
 
           <View>
             <Image
-              source={require("@/assets/images/background_1.png")}
-              style={styles.background_1}
+              source={require("@/assets/images/background_2.png")}
+              style={styles.background_2}
             />
           </View>
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Lý lịch tư pháp</Text>
-          </View>
-
-          {/* Image Upload Section */}
-          <View style={styles.imageSection}>
-            <View style={styles.imageContainer}>
-              <Text style={styles.imageLabel}>
-                Lý lịch tư pháp <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.imageUploadArea}>
-                {tempImageUri || imageUri ? (
-                  <TouchableOpacity
-                    style={styles.imageWrapper}
-                    onPress={() => handleImagePress()}
-                  >
-                    <Image
-                      source={{ uri: (tempImageUri || imageUri)! }}
-                      style={[
-                        styles.uploadedImage,
-                        showDeleteMode && styles.dimmedImage,
-                      ]}
-                    />
-                    {showDeleteMode && (
-                      <View style={styles.deleteOverlay}>
-                        <TouchableOpacity
-                          style={styles.trashButton}
-                          onPress={() => handleDeleteImage()}
-                        >
-                          <Trash2 color="#FFFFFF" size={24} />
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.uploadPlaceholder}
-                    onPress={() => handleImageUpload()}
-                  >
-                    <Text style={styles.uploadText}>Tải ảnh lên</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => handleImageUpload()}
-                >
-                  <Edit2Icon color="#70E000" size={16} />
-                </TouchableOpacity>
-              </View>
-            </View>
+            <Text style={styles.title}>
+              Thông tin liên hệ khẩn cấp và địa chỉ tạm trú
+            </Text>
           </View>
 
           {/* Form Fields */}
           <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                Ngày cấp <Text style={styles.required}>*</Text>
+                Tên người liên hệ trong trường hợp khẩn cấp{" "}
+                <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
                 style={styles.input}
-                value={formData.issueDate}
-                onChangeText={(value) => handleInputChange("issueDate", value)}
-                placeholder="DD/MM/YYYY"
+                value={formData.emergencyContactName}
+                onChangeText={(value) =>
+                  handleInputChange("emergencyContactName", value)
+                }
+                placeholder="Nhập tên người liên hệ"
                 placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={10}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Quan hệ <Text style={styles.required}>*</Text>
+              </Text>
+              <TouchableOpacity
+                style={styles.dropdownContainer}
+                onPress={() =>
+                  setShowRelationshipDropdown(!showRelationshipDropdown)
+                }
+              >
+                <Text
+                  style={[
+                    styles.dropdownText,
+                    !formData.relationship && styles.placeholderText,
+                  ]}
+                >
+                  {formData.relationship || "Chọn quan hệ"}
+                </Text>
+                <ChevronDown
+                  color="#92929D"
+                  size={20}
+                  style={[
+                    styles.dropdownIcon,
+                    showRelationshipDropdown && styles.dropdownIconRotated,
+                  ]}
+                />
+              </TouchableOpacity>
+              {showRelationshipDropdown && (
+                <View style={styles.dropdownList}>
+                  <ScrollView
+                    style={styles.dropdownScrollView}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                  >
+                    {relationships.map((relationship) => (
+                      <TouchableOpacity
+                        key={relationship}
+                        style={styles.dropdownItem}
+                        onPress={() => handleRelationshipSelect(relationship)}
+                      >
+                        <Text style={styles.dropdownItemText}>
+                          {relationship}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Số điện thoại liên hệ trong trường hợp khẩn cấp{" "}
+                <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={formData.emergencyPhone}
+                onChangeText={(value) =>
+                  handleInputChange("emergencyPhone", value)
+                }
+                placeholder="Nhập số điện thoại"
+                placeholderTextColor="#92929D"
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Địa chỉ tạm trú của người hướng dẫn{" "}
+                <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={formData.temporaryAddress}
+                onChangeText={(value) =>
+                  handleInputChange("temporaryAddress", value)
+                }
+                placeholder="Nhập địa chỉ tạm trú"
+                placeholderTextColor="#92929D"
+                multiline={true}
+                numberOfLines={3}
               />
             </View>
           </View>
@@ -515,7 +486,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF0000",
     borderRadius: 4,
   },
-  background_1: {
+  background_2: {
     width: "100%",
     height: 250,
   },
@@ -529,100 +500,22 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#000",
   },
-  imageSection: {
-    paddingHorizontal: 20,
-    marginBottom: 30,
-  },
-  imageContainer: {
-    marginBottom: 20,
-  },
-  imageLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 10,
-  },
-  required: {
-    color: "#FF0000",
-  },
-  imageUploadArea: {
-    position: "relative",
-    borderWidth: 2,
-    borderColor: "#70E000",
-    borderStyle: "dashed",
-    borderRadius: 8,
-    height: 150,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  imageWrapper: {
-    width: "100%",
-    height: "100%",
-    position: "relative",
-  },
-  uploadedImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 6,
-  },
-  dimmedImage: {
-    opacity: 0.5,
-  },
-  deleteOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 6,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  trashButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#FF4444",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  uploadPlaceholder: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  uploadText: {
-    fontSize: 16,
-    color: "#70E000",
-    fontWeight: "600",
-  },
-  editButton: {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-    borderColor: "#70E000",
-    borderWidth: 1,
-  },
   formContainer: {
     paddingHorizontal: 20,
     marginBottom: 30,
   },
   inputGroup: {
     marginBottom: 20,
+    position: "relative",
   },
   label: {
     fontSize: 16,
     fontWeight: "600",
     color: "#000",
     marginBottom: 8,
+  },
+  required: {
+    color: "#FF0000",
   },
   input: {
     backgroundColor: "#F5F5F5",
@@ -633,6 +526,64 @@ const styles = StyleSheet.create({
     color: "#000",
     borderWidth: 1,
     borderColor: "#E0E0E0",
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: "top",
+  },
+  dropdownContainer: {
+    backgroundColor: "#F5F5F5",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: "#000",
+  },
+  placeholderText: {
+    color: "#92929D",
+  },
+  dropdownIcon: {
+    transform: [{ rotate: "0deg" }],
+  },
+  dropdownIconRotated: {
+    transform: [{ rotate: "180deg" }],
+  },
+  dropdownList: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    zIndex: 9999,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    maxHeight: 200,
+  },
+  dropdownScrollView: {
+    maxHeight: 180,
+  },
+  dropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: "#000",
   },
   buttonContainer: {
     flexDirection: "row",
