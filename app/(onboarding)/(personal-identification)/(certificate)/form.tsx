@@ -23,15 +23,11 @@ import CustomAlert from "@/components/CustomAlert";
 
 export default function FormScreen() {
   const router = useRouter();
-  const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
-  const [backImageUri, setBackImageUri] = useState<string | null>(null);
-  const [tempFrontImageUri, setTempFrontImageUri] = useState<string | null>(
-    null
-  );
-  const [tempBackImageUri, setTempBackImageUri] = useState<string | null>(null);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [tempImageUri, setTempImageUri] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
-  const [showLicenseClassDropdown, setShowLicenseClassDropdown] =
+  const [showVehicleClassDropdown, setShowVehicleClassDropdown] =
     useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
@@ -46,14 +42,12 @@ export default function FormScreen() {
 
   // Form data
   const [formData, setFormData] = useState({
-    licenseNumber: "",
     issueDate: "",
-    expiryDate: "",
-    licenseClass: "",
+    vehicleClass: "",
   });
 
-  // License class options
-  const licenseClasses = ["B", "C", "C1", "C2", "D", "E", "F"];
+  // Vehicle class options (same as license classes)
+  const vehicleClasses = ["B", "C", "C1", "C2", "D", "E", "F"];
 
   useEffect(() => {
     loadUserData();
@@ -75,39 +69,28 @@ export default function FormScreen() {
 
       // If onboarding was reset, clear all data
       if (!onboardingCompleted || !quizCompleted) {
-        setFrontImageUri(null);
-        setBackImageUri(null);
-        setTempFrontImageUri(null);
-        setTempBackImageUri(null);
+        setImageUri(null);
+        setTempImageUri(null);
         setIsSaved(false);
-        await AsyncStorage.removeItem("temp_license_front");
-        await AsyncStorage.removeItem("temp_license_back");
-        await AsyncStorage.removeItem("license_data");
+        await AsyncStorage.removeItem("temp_certificate");
+        await AsyncStorage.removeItem("certificate_data");
         return;
       }
 
-      const savedFrontImage = await AsyncStorage.getItem("license_front");
-      const savedBackImage = await AsyncStorage.getItem("license_back");
-      const savedFormData = await AsyncStorage.getItem("license_data");
+      const savedImage = await AsyncStorage.getItem("certificate");
+      const savedFormData = await AsyncStorage.getItem("certificate_data");
 
-      if (savedFrontImage) {
-        setFrontImageUri(savedFrontImage);
-      }
-      if (savedBackImage) {
-        setBackImageUri(savedBackImage);
+      if (savedImage) {
+        setImageUri(savedImage);
       }
       if (savedFormData) {
         setFormData(JSON.parse(savedFormData));
       }
 
-      // Load temp images if exist
-      const tempFront = await AsyncStorage.getItem("temp_license_front");
-      const tempBack = await AsyncStorage.getItem("temp_license_back");
-      if (tempFront) {
-        setTempFrontImageUri(tempFront);
-      }
-      if (tempBack) {
-        setTempBackImageUri(tempBack);
+      // Load temp image if exists
+      const tempImage = await AsyncStorage.getItem("temp_certificate");
+      if (tempImage) {
+        setTempImageUri(tempImage);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -118,24 +101,19 @@ export default function FormScreen() {
     router.back();
   };
 
-  const handleImagePress = (type: "front" | "back") => {
-    if (
-      (type === "front" && (tempFrontImageUri || frontImageUri)) ||
-      (type === "back" && (tempBackImageUri || backImageUri))
-    ) {
+  const handleImagePress = () => {
+    if (tempImageUri || imageUri) {
       setShowDeleteMode(true);
     }
   };
 
-  const handleImageUpload = (type: "front" | "back") => {
+  const handleImageUpload = () => {
     // Reset saved state when user changes image
     if (isSaved) {
       setIsSaved(false);
     }
 
-    router.push(
-      `/(onboarding)/(personal-identification)/(license)/upload-guide?type=${type}`
-    );
+    router.push(`/(onboarding)/(certificate)/upload-guide`);
   };
 
   const showCustomAlert = (
@@ -179,7 +157,7 @@ export default function FormScreen() {
     }
 
     // Apply date formatting for date fields
-    if (field === "issueDate" || field === "expiryDate") {
+    if (field === "issueDate") {
       const formattedValue = formatDateInput(value);
       setFormData((prev) => ({
         ...prev,
@@ -193,37 +171,34 @@ export default function FormScreen() {
     }
   };
 
-  const handleLicenseClassSelect = (licenseClass: string) => {
-    // Reset saved state when user changes license class
+  const handleVehicleClassSelect = (vehicleClass: string) => {
+    // Reset saved state when user changes vehicle class
     if (isSaved) {
       setIsSaved(false);
     }
 
     setFormData((prev) => ({
       ...prev,
-      licenseClass: licenseClass,
+      vehicleClass: vehicleClass,
     }));
-    setShowLicenseClassDropdown(false);
+    setShowVehicleClassDropdown(false);
   };
 
   // Check if all fields are filled
   const isFormComplete = () => {
     return (
-      (tempFrontImageUri || frontImageUri) &&
-      (tempBackImageUri || backImageUri) &&
-      formData.licenseNumber.trim() !== "" &&
+      (tempImageUri || imageUri) &&
       formData.issueDate.trim() !== "" &&
-      formData.expiryDate.trim() !== "" &&
-      formData.licenseClass.trim() !== ""
+      formData.vehicleClass.trim() !== ""
     );
   };
 
   const handleSave = async () => {
     // Validation
-    if (!tempFrontImageUri && !frontImageUri) {
+    if (!tempImageUri && !imageUri) {
       showCustomAlert(
         "Lỗi",
-        "Vui lòng tải lên ảnh mặt trước giấy phép lái xe",
+        "Vui lòng tải lên chứng chỉ hành nghề giảng dạy lái xe",
         [
           {
             text: "OK",
@@ -231,26 +206,6 @@ export default function FormScreen() {
           },
         ]
       );
-      return;
-    }
-
-    if (!tempBackImageUri && !backImageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt sau giấy phép lái xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.licenseNumber.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập số giấy phép lái xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
       return;
     }
 
@@ -264,18 +219,8 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.expiryDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày hết hạn", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.licenseClass.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng chọn hạng giấy phép lái xe", [
+    if (!formData.vehicleClass.trim()) {
+      showCustomAlert("Lỗi", "Vui lòng chọn hạng xe đào tạo giảng dạy", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -285,29 +230,28 @@ export default function FormScreen() {
     }
 
     try {
-      const currentFrontImage = tempFrontImageUri || frontImageUri;
-      const currentBackImage = tempBackImageUri || backImageUri;
+      const currentImage = tempImageUri || imageUri;
 
-      await AsyncStorage.setItem("license_front", currentFrontImage!);
-      await AsyncStorage.setItem("license_back", currentBackImage!);
-      await AsyncStorage.setItem("license_data", JSON.stringify(formData));
+      await AsyncStorage.setItem("certificate", currentImage!);
+      await AsyncStorage.setItem("certificate_data", JSON.stringify(formData));
 
-      setFrontImageUri(currentFrontImage);
-      setBackImageUri(currentBackImage);
-      setTempFrontImageUri(null);
-      setTempBackImageUri(null);
-      await AsyncStorage.removeItem("temp_license_front");
-      await AsyncStorage.removeItem("temp_license_back");
+      setImageUri(currentImage);
+      setTempImageUri(null);
+      await AsyncStorage.removeItem("temp_certificate");
       setIsSaved(true);
 
-      showCustomAlert("Thành công", "Thông tin giấy phép lái xe đã được lưu", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+      showCustomAlert(
+        "Thành công",
+        "Thông tin chứng chỉ hành nghề đã được lưu",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
     } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu thông tin giấy phép lái xe", [
+      showCustomAlert("Lỗi", "Không thể lưu thông tin chứng chỉ hành nghề", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -317,7 +261,7 @@ export default function FormScreen() {
   };
 
   const handleNext = () => {
-    router.push("/(onboarding)/(personal-identification)/(certificate)/form");
+    router.push("/(onboarding)/(certificate)/form");
   };
 
   // Auto exit delete mode after 3 seconds
@@ -330,15 +274,13 @@ export default function FormScreen() {
     }
   }, [showDeleteMode]);
 
-  const handleDeleteImage = (type: "front" | "back") => {
+  const handleDeleteImage = () => {
     showCustomAlert(
-      "Xóa ảnh giấy phép lái xe",
-      `Bạn có chắc chắn muốn xóa ảnh mặt ${
-        type === "front" ? "trước" : "sau"
-      } giấy phép lái xe?`,
+      "Xóa ảnh chứng chỉ",
+      "Bạn có chắc chắn muốn xóa ảnh chứng chỉ hành nghề giảng dạy lái xe?",
       [
         {
-          text: "Hủy", // Cancel button text
+          text: "Hủy",
           style: "cancel",
           onPress: () => {
             setShowAlert(false);
@@ -346,7 +288,7 @@ export default function FormScreen() {
           },
         },
         {
-          text: "Xóa", // Delete button text
+          text: "Xóa",
           style: "destructive",
           onPress: async () => {
             try {
@@ -355,17 +297,10 @@ export default function FormScreen() {
                 setIsSaved(false);
               }
 
-              if (type === "front") {
-                setTempFrontImageUri(null);
-                setFrontImageUri(null);
-                await AsyncStorage.removeItem("temp_license_front");
-                await AsyncStorage.removeItem("license_front");
-              } else {
-                setTempBackImageUri(null);
-                setBackImageUri(null);
-                await AsyncStorage.removeItem("temp_license_back");
-                await AsyncStorage.removeItem("license_back");
-              }
+              setTempImageUri(null);
+              setImageUri(null);
+              await AsyncStorage.removeItem("temp_certificate");
+              await AsyncStorage.removeItem("certificate");
               setShowDeleteMode(false);
               setShowAlert(false);
 
@@ -427,24 +362,24 @@ export default function FormScreen() {
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Giấy phép lái xe</Text>
+            <Text style={styles.title}>Chứng chỉ hành nghề</Text>
           </View>
 
-          {/* Image Upload Sections */}
+          {/* Image Upload Section */}
           <View style={styles.imageSection}>
-            {/* Front Image */}
             <View style={styles.imageContainer}>
               <Text style={styles.imageLabel}>
-                Ảnh mặt trước <Text style={styles.required}>*</Text>
+                Chứng chỉ hành nghề giảng dạy lái xe{" "}
+                <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.imageUploadArea}>
-                {tempFrontImageUri || frontImageUri ? (
+                {tempImageUri || imageUri ? (
                   <TouchableOpacity
                     style={styles.imageWrapper}
-                    onPress={() => handleImagePress("front")}
+                    onPress={() => handleImagePress()}
                   >
                     <Image
-                      source={{ uri: (tempFrontImageUri || frontImageUri)! }}
+                      source={{ uri: (tempImageUri || imageUri)! }}
                       style={[
                         styles.uploadedImage,
                         showDeleteMode && styles.dimmedImage,
@@ -454,7 +389,7 @@ export default function FormScreen() {
                       <View style={styles.deleteOverlay}>
                         <TouchableOpacity
                           style={styles.trashButton}
-                          onPress={() => handleDeleteImage("front")}
+                          onPress={() => handleDeleteImage()}
                         >
                           <Trash2 color="#FFFFFF" size={24} />
                         </TouchableOpacity>
@@ -464,60 +399,14 @@ export default function FormScreen() {
                 ) : (
                   <TouchableOpacity
                     style={styles.uploadPlaceholder}
-                    onPress={() => handleImageUpload("front")}
+                    onPress={() => handleImageUpload()}
                   >
                     <Text style={styles.uploadText}>Tải ảnh lên</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
                   style={styles.editButton}
-                  onPress={() => handleImageUpload("front")}
-                >
-                  <Edit2Icon color="#70E000" size={16} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Back Image */}
-            <View style={styles.imageContainer}>
-              <Text style={styles.imageLabel}>
-                Ảnh mặt sau <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.imageUploadArea}>
-                {tempBackImageUri || backImageUri ? (
-                  <TouchableOpacity
-                    style={styles.imageWrapper}
-                    onPress={() => handleImagePress("back")}
-                  >
-                    <Image
-                      source={{ uri: (tempBackImageUri || backImageUri)! }}
-                      style={[
-                        styles.uploadedImage,
-                        showDeleteMode && styles.dimmedImage,
-                      ]}
-                    />
-                    {showDeleteMode && (
-                      <View style={styles.deleteOverlay}>
-                        <TouchableOpacity
-                          style={styles.trashButton}
-                          onPress={() => handleDeleteImage("back")}
-                        >
-                          <Trash2 color="#FFFFFF" size={24} />
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.uploadPlaceholder}
-                    onPress={() => handleImageUpload("back")}
-                  >
-                    <Text style={styles.uploadText}>Tải ảnh lên</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => handleImageUpload("back")}
+                  onPress={() => handleImageUpload()}
                 >
                   <Edit2Icon color="#70E000" size={16} />
                 </TouchableOpacity>
@@ -527,22 +416,6 @@ export default function FormScreen() {
 
           {/* Form Fields */}
           <View style={styles.formContainer}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Số giấy phép lái xe <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.licenseNumber}
-                onChangeText={(value) =>
-                  handleInputChange("licenseNumber", value)
-                }
-                placeholder="Nhập số giấy phép lái xe"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-              />
-            </View>
-
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
                 Ngày cấp <Text style={styles.required}>*</Text>
@@ -560,59 +433,50 @@ export default function FormScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                Ngày hết hạn <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.expiryDate}
-                onChangeText={(value) => handleInputChange("expiryDate", value)}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Hạng giấy phép lái xe <Text style={styles.required}>*</Text>
+                Hạng xe đào tạo giảng dạy <Text style={styles.required}>*</Text>
               </Text>
               <TouchableOpacity
                 style={styles.dropdownContainer}
                 onPress={() =>
-                  setShowLicenseClassDropdown(!showLicenseClassDropdown)
+                  setShowVehicleClassDropdown(!showVehicleClassDropdown)
                 }
               >
                 <Text
                   style={[
                     styles.dropdownText,
-                    !formData.licenseClass && styles.placeholderText,
+                    !formData.vehicleClass && styles.placeholderText,
                   ]}
                 >
-                  {formData.licenseClass || "Chọn hạng giấy phép lái xe"}
+                  {formData.vehicleClass || "Chọn hạng xe đào tạo giảng dạy"}
                 </Text>
                 <ChevronDown
                   color="#92929D"
                   size={20}
                   style={[
                     styles.dropdownIcon,
-                    showLicenseClassDropdown && styles.dropdownIconRotated,
+                    showVehicleClassDropdown && styles.dropdownIconRotated,
                   ]}
                 />
               </TouchableOpacity>
-              {showLicenseClassDropdown && (
+              {showVehicleClassDropdown && (
                 <View style={styles.dropdownList}>
-                  {licenseClasses.map((licenseClass) => (
-                    <TouchableOpacity
-                      key={licenseClass}
-                      style={styles.dropdownItem}
-                      onPress={() => handleLicenseClassSelect(licenseClass)}
-                    >
-                      <Text style={styles.dropdownItemText}>
-                        {licenseClass}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  <ScrollView
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                    style={styles.dropdownScrollView}
+                  >
+                    {vehicleClasses.map((vehicleClass) => (
+                      <TouchableOpacity
+                        key={vehicleClass}
+                        style={styles.dropdownItem}
+                        onPress={() => handleVehicleClassSelect(vehicleClass)}
+                      >
+                        <Text style={styles.dropdownItemText}>
+                          {vehicleClass}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 </View>
               )}
             </View>
@@ -941,12 +805,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#E0E0E0",
-    zIndex: 1000,
-    elevation: 5,
+    zIndex: 9999,
+    elevation: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    maxHeight: 200,
+  },
+  dropdownScrollView: {
+    maxHeight: 180,
   },
   dropdownItem: {
     paddingHorizontal: 16,
