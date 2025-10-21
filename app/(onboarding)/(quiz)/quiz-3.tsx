@@ -23,7 +23,7 @@ export default function Quiz3Screen() {
   };
 
   const handleYes = () => {
-    router.push("/(onboarding)/(quiz)/quiz-4");
+    router.push("/(onboarding)/(personal-identification)/(avatar)/avatar");
   };
 
   return (
@@ -46,14 +46,12 @@ export default function Quiz3Screen() {
 
         {/* Progress */}
         <View style={styles.progressContainer}>
-          <Text style={styles.progressText}>3/4</Text>
+          <Text style={styles.progressText}>3/3</Text>
         </View>
 
         {/* Content */}
         <View style={styles.contentArea}>
-          <Text style={styles.title}>
-            Bạn có đáp ứng được yêu cầu về phương tiện bên dưới không?
-          </Text>
+          <Text style={styles.title}>Bạn đã có lý lịch tư pháp chưa?</Text>
 
           {/* Car Illustration */}
           <Image
@@ -63,16 +61,11 @@ export default function Quiz3Screen() {
 
           <View style={styles.requirementsBox}>
             <Text style={styles.requirementItem}>
-              • Xe ô tô có niên hạn dưới 11 năm
+              • Lý lịch tư pháp còn hạn ít nhất 10 tháng kể từ ngày cấp
             </Text>
             <Text style={styles.requirementItem}>
-              • Xe có lắp hộp đen (thiết bị giám sát hành trình)
-            </Text>
-            <Text style={styles.requirementItem}>
-              • Đăng kiểm có kinh doanh
-            </Text>
-            <Text style={styles.requirementItem}>
-              • Bảo hiểm bắt buộc TNDS loại hình kinh doanh
+              • Bạn có thể đăng ký bằng giấy hẹn lý lịch tư pháp hoặc biên lai
+              bưu điện
             </Text>
           </View>
         </View>
@@ -147,7 +140,7 @@ const styles = StyleSheet.create({
   },
   icon2: {
     width: 250,
-    height: 150,
+    height: 200,
     marginBottom: 20,
   },
   requirementsBox: {
@@ -184,7 +177,7 @@ const styles = StyleSheet.create({
   },
   yesButton: {
     flex: 1,
-    backgroundColor: "#026AA7",
+    backgroundColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",

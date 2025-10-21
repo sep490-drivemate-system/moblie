@@ -82,8 +82,8 @@ export default function RoleSelectionScreen() {
         await AsyncStorage.setItem("onboarding_completed", "true");
         router.replace("/(main)/(tabs)/home");
       } else if (selectedRole.id === "instructor") {
-        // Instructor goes to license class selection
-        router.push("/(onboarding)/license-class-select");
+        // Instructor goes to quiz
+        router.push("/(onboarding)/(quiz)/quiz-1");
       }
     } catch (error) {
       showCustomAlert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.", () =>
@@ -109,7 +109,7 @@ export default function RoleSelectionScreen() {
       </View>
       {selectedRole?.id === item.id && (
         <Text>
-          <Check color={"#026AA7"} />
+          <Check color={"#92929D"} />
         </Text>
       )}
     </TouchableOpacity>
@@ -160,9 +160,9 @@ export default function RoleSelectionScreen() {
             </View>
             <Text>
               {showDropdown ? (
-                <ChevronUp color={"#70E000"} />
+                <ChevronUp color={"#92929D"} />
               ) : (
-                <ChevronDown color={"#70E000"} />
+                <ChevronDown color={"#92929D"} />
               )}
             </Text>
           </TouchableOpacity>

@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   },
   yesButton: {
     flex: 1,
-    backgroundColor: "#026AA7",
+    backgroundColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",

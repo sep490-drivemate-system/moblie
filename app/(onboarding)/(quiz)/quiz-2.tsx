@@ -36,25 +36,8 @@ export default function Quiz2Screen() {
   };
 
   const getLicenseSpecificText = () => {
-    if (!licenseClass) return "B2";
-
-    // Map license class to specific text
-    const licenseMap: { [key: string]: string } = {
-      B: "B2",
-      C1: "C1",
-      C: "C",
-      D1: "D1",
-      D2: "D2",
-      D: "D",
-      BE: "B2",
-      C1E: "C1",
-      CE: "C",
-      D1E: "D1",
-      D2E: "D2",
-      DE: "D",
-    };
-
-    return licenseMap[licenseClass.id] || "B2";
+    // Always return "B" as default
+    return "B";
   };
 
   const handleBack = () => {
@@ -91,7 +74,7 @@ export default function Quiz2Screen() {
 
         {/* Progress */}
         <View style={styles.progressContainer}>
-          <Text style={styles.progressText}>2/4</Text>
+          <Text style={styles.progressText}>2/3</Text>
         </View>
 
         {/* Content */}
@@ -106,13 +89,13 @@ export default function Quiz2Screen() {
               đến 65 tuổi; và có khả năng đọc viết
             </Text>
             <Text style={styles.requirementItem}>
-              • Có GPLX hạng {licenseSpecificText} trở lên và còn hạn
+              • Có GPLX hạng B trở lên và còn hạn
             </Text>
             <Text style={styles.requirementItem}>
               • Có chứng chỉ hành nghề giảng dạy lái xe
             </Text>
             <Text style={styles.requirementItem}>
-              • Có giấy khám sức khỏe đáp ứng hạng {licenseSpecificText} trở lên
+              • Có giấy khám sức khỏe đáp ứng hạng B trở lên
             </Text>
             <Text style={styles.requirementItem}>
               • Có kết quả xét nghiệm heroin âm tính
@@ -231,7 +214,7 @@ const styles = StyleSheet.create({
   },
   yesButton: {
     flex: 1,
-    backgroundColor: "#026AA7",
+    backgroundColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
