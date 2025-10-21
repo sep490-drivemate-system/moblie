@@ -283,7 +283,7 @@ export default function AvatarScreen() {
               style={styles.editButton}
               onPress={handleAvatarPress}
             >
-              <Edit2Icon color="#026AA7" size={16} />
+              <Edit2Icon color="#70E000" size={16} />
             </TouchableOpacity>
           </View>
         </View>
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   progressFill: {
     width: "25%",
     height: "100%",
-    backgroundColor: "#026AA7",
+    backgroundColor: "#70E000",
     borderRadius: 2,
   },
   headerButtons: {
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
   },
   background_1: {
     width: "100%",
-    height: 200,
+    height: 280,
   },
   welcomeContainer: {
     alignItems: "center",
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   drivemateText: {
-    color: "#026AA7",
+    color: "#70E000",
     fontWeight: "bold",
   },
   avatarContainer: {
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 110,
     borderWidth: 1,
-    borderColor: "#026AA7",
+    borderColor: "#70E000",
     borderStyle: "dashed",
     justifyContent: "center",
     alignItems: "center",
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 90,
-    borderColor: "#026AA7",
+    borderColor: "#70E000",
     borderWidth: 1,
     backgroundColor: "#F0F0F0",
     justifyContent: "center",
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
-    borderColor: "#026AA7",
+    borderColor: "#70E000",
     borderWidth: 1,
   },
   imageContainer: {
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#026AA7",
+    backgroundColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",

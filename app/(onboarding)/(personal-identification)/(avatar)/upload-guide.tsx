@@ -52,6 +52,7 @@ export default function UploadGuideScreen() {
     showCustomAlert("Chọn ảnh", "Bạn muốn chụp ảnh mới hay chọn từ thư viện?", [
       {
         text: "Chụp ảnh",
+        style: "default",
         onPress: () => {
           setShowAlert(false);
           openCamera();
@@ -59,6 +60,7 @@ export default function UploadGuideScreen() {
       },
       {
         text: "Chọn từ thư viện",
+        style: "default",
         onPress: () => {
           setShowAlert(false);
           openImageLibrary();
@@ -154,18 +156,15 @@ export default function UploadGuideScreen() {
         <View style={styles.sampleContainer}>
           <Text style={styles.sampleLabel}>Ảnh mẫu</Text>
           <View style={styles.samplePhotos}>
-            <View style={styles.samplePhoto}>
-              <View style={styles.samplePerson}>
-                <View style={styles.sampleHead} />
-                <View style={styles.sampleBody} />
-              </View>
-            </View>
-            <View style={styles.samplePhoto}>
-              <View style={styles.samplePerson}>
-                <View style={styles.sampleHead} />
-                <View style={styles.sampleBody} />
-              </View>
-            </View>
+            <Image
+              source={require("@/assets/images/image_1-guide1.png")}
+              style={styles.samplePhoto}
+            />
+
+            <Image
+              source={require("@/assets/images/image_2-guide1.png")}
+              style={styles.samplePhoto}
+            />
           </View>
         </View>
 
@@ -294,7 +293,7 @@ const styles = StyleSheet.create({
   },
   samplePhoto: {
     width: "48%",
-    height: 120,
+    height: 200,
     backgroundColor: "#F0F0F0",
     borderRadius: 8,
     justifyContent: "center",
@@ -344,7 +343,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   uploadButton: {
-    backgroundColor: "#026AA7",
+    backgroundColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",

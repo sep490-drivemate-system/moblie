@@ -34,7 +34,14 @@ export default function CustomAlert({
   const renderButtons = () => {
     if (buttons && buttons.length > 0) {
       return (
-        <View style={styles.buttonContainer}>
+        <View
+          style={[
+            styles.buttonContainer,
+            buttons.length === 1
+              ? styles.singleButtonContainer
+              : styles.multipleButtonContainer,
+          ]}
+        >
           {buttons.map((button, index) => (
             <TouchableOpacity
               key={index}
@@ -133,12 +140,17 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   buttonContainer: {
-    flexDirection: "row",
     gap: 12,
     width: "100%",
   },
+  singleButtonContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  multipleButtonContainer: {
+    flexDirection: "column",
+  },
   button: {
-    flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
