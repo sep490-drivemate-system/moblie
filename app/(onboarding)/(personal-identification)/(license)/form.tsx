@@ -317,7 +317,9 @@ export default function FormScreen() {
   };
 
   const handleNext = () => {
-    router.push("/(onboarding)/(personal-identification)/(certificate)/form");
+    router.push(
+      "/(onboarding)/(personal-identification)/(professional-license)/form"
+    );
   };
 
   // Auto exit delete mode after 3 seconds

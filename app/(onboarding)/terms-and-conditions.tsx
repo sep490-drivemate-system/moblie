@@ -8,13 +8,19 @@ import {
   StatusBar,
   Image,
   ScrollView,
+  Linking,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ArrowLeft, MoreVertical, Check } from "lucide-react-native";
+import {
+  ArrowLeft,
+  MoreVertical,
+  Check,
+  ExternalLink,
+} from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
 
-export default function CommitmentScreen() {
+export default function TermsAndConditionsScreen() {
   const router = useRouter();
   const [isSaved, setIsSaved] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -28,13 +34,12 @@ export default function CommitmentScreen() {
     }>,
   });
 
-  // Commitment states
-  const [commitments, setCommitments] = useState({
-    validLicense: false,
-    trafficLaws: false,
-    noCriminalRecord: false,
-    noInvestigation: false,
-    healthCondition: false,
+  // Terms acceptance states
+  const [termsAccepted, setTermsAccepted] = useState({
+    privacyNotice: false,
+    termsOfUse: false,
+    instructorTerms: false,
+    codeOfConduct: false,
   });
 
   useEffect(() => {
@@ -57,22 +62,23 @@ export default function CommitmentScreen() {
 
       // If onboarding was reset, clear all data
       if (!onboardingCompleted || !quizCompleted) {
-        setCommitments({
-          validLicense: false,
-          trafficLaws: false,
-          noCriminalRecord: false,
-          noInvestigation: false,
-          healthCondition: false,
+        setTermsAccepted({
+          privacyNotice: false,
+          termsOfUse: false,
+          instructorTerms: false,
+          codeOfConduct: false,
         });
         setIsSaved(false);
-        await AsyncStorage.removeItem("commitment_data");
+        await AsyncStorage.removeItem("terms_and_conditions_data");
         return;
       }
 
-      const savedCommitments = await AsyncStorage.getItem("commitment_data");
+      const savedTerms = await AsyncStorage.getItem(
+        "terms_and_conditions_data"
+      );
 
-      if (savedCommitments) {
-        setCommitments(JSON.parse(savedCommitments));
+      if (savedTerms) {
+        setTermsAccepted(JSON.parse(savedTerms));
         setIsSaved(true);
       }
     } catch (error) {
@@ -101,27 +107,50 @@ export default function CommitmentScreen() {
     setShowAlert(true);
   };
 
-  const handleCommitmentToggle = (commitment: keyof typeof commitments) => {
+  const handleTermsToggle = (term: keyof typeof termsAccepted) => {
     // Reset saved state when user changes data
     if (isSaved) {
       setIsSaved(false);
     }
 
-    setCommitments((prev) => ({
+    setTermsAccepted((prev) => ({
       ...prev,
-      [commitment]: !prev[commitment],
+      [term]: !prev[term],
     }));
   };
 
-  // Check if all commitments are checked
+  const handleLinkPress = async (url: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        showCustomAlert("Lỗi", "Không thể mở liên kết", [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]);
+      }
+    } catch (error) {
+      showCustomAlert("Lỗi", "Không thể mở liên kết", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
+    }
+  };
+
+  // Check if all terms are accepted
   const isFormComplete = () => {
-    return Object.values(commitments).every((value) => value === true);
+    return Object.values(termsAccepted).every((value) => value === true);
   };
 
   const handleSave = async () => {
     // Validation
     if (!isFormComplete()) {
-      showCustomAlert("Lỗi", "Vui lòng đồng ý với tất cả các cam kết", [
+      showCustomAlert("Lỗi", "Vui lòng đồng ý với tất cả các điều khoản", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -132,19 +161,19 @@ export default function CommitmentScreen() {
 
     try {
       await AsyncStorage.setItem(
-        "commitment_data",
-        JSON.stringify(commitments)
+        "terms_and_conditions_data",
+        JSON.stringify(termsAccepted)
       );
       setIsSaved(true);
 
-      showCustomAlert("Thành công", "Cam kết đã được lưu", [
+      showCustomAlert("Thành công", "Điều khoản đã được lưu", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
         },
       ]);
     } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu cam kết", [
+      showCustomAlert("Lỗi", "Không thể lưu điều khoản", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -195,120 +224,131 @@ export default function CommitmentScreen() {
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Cam kết</Text>
+            <Text style={styles.title}>Điều khoản dịch vụ</Text>
           </View>
 
-          {/* Commitments List */}
-          <View style={styles.commitmentsContainer}>
-            <View style={styles.commitmentItem}>
+          {/* Introduction Text */}
+          <View style={styles.introContainer}>
+            <Text style={styles.introText}>
+              Bằng việc tiếp tục, bạn đồng ý với việc xử lý dữ liệu cá nhân của
+              bạn để đăng ký (bao gồm kiểm tra lý lịch, liên kết tài khoản với
+              DriveMate và quản lý ví điện tử) và xác nhận rằng bạn đã đọc, hiểu
+              và đồng ý với các điều khoản của DriveMate.
+            </Text>
+          </View>
+
+          {/* Terms List */}
+          <View style={styles.termsContainer}>
+            <View style={styles.termItem}>
               <TouchableOpacity
                 style={styles.checkboxContainer}
-                onPress={() => handleCommitmentToggle("validLicense")}
+                onPress={() => handleTermsToggle("privacyNotice")}
               >
                 <View
                   style={[
                     styles.checkbox,
-                    commitments.validLicense && styles.checkedBox,
+                    termsAccepted.privacyNotice && styles.checkedBox,
                   ]}
                 >
-                  {commitments.validLicense && (
+                  {termsAccepted.privacyNotice && (
                     <Check color="#FFFFFF" size={16} />
                   )}
                 </View>
               </TouchableOpacity>
-              <Text style={styles.commitmentText}>
-                Tôi có và sẽ duy trì giấy phép lái xe còn điểm và còn hiệu lực
-                trong suốt quá trình hoạt động với DriveMate
-              </Text>
+              <TouchableOpacity
+                style={styles.linkContainer}
+                onPress={() =>
+                  handleLinkPress("https://drivemate.com/privacy-notice")
+                }
+              >
+                <Text style={styles.linkText}>Thông báo Bảo mật</Text>
+                <ExternalLink color="#70E000" size={16} />
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.commitmentItem}>
+            <View style={styles.termItem}>
               <TouchableOpacity
                 style={styles.checkboxContainer}
-                onPress={() => handleCommitmentToggle("trafficLaws")}
+                onPress={() => handleTermsToggle("termsOfUse")}
               >
                 <View
                   style={[
                     styles.checkbox,
-                    commitments.trafficLaws && styles.checkedBox,
+                    termsAccepted.termsOfUse && styles.checkedBox,
                   ]}
                 >
-                  {commitments.trafficLaws && (
+                  {termsAccepted.termsOfUse && (
                     <Check color="#FFFFFF" size={16} />
                   )}
                 </View>
               </TouchableOpacity>
-              <Text style={styles.commitmentText}>
-                Tôi cam kết tuân thủ quy định pháp luật về giao thông đường bộ,
-                đảm bảo thực hiện trách nhiệm về kiểm định phương tiện tham gia
-                giao thông và chỉ điều khiển phương tiện tương ứng với loại giấy
-                phép lái xe được cấp
-              </Text>
+              <TouchableOpacity
+                style={styles.linkContainer}
+                onPress={() =>
+                  handleLinkPress("https://drivemate.com/terms-of-use")
+                }
+              >
+                <Text style={styles.linkText}>
+                  Điều Khoản Sử Dụng dành cho Vận tải, Giao thông, Thương mại
+                </Text>
+                <ExternalLink color="#70E000" size={16} />
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.commitmentItem}>
+            <View style={styles.termItem}>
               <TouchableOpacity
                 style={styles.checkboxContainer}
-                onPress={() => handleCommitmentToggle("noCriminalRecord")}
+                onPress={() => handleTermsToggle("instructorTerms")}
               >
                 <View
                   style={[
                     styles.checkbox,
-                    commitments.noCriminalRecord && styles.checkedBox,
+                    termsAccepted.instructorTerms && styles.checkedBox,
                   ]}
                 >
-                  {commitments.noCriminalRecord && (
+                  {termsAccepted.instructorTerms && (
                     <Check color="#FFFFFF" size={16} />
                   )}
                 </View>
               </TouchableOpacity>
-              <Text style={styles.commitmentText}>
-                Tôi không có/ không còn án tích tại thời điểm hiện tại thời điểm
-                tham gia DriveMate
-              </Text>
+              <TouchableOpacity
+                style={styles.linkContainer}
+                onPress={() =>
+                  handleLinkPress("https://drivemate.com/instructor-terms")
+                }
+              >
+                <Text style={styles.linkText}>
+                  Điều khoản dịch vụ dành cho đối tác người hướng dẫn
+                </Text>
+                <ExternalLink color="#70E000" size={16} />
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.commitmentItem}>
+            <View style={styles.termItem}>
               <TouchableOpacity
                 style={styles.checkboxContainer}
-                onPress={() => handleCommitmentToggle("noInvestigation")}
+                onPress={() => handleTermsToggle("codeOfConduct")}
               >
                 <View
                   style={[
                     styles.checkbox,
-                    commitments.noInvestigation && styles.checkedBox,
+                    termsAccepted.codeOfConduct && styles.checkedBox,
                   ]}
                 >
-                  {commitments.noInvestigation && (
+                  {termsAccepted.codeOfConduct && (
                     <Check color="#FFFFFF" size={16} />
                   )}
                 </View>
               </TouchableOpacity>
-              <Text style={styles.commitmentText}>
-                Tôi không đang trong giai đoạn bị điều tra, khởi tố, truy tố
-              </Text>
-            </View>
-
-            <View style={styles.commitmentItem}>
               <TouchableOpacity
-                style={styles.checkboxContainer}
-                onPress={() => handleCommitmentToggle("healthCondition")}
+                style={styles.linkContainer}
+                onPress={() =>
+                  handleLinkPress("https://drivemate.com/code-of-conduct")
+                }
               >
-                <View
-                  style={[
-                    styles.checkbox,
-                    commitments.healthCondition && styles.checkedBox,
-                  ]}
-                >
-                  {commitments.healthCondition && (
-                    <Check color="#FFFFFF" size={16} />
-                  )}
-                </View>
+                <Text style={styles.linkText}>Bộ quy tắc ứng xử</Text>
+                <ExternalLink color="#70E000" size={16} />
               </TouchableOpacity>
-              <Text style={styles.commitmentText}>
-                Tôi cam kết đủ sức khỏe và đủ các điều kiện khác theo quy định
-                để điều khiển phương tiện tham gia giao thông trên đường
-              </Text>
             </View>
           </View>
 
@@ -439,7 +479,7 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     alignItems: "flex-start",
-    marginBottom: 30,
+    marginBottom: 20,
     paddingHorizontal: 20,
   },
   title: {
@@ -447,11 +487,20 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#000",
   },
-  commitmentsContainer: {
+  introContainer: {
     paddingHorizontal: 20,
     marginBottom: 30,
   },
-  commitmentItem: {
+  introText: {
+    fontSize: 16,
+    color: "#000",
+    lineHeight: 22,
+  },
+  termsContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 30,
+  },
+  termItem: {
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 20,
@@ -474,11 +523,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#70E000",
     borderColor: "#70E000",
   },
-  commitmentText: {
+  linkContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+  },
+  linkText: {
     flex: 1,
     fontSize: 16,
-    color: "#000",
+    color: "#70E000",
     lineHeight: 22,
+    marginRight: 8,
   },
   buttonContainer: {
     flexDirection: "row",

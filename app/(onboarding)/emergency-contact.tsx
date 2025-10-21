@@ -120,6 +120,11 @@ export default function EmergencyContactScreen() {
   };
 
   const handleRelationshipSelect = (relationship: string) => {
+    // Reset saved state when user changes data
+    if (isSaved) {
+      setIsSaved(false);
+    }
+
     setFormData((prev) => ({
       ...prev,
       relationship: relationship,
