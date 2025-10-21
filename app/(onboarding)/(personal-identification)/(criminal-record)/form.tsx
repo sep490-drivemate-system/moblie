@@ -17,7 +17,6 @@ import {
   MoreVertical,
   Edit2Icon,
   Trash2,
-  ChevronDown,
 } from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
 
@@ -27,8 +26,6 @@ export default function FormScreen() {
   const [tempImageUri, setTempImageUri] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
-  const [showVehicleClassDropdown, setShowVehicleClassDropdown] =
-    useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -43,11 +40,7 @@ export default function FormScreen() {
   // Form data
   const [formData, setFormData] = useState({
     issueDate: "",
-    vehicleClass: "",
   });
-
-  // Vehicle class options (same as license classes)
-  const vehicleClasses = ["B", "C", "C1", "C2", "D", "E", "F"];
 
   useEffect(() => {
     loadUserData();
@@ -72,13 +65,13 @@ export default function FormScreen() {
         setImageUri(null);
         setTempImageUri(null);
         setIsSaved(false);
-        await AsyncStorage.removeItem("temp_certificate");
-        await AsyncStorage.removeItem("certificate_data");
+        await AsyncStorage.removeItem("temp_criminal_record");
+        await AsyncStorage.removeItem("criminal_record_data");
         return;
       }
 
-      const savedImage = await AsyncStorage.getItem("certificate");
-      const savedFormData = await AsyncStorage.getItem("certificate_data");
+      const savedImage = await AsyncStorage.getItem("criminal_record");
+      const savedFormData = await AsyncStorage.getItem("criminal_record_data");
 
       if (savedImage) {
         setImageUri(savedImage);
@@ -88,7 +81,7 @@ export default function FormScreen() {
       }
 
       // Load temp image if exists
-      const tempImage = await AsyncStorage.getItem("temp_certificate");
+      const tempImage = await AsyncStorage.getItem("temp_criminal_record");
       if (tempImage) {
         setTempImageUri(tempImage);
       }
@@ -114,7 +107,7 @@ export default function FormScreen() {
     }
 
     router.push(
-      `/(onboarding)/(personal-identification)/(criminal-record)/form`
+      `/(onboarding)/(personal-identification)/(criminal-record)/upload-guide`
     );
   };
 
@@ -173,41 +166,20 @@ export default function FormScreen() {
     }
   };
 
-  const handleVehicleClassSelect = (vehicleClass: string) => {
-    // Reset saved state when user changes vehicle class
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      vehicleClass: vehicleClass,
-    }));
-    setShowVehicleClassDropdown(false);
-  };
-
   // Check if all fields are filled
   const isFormComplete = () => {
-    return (
-      (tempImageUri || imageUri) &&
-      formData.issueDate.trim() !== "" &&
-      formData.vehicleClass.trim() !== ""
-    );
+    return (tempImageUri || imageUri) && formData.issueDate.trim() !== "";
   };
 
   const handleSave = async () => {
     // Validation
     if (!tempImageUri && !imageUri) {
-      showCustomAlert(
-        "Lỗi",
-        "Vui lòng tải lên chứng chỉ hành nghề giảng dạy lái xe",
-        [
-          {
-            text: "OK",
-            onPress: () => setShowAlert(false),
-          },
-        ]
-      );
+      showCustomAlert("Lỗi", "Vui lòng tải lên lý lịch tư pháp", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
       return;
     }
 
@@ -221,39 +193,28 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.vehicleClass.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng chọn hạng xe đào tạo giảng dạy", [
+    try {
+      const currentImage = tempImageUri || imageUri;
+
+      await AsyncStorage.setItem("criminal_record", currentImage!);
+      await AsyncStorage.setItem(
+        "criminal_record_data",
+        JSON.stringify(formData)
+      );
+
+      setImageUri(currentImage);
+      setTempImageUri(null);
+      await AsyncStorage.removeItem("temp_criminal_record");
+      setIsSaved(true);
+
+      showCustomAlert("Thành công", "Thông tin lý lịch tư pháp đã được lưu", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
         },
       ]);
-      return;
-    }
-
-    try {
-      const currentImage = tempImageUri || imageUri;
-
-      await AsyncStorage.setItem("certificate", currentImage!);
-      await AsyncStorage.setItem("certificate_data", JSON.stringify(formData));
-
-      setImageUri(currentImage);
-      setTempImageUri(null);
-      await AsyncStorage.removeItem("temp_certificate");
-      setIsSaved(true);
-
-      showCustomAlert(
-        "Thành công",
-        "Thông tin chứng chỉ hành nghề đã được lưu",
-        [
-          {
-            text: "OK",
-            onPress: () => setShowAlert(false),
-          },
-        ]
-      );
     } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu thông tin chứng chỉ hành nghề", [
+      showCustomAlert("Lỗi", "Không thể lưu thông tin lý lịch tư pháp", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -280,8 +241,8 @@ export default function FormScreen() {
 
   const handleDeleteImage = () => {
     showCustomAlert(
-      "Xóa ảnh chứng chỉ",
-      "Bạn có chắc chắn muốn xóa ảnh chứng chỉ hành nghề giảng dạy lái xe?",
+      "Xóa ảnh lý lịch tư pháp",
+      "Bạn có chắc chắn muốn xóa ảnh lý lịch tư pháp?",
       [
         {
           text: "Hủy",
@@ -303,8 +264,8 @@ export default function FormScreen() {
 
               setTempImageUri(null);
               setImageUri(null);
-              await AsyncStorage.removeItem("temp_certificate");
-              await AsyncStorage.removeItem("certificate");
+              await AsyncStorage.removeItem("temp_criminal_record");
+              await AsyncStorage.removeItem("criminal_record");
               setShowDeleteMode(false);
               setShowAlert(false);
 
@@ -366,15 +327,14 @@ export default function FormScreen() {
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Chứng chỉ hành nghề</Text>
+            <Text style={styles.title}>Lý lịch tư pháp</Text>
           </View>
 
           {/* Image Upload Section */}
           <View style={styles.imageSection}>
             <View style={styles.imageContainer}>
               <Text style={styles.imageLabel}>
-                Chứng chỉ hành nghề giảng dạy lái xe{" "}
-                <Text style={styles.required}>*</Text>
+                Lý lịch tư pháp <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.imageUploadArea}>
                 {tempImageUri || imageUri ? (
@@ -433,56 +393,6 @@ export default function FormScreen() {
                 keyboardType="numeric"
                 maxLength={10}
               />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Hạng xe đào tạo giảng dạy <Text style={styles.required}>*</Text>
-              </Text>
-              <TouchableOpacity
-                style={styles.dropdownContainer}
-                onPress={() =>
-                  setShowVehicleClassDropdown(!showVehicleClassDropdown)
-                }
-              >
-                <Text
-                  style={[
-                    styles.dropdownText,
-                    !formData.vehicleClass && styles.placeholderText,
-                  ]}
-                >
-                  {formData.vehicleClass || "Chọn hạng xe đào tạo giảng dạy"}
-                </Text>
-                <ChevronDown
-                  color="#92929D"
-                  size={20}
-                  style={[
-                    styles.dropdownIcon,
-                    showVehicleClassDropdown && styles.dropdownIconRotated,
-                  ]}
-                />
-              </TouchableOpacity>
-              {showVehicleClassDropdown && (
-                <View style={styles.dropdownList}>
-                  <ScrollView
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled={true}
-                    style={styles.dropdownScrollView}
-                  >
-                    {vehicleClasses.map((vehicleClass) => (
-                      <TouchableOpacity
-                        key={vehicleClass}
-                        style={styles.dropdownItem}
-                        onPress={() => handleVehicleClassSelect(vehicleClass)}
-                      >
-                        <Text style={styles.dropdownItemText}>
-                          {vehicleClass}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
             </View>
           </View>
 
@@ -775,59 +685,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
-  },
-  dropdownContainer: {
-    backgroundColor: "#F5F5F5",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  dropdownText: {
-    fontSize: 16,
-    color: "#000",
-  },
-  placeholderText: {
-    color: "#92929D",
-  },
-  dropdownIcon: {
-    transform: [{ rotate: "0deg" }],
-  },
-  dropdownIconRotated: {
-    transform: [{ rotate: "180deg" }],
-  },
-  dropdownList: {
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    zIndex: 9999,
-    elevation: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    maxHeight: 200,
-  },
-  dropdownScrollView: {
-    maxHeight: 180,
-  },
-  dropdownItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  dropdownItemText: {
-    fontSize: 16,
-    color: "#000",
   },
 });
