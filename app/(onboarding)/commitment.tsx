@@ -7,19 +7,16 @@ import {
   SafeAreaView,
   StatusBar,
   Image,
-  TextInput,
   ScrollView,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ArrowLeft, MoreVertical, ChevronDown } from "lucide-react-native";
+import { ArrowLeft, MoreVertical, Check } from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
 
-export default function EmergencyContactScreen() {
+export default function CommitmentScreen() {
   const router = useRouter();
   const [isSaved, setIsSaved] = useState(false);
-  const [showRelationshipDropdown, setShowRelationshipDropdown] =
-    useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -31,22 +28,14 @@ export default function EmergencyContactScreen() {
     }>,
   });
 
-  // Form data
-  const [formData, setFormData] = useState({
-    emergencyContactName: "",
-    relationship: "",
-    emergencyPhone: "",
-    temporaryAddress: "",
+  // Commitment states
+  const [commitments, setCommitments] = useState({
+    validLicense: false,
+    trafficLaws: false,
+    noCriminalRecord: false,
+    noInvestigation: false,
+    healthCondition: false,
   });
-
-  const relationships = [
-    "Bố mẹ ruột",
-    "Anh chị em ruột",
-    "Cô dì chú bác",
-    "Chồng",
-    "Vợ",
-    "Khác",
-  ];
 
   useEffect(() => {
     loadUserData();
@@ -68,17 +57,22 @@ export default function EmergencyContactScreen() {
 
       // If onboarding was reset, clear all data
       if (!onboardingCompleted || !quizCompleted) {
+        setCommitments({
+          validLicense: false,
+          trafficLaws: false,
+          noCriminalRecord: false,
+          noInvestigation: false,
+          healthCondition: false,
+        });
         setIsSaved(false);
-        await AsyncStorage.removeItem("emergency_contact_data");
+        await AsyncStorage.removeItem("commitment_data");
         return;
       }
 
-      const savedFormData = await AsyncStorage.getItem(
-        "emergency_contact_data"
-      );
+      const savedCommitments = await AsyncStorage.getItem("commitment_data");
 
-      if (savedFormData) {
-        setFormData(JSON.parse(savedFormData));
+      if (savedCommitments) {
+        setCommitments(JSON.parse(savedCommitments));
         setIsSaved(true);
       }
     } catch (error) {
@@ -107,54 +101,27 @@ export default function EmergencyContactScreen() {
     setShowAlert(true);
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleCommitmentToggle = (commitment: keyof typeof commitments) => {
     // Reset saved state when user changes data
     if (isSaved) {
       setIsSaved(false);
     }
 
-    setFormData((prev) => ({
+    setCommitments((prev) => ({
       ...prev,
-      [field]: value,
+      [commitment]: !prev[commitment],
     }));
   };
 
-  const handleRelationshipSelect = (relationship: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      relationship: relationship,
-    }));
-    setShowRelationshipDropdown(false);
-  };
-
-  // Check if all fields are filled
+  // Check if all commitments are checked
   const isFormComplete = () => {
-    return (
-      formData.emergencyContactName.trim() !== "" &&
-      formData.relationship.trim() !== "" &&
-      formData.emergencyPhone.trim() !== "" &&
-      formData.temporaryAddress.trim() !== ""
-    );
+    return Object.values(commitments).every((value) => value === true);
   };
 
   const handleSave = async () => {
     // Validation
-    if (!formData.emergencyContactName.trim()) {
-      showCustomAlert(
-        "Lỗi",
-        "Vui lòng nhập tên người liên hệ trong trường hợp khẩn cấp",
-        [
-          {
-            text: "OK",
-            onPress: () => setShowAlert(false),
-          },
-        ]
-      );
-      return;
-    }
-
-    if (!formData.relationship.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng chọn quan hệ", [
+    if (!isFormComplete()) {
+      showCustomAlert("Lỗi", "Vui lòng đồng ý với tất cả các cam kết", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -163,49 +130,21 @@ export default function EmergencyContactScreen() {
       return;
     }
 
-    if (!formData.emergencyPhone.trim()) {
-      showCustomAlert(
-        "Lỗi",
-        "Vui lòng nhập số điện thoại liên hệ trong trường hợp khẩn cấp",
-        [
-          {
-            text: "OK",
-            onPress: () => setShowAlert(false),
-          },
-        ]
-      );
-      return;
-    }
-
-    if (!formData.temporaryAddress.trim()) {
-      showCustomAlert(
-        "Lỗi",
-        "Vui lòng nhập địa chỉ tạm trú của người hướng dẫn",
-        [
-          {
-            text: "OK",
-            onPress: () => setShowAlert(false),
-          },
-        ]
-      );
-      return;
-    }
-
     try {
       await AsyncStorage.setItem(
-        "emergency_contact_data",
-        JSON.stringify(formData)
+        "commitment_data",
+        JSON.stringify(commitments)
       );
       setIsSaved(true);
 
-      showCustomAlert("Thành công", "Thông tin liên hệ khẩn cấp đã được lưu", [
+      showCustomAlert("Thành công", "Cam kết đã được lưu", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
         },
       ]);
     } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu thông tin liên hệ khẩn cấp", [
+      showCustomAlert("Lỗi", "Không thể lưu cam kết", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -249,119 +188,127 @@ export default function EmergencyContactScreen() {
 
           <View>
             <Image
-              source={require("@/assets/images/background_2.png")}
-              style={styles.background_2}
+              source={require("@/assets/images/background_3.png")}
+              style={styles.background_3}
             />
           </View>
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>
-              Thông tin liên hệ khẩn cấp và địa chỉ tạm trú
-            </Text>
+            <Text style={styles.title}>Cam kết</Text>
           </View>
 
-          {/* Form Fields */}
-          <View style={styles.formContainer}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Tên người liên hệ trong trường hợp khẩn cấp{" "}
-                <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.emergencyContactName}
-                onChangeText={(value) =>
-                  handleInputChange("emergencyContactName", value)
-                }
-                placeholder="Nhập tên người liên hệ"
-                placeholderTextColor="#92929D"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Quan hệ <Text style={styles.required}>*</Text>
-              </Text>
+          {/* Commitments List */}
+          <View style={styles.commitmentsContainer}>
+            <View style={styles.commitmentItem}>
               <TouchableOpacity
-                style={styles.dropdownContainer}
-                onPress={() =>
-                  setShowRelationshipDropdown(!showRelationshipDropdown)
-                }
+                style={styles.checkboxContainer}
+                onPress={() => handleCommitmentToggle("validLicense")}
               >
-                <Text
+                <View
                   style={[
-                    styles.dropdownText,
-                    !formData.relationship && styles.placeholderText,
+                    styles.checkbox,
+                    commitments.validLicense && styles.checkedBox,
                   ]}
                 >
-                  {formData.relationship || "Chọn quan hệ"}
-                </Text>
-                <ChevronDown
-                  color="#92929D"
-                  size={20}
-                  style={[
-                    styles.dropdownIcon,
-                    showRelationshipDropdown && styles.dropdownIconRotated,
-                  ]}
-                />
-              </TouchableOpacity>
-              {showRelationshipDropdown && (
-                <View style={styles.dropdownList}>
-                  <ScrollView
-                    style={styles.dropdownScrollView}
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled={true}
-                  >
-                    {relationships.map((relationship) => (
-                      <TouchableOpacity
-                        key={relationship}
-                        style={styles.dropdownItem}
-                        onPress={() => handleRelationshipSelect(relationship)}
-                      >
-                        <Text style={styles.dropdownItemText}>
-                          {relationship}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                  {commitments.validLicense && (
+                    <Check color="#FFFFFF" size={16} />
+                  )}
                 </View>
-              )}
+              </TouchableOpacity>
+              <Text style={styles.commitmentText}>
+                Tôi có và sẽ duy trì giấy phép lái xe còn điểm và còn hiệu lực
+                trong suốt quá trình hoạt động với DriveMate
+              </Text>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Số điện thoại liên hệ trong trường hợp khẩn cấp{" "}
-                <Text style={styles.required}>*</Text>
+            <View style={styles.commitmentItem}>
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => handleCommitmentToggle("trafficLaws")}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    commitments.trafficLaws && styles.checkedBox,
+                  ]}
+                >
+                  {commitments.trafficLaws && (
+                    <Check color="#FFFFFF" size={16} />
+                  )}
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.commitmentText}>
+                Tôi cam kết tuân thủ quy định pháp luật về giao thông đường bộ,
+                đảm bảo thực hiện trách nhiệm về kiểm định phương tiện tham gia
+                giao thông và chỉ điều khiển phương tiện tương ứng với loại giấy
+                phép lái xe được cấp
               </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.emergencyPhone}
-                onChangeText={(value) =>
-                  handleInputChange("emergencyPhone", value)
-                }
-                placeholder="Nhập số điện thoại"
-                placeholderTextColor="#92929D"
-                keyboardType="phone-pad"
-              />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Địa chỉ tạm trú của người hướng dẫn{" "}
-                <Text style={styles.required}>*</Text>
+            <View style={styles.commitmentItem}>
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => handleCommitmentToggle("noCriminalRecord")}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    commitments.noCriminalRecord && styles.checkedBox,
+                  ]}
+                >
+                  {commitments.noCriminalRecord && (
+                    <Check color="#FFFFFF" size={16} />
+                  )}
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.commitmentText}>
+                Tôi không có/ không còn án tích tại thời điểm hiện tại thời điểm
+                tham gia DriveMate
               </Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.temporaryAddress}
-                onChangeText={(value) =>
-                  handleInputChange("temporaryAddress", value)
-                }
-                placeholder="Nhập địa chỉ tạm trú"
-                placeholderTextColor="#92929D"
-                multiline={true}
-                numberOfLines={3}
-              />
+            </View>
+
+            <View style={styles.commitmentItem}>
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => handleCommitmentToggle("noInvestigation")}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    commitments.noInvestigation && styles.checkedBox,
+                  ]}
+                >
+                  {commitments.noInvestigation && (
+                    <Check color="#FFFFFF" size={16} />
+                  )}
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.commitmentText}>
+                Tôi không đang trong giai đoạn bị điều tra, khởi tố, truy tố
+              </Text>
+            </View>
+
+            <View style={styles.commitmentItem}>
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => handleCommitmentToggle("healthCondition")}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    commitments.healthCondition && styles.checkedBox,
+                  ]}
+                >
+                  {commitments.healthCondition && (
+                    <Check color="#FFFFFF" size={16} />
+                  )}
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.commitmentText}>
+                Tôi cam kết đủ sức khỏe và đủ các điều kiện khác theo quy định
+                để điều khiển phương tiện tham gia giao thông trên đường
+              </Text>
             </View>
           </View>
 
@@ -486,7 +433,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF0000",
     borderRadius: 4,
   },
-  background_2: {
+  background_3: {
     width: "100%",
     height: 250,
   },
@@ -500,90 +447,38 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#000",
   },
-  formContainer: {
+  commitmentsContainer: {
     paddingHorizontal: 20,
     marginBottom: 30,
   },
-  inputGroup: {
-    marginBottom: 20,
-    position: "relative",
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 8,
-  },
-  required: {
-    color: "#FF0000",
-  },
-  input: {
-    backgroundColor: "#F5F5F5",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: "#000",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: "top",
-  },
-  dropdownContainer: {
-    backgroundColor: "#F5F5F5",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
+  commitmentItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 20,
+  },
+  checkboxContainer: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#E0E0E0",
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
     alignItems: "center",
   },
-  dropdownText: {
+  checkedBox: {
+    backgroundColor: "#70E000",
+    borderColor: "#70E000",
+  },
+  commitmentText: {
+    flex: 1,
     fontSize: 16,
     color: "#000",
-  },
-  placeholderText: {
-    color: "#92929D",
-  },
-  dropdownIcon: {
-    transform: [{ rotate: "0deg" }],
-  },
-  dropdownIconRotated: {
-    transform: [{ rotate: "180deg" }],
-  },
-  dropdownList: {
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    zIndex: 9999,
-    elevation: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    maxHeight: 200,
-  },
-  dropdownScrollView: {
-    maxHeight: 180,
-  },
-  dropdownItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  dropdownItemText: {
-    fontSize: 16,
-    color: "#000",
+    lineHeight: 22,
   },
   buttonContainer: {
     flexDirection: "row",
