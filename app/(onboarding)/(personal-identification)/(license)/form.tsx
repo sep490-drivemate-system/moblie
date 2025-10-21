@@ -31,7 +31,8 @@ export default function FormScreen() {
   const [tempBackImageUri, setTempBackImageUri] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
-  const [showGenderDropdown, setShowGenderDropdown] = useState(false);
+  const [showLicenseClassDropdown, setShowLicenseClassDropdown] =
+    useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -45,14 +46,14 @@ export default function FormScreen() {
 
   // Form data
   const [formData, setFormData] = useState({
-    idNumber: "",
+    licenseNumber: "",
     issueDate: "",
     expiryDate: "",
-    issuePlace: "",
-    address: "",
-    gender: "",
-    birthDate: "",
+    licenseClass: "",
   });
+
+  // License class options
+  const licenseClasses = ["B", "C", "C1", "C2", "D", "E", "F"];
 
   useEffect(() => {
     loadUserData();
@@ -79,15 +80,15 @@ export default function FormScreen() {
         setTempFrontImageUri(null);
         setTempBackImageUri(null);
         setIsSaved(false);
-        await AsyncStorage.removeItem("temp_id_front");
-        await AsyncStorage.removeItem("temp_id_back");
-        await AsyncStorage.removeItem("id_card_data");
+        await AsyncStorage.removeItem("temp_license_front");
+        await AsyncStorage.removeItem("temp_license_back");
+        await AsyncStorage.removeItem("license_data");
         return;
       }
 
-      const savedFrontImage = await AsyncStorage.getItem("id_front");
-      const savedBackImage = await AsyncStorage.getItem("id_back");
-      const savedFormData = await AsyncStorage.getItem("id_card_data");
+      const savedFrontImage = await AsyncStorage.getItem("license_front");
+      const savedBackImage = await AsyncStorage.getItem("license_back");
+      const savedFormData = await AsyncStorage.getItem("license_data");
 
       if (savedFrontImage) {
         setFrontImageUri(savedFrontImage);
@@ -100,8 +101,8 @@ export default function FormScreen() {
       }
 
       // Load temp images if exist
-      const tempFront = await AsyncStorage.getItem("temp_id_front");
-      const tempBack = await AsyncStorage.getItem("temp_id_back");
+      const tempFront = await AsyncStorage.getItem("temp_license_front");
+      const tempBack = await AsyncStorage.getItem("temp_license_back");
       if (tempFront) {
         setTempFrontImageUri(tempFront);
       }
@@ -133,7 +134,7 @@ export default function FormScreen() {
     }
 
     router.push(
-      `/(onboarding)/(personal-identification)/(id-card)/upload-guide?type=${type}`
+      `/(onboarding)/(personal-identification)/(license)/upload-guide?type=${type}`
     );
   };
 
@@ -178,11 +179,7 @@ export default function FormScreen() {
     }
 
     // Apply date formatting for date fields
-    if (
-      field === "issueDate" ||
-      field === "expiryDate" ||
-      field === "birthDate"
-    ) {
+    if (field === "issueDate" || field === "expiryDate") {
       const formattedValue = formatDateInput(value);
       setFormData((prev) => ({
         ...prev,
@@ -196,17 +193,17 @@ export default function FormScreen() {
     }
   };
 
-  const handleGenderSelect = (gender: string) => {
-    // Reset saved state when user changes gender
+  const handleLicenseClassSelect = (licenseClass: string) => {
+    // Reset saved state when user changes license class
     if (isSaved) {
       setIsSaved(false);
     }
 
     setFormData((prev) => ({
       ...prev,
-      gender: gender,
+      licenseClass: licenseClass,
     }));
-    setShowGenderDropdown(false);
+    setShowLicenseClassDropdown(false);
   };
 
   // Check if all fields are filled
@@ -214,30 +211,31 @@ export default function FormScreen() {
     return (
       (tempFrontImageUri || frontImageUri) &&
       (tempBackImageUri || backImageUri) &&
-      formData.idNumber.trim() !== "" &&
+      formData.licenseNumber.trim() !== "" &&
       formData.issueDate.trim() !== "" &&
       formData.expiryDate.trim() !== "" &&
-      formData.issuePlace.trim() !== "" &&
-      formData.address.trim() !== "" &&
-      formData.gender.trim() !== "" &&
-      formData.birthDate.trim() !== ""
+      formData.licenseClass.trim() !== ""
     );
   };
 
   const handleSave = async () => {
     // Validation
     if (!tempFrontImageUri && !frontImageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt trước thẻ căn cước", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng tải lên ảnh mặt trước giấy phép lái xe",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
       return;
     }
 
     if (!tempBackImageUri && !backImageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt sau thẻ căn cước", [
+      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt sau giấy phép lái xe", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -246,8 +244,8 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.idNumber.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập số căn cước công dân", [
+    if (!formData.licenseNumber.trim()) {
+      showCustomAlert("Lỗi", "Vui lòng nhập số giấy phép lái xe", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -276,38 +274,8 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.issuePlace.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập nơi cấp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.address.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập địa chỉ thường trú", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.gender.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng chọn giới tính", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.birthDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày sinh", [
+    if (!formData.licenseClass.trim()) {
+      showCustomAlert("Lỗi", "Vui lòng chọn hạng giấy phép lái xe", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -320,26 +288,26 @@ export default function FormScreen() {
       const currentFrontImage = tempFrontImageUri || frontImageUri;
       const currentBackImage = tempBackImageUri || backImageUri;
 
-      await AsyncStorage.setItem("id_front", currentFrontImage!);
-      await AsyncStorage.setItem("id_back", currentBackImage!);
-      await AsyncStorage.setItem("id_card_data", JSON.stringify(formData));
+      await AsyncStorage.setItem("license_front", currentFrontImage!);
+      await AsyncStorage.setItem("license_back", currentBackImage!);
+      await AsyncStorage.setItem("license_data", JSON.stringify(formData));
 
       setFrontImageUri(currentFrontImage);
       setBackImageUri(currentBackImage);
       setTempFrontImageUri(null);
       setTempBackImageUri(null);
-      await AsyncStorage.removeItem("temp_id_front");
-      await AsyncStorage.removeItem("temp_id_back");
+      await AsyncStorage.removeItem("temp_license_front");
+      await AsyncStorage.removeItem("temp_license_back");
       setIsSaved(true);
 
-      showCustomAlert("Thành công", "Thông tin thẻ căn cước đã được lưu", [
+      showCustomAlert("Thành công", "Thông tin giấy phép lái xe đã được lưu", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
         },
       ]);
     } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu thông tin thẻ căn cước", [
+      showCustomAlert("Lỗi", "Không thể lưu thông tin giấy phép lái xe", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -364,13 +332,13 @@ export default function FormScreen() {
 
   const handleDeleteImage = (type: "front" | "back") => {
     showCustomAlert(
-      "Xóa ảnh thẻ căn cước",
+      "Xóa ảnh giấy phép lái xe",
       `Bạn có chắc chắn muốn xóa ảnh mặt ${
         type === "front" ? "trước" : "sau"
-      } thẻ căn cước?`,
+      } giấy phép lái xe?`,
       [
         {
-          text: "Hủy",
+          text: "Hủy", // Cancel button text
           style: "cancel",
           onPress: () => {
             setShowAlert(false);
@@ -378,7 +346,7 @@ export default function FormScreen() {
           },
         },
         {
-          text: "Xóa",
+          text: "Xóa", // Delete button text
           style: "destructive",
           onPress: async () => {
             try {
@@ -390,13 +358,13 @@ export default function FormScreen() {
               if (type === "front") {
                 setTempFrontImageUri(null);
                 setFrontImageUri(null);
-                await AsyncStorage.removeItem("temp_id_front");
-                await AsyncStorage.removeItem("id_front");
+                await AsyncStorage.removeItem("temp_license_front");
+                await AsyncStorage.removeItem("license_front");
               } else {
                 setTempBackImageUri(null);
                 setBackImageUri(null);
-                await AsyncStorage.removeItem("temp_id_back");
-                await AsyncStorage.removeItem("id_back");
+                await AsyncStorage.removeItem("temp_license_back");
+                await AsyncStorage.removeItem("license_back");
               }
               setShowDeleteMode(false);
               setShowAlert(false);
@@ -459,7 +427,7 @@ export default function FormScreen() {
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Thẻ căn cước</Text>
+            <Text style={styles.title}>Giấy phép lái xe</Text>
           </View>
 
           {/* Image Upload Sections */}
@@ -561,13 +529,15 @@ export default function FormScreen() {
           <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                Số căn cước công dân <Text style={styles.required}>*</Text>
+                Số giấy phép lái xe <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
                 style={styles.input}
-                value={formData.idNumber}
-                onChangeText={(value) => handleInputChange("idNumber", value)}
-                placeholder="Nhập số căn cước công dân"
+                value={formData.licenseNumber}
+                onChangeText={(value) =>
+                  handleInputChange("licenseNumber", value)
+                }
+                placeholder="Nhập số giấy phép lái xe"
                 placeholderTextColor="#92929D"
                 keyboardType="numeric"
               />
@@ -605,88 +575,46 @@ export default function FormScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                Nơi cấp <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.issuePlace}
-                onChangeText={(value) => handleInputChange("issuePlace", value)}
-                placeholder="Nhập nơi cấp"
-                placeholderTextColor="#92929D"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Địa chỉ thường trú <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.address}
-                onChangeText={(value) => handleInputChange("address", value)}
-                placeholder="Nhập địa chỉ thường trú"
-                placeholderTextColor="#92929D"
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Giới tính <Text style={styles.required}>*</Text>
+                Hạng giấy phép lái xe <Text style={styles.required}>*</Text>
               </Text>
               <TouchableOpacity
                 style={styles.dropdownContainer}
-                onPress={() => setShowGenderDropdown(!showGenderDropdown)}
+                onPress={() =>
+                  setShowLicenseClassDropdown(!showLicenseClassDropdown)
+                }
               >
                 <Text
                   style={[
                     styles.dropdownText,
-                    !formData.gender && styles.placeholderText,
+                    !formData.licenseClass && styles.placeholderText,
                   ]}
                 >
-                  {formData.gender || "Chọn giới tính"}
+                  {formData.licenseClass || "Chọn hạng giấy phép lái xe"}
                 </Text>
                 <ChevronDown
                   color="#92929D"
                   size={20}
                   style={[
                     styles.dropdownIcon,
-                    showGenderDropdown && styles.dropdownIconRotated,
+                    showLicenseClassDropdown && styles.dropdownIconRotated,
                   ]}
                 />
               </TouchableOpacity>
-              {showGenderDropdown && (
+              {showLicenseClassDropdown && (
                 <View style={styles.dropdownList}>
-                  <TouchableOpacity
-                    style={styles.dropdownItem}
-                    onPress={() => handleGenderSelect("Nam")}
-                  >
-                    <Text style={styles.dropdownItemText}>Nam</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.dropdownItem}
-                    onPress={() => handleGenderSelect("Nữ")}
-                  >
-                    <Text style={styles.dropdownItemText}>Nữ</Text>
-                  </TouchableOpacity>
+                  {licenseClasses.map((licenseClass) => (
+                    <TouchableOpacity
+                      key={licenseClass}
+                      style={styles.dropdownItem}
+                      onPress={() => handleLicenseClassSelect(licenseClass)}
+                    >
+                      <Text style={styles.dropdownItemText}>
+                        {licenseClass}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               )}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Ngày sinh <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.birthDate}
-                onChangeText={(value) => handleInputChange("birthDate", value)}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={10}
-              />
             </View>
           </View>
 
@@ -929,10 +857,6 @@ const styles = StyleSheet.create({
     color: "#000",
     borderWidth: 1,
     borderColor: "#E0E0E0",
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: "top",
   },
   buttonContainer: {
     flexDirection: "row",

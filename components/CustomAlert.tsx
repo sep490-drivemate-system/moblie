@@ -11,11 +11,6 @@ interface CustomAlertProps {
   visible: boolean;
   title: string;
   message: string;
-  confirmText?: string;
-  onConfirm?: () => void;
-  onCancel?: () => void;
-  showCancel?: boolean;
-  cancelText?: string;
   buttons?: AlertButton[];
 }
 
@@ -23,76 +18,56 @@ export default function CustomAlert({
   visible,
   title,
   message,
-  confirmText = "OK",
-  onConfirm,
-  onCancel,
-  showCancel = false,
-  cancelText = "Hủy",
   buttons,
 }: CustomAlertProps) {
-  // If buttons array is provided, use it instead of default buttons
+  const buttonCount = buttons?.length || 0;
+
   const renderButtons = () => {
-    if (buttons && buttons.length > 0) {
-      return (
-        <View
-          style={[
-            styles.buttonContainer,
-            buttons.length === 1
-              ? styles.singleButtonContainer
-              : buttons.length === 2
-              ? styles.twoButtonContainer
-              : styles.threeButtonContainer,
-          ]}
-        >
-          {buttons.map((button, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.button,
-                button.style === "destructive" && styles.destructiveButton,
-                button.style === "cancel" && styles.cancelButton,
-                (button.style === "default" || !button.style) &&
-                  styles.confirmButton,
-                buttons.length === 1 && styles.singleButton,
-                buttons.length === 2 && styles.twoButtonItem,
-                buttons.length === 3 && styles.threeButtonItem,
-              ]}
-              onPress={button.onPress}
-            >
-              <Text
-                style={[
-                  button.style === "destructive" &&
-                    styles.destructiveButtonText,
-                  button.style === "cancel" && styles.cancelButtonText,
-                  (button.style === "default" || !button.style) &&
-                    styles.confirmButtonText,
-                ]}
-              >
-                {button.text}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      );
+    if (!buttons || buttons.length === 0) {
+      return null;
     }
 
-    // Default button layout
+    const containerStyle = [
+      styles.buttonContainerBase,
+      buttonCount === 2 && styles.rowLayout,
+      buttonCount === 1 && styles.singleButtonLayout,
+      buttonCount === 2 && styles.twoButtonLayout,
+      buttonCount > 2 && styles.columnLayout,
+    ];
+
     return (
-      <View style={styles.buttonContainer}>
-        {showCancel && (
-          <TouchableOpacity
-            style={[styles.button, styles.cancelButton]}
-            onPress={onCancel}
-          >
-            <Text style={styles.cancelButtonText}>{cancelText}</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[styles.button, styles.confirmButton]}
-          onPress={onConfirm}
-        >
-          <Text style={styles.confirmButtonText}>{confirmText}</Text>
-        </TouchableOpacity>
+      <View style={containerStyle}>
+        {buttons.map((button, index) => {
+          const buttonStyle = [
+            styles.button,
+            button.style === "destructive" && styles.destructiveButton,
+            button.style === "cancel" && styles.cancelButton,
+            (button.style === "default" || !button.style) &&
+              styles.confirmButton,
+
+            buttonCount === 1 && styles.singleButton,
+            buttonCount === 2 && styles.twoButton,
+            buttonCount > 2 && styles.multiButton,
+          ];
+
+          const textStyle = [
+            styles.buttonText,
+            button.style === "destructive" && styles.destructiveButtonText,
+            button.style === "cancel" && styles.cancelButtonText,
+            (button.style === "default" || !button.style) &&
+              styles.confirmButtonText,
+          ];
+
+          return (
+            <TouchableOpacity
+              key={index}
+              style={buttonStyle}
+              onPress={button.onPress}
+            >
+              <Text style={textStyle}>{button.text}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     );
   };
@@ -102,10 +77,14 @@ export default function CustomAlert({
       visible={visible}
       transparent={true}
       animationType="fade"
-      onRequestClose={onCancel || onConfirm || (() => {})}
+      onRequestClose={
+        buttons && buttons.length > 0
+          ? buttons[buttons.length - 1].onPress
+          : () => {}
+      }
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>{title}</Text>
           <Text style={styles.modalMessage}>{message}</Text>
           {renderButtons()}
@@ -122,7 +101,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  modalContainer: {
+  modalContent: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 24,
@@ -144,38 +123,53 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 22,
   },
-  buttonContainer: {
+
+  // --- Button Containers ---
+  buttonContainerBase: {
+    width: 300,
     gap: 12,
+  },
+  rowLayout: {
+    flexDirection: "row",
+  },
+
+  singleButtonLayout: {
     width: "100%",
   },
-  singleButtonContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-  },
-  twoButtonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  threeButtonContainer: {
+  columnLayout: {
     flexDirection: "column",
   },
+  twoButtonLayout: {
+    justifyContent: "space-between",
+  },
+
+  // --- Individual Buttons ---
   button: {
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 32,
     borderRadius: 8,
     alignItems: "center",
-  },
-  singleButton: {
-    flex: 0,
+    justifyContent: "center",
     minWidth: 100,
   },
-  twoButtonItem: {
+
+  singleButton: {
+    flex: 0,
+    minWidth: 120,
+    paddingHorizontal: 30,
+    alignSelf: "center",
+    alignItems: "center",
+  },
+
+  twoButton: {
     flex: 1,
   },
-  threeButtonItem: {
+
+  multiButton: {
     width: "100%",
   },
+
+  // --- Button Color/Style ---
   confirmButton: {
     backgroundColor: "#70E000",
   },
@@ -187,19 +181,20 @@ const styles = StyleSheet.create({
   destructiveButton: {
     backgroundColor: "#FF4444",
   },
-  confirmButtonText: {
+
+  // --- Button Text ---
+  buttonText: {
     fontSize: 16,
     fontWeight: "600",
+    textAlign: "center",
+  },
+  confirmButtonText: {
     color: "#FFFFFF",
   },
   cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
     color: "#666666",
   },
   destructiveButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
     color: "#FFFFFF",
   },
 });
