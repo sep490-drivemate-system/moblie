@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
   StatusBar,
   FlatList,
   Image,
@@ -18,6 +17,7 @@ import {
   ChevronUp,
   MoreVertical,
 } from "lucide-react-native";
+import CustomAlert from "@/components/CustomAlert";
 
 interface Role {
   id: string;
@@ -39,15 +39,36 @@ export default function RoleSelectionScreen() {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
 
   const handleRoleSelect = (role: Role) => {
     setSelectedRole(role);
     setShowDropdown(false);
   };
 
+  const showCustomAlert = (
+    title: string,
+    message: string,
+    onConfirm: () => void
+  ) => {
+    setAlertConfig({
+      title,
+      message,
+      onConfirm,
+    });
+    setShowAlert(true);
+  };
+
   const handleContinue = async () => {
     if (!selectedRole) {
-      Alert.alert("Lỗi", "Vui lòng chọn vai trò của bạn");
+      showCustomAlert("Lỗi", "Vui lòng chọn vai trò của bạn", () =>
+        setShowAlert(false)
+      );
       return;
     }
 
@@ -65,7 +86,9 @@ export default function RoleSelectionScreen() {
         router.push("/(onboarding)/license-class-select");
       }
     } catch (error) {
-      Alert.alert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.");
+      showCustomAlert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.", () =>
+        setShowAlert(false)
+      );
     }
   };
 
@@ -98,7 +121,7 @@ export default function RoleSelectionScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Image
-            source={require("@/assets/images/logo_blue.png")}
+            source={require("@/assets/images/logo_drivemate_green.png")}
             style={styles.logo}
           />
           <View style={styles.headerButtons}>
@@ -137,9 +160,9 @@ export default function RoleSelectionScreen() {
             </View>
             <Text>
               {showDropdown ? (
-                <ChevronUp color={"#026AA7"} />
+                <ChevronUp color={"#70E000"} />
               ) : (
-                <ChevronDown color={"#026AA7"} />
+                <ChevronDown color={"#70E000"} />
               )}
             </Text>
           </TouchableOpacity>
@@ -171,6 +194,14 @@ export default function RoleSelectionScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={showAlert}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onConfirm={alertConfig.onConfirm}
+      />
     </SafeAreaView>
   );
 }
@@ -281,7 +312,7 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     fontSize: 18,
-    color: "#026AA7",
+    color: "#70E000",
     fontWeight: "bold",
   },
   buttonContainer: {
@@ -289,7 +320,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   continueButton: {
-    backgroundColor: "#026AA7",
+    backgroundColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 20,
     alignItems: "center",

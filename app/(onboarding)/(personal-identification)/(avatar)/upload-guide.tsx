@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,33 +7,67 @@ import {
   SafeAreaView,
   StatusBar,
   Image,
-  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ArrowLeft, MoreVertical, Check, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
+import CustomAlert from "@/components/CustomAlert";
 
 export default function UploadGuideScreen() {
   const router = useRouter();
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: "",
+    message: "",
+    buttons: [] as Array<{
+      text: string;
+      onPress: () => void;
+      style?: "default" | "cancel" | "destructive";
+    }>,
+  });
 
   const handleBack = () => {
     router.back();
   };
 
+  const showCustomAlert = (
+    title: string,
+    message: string,
+    buttons: Array<{
+      text: string;
+      onPress: () => void;
+      style?: "default" | "cancel" | "destructive";
+    }>
+  ) => {
+    setAlertConfig({
+      title,
+      message,
+      buttons,
+    });
+    setShowAlert(true);
+  };
+
   const handleUpload = () => {
-    Alert.alert("Chọn ảnh", "Bạn muốn chụp ảnh mới hay chọn từ thư viện?", [
+    showCustomAlert("Chọn ảnh", "Bạn muốn chụp ảnh mới hay chọn từ thư viện?", [
       {
         text: "Chụp ảnh",
-        onPress: () => openCamera(),
+        onPress: () => {
+          setShowAlert(false);
+          openCamera();
+        },
       },
       {
         text: "Chọn từ thư viện",
-        onPress: () => openImageLibrary(),
+        onPress: () => {
+          setShowAlert(false);
+          openImageLibrary();
+        },
       },
       {
         text: "Hủy",
         style: "cancel",
+        onPress: () => setShowAlert(false),
       },
     ]);
   };
@@ -42,7 +76,12 @@ export default function UploadGuideScreen() {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert("Lỗi", "Cần quyền truy cập camera để chụp ảnh");
+      showCustomAlert("Lỗi", "Cần quyền truy cập camera để chụp ảnh", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
       return;
     }
 
@@ -66,7 +105,12 @@ export default function UploadGuideScreen() {
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert("Lỗi", "Cần quyền truy cập thư viện ảnh");
+      showCustomAlert("Lỗi", "Cần quyền truy cập thư viện ảnh", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
       return;
     }
 
@@ -173,6 +217,14 @@ export default function UploadGuideScreen() {
           <Text style={styles.uploadButtonText}>Tải hồ sơ lên</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={showAlert}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        buttons={alertConfig.buttons}
+      />
     </SafeAreaView>
   );
 }

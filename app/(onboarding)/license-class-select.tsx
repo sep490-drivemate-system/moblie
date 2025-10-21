@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
   StatusBar,
   FlatList,
 } from "react-native";
@@ -18,6 +17,7 @@ import {
   MoreVertical,
   ArrowLeft,
 } from "lucide-react-native";
+import CustomAlert from "@/components/CustomAlert";
 
 interface LicenseClass {
   id: string;
@@ -43,15 +43,36 @@ export default function LicenseClassSelectScreen() {
   const router = useRouter();
   const [selectedClass, setSelectedClass] = useState<LicenseClass | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
 
   const handleClassSelect = (licenseClass: LicenseClass) => {
     setSelectedClass(licenseClass);
     setShowDropdown(false);
   };
 
+  const showCustomAlert = (
+    title: string,
+    message: string,
+    onConfirm: () => void
+  ) => {
+    setAlertConfig({
+      title,
+      message,
+      onConfirm,
+    });
+    setShowAlert(true);
+  };
+
   const handleContinue = async () => {
     if (!selectedClass) {
-      Alert.alert("Lỗi", "Vui lòng chọn hạng giấy phép lái xe");
+      showCustomAlert("Lỗi", "Vui lòng chọn hạng giấy phép lái xe", () =>
+        setShowAlert(false)
+      );
       return;
     }
 
@@ -68,7 +89,9 @@ export default function LicenseClassSelectScreen() {
       // Navigate to quiz instead of home
       router.push("/(onboarding)/(quiz)/quiz-1");
     } catch (error) {
-      Alert.alert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.");
+      showCustomAlert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.", () =>
+        setShowAlert(false)
+      );
     }
   };
 
@@ -175,6 +198,14 @@ export default function LicenseClassSelectScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={showAlert}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onConfirm={alertConfig.onConfirm}
+      />
     </SafeAreaView>
   );
 }

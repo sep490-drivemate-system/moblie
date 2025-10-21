@@ -7,7 +7,6 @@ import {
   SafeAreaView,
   StatusBar,
   Image,
-  Alert,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -17,6 +16,7 @@ import {
   Edit2Icon,
   Trash2,
 } from "lucide-react-native";
+import CustomAlert from "@/components/CustomAlert";
 
 export default function AvatarScreen() {
   const router = useRouter();
@@ -25,6 +25,16 @@ export default function AvatarScreen() {
   const [isSaved, setIsSaved] = useState(false);
   const [userName, setUserName] = useState("Ngân");
   const [showDeleteMode, setShowDeleteMode] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: "",
+    message: "",
+    buttons: [] as Array<{
+      text: string;
+      onPress: () => void;
+      style?: "default" | "cancel" | "destructive";
+    }>,
+  });
 
   useEffect(() => {
     loadUserData();
@@ -80,10 +90,32 @@ export default function AvatarScreen() {
     );
   };
 
+  const showCustomAlert = (
+    title: string,
+    message: string,
+    buttons: Array<{
+      text: string;
+      onPress: () => void;
+      style?: "default" | "cancel" | "destructive";
+    }>
+  ) => {
+    setAlertConfig({
+      title,
+      message,
+      buttons,
+    });
+    setShowAlert(true);
+  };
+
   const handleSave = async () => {
     const currentAvatar = tempAvatarUri || avatarUri;
     if (!currentAvatar) {
-      Alert.alert("Lỗi", "Vui lòng tải lên ảnh đại diện");
+      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh đại diện", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
       return;
     }
 
@@ -93,16 +125,24 @@ export default function AvatarScreen() {
       setTempAvatarUri(null);
       await AsyncStorage.removeItem("temp_user_avatar");
       setIsSaved(true);
-      Alert.alert("Thành công", "Ảnh đại diện đã được lưu");
+      showCustomAlert("Thành công", "Ảnh đại diện đã được lưu", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể lưu ảnh đại diện");
+      showCustomAlert("Lỗi", "Không thể lưu ảnh đại diện", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
     }
   };
 
   const handleNext = () => {
-    router.push(
-      "/(onboarding)/(personal-identification)/(national-id)/national-id"
-    );
+    router.push("/(onboarding)/(personal-identification)/(avatar)/avatar");
   };
 
   const handleImagePress = () => {
@@ -122,34 +162,52 @@ export default function AvatarScreen() {
   }, [showDeleteMode]);
 
   const handleDeleteAvatar = () => {
-    Alert.alert("Xóa ảnh đại diện", "Bạn có chắc chắn muốn xóa ảnh đại diện?", [
-      {
-        text: "Hủy",
-        style: "cancel",
-        onPress: () => setShowDeleteMode(false),
-      },
-      {
-        text: "Xóa",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            // Clear both temp and saved avatar
-            setTempAvatarUri(null);
-            setAvatarUri(null);
-            setIsSaved(false);
+    showCustomAlert(
+      "Xóa ảnh đại diện",
+      "Bạn có chắc chắn muốn xóa ảnh đại diện?",
+      [
+        {
+          text: "Hủy",
+          style: "cancel",
+          onPress: () => {
+            setShowAlert(false);
             setShowDeleteMode(false);
-
-            // Remove from AsyncStorage
-            await AsyncStorage.removeItem("temp_user_avatar");
-            await AsyncStorage.removeItem("user_avatar");
-
-            Alert.alert("Thành công", "Ảnh đại diện đã được xóa");
-          } catch (error) {
-            Alert.alert("Lỗi", "Không thể xóa ảnh đại diện");
-          }
+          },
         },
-      },
-    ]);
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Clear both temp and saved avatar
+              setTempAvatarUri(null);
+              setAvatarUri(null);
+              setIsSaved(false);
+              setShowDeleteMode(false);
+              setShowAlert(false);
+
+              // Remove from AsyncStorage
+              await AsyncStorage.removeItem("temp_user_avatar");
+              await AsyncStorage.removeItem("user_avatar");
+
+              showCustomAlert("Thành công", "Ảnh đại diện đã được xóa", [
+                {
+                  text: "OK",
+                  onPress: () => setShowAlert(false),
+                },
+              ]);
+            } catch (error) {
+              showCustomAlert("Lỗi", "Không thể xóa ảnh đại diện", [
+                {
+                  text: "OK",
+                  onPress: () => setShowAlert(false),
+                },
+              ]);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -263,6 +321,14 @@ export default function AvatarScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={showAlert}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        buttons={alertConfig.buttons}
+      />
     </SafeAreaView>
   );
 }
