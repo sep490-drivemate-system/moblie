@@ -142,7 +142,7 @@ export default function AvatarScreen() {
   };
 
   const handleNext = () => {
-    router.push("/(onboarding)/(personal-identification)/(avatar)/avatar");
+    router.push("/(onboarding)/(personal-identification)/(id-card)/form");
   };
 
   const handleImagePress = () => {

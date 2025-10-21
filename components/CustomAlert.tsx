@@ -39,7 +39,9 @@ export default function CustomAlert({
             styles.buttonContainer,
             buttons.length === 1
               ? styles.singleButtonContainer
-              : styles.multipleButtonContainer,
+              : buttons.length === 2
+              ? styles.twoButtonContainer
+              : styles.threeButtonContainer,
           ]}
         >
           {buttons.map((button, index) => (
@@ -49,8 +51,11 @@ export default function CustomAlert({
                 styles.button,
                 button.style === "destructive" && styles.destructiveButton,
                 button.style === "cancel" && styles.cancelButton,
-                button.style === "default" && styles.confirmButton,
+                (button.style === "default" || !button.style) &&
+                  styles.confirmButton,
                 buttons.length === 1 && styles.singleButton,
+                buttons.length === 2 && styles.twoButtonItem,
+                buttons.length === 3 && styles.threeButtonItem,
               ]}
               onPress={button.onPress}
             >
@@ -59,8 +64,8 @@ export default function CustomAlert({
                   button.style === "destructive" &&
                     styles.destructiveButtonText,
                   button.style === "cancel" && styles.cancelButtonText,
-                  button.style === "default" && styles.confirmButtonText,
-                  !button.style && styles.confirmButtonText,
+                  (button.style === "default" || !button.style) &&
+                    styles.confirmButtonText,
                 ]}
               >
                 {button.text}
@@ -147,7 +152,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
   },
-  multipleButtonContainer: {
+  twoButtonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  threeButtonContainer: {
     flexDirection: "column",
   },
   button: {
@@ -159,6 +169,12 @@ const styles = StyleSheet.create({
   singleButton: {
     flex: 0,
     minWidth: 100,
+  },
+  twoButtonItem: {
+    flex: 1,
+  },
+  threeButtonItem: {
+    width: "100%",
   },
   confirmButton: {
     backgroundColor: "#70E000",

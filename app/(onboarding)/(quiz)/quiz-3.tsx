@@ -144,10 +144,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   requirementsBox: {
-    backgroundColor: "#F5F5F5",
-    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 3,
+    borderRadius: 5,
     padding: 20,
-    width: "100%",
+    marginTop: 20,
   },
   requirementItem: {
     fontSize: 16,

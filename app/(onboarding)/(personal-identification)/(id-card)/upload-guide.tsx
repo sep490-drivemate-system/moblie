@@ -9,7 +9,7 @@ import {
   Image,
   ScrollView,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ArrowLeft, MoreVertical, Check, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -17,6 +17,7 @@ import CustomAlert from "@/components/CustomAlert";
 
 export default function UploadGuideScreen() {
   const router = useRouter();
+  const { type } = useLocalSearchParams<{ type: string }>();
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -97,8 +98,9 @@ export default function UploadGuideScreen() {
 
     if (!result.canceled) {
       // Save image to temp AsyncStorage
-      await AsyncStorage.setItem("temp_user_avatar", result.assets[0].uri);
-      // Navigate back to avatar with selected image
+      const storageKey = type === "front" ? "temp_id_front" : "temp_id_back";
+      await AsyncStorage.setItem(storageKey, result.assets[0].uri);
+      // Navigate back to form with selected image
       router.back();
     }
   };
@@ -126,9 +128,30 @@ export default function UploadGuideScreen() {
 
     if (!result.canceled) {
       // Save image to temp AsyncStorage
-      await AsyncStorage.setItem("temp_user_avatar", result.assets[0].uri);
-      // Navigate back to avatar with selected image
+      const storageKey = type === "front" ? "temp_id_front" : "temp_id_back";
+      await AsyncStorage.setItem(storageKey, result.assets[0].uri);
+      // Navigate back to form with selected image
       router.back();
+    }
+  };
+
+  const getTitle = () => {
+    return type === "front"
+      ? "Hướng dẫn tải lên ảnh mặt trước"
+      : "Hướng dẫn tải lên ảnh mặt sau";
+  };
+
+  const getSampleImages = () => {
+    if (type === "front") {
+      return [
+        require("@/assets/images/image_1-guide2.png"),
+        require("@/assets/images/image_2-guide2.png"),
+      ];
+    } else {
+      return [
+        require("@/assets/images/image_1-guide2.png"),
+        require("@/assets/images/image_1-guide2.png"),
+      ];
     }
   };
 
@@ -156,21 +179,16 @@ export default function UploadGuideScreen() {
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Hướng dẫn tải lên tài liệu</Text>
+          <Text style={styles.title}>{getTitle()}</Text>
 
           {/* Sample Photos */}
           <View style={styles.sampleContainer}>
             <Text style={styles.sampleLabel}>Ảnh mẫu</Text>
             <View style={styles.samplePhotos}>
-              <Image
-                source={require("@/assets/images/image_1-guide1.png")}
-                style={styles.samplePhoto}
-              />
-
-              <Image
-                source={require("@/assets/images/image_2-guide1.png")}
-                style={styles.samplePhoto}
-              />
+              <Image source={getSampleImages()[0]} style={styles.samplePhoto} />
+            </View>
+            <View style={styles.samplePhotos}>
+              <Image source={getSampleImages()[1]} style={styles.samplePhoto} />
             </View>
           </View>
 
@@ -183,13 +201,19 @@ export default function UploadGuideScreen() {
               </View>
               <View style={styles.requirementList}>
                 <Text style={styles.requirementItem}>
-                  • Chụp ảnh với phông nền trơn
+                  • Còn hạn ít nhất 1 tháng
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Chụp ảnh từ phần thân trên, rõ nét, không lóa sáng
+                  • Công dân Việt Nam từ 18 tới 65 tuổi (Nam tối đa 65, Nữ tối
+                  đa 60)
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Chụp chính diện nhìn thẳng, không nhắm mắt
+                  • Mặt trước CCCD là mặt có ảnh và thông tin cá nhân (tên, ngày
+                  tháng năm sinh, địa chỉ...)
+                </Text>
+                <Text style={styles.requirementItem}>
+                  • Mặt trước hộ chiếu là trang 2, 3 có đầy đủ thông tin cá nhân
+                  và rõ dấu
                 </Text>
               </View>
             </View>
@@ -203,15 +227,14 @@ export default function UploadGuideScreen() {
               </View>
               <View style={styles.requirementList}>
                 <Text style={styles.requirementItem}>
-                  • Ảnh không được có thêm người, động vật hoặc các vật khác
-                  trong khung hình
+                  • Giấy tờ chụp đầy đủ các thông tin, không mất góc
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Không đội mũ, không đeo khẩu trang, không đeo kính râm khi
-                  chụp ảnh
+                  • Hình ảnh không được chụp quá tầm mắt nhìn
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Không sử dụng ảnh thẻ hoặc hình selfie
+                  • Không chụp ảnh qua màn hình hoặc sử dụng giấy tờ scan. Ảnh
+                  chụp rõ nét, không lóa sáng, không can thiệp chỉnh sửa
                 </Text>
               </View>
             </View>
@@ -301,32 +324,15 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   samplePhotos: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    paddingBottom: 10,
   },
   samplePhoto: {
-    width: "48%",
-    height: 200,
+    width: "100%",
+    height: 250,
     backgroundColor: "#F0F0F0",
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
-  },
-  samplePerson: {
-    alignItems: "center",
-  },
-  sampleHead: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#D3D3D3",
-    marginBottom: 5,
-  },
-  sampleBody: {
-    width: 40,
-    height: 50,
-    backgroundColor: "#D3D3D3",
-    borderRadius: 4,
   },
   requirementsContainer: {
     flex: 1,

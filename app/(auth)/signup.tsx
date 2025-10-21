@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    color: "#92929D",
+    color: "#000",
     marginBottom: 8,
     fontWeight: "500",
   },

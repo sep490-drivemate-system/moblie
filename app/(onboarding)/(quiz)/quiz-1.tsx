@@ -116,7 +116,6 @@ const styles = StyleSheet.create({
   contentArea: {
     flex: 1,
     alignItems: "flex-start",
-    paddingHorizontal: 20,
   },
   subtitle: {
     fontSize: 16,
