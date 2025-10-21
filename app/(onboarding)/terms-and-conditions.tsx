@@ -183,7 +183,7 @@ export default function TermsAndConditionsScreen() {
   };
 
   const handleNext = () => {
-    router.push("/(onboarding)/terms-and-conditions");
+    router.push("/(onboarding)/add-car");
   };
 
   return (
