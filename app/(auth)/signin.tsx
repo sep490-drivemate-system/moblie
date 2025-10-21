@@ -187,9 +187,7 @@ export default function SignInScreen() {
             {/* Sign Up Link */}
             <View style={styles.signUpContainer}>
               <Text style={styles.signUpText}>Chưa có tài khoản? </Text>
-              <TouchableOpacity
-                onPress={() => router.push("/(onboarding)/register")}
-              >
+              <TouchableOpacity onPress={() => router.push("/(auth)/signup")}>
                 <Text style={styles.signUpLink}>Tạo mới!</Text>
               </TouchableOpacity>
             </View>

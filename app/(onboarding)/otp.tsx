@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   Alert,
   StatusBar,
+  Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -18,6 +19,13 @@ export default function OTPScreen() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timeLeft, setTimeLeft] = useState(120); // 2 minutes
   const [canResend, setCanResend] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    title: "",
+    message: "",
+    onConfirm: () => {},
+    confirmText: "OK",
+  });
   const inputRefs = useRef<TextInput[]>([]);
 
   // Countdown timer
@@ -49,11 +57,28 @@ export default function OTPScreen() {
     }
   };
 
+  const showCustomAlert = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    confirmText: string = "OK"
+  ) => {
+    setModalConfig({
+      title,
+      message,
+      onConfirm,
+      confirmText,
+    });
+    setShowModal(true);
+  };
+
   const handleVerifyOTP = async () => {
     const otpString = otp.join("");
 
     if (otpString.length !== 6) {
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ 6 chữ số");
+      showCustomAlert("Lỗi", "Vui lòng nhập đầy đủ 6 chữ số", () =>
+        setShowModal(false)
+      );
       return;
     }
 
@@ -65,26 +90,27 @@ export default function OTPScreen() {
         // Save OTP verification status
         await AsyncStorage.setItem("otp_verified", "true");
 
-        Alert.alert("Thành công", "Xác minh OTP thành công!", [
-          {
-            text: "OK",
-            onPress: () => router.push("/(onboarding)/role-selection"),
-          },
-        ]);
+        showCustomAlert("Thành công", "Xác minh OTP thành công!", () => {
+          setShowModal(false);
+          router.push("/(onboarding)/role-selection");
+        });
       } catch (error) {
-        Alert.alert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.");
+        showCustomAlert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.", () =>
+          setShowModal(false)
+        );
       }
     } else {
       // Wrong OTP
-      Alert.alert("Lỗi", "Mã OTP không đúng. Vui lòng kiểm tra lại.", [
-        {
-          text: "Thử lại",
-          onPress: () => {
-            setOtp(["", "", "", "", "", ""]);
-            inputRefs.current[0]?.focus();
-          },
+      showCustomAlert(
+        "Lỗi",
+        "Mã OTP không đúng. Vui lòng kiểm tra lại.",
+        () => {
+          setShowModal(false);
+          setOtp(["", "", "", "", "", ""]);
+          inputRefs.current[0]?.focus();
         },
-      ]);
+        "Thử lại"
+      );
     }
   };
 
@@ -94,7 +120,9 @@ export default function OTPScreen() {
       setCanResend(false);
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
-      Alert.alert("Thành công", "Mã OTP mới đã được gửi");
+      showCustomAlert("Thành công", "Mã OTP mới đã được gửi", () =>
+        setShowModal(false)
+      );
     }
   };
 
@@ -124,7 +152,8 @@ export default function OTPScreen() {
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Xác minh tài khoản với mã OTP</Text>
           <Text style={styles.description}>
-            Chúng tôi đã gửi một mã có 6 chữ số đến số điện thoại +84 949******
+            Chúng tôi đã gửi một mã có 6 chữ số đến số điện thoại
+            nga***@gmail.com
           </Text>
         </View>
 
@@ -174,6 +203,29 @@ export default function OTPScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Custom Alert Modal */}
+      <Modal
+        visible={showModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+            <Text style={styles.modalMessage}>{modalConfig.message}</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={modalConfig.onConfirm}
+            >
+              <Text style={styles.modalButtonText}>
+                {modalConfig.confirmText}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -243,13 +295,13 @@ const styles = StyleSheet.create({
   },
   resendButton: {
     fontSize: 16,
-    color: "#026AA7",
+    color: "#70E000",
     fontWeight: "600",
     textDecorationLine: "underline",
   },
   timerText: {
     fontSize: 16,
-    color: "#026AA7",
+    color: "#70E000",
     fontWeight: "600",
   },
   buttonContainer: {
@@ -257,7 +309,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   verifyButton: {
-    backgroundColor: "#026AA7",
+    backgroundColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 20,
     alignItems: "center",
@@ -265,6 +317,47 @@ const styles = StyleSheet.create({
   verifyButtonText: {
     fontSize: 18,
     fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 24,
+    marginHorizontal: 20,
+    minWidth: 280,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#000",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: "#92929D",
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  modalButton: {
+    backgroundColor: "#70E000",
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
     color: "#FFFFFF",
   },
 });

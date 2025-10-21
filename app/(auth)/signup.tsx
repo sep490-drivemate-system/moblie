@@ -10,6 +10,7 @@ import {
   StatusBar,
   Image,
   ScrollView,
+  Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -28,6 +29,13 @@ export default function SignUpScreen() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showRetypePassword, setShowRetypePassword] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    title: "",
+    message: "",
+    onConfirm: () => {},
+    confirmText: "OK",
+  });
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -36,34 +44,57 @@ export default function SignUpScreen() {
     }));
   };
 
+  const showCustomAlert = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    confirmText: string = "OK"
+  ) => {
+    setModalConfig({
+      title,
+      message,
+      onConfirm,
+      confirmText,
+    });
+    setShowModal(true);
+  };
+
   const handleSubmit = async () => {
     // Validation
     if (!formData.firstName.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập tên");
+      showCustomAlert("Lỗi", "Vui lòng nhập tên", () => setShowModal(false));
       return;
     }
     if (!formData.lastName.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập họ");
+      showCustomAlert("Lỗi", "Vui lòng nhập họ", () => setShowModal(false));
       return;
     }
     if (!formData.email.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập email");
+      showCustomAlert("Lỗi", "Vui lòng nhập email", () => setShowModal(false));
       return;
     }
     if (!formData.password.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập mật khẩu");
+      showCustomAlert("Lỗi", "Vui lòng nhập mật khẩu", () =>
+        setShowModal(false)
+      );
       return;
     }
     if (formData.password !== formData.retypePassword) {
-      Alert.alert("Lỗi", "Mật khẩu nhập lại không khớp");
+      showCustomAlert("Lỗi", "Mật khẩu nhập lại không khớp", () =>
+        setShowModal(false)
+      );
       return;
     }
     if (!formData.phone.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập số điện thoại");
+      showCustomAlert("Lỗi", "Vui lòng nhập số điện thoại", () =>
+        setShowModal(false)
+      );
       return;
     }
     if (!acceptTerms) {
-      Alert.alert("Lỗi", "Vui lòng chấp nhận điều khoản sử dụng");
+      showCustomAlert("Lỗi", "Vui lòng chấp nhận điều khoản sử dụng", () =>
+        setShowModal(false)
+      );
       return;
     }
 
@@ -82,18 +113,20 @@ export default function SignUpScreen() {
       // Save user info to AsyncStorage
       await AsyncStorage.setItem("user_info", JSON.stringify(userInfo));
 
-      Alert.alert(
+      showCustomAlert(
         "Thành công",
         "Thông tin đã được lưu thành công! Vui lòng xác minh OTP.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.push("/(onboarding)/otp"),
-          },
-        ]
+        () => {
+          setShowModal(false);
+          router.push("/(onboarding)/otp");
+        }
       );
     } catch (error) {
-      Alert.alert("Lỗi", "Có lỗi xảy ra khi lưu thông tin. Vui lòng thử lại.");
+      showCustomAlert(
+        "Lỗi",
+        "Có lỗi xảy ra khi lưu thông tin. Vui lòng thử lại.",
+        () => setShowModal(false)
+      );
     }
   };
 
@@ -288,6 +321,29 @@ export default function SignUpScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Custom Alert Modal */}
+      <Modal
+        visible={showModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+            <Text style={styles.modalMessage}>{modalConfig.message}</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={modalConfig.onConfirm}
+            >
+              <Text style={styles.modalButtonText}>
+                {modalConfig.confirmText}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -456,6 +512,47 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 18,
     fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 24,
+    marginHorizontal: 20,
+    minWidth: 280,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#000",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: "#92929D",
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  modalButton: {
+    backgroundColor: "#70E000",
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
     color: "#FFFFFF",
   },
 });
