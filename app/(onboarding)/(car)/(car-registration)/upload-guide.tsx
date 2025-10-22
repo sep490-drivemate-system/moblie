@@ -9,7 +9,7 @@ import {
   Image,
   ScrollView,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ArrowLeft, MoreVertical, Check, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -17,6 +17,7 @@ import CustomAlert from "@/components/CustomAlert";
 
 export default function UploadGuideScreen() {
   const router = useRouter();
+  const { type } = useLocalSearchParams<{ type: string }>();
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -97,10 +98,11 @@ export default function UploadGuideScreen() {
 
     if (!result.canceled) {
       // Save image to temp AsyncStorage
-      await AsyncStorage.setItem(
-        "temp_healthcare_certificate",
-        result.assets[0].uri
-      );
+      const storageKey =
+        type === "front"
+          ? "temp_car_registration_front"
+          : "temp_car_registration_back";
+      await AsyncStorage.setItem(storageKey, result.assets[0].uri);
       // Navigate back to form with selected image
       router.back();
     }
@@ -129,17 +131,34 @@ export default function UploadGuideScreen() {
 
     if (!result.canceled) {
       // Save image to temp AsyncStorage
-      await AsyncStorage.setItem(
-        "temp_healthcare_certificate",
-        result.assets[0].uri
-      );
+      const storageKey =
+        type === "front"
+          ? "temp_car_registration_front"
+          : "temp_car_registration_back";
+      await AsyncStorage.setItem(storageKey, result.assets[0].uri);
       // Navigate back to form with selected image
       router.back();
     }
   };
 
+  const getTitle = () => {
+    return type === "front"
+      ? "Hướng dẫn tải lên ảnh mặt trước giấy đăng ký xe"
+      : "Hướng dẫn tải lên ảnh mặt sau giấy đăng ký xe";
+  };
+
   const getSampleImages = () => {
-    return [require("@/assets/images/image_1-guide6.png")];
+    if (type === "front") {
+      return [
+        require("@/assets/images/image_1-guide7.png"),
+        require("@/assets/images/image_2-guide7.png"),
+      ];
+    } else {
+      return [
+        require("@/assets/images/image_1-guide7.png"),
+        require("@/assets/images/image_1-guide7.png"),
+      ];
+    }
   };
 
   return (
@@ -155,24 +174,40 @@ export default function UploadGuideScreen() {
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <ArrowLeft color="#000" size={24} />
             </TouchableOpacity>
+
             <View style={styles.headerButtons}>
               <TouchableOpacity style={styles.helpButton}>
                 <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.notificationButton}>
+                <View style={styles.notificationDot} />
                 <MoreVertical color="#000" size={24} />
               </TouchableOpacity>
             </View>
           </View>
 
+          <View style={styles.progressBar}>
+            <View style={styles.progressFill} />
+          </View>
+
+          <View>
+            <Image
+              source={require("@/assets/images/background_1.png")}
+              style={styles.background_1}
+            />
+          </View>
+
           {/* Title */}
-          <Text style={styles.title}>Hướng dẫn tải lên giấy khám sức khỏe</Text>
+          <Text style={styles.title}>{getTitle()}</Text>
 
           {/* Sample Photos */}
           <View style={styles.sampleContainer}>
             <Text style={styles.sampleLabel}>Ảnh mẫu</Text>
             <View style={styles.samplePhotos}>
               <Image source={getSampleImages()[0]} style={styles.samplePhoto} />
+            </View>
+            <View style={styles.samplePhotos}>
+              <Image source={getSampleImages()[1]} style={styles.samplePhoto} />
             </View>
           </View>
 
@@ -185,17 +220,17 @@ export default function UploadGuideScreen() {
               </View>
               <View style={styles.requirementList}>
                 <Text style={styles.requirementItem}>
-                  • Giấy khám sức khỏe còn hạn 6 tháng kể từ ngày cấp và phải có
-                  kết luận đủ điều kiện lái xe hạng B2 trở lên
+                  • Còn hạn ít nhất 1 tháng
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Giấy khám sức khỏe phải có ảnh kèm giáp lai của Bệnh viện
-                  với đầy đủ kết và chữ ký, họ tên của bác sĩ với từng chuyên
-                  khoa
+                  • Giấy đăng ký xe được cấp bởi cơ quan có thẩm quyền
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Giấy khám sức khỏe khớp thông tin với CCCD: Họ và tên, số
-                  CCCD
+                  • Mặt trước giấy đăng ký xe có đầy đủ thông tin xe (biển số,
+                  hãng xe, mẫu xe, màu sắc, năm sản xuất...)
+                </Text>
+                <Text style={styles.requirementItem}>
+                  • Mặt sau giấy đăng ký xe có thông tin chủ xe và ngày cấp
                 </Text>
               </View>
             </View>
@@ -210,6 +245,9 @@ export default function UploadGuideScreen() {
               <View style={styles.requirementList}>
                 <Text style={styles.requirementItem}>
                   • Giấy tờ chụp đầy đủ các thông tin, không mất góc
+                </Text>
+                <Text style={styles.requirementItem}>
+                  • Hình ảnh không được chụp quá tầm mắt nhìn
                 </Text>
                 <Text style={styles.requirementItem}>
                   • Không chụp ảnh qua màn hình hoặc sử dụng giấy tờ scan. Ảnh
@@ -266,6 +304,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  progressBar: {
+    height: 4,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 2,
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  progressFill: {
+    width: "50%",
+    height: "100%",
+    backgroundColor: "#70E000",
+    borderRadius: 2,
+  },
   headerButtons: {
     flexDirection: "row",
     alignItems: "center",
@@ -285,6 +336,20 @@ const styles = StyleSheet.create({
   notificationButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
+    position: "relative",
+  },
+  notificationDot: {
+    position: "absolute",
+    top: 8,
+    right: 12,
+    width: 8,
+    height: 8,
+    backgroundColor: "#FF0000",
+    borderRadius: 4,
+  },
+  background_1: {
+    width: "100%",
+    height: 250,
   },
   title: {
     fontSize: 20,
@@ -307,7 +372,7 @@ const styles = StyleSheet.create({
   },
   samplePhoto: {
     width: "100%",
-    height: 500,
+    height: 250,
     backgroundColor: "#F0F0F0",
     borderRadius: 8,
     justifyContent: "center",
