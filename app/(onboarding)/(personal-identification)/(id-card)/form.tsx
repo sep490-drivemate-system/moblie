@@ -29,7 +29,6 @@ export default function FormScreen() {
     null
   );
   const [tempBackImageUri, setTempBackImageUri] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -78,7 +77,15 @@ export default function FormScreen() {
         setBackImageUri(null);
         setTempFrontImageUri(null);
         setTempBackImageUri(null);
-        setIsSaved(false);
+        setFormData({
+          idNumber: "",
+          issueDate: "",
+          expiryDate: "",
+          issuePlace: "",
+          address: "",
+          gender: "",
+          birthDate: "",
+        });
         await AsyncStorage.removeItem("temp_id_front");
         await AsyncStorage.removeItem("temp_id_back");
         await AsyncStorage.removeItem("id_card_data");
@@ -127,11 +134,6 @@ export default function FormScreen() {
   };
 
   const handleImageUpload = (type: "front" | "back") => {
-    // Reset saved state when user changes image
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
     router.push(
       `/(onboarding)/(personal-identification)/(id-card)/upload-guide?type=${type}`
     );
@@ -172,41 +174,40 @@ export default function FormScreen() {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    // Reset saved state when user changes data
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
     // Apply date formatting for date fields
+    let newFormData;
     if (
       field === "issueDate" ||
       field === "expiryDate" ||
       field === "birthDate"
     ) {
       const formattedValue = formatDateInput(value);
-      setFormData((prev) => ({
-        ...prev,
+      newFormData = {
+        ...formData,
         [field]: formattedValue,
-      }));
+      };
     } else {
-      setFormData((prev) => ({
-        ...prev,
+      newFormData = {
+        ...formData,
         [field]: value,
-      }));
+      };
     }
+    setFormData(newFormData);
+
+    // Save form data temporarily
+    AsyncStorage.setItem("id_card_data", JSON.stringify(newFormData));
   };
 
   const handleGenderSelect = (gender: string) => {
-    // Reset saved state when user changes gender
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
-    setFormData((prev) => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       gender: gender,
-    }));
+    };
+    setFormData(newFormData);
     setShowGenderDropdown(false);
+
+    // Save form data temporarily
+    AsyncStorage.setItem("id_card_data", JSON.stringify(newFormData));
   };
 
   // Check if all fields are filled
@@ -224,7 +225,11 @@ export default function FormScreen() {
     );
   };
 
-  const handleSave = async () => {
+  const handleGoBack = () => {
+    router.back();
+  };
+
+  const handleNext = async () => {
     // Validation
     if (!tempFrontImageUri && !frontImageUri) {
       showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt trước thẻ căn cước", [
@@ -320,24 +325,21 @@ export default function FormScreen() {
       const currentFrontImage = tempFrontImageUri || frontImageUri;
       const currentBackImage = tempBackImageUri || backImageUri;
 
+      // Save data to AsyncStorage
       await AsyncStorage.setItem("id_front", currentFrontImage!);
       await AsyncStorage.setItem("id_back", currentBackImage!);
       await AsyncStorage.setItem("id_card_data", JSON.stringify(formData));
 
+      // Clean up temp images
       setFrontImageUri(currentFrontImage);
       setBackImageUri(currentBackImage);
       setTempFrontImageUri(null);
       setTempBackImageUri(null);
       await AsyncStorage.removeItem("temp_id_front");
       await AsyncStorage.removeItem("temp_id_back");
-      setIsSaved(true);
 
-      showCustomAlert("Thành công", "Thông tin thẻ căn cước đã được lưu", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+      // Navigate to next page
+      router.push("/(onboarding)/(personal-identification)/(license)/form");
     } catch (error) {
       showCustomAlert("Lỗi", "Không thể lưu thông tin thẻ căn cước", [
         {
@@ -346,10 +348,6 @@ export default function FormScreen() {
         },
       ]);
     }
-  };
-
-  const handleNext = () => {
-    router.push("/(onboarding)/(personal-identification)/(license)/form");
   };
 
   // Auto exit delete mode after 3 seconds
@@ -382,11 +380,6 @@ export default function FormScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              // Reset saved state when user deletes image
-              if (isSaved) {
-                setIsSaved(false);
-              }
-
               if (type === "front") {
                 setTempFrontImageUri(null);
                 setFrontImageUri(null);
@@ -431,7 +424,10 @@ export default function FormScreen() {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <TouchableOpacity
+              style={styles.headerBackButton}
+              onPress={handleBack}
+            >
               <ArrowLeft color="#000" size={24} />
             </TouchableOpacity>
 
@@ -692,37 +688,11 @@ export default function FormScreen() {
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                !isFormComplete() && styles.disabledButton,
-                isSaved && styles.savedButton,
-              ]}
-              onPress={handleSave}
-              disabled={!isFormComplete() || isSaved}
-            >
-              <Text
-                style={[
-                  styles.saveButtonText,
-                  isSaved && styles.savedButtonText,
-                ]}
-              >
-                Lưu
-              </Text>
+            <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+              <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.nextButton, !isSaved && styles.disabledNextButton]}
-              onPress={handleNext}
-              disabled={!isSaved}
-            >
-              <Text
-                style={[
-                  styles.nextButtonText,
-                  !isSaved && styles.disabledNextButtonText,
-                ]}
-              >
-                Kế tiếp
-              </Text>
+            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+              <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -761,7 +731,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     paddingHorizontal: 20,
   },
-  backButton: {
+  headerBackButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -941,11 +911,11 @@ const styles = StyleSheet.create({
     gap: 15,
     paddingHorizontal: 20,
   },
-  saveButton: {
+  backButton: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -957,27 +927,10 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: "center",
   },
-  disabledButton: {
-    backgroundColor: "#F0F0F0",
-    borderColor: "#E0E0E0",
-  },
-  savedButton: {
-    backgroundColor: "#E0E0E0",
-    borderColor: "#E0E0E0",
-  },
-  savedButtonText: {
-    color: "#92929D",
-  },
-  disabledNextButton: {
-    backgroundColor: "#B8E6B8",
-  },
-  disabledNextButtonText: {
-    color: "#FFFFFF",
-  },
-  saveButtonText: {
+  backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#000",
+    color: "#70E000",
   },
   nextButtonText: {
     fontSize: 16,

@@ -64,7 +64,7 @@ export default function Quiz1Screen() {
         {/* Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.noButton} onPress={handleNo}>
-            <Text style={styles.noButtonText}>Không</Text>
+            <Text style={styles.noButtonText}>Quay lại</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.yesButton} onPress={handleYes}>
             <Text style={styles.yesButtonText}>Có, tiếp tục</Text>

@@ -16,7 +16,6 @@ import CustomAlert from "@/components/CustomAlert";
 
 export default function CommitmentScreen() {
   const router = useRouter();
-  const [isSaved, setIsSaved] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -64,7 +63,6 @@ export default function CommitmentScreen() {
           noInvestigation: false,
           healthCondition: false,
         });
-        setIsSaved(false);
         await AsyncStorage.removeItem("commitment_data");
         return;
       }
@@ -73,7 +71,6 @@ export default function CommitmentScreen() {
 
       if (savedCommitments) {
         setCommitments(JSON.parse(savedCommitments));
-        setIsSaved(true);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -102,15 +99,14 @@ export default function CommitmentScreen() {
   };
 
   const handleCommitmentToggle = (commitment: keyof typeof commitments) => {
-    // Reset saved state when user changes data
-    if (isSaved) {
-      setIsSaved(false);
-    }
+    const newCommitments = {
+      ...commitments,
+      [commitment]: !commitments[commitment],
+    };
+    setCommitments(newCommitments);
 
-    setCommitments((prev) => ({
-      ...prev,
-      [commitment]: !prev[commitment],
-    }));
+    // Save commitments temporarily
+    AsyncStorage.setItem("commitment_data", JSON.stringify(newCommitments));
   };
 
   // Check if all commitments are checked
@@ -118,7 +114,11 @@ export default function CommitmentScreen() {
     return Object.values(commitments).every((value) => value === true);
   };
 
-  const handleSave = async () => {
+  const handleGoBack = () => {
+    router.back();
+  };
+
+  const handleNext = async () => {
     // Validation
     if (!isFormComplete()) {
       showCustomAlert("Lỗi", "Vui lòng đồng ý với tất cả các cam kết", [
@@ -131,18 +131,14 @@ export default function CommitmentScreen() {
     }
 
     try {
+      // Save data to AsyncStorage
       await AsyncStorage.setItem(
         "commitment_data",
         JSON.stringify(commitments)
       );
-      setIsSaved(true);
 
-      showCustomAlert("Thành công", "Cam kết đã được lưu", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+      // Navigate to next page
+      router.push("/(onboarding)/terms-and-conditions");
     } catch (error) {
       showCustomAlert("Lỗi", "Không thể lưu cam kết", [
         {
@@ -151,10 +147,6 @@ export default function CommitmentScreen() {
         },
       ]);
     }
-  };
-
-  const handleNext = () => {
-    router.push("/(onboarding)/terms-and-conditions");
   };
 
   return (
@@ -167,7 +159,10 @@ export default function CommitmentScreen() {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <TouchableOpacity
+              style={styles.headerBackButton}
+              onPress={handleBack}
+            >
               <ArrowLeft color="#000" size={24} />
             </TouchableOpacity>
 
@@ -314,37 +309,11 @@ export default function CommitmentScreen() {
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                !isFormComplete() && styles.disabledButton,
-                isSaved && styles.savedButton,
-              ]}
-              onPress={handleSave}
-              disabled={!isFormComplete() || isSaved}
-            >
-              <Text
-                style={[
-                  styles.saveButtonText,
-                  isSaved && styles.savedButtonText,
-                ]}
-              >
-                Lưu
-              </Text>
+            <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+              <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.nextButton, !isSaved && styles.disabledNextButton]}
-              onPress={handleNext}
-              disabled={!isSaved}
-            >
-              <Text
-                style={[
-                  styles.nextButtonText,
-                  !isSaved && styles.disabledNextButtonText,
-                ]}
-              >
-                Kế tiếp
-              </Text>
+            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+              <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -383,7 +352,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     paddingHorizontal: 20,
   },
-  backButton: {
+  headerBackButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -487,11 +456,11 @@ const styles = StyleSheet.create({
     gap: 15,
     paddingHorizontal: 20,
   },
-  saveButton: {
+  backButton: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -503,27 +472,10 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: "center",
   },
-  disabledButton: {
-    backgroundColor: "#F0F0F0",
-    borderColor: "#E0E0E0",
-  },
-  savedButton: {
-    backgroundColor: "#E0E0E0",
-    borderColor: "#E0E0E0",
-  },
-  savedButtonText: {
-    color: "#92929D",
-  },
-  disabledNextButton: {
-    backgroundColor: "#B8E6B8",
-  },
-  disabledNextButtonText: {
-    color: "#FFFFFF",
-  },
-  saveButtonText: {
+  backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#000",
+    color: "#70E000",
   },
   nextButtonText: {
     fontSize: 16,

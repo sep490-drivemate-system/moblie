@@ -74,15 +74,21 @@ export default function FormScreen() {
           issueDate: "",
           expiryDate: "",
         });
-        await AsyncStorage.removeItem("temp_car_insurance_front");
-        await AsyncStorage.removeItem("temp_car_insurance_back");
-        await AsyncStorage.removeItem("car_insurance_data");
+        await AsyncStorage.removeItem("temp_car_inspection_certificate_front");
+        await AsyncStorage.removeItem("temp_car_inspection_certificate_back");
+        await AsyncStorage.removeItem("car_inspection_certificate_data");
         return;
       }
 
-      const savedFrontImage = await AsyncStorage.getItem("car_insurance_front");
-      const savedBackImage = await AsyncStorage.getItem("car_insurance_back");
-      const savedFormData = await AsyncStorage.getItem("car_insurance_data");
+      const savedFrontImage = await AsyncStorage.getItem(
+        "car_inspection_certificate_front"
+      );
+      const savedBackImage = await AsyncStorage.getItem(
+        "car_inspection_certificate_back"
+      );
+      const savedFormData = await AsyncStorage.getItem(
+        "car_inspection_certificate_data"
+      );
 
       if (savedFrontImage) {
         setFrontImageUri(savedFrontImage);
@@ -96,10 +102,10 @@ export default function FormScreen() {
 
       // Load temp images if exist
       const tempFrontImage = await AsyncStorage.getItem(
-        "temp_car_insurance_front"
+        "temp_car_inspection_certificate_front"
       );
       const tempBackImage = await AsyncStorage.getItem(
-        "temp_car_insurance_back"
+        "temp_car_inspection_certificate_back"
       );
       if (tempFrontImage) {
         setTempFrontImageUri(tempFrontImage);
@@ -127,7 +133,7 @@ export default function FormScreen() {
 
   const handleImageUpload = (type: "front" | "back") => {
     router.push(
-      `/(onboarding)/(car)/(car-insurance)/upload-guide?type=${type}`
+      `/(onboarding)/(car)/(car-inspection-certificate)/upload-guide?type=${type}`
     );
   };
 
@@ -175,7 +181,10 @@ export default function FormScreen() {
     setFormData(newFormData);
 
     // Save form data temporarily
-    AsyncStorage.setItem("car_insurance_data", JSON.stringify(newFormData));
+    AsyncStorage.setItem(
+      "car_inspection_certificate_data",
+      JSON.stringify(newFormData)
+    );
   };
 
   // Check if all fields are filled
@@ -195,17 +204,21 @@ export default function FormScreen() {
   const handleNext = async () => {
     // Validation
     if (!tempFrontImageUri && !frontImageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt trước bảo hiểm xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng tải lên ảnh mặt trước giấy đăng kiểm xe",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
       return;
     }
 
     if (!tempBackImageUri && !backImageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt sau bảo hiểm xe", [
+      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt sau giấy đăng kiểm xe", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -239,10 +252,16 @@ export default function FormScreen() {
       const currentBackImage = tempBackImageUri || backImageUri;
 
       // Save data to AsyncStorage
-      await AsyncStorage.setItem("car_insurance_front", currentFrontImage!);
-      await AsyncStorage.setItem("car_insurance_back", currentBackImage!);
       await AsyncStorage.setItem(
-        "car_insurance_data",
+        "car_inspection_certificate_front",
+        currentFrontImage!
+      );
+      await AsyncStorage.setItem(
+        "car_inspection_certificate_back",
+        currentBackImage!
+      );
+      await AsyncStorage.setItem(
+        "car_inspection_certificate_data",
         JSON.stringify(formData)
       );
 
@@ -251,13 +270,13 @@ export default function FormScreen() {
       setBackImageUri(currentBackImage);
       setTempFrontImageUri(null);
       setTempBackImageUri(null);
-      await AsyncStorage.removeItem("temp_car_insurance_front");
-      await AsyncStorage.removeItem("temp_car_insurance_back");
+      await AsyncStorage.removeItem("temp_car_inspection_certificate_front");
+      await AsyncStorage.removeItem("temp_car_inspection_certificate_back");
 
       // Navigate to next page
-      router.push("/(onboarding)/(car)/(car-inspection-certificate)/form");
+      router.push("/(main)/(tabs)/home");
     } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu thông tin bảo hiểm xe", [
+      showCustomAlert("Lỗi", "Không thể lưu thông tin giấy đăng kiểm xe", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -278,10 +297,10 @@ export default function FormScreen() {
 
   const handleDeleteImage = (type: "front" | "back") => {
     showCustomAlert(
-      `Xóa ảnh mặt ${type === "front" ? "trước" : "sau"} bảo hiểm xe`,
+      `Xóa ảnh mặt ${type === "front" ? "trước" : "sau"} giấy đăng kiểm xe`,
       `Bạn có chắc chắn muốn xóa ảnh mặt ${
         type === "front" ? "trước" : "sau"
-      } bảo hiểm xe?`,
+      } giấy đăng kiểm xe?`,
       [
         {
           text: "Hủy",
@@ -299,13 +318,21 @@ export default function FormScreen() {
               if (type === "front") {
                 setTempFrontImageUri(null);
                 setFrontImageUri(null);
-                await AsyncStorage.removeItem("temp_car_insurance_front");
-                await AsyncStorage.removeItem("car_insurance_front");
+                await AsyncStorage.removeItem(
+                  "temp_car_inspection_certificate_front"
+                );
+                await AsyncStorage.removeItem(
+                  "car_inspection_certificate_front"
+                );
               } else {
                 setTempBackImageUri(null);
                 setBackImageUri(null);
-                await AsyncStorage.removeItem("temp_car_insurance_back");
-                await AsyncStorage.removeItem("car_insurance_back");
+                await AsyncStorage.removeItem(
+                  "temp_car_inspection_certificate_back"
+                );
+                await AsyncStorage.removeItem(
+                  "car_inspection_certificate_back"
+                );
               }
               setShowDeleteMode(false);
               setShowAlert(false);
@@ -371,7 +398,7 @@ export default function FormScreen() {
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Bảo hiểm xe</Text>
+            <Text style={styles.title}>Giấy đăng kiểm</Text>
           </View>
 
           {/* Image Upload Sections */}

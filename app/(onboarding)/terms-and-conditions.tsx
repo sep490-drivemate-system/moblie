@@ -22,7 +22,6 @@ import CustomAlert from "@/components/CustomAlert";
 
 export default function TermsAndConditionsScreen() {
   const router = useRouter();
-  const [isSaved, setIsSaved] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -68,7 +67,6 @@ export default function TermsAndConditionsScreen() {
           instructorTerms: false,
           codeOfConduct: false,
         });
-        setIsSaved(false);
         await AsyncStorage.removeItem("terms_and_conditions_data");
         return;
       }
@@ -79,7 +77,6 @@ export default function TermsAndConditionsScreen() {
 
       if (savedTerms) {
         setTermsAccepted(JSON.parse(savedTerms));
-        setIsSaved(true);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -108,15 +105,17 @@ export default function TermsAndConditionsScreen() {
   };
 
   const handleTermsToggle = (term: keyof typeof termsAccepted) => {
-    // Reset saved state when user changes data
-    if (isSaved) {
-      setIsSaved(false);
-    }
+    const newTermsAccepted = {
+      ...termsAccepted,
+      [term]: !termsAccepted[term],
+    };
+    setTermsAccepted(newTermsAccepted);
 
-    setTermsAccepted((prev) => ({
-      ...prev,
-      [term]: !prev[term],
-    }));
+    // Save terms temporarily
+    AsyncStorage.setItem(
+      "terms_and_conditions_data",
+      JSON.stringify(newTermsAccepted)
+    );
   };
 
   const handleLinkPress = async (url: string) => {
@@ -147,7 +146,11 @@ export default function TermsAndConditionsScreen() {
     return Object.values(termsAccepted).every((value) => value === true);
   };
 
-  const handleSave = async () => {
+  const handleGoBack = () => {
+    router.back();
+  };
+
+  const handleNext = async () => {
     // Validation
     if (!isFormComplete()) {
       showCustomAlert("Lỗi", "Vui lòng đồng ý với tất cả các điều khoản", [
@@ -160,18 +163,14 @@ export default function TermsAndConditionsScreen() {
     }
 
     try {
+      // Save data to AsyncStorage
       await AsyncStorage.setItem(
         "terms_and_conditions_data",
         JSON.stringify(termsAccepted)
       );
-      setIsSaved(true);
 
-      showCustomAlert("Thành công", "Điều khoản đã được lưu", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+      // Navigate to next page
+      router.push("/(onboarding)/add-car");
     } catch (error) {
       showCustomAlert("Lỗi", "Không thể lưu điều khoản", [
         {
@@ -180,10 +179,6 @@ export default function TermsAndConditionsScreen() {
         },
       ]);
     }
-  };
-
-  const handleNext = () => {
-    router.push("/(onboarding)/add-car");
   };
 
   return (
@@ -196,7 +191,10 @@ export default function TermsAndConditionsScreen() {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <TouchableOpacity
+              style={styles.headerBackButton}
+              onPress={handleBack}
+            >
               <ArrowLeft color="#000" size={24} />
             </TouchableOpacity>
 
@@ -354,37 +352,11 @@ export default function TermsAndConditionsScreen() {
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                !isFormComplete() && styles.disabledButton,
-                isSaved && styles.savedButton,
-              ]}
-              onPress={handleSave}
-              disabled={!isFormComplete() || isSaved}
-            >
-              <Text
-                style={[
-                  styles.saveButtonText,
-                  isSaved && styles.savedButtonText,
-                ]}
-              >
-                Lưu
-              </Text>
+            <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+              <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.nextButton, !isSaved && styles.disabledNextButton]}
-              onPress={handleNext}
-              disabled={!isSaved}
-            >
-              <Text
-                style={[
-                  styles.nextButtonText,
-                  !isSaved && styles.disabledNextButtonText,
-                ]}
-              >
-                Kế tiếp
-              </Text>
+            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+              <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -423,7 +395,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     paddingHorizontal: 20,
   },
-  backButton: {
+  headerBackButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -544,11 +516,11 @@ const styles = StyleSheet.create({
     gap: 15,
     paddingHorizontal: 20,
   },
-  saveButton: {
+  backButton: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -560,27 +532,10 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: "center",
   },
-  disabledButton: {
-    backgroundColor: "#F0F0F0",
-    borderColor: "#E0E0E0",
-  },
-  savedButton: {
-    backgroundColor: "#E0E0E0",
-    borderColor: "#E0E0E0",
-  },
-  savedButtonText: {
-    color: "#92929D",
-  },
-  disabledNextButton: {
-    backgroundColor: "#B8E6B8",
-  },
-  disabledNextButtonText: {
-    color: "#FFFFFF",
-  },
-  saveButtonText: {
+  backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#000",
+    color: "#70E000",
   },
   nextButtonText: {
     fontSize: 16,
