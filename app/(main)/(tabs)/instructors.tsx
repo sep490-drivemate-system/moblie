@@ -22,7 +22,7 @@ import {
   sortInstructorsByPrice,
   sortInstructorsByExperience,
 } from "../../../data/instructors_data";
-import { IInstructor } from "@/models/instructor/instructor";
+import { Instructor } from "@/models/instructor/instructor";
 
 type FilterType = "all" | "available" | "busy";
 type DistanceFilter = "all" | "1-3" | "3-5" | "5-10" | "10+";
@@ -51,9 +51,9 @@ function InstructorsScreen() {
   const [sortBy, setSortBy] = useState<SortType>("rating");
   const [sortAscending, setSortAscending] = useState(false);
   const [instructorsWithDistance, setInstructorsWithDistance] =
-    useState<IInstructor[]>(instructorsData);
+    useState<Instructor[]>(instructorsData);
   const [filteredInstructors, setFilteredInstructors] =
-    useState<IInstructor[]>(instructorsData);
+    useState<Instructor[]>(instructorsData);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -103,8 +103,8 @@ function InstructorsScreen() {
     // Apply price range filter
     filtered = filtered.filter(
       (instructor) =>
-        instructor.pricePerHour >= filters.priceRange[0] &&
-        instructor.pricePerHour <= filters.priceRange[1]
+        instructor.price >= filters.priceRange[0] &&
+        instructor.price <= filters.priceRange[1]
     );
 
     // Apply minimum rating filter
@@ -155,11 +155,11 @@ function InstructorsScreen() {
     setShowFilterModal(false);
   };
 
-  const handleInstructorPress = (instructor: IInstructor) => {
+  const handleInstructorPress = (instructor: Instructor) => {
     Alert.alert(
       `${instructor.name}`,
       `⭐ Rating: ${instructor.rating}/5 (${instructor.totalBookings} bookings)
-💰 Pricing: ${instructor.pricing}
+💰 Pricing: ${instructor.price}
 📚 Experience: ${instructor.experience}
 📱 Phone: ${instructor.phone}
 📧 Email: ${instructor.email}
@@ -179,7 +179,7 @@ ${instructor.specialties.join(", ")}
     );
   };
 
-  const renderInstructorCard = ({ item }: { item: IInstructor }) => (
+  const renderInstructorCard = ({ item }: { item: Instructor }) => (
     <TouchableOpacity
       style={styles.instructorCard}
       onPress={() => handleInstructorPress(item)}
@@ -203,7 +203,7 @@ ${instructor.specialties.join(", ")}
         </View>
 
         <View style={styles.priceRow}>
-          <Text style={styles.instructorPrice}>{item.pricing}</Text>
+          <Text style={styles.instructorPrice}>{item.price}</Text>
           <TouchableOpacity
             style={styles.detailButton}
             onPress={() =>

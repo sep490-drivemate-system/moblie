@@ -1,5 +1,6 @@
 import FilterModal from "@/components/FilterModal";
 import CarItem from "@/components/ui/car-item";
+import SearchBar from "@/components/ui/searchbar";
 import { FilterType } from "@/constants/FilterOptions";
 import { RootState } from "@/lib/redux/store";
 import { ListCarViewModel } from "@/viewmodels/listCar/listCarViewModel";
@@ -54,6 +55,7 @@ export default function CarsScreen() {
   const [selectedFilterType, setSelectedFilterType] =
     useState<FilterType | null>(null);
   const [selectedFilterTitle, setSelectedFilterTitle] = useState("");
+  const [query, setQuery] = useState("");
 
   const handleFilterPress = (filter: (typeof filters)[0]) => {
     if (filter.type === null) {
@@ -106,6 +108,13 @@ export default function CarsScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.searchbarContainer}>
+        <SearchBar
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Tìm kiếm"
+        />
+      </View>
       <View style={styles.filterContainer}>
         <FlatList
           data={filters}
@@ -147,6 +156,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FAFAFA",
     paddingTop: StatusBar.currentHeight,
+  },
+  searchbarContainer: {
     paddingHorizontal: 10,
   },
   filterContainer: {
@@ -181,5 +192,6 @@ const styles = StyleSheet.create({
   },
   carList: {
     gap: 20,
+    paddingHorizontal: 10,
   },
 });
