@@ -423,24 +423,7 @@ export default function FormScreen() {
       >
         <View style={styles.content}>
           {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.headerBackButton}
-              onPress={handleBack}
-            >
-              <ArrowLeft color="#000" size={24} />
-            </TouchableOpacity>
-
-            <View style={styles.headerButtons}>
-              <TouchableOpacity style={styles.helpButton}>
-                <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.notificationButton}>
-                <View style={styles.notificationDot} />
-                <MoreVertical color="#000" size={24} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <View style={styles.header}></View>
 
           <View style={styles.progressBar}>
             <View style={styles.progressFill} />
@@ -746,7 +729,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "50%",
+    width: "14%",
     height: "100%",
     backgroundColor: "#70E000",
     borderRadius: 2,

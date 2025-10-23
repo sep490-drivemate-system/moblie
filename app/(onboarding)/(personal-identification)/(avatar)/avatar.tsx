@@ -23,7 +23,6 @@ export default function AvatarScreen() {
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [tempAvatarUri, setTempAvatarUri] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
-  const [userName, setUserName] = useState("Ngân");
   const [showDeleteMode, setShowDeleteMode] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
@@ -60,21 +59,21 @@ export default function AvatarScreen() {
         setTempAvatarUri(null);
         setIsSaved(false);
         await AsyncStorage.removeItem("temp_user_avatar");
-        await AsyncStorage.removeItem("user_avatar");
         return;
       }
 
-      const savedAvatar = await AsyncStorage.getItem("user_avatar");
-      if (savedAvatar) {
-        setAvatarUri(savedAvatar);
-        setIsSaved(true);
-      }
-
-      // Load temp avatar if exists
+      // Load temp avatar from AsyncStorage (from upload-guide)
       const tempAvatar = await AsyncStorage.getItem("temp_user_avatar");
       if (tempAvatar) {
         setTempAvatarUri(tempAvatar);
+        setIsSaved(false);
+      } else {
+        setTempAvatarUri(null);
+        setIsSaved(false);
       }
+
+      // Clear saved avatar since we're not persisting to AsyncStorage
+      setAvatarUri(null);
     } catch (error) {
       console.error("Error loading user data:", error);
     }
@@ -120,11 +119,12 @@ export default function AvatarScreen() {
     }
 
     try {
-      await AsyncStorage.setItem("user_avatar", currentAvatar);
+      // Chỉ lưu ảnh vào state, không lưu vào AsyncStorage
       setAvatarUri(currentAvatar);
       setTempAvatarUri(null);
-      await AsyncStorage.removeItem("temp_user_avatar");
       setIsSaved(true);
+      // Xóa temp avatar từ AsyncStorage sau khi đã lưu vào state
+      await AsyncStorage.removeItem("temp_user_avatar");
       showCustomAlert("Thành công", "Ảnh đại diện đã được lưu", [
         {
           text: "OK",
@@ -142,6 +142,21 @@ export default function AvatarScreen() {
   };
 
   const handleNext = () => {
+    const currentAvatar = tempAvatarUri || avatarUri;
+    if (!currentAvatar) {
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng tải lên ảnh đại diện trước khi tiếp tục",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
+      return;
+    }
+
     router.push("/(onboarding)/(personal-identification)/(id-card)/form");
   };
 
@@ -186,9 +201,8 @@ export default function AvatarScreen() {
               setShowDeleteMode(false);
               setShowAlert(false);
 
-              // Remove from AsyncStorage
+              // Xóa temp avatar từ AsyncStorage
               await AsyncStorage.removeItem("temp_user_avatar");
-              await AsyncStorage.removeItem("user_avatar");
 
               showCustomAlert("Thành công", "Ảnh đại diện đã được xóa", [
                 {
@@ -214,21 +228,7 @@ export default function AvatarScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <ArrowLeft color="#000" size={24} />
-          </TouchableOpacity>
-
-          <View style={styles.headerButtons}>
-            <TouchableOpacity style={styles.helpButton}>
-              <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.notificationButton}>
-              <View style={styles.notificationDot} />
-              <MoreVertical color="#000" size={24} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <View style={styles.header}></View>
 
         <View style={styles.progressBar}>
           <View style={styles.progressFill} />
@@ -243,7 +243,7 @@ export default function AvatarScreen() {
 
         {/* Welcome Message */}
         <View style={styles.welcomeContainer}>
-          <Text style={styles.welcomeText}>Xin chào {userName}!</Text>
+          <Text style={styles.welcomeText}>Xin chào bạn!</Text>
           <Text style={styles.subtitleText}>
             Bạn đang đăng ký dịch vụ{" "}
             <Text style={styles.drivemateText}>DriveMate</Text>
@@ -290,34 +290,11 @@ export default function AvatarScreen() {
 
         {/* Buttons */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[
-              styles.saveButton,
-              !tempAvatarUri && styles.disabledButton,
-              isSaved && styles.savedButton,
-            ]}
-            onPress={handleSave}
-            disabled={!tempAvatarUri || isSaved}
-          >
-            <Text
-              style={[styles.saveButtonText, isSaved && styles.savedButtonText]}
-            >
-              Lưu
-            </Text>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Text style={styles.backButtonText}>Quay lại</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.nextButton, !isSaved && styles.disabledNextButton]}
-            onPress={handleNext}
-            disabled={!isSaved}
-          >
-            <Text
-              style={[
-                styles.nextButtonText,
-                !isSaved && styles.disabledNextButtonText,
-              ]}
-            >
-              Kế tiếp
-            </Text>
+          <TouchableOpacity style={[styles.nextButton]} onPress={handleNext}>
+            <Text style={[styles.nextButtonText]}>Kế tiếp</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -349,13 +326,6 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     paddingHorizontal: 20,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   progressBar: {
     height: 4,
     backgroundColor: "#E0E0E0",
@@ -364,7 +334,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "25%",
+    width: "7%",
     height: "100%",
     backgroundColor: "#70E000",
     borderRadius: 2,
@@ -503,11 +473,16 @@ const styles = StyleSheet.create({
     gap: 15,
     paddingHorizontal: 20,
   },
-  saveButton: {
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#70E000",
+  },
+  backButton: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -518,28 +493,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
-  },
-  disabledButton: {
-    backgroundColor: "#F0F0F0",
-    borderColor: "#E0E0E0",
-  },
-  savedButton: {
-    backgroundColor: "#E0E0E0",
-    borderColor: "#E0E0E0",
-  },
-  savedButtonText: {
-    color: "#92929D",
-  },
-  disabledNextButton: {
-    backgroundColor: "#609EC2",
-  },
-  disabledNextButtonText: {
-    color: "#FFFFFF",
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
   },
   nextButtonText: {
     fontSize: 16,

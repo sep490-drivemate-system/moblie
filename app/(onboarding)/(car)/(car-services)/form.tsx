@@ -12,25 +12,11 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  ArrowLeft,
-  MoreVertical,
-  Edit2Icon,
-  Trash2,
-} from "lucide-react-native";
+import { ArrowLeft, MoreVertical } from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
 
 export default function FormScreen() {
   const router = useRouter();
-  const [instructorPrice, setInstructorPrice] = useState<string | null>(null);
-  const [carPrice, setCarPrice] = useState<string | null>(null);
-  const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
-  const [backImageUri, setBackImageUri] = useState<string | null>(null);
-  const [tempFrontImageUri, setTempFrontImageUri] = useState<string | null>(
-    null
-  );
-  const [tempBackImageUri, setTempBackImageUri] = useState<string | null>(null);
-  const [showDeleteMode, setShowDeleteMode] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -44,9 +30,12 @@ export default function FormScreen() {
 
   // Form data
   const [formData, setFormData] = useState({
-    issueDate: "",
-    expiryDate: "",
+    instructorPrice: "",
+    carPrice: "",
   });
+
+  // Check if user added car or skipped
+  const [hasAddedCar, setHasAddedCar] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -60,54 +49,14 @@ export default function FormScreen() {
 
   const loadUserData = async () => {
     try {
-      // Check if onboarding was reset
-      const onboardingCompleted = await AsyncStorage.getItem(
-        "onboarding_completed"
-      );
-      const quizCompleted = await AsyncStorage.getItem("quiz_completed");
+      // Check if user added car or skipped
+      const carAdded = await AsyncStorage.getItem("car_added");
+      setHasAddedCar(carAdded === "true");
 
-      // If onboarding was reset, clear all data
-      if (!onboardingCompleted || !quizCompleted) {
-        setFrontImageUri(null);
-        setBackImageUri(null);
-        setTempFrontImageUri(null);
-        setTempBackImageUri(null);
-        setFormData({
-          issueDate: "",
-          expiryDate: "",
-        });
-        await AsyncStorage.removeItem("temp_car_insurance_front");
-        await AsyncStorage.removeItem("temp_car_insurance_back");
-        await AsyncStorage.removeItem("car_insurance_data");
-        return;
-      }
-
-      const savedFrontImage = await AsyncStorage.getItem("car_insurance_front");
-      const savedBackImage = await AsyncStorage.getItem("car_insurance_back");
-      const savedFormData = await AsyncStorage.getItem("car_insurance_data");
-
-      if (savedFrontImage) {
-        setFrontImageUri(savedFrontImage);
-      }
-      if (savedBackImage) {
-        setBackImageUri(savedBackImage);
-      }
+      // Load saved form data
+      const savedFormData = await AsyncStorage.getItem("car_services_data");
       if (savedFormData) {
         setFormData(JSON.parse(savedFormData));
-      }
-
-      // Load temp images if exist
-      const tempFrontImage = await AsyncStorage.getItem(
-        "temp_car_insurance_front"
-      );
-      const tempBackImage = await AsyncStorage.getItem(
-        "temp_car_insurance_back"
-      );
-      if (tempFrontImage) {
-        setTempFrontImageUri(tempFrontImage);
-      }
-      if (tempBackImage) {
-        setTempBackImageUri(tempBackImage);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -116,21 +65,6 @@ export default function FormScreen() {
 
   const handleBack = () => {
     router.back();
-  };
-
-  const handleImagePress = (type: "front" | "back") => {
-    if (
-      (type === "front" && (tempFrontImageUri || frontImageUri)) ||
-      (type === "back" && (tempBackImageUri || backImageUri))
-    ) {
-      setShowDeleteMode(true);
-    }
-  };
-
-  const handleImageUpload = (type: "front" | "back") => {
-    router.push(
-      `/(onboarding)/(car)/(car-insurance)/upload-guide?type=${type}`
-    );
   };
 
   const showCustomAlert = (
@@ -150,44 +84,15 @@ export default function FormScreen() {
     setShowAlert(true);
   };
 
-  const formatDateInput = (value: string) => {
-    // Remove all non-numeric characters
-    const numbers = value.replace(/\D/g, "");
-
-    // Format as DD/MM/YYYY
-    if (numbers.length <= 2) {
-      return numbers;
-    } else if (numbers.length <= 4) {
-      return `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
-    } else {
-      return `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(
-        4,
-        8
-      )}`;
-    }
-  };
-
   const handleInputChange = (field: string, value: string) => {
-    // Apply date formatting for date fields
-    const formattedValue = formatDateInput(value);
     const newFormData = {
       ...formData,
-      [field]: formattedValue,
+      [field]: value,
     };
     setFormData(newFormData);
 
     // Save form data temporarily
-    AsyncStorage.setItem("car_insurance_data", JSON.stringify(newFormData));
-  };
-
-  // Check if all fields are filled
-  const isFormComplete = () => {
-    return (
-      (tempFrontImageUri || frontImageUri) &&
-      (tempBackImageUri || backImageUri) &&
-      formData.issueDate.trim() !== "" &&
-      formData.expiryDate.trim() !== ""
-    );
+    AsyncStorage.setItem("car_services_data", JSON.stringify(newFormData));
   };
 
   const handleGoBack = () => {
@@ -195,9 +100,9 @@ export default function FormScreen() {
   };
 
   const handleNext = async () => {
-    // Validation
-    if (!tempFrontImageUri && !frontImageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt trước bảo hiểm xe", [
+    // Validation for instructor price
+    if (!formData.instructorPrice?.trim()) {
+      showCustomAlert("Lỗi", "Vui lòng nhập giá gói thuê người hướng dẫn", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -206,28 +111,9 @@ export default function FormScreen() {
       return;
     }
 
-    if (!tempBackImageUri && !backImageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt sau bảo hiểm xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.issueDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.expiryDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày hết hạn", [
+    // Validation for car price (only if user added car)
+    if (hasAddedCar && !formData.carPrice?.trim()) {
+      showCustomAlert("Lỗi", "Vui lòng nhập giá xe", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -237,99 +123,19 @@ export default function FormScreen() {
     }
 
     try {
-      const currentFrontImage = tempFrontImageUri || frontImageUri;
-      const currentBackImage = tempBackImageUri || backImageUri;
-
       // Save data to AsyncStorage
-      await AsyncStorage.setItem("car_insurance_front", currentFrontImage!);
-      await AsyncStorage.setItem("car_insurance_back", currentBackImage!);
-      await AsyncStorage.setItem(
-        "car_insurance_data",
-        JSON.stringify(formData)
-      );
-
-      // Clean up temp images
-      setFrontImageUri(currentFrontImage);
-      setBackImageUri(currentBackImage);
-      setTempFrontImageUri(null);
-      setTempBackImageUri(null);
-      await AsyncStorage.removeItem("temp_car_insurance_front");
-      await AsyncStorage.removeItem("temp_car_insurance_back");
+      await AsyncStorage.setItem("car_services_data", JSON.stringify(formData));
 
       // Navigate to next page
-      router.push("/(onboarding)/(car)/(car-inspection-certificate)/form");
+      router.push("/(onboarding)/waiting-confirm");
     } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu thông tin bảo hiểm xe", [
+      showCustomAlert("Lỗi", "Không thể lưu thông tin giá dịch vụ", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
         },
       ]);
     }
-  };
-
-  // Auto exit delete mode after 3 seconds
-  useEffect(() => {
-    if (showDeleteMode) {
-      const timer = setTimeout(() => {
-        setShowDeleteMode(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showDeleteMode]);
-
-  const handleDeleteImage = (type: "front" | "back") => {
-    showCustomAlert(
-      `Xóa ảnh mặt ${type === "front" ? "trước" : "sau"} bảo hiểm xe`,
-      `Bạn có chắc chắn muốn xóa ảnh mặt ${
-        type === "front" ? "trước" : "sau"
-      } bảo hiểm xe?`,
-      [
-        {
-          text: "Hủy",
-          style: "cancel",
-          onPress: () => {
-            setShowAlert(false);
-            setShowDeleteMode(false);
-          },
-        },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              if (type === "front") {
-                setTempFrontImageUri(null);
-                setFrontImageUri(null);
-                await AsyncStorage.removeItem("temp_car_insurance_front");
-                await AsyncStorage.removeItem("car_insurance_front");
-              } else {
-                setTempBackImageUri(null);
-                setBackImageUri(null);
-                await AsyncStorage.removeItem("temp_car_insurance_back");
-                await AsyncStorage.removeItem("car_insurance_back");
-              }
-              setShowDeleteMode(false);
-              setShowAlert(false);
-
-              showCustomAlert("Thành công", "Ảnh đã được xóa", [
-                {
-                  text: "OK",
-                  onPress: () => setShowAlert(false),
-                },
-              ]);
-            } catch (error) {
-              showCustomAlert("Lỗi", "Không thể xóa ảnh", [
-                {
-                  text: "OK",
-                  onPress: () => setShowAlert(false),
-                },
-              ]);
-            }
-          },
-        },
-      ]
-    );
   };
 
   return (
@@ -341,24 +147,7 @@ export default function FormScreen() {
       >
         <View style={styles.content}>
           {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.headerBackButton}
-              onPress={handleBack}
-            >
-              <ArrowLeft color="#000" size={24} />
-            </TouchableOpacity>
-
-            <View style={styles.headerButtons}>
-              <TouchableOpacity style={styles.helpButton}>
-                <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.notificationButton}>
-                <View style={styles.notificationDot} />
-                <MoreVertical color="#000" size={24} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <View style={styles.header}></View>
 
           <View style={styles.progressBar}>
             <View style={styles.progressFill} />
@@ -375,9 +164,14 @@ export default function FormScreen() {
           <View style={styles.titleContainer}>
             <Text style={styles.title}>Giá gói dịch vụ</Text>
             <Text style={styles.description}>
-              Giá xe sẽ được cộng với giá Gói thuê người hướng dẫn sẽ ra mức giá
-              Gói thuê trọn gói niêm yết cho mỗi giờ mà bạn muốn hiển thị với
-              khách hàng (tay lái mới). Tỷ giá quy đổi: 1.000 đồng = 1.000.
+              • Giá xe sẽ được cộng với giá Gói thuê người hướng dẫn sẽ ra mức
+              giá Gói thuê trọn gói niêm yết cho mỗi giờ mà bạn muốn hiển thị
+              với khách hàng (tay lái mới).
+            </Text>
+            <Text style={styles.description}>
+              {" "}
+              •Tỷ giá quy đổi:{" "}
+              <Text style={styles.highlightText}>1.000 đồng = 1.000GF</Text>.
             </Text>
           </View>
 
@@ -385,16 +179,34 @@ export default function FormScreen() {
             <View style={styles.serviceContainer}>
               <Text style={styles.serviceLabel}>
                 Giá gói thuê người hướng dẫn / Giờ
-                <Text style={styles.required}>*</Text>
+                <Text style={styles.required}> *</Text>
               </Text>
-              <TextInput style={styles.serviceInput} keyboardType="numeric" />
+              <TextInput
+                keyboardType="numeric"
+                value={formData.instructorPrice}
+                onChangeText={(value) =>
+                  handleInputChange("instructorPrice", value)
+                }
+                placeholder="Nhập giá"
+                placeholderTextColor="#92929D"
+                style={[styles.serviceInput]}
+              />
             </View>
-            <View style={styles.serviceContainer}>
-              <Text style={styles.serviceLabel}>
-                Giá xe / giờ<Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput style={styles.serviceInput} keyboardType="numeric" />
-            </View>
+            {hasAddedCar && (
+              <View style={styles.serviceContainer}>
+                <Text style={styles.serviceLabel}>
+                  Giá xe / giờ<Text style={styles.required}> *</Text>
+                </Text>
+                <TextInput
+                  keyboardType="numeric"
+                  value={formData.carPrice}
+                  onChangeText={(value) => handleInputChange("carPrice", value)}
+                  placeholder="Nhập giá"
+                  placeholderTextColor="#92929D"
+                  style={[styles.serviceInput]}
+                />
+              </View>
+            )}
           </View>
 
           {/* Buttons */}
@@ -457,7 +269,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "50%",
+    width: "100%",
     height: "100%",
     backgroundColor: "#70E000",
     borderRadius: 2,
@@ -505,9 +317,10 @@ const styles = StyleSheet.create({
     fontSize: 25,
     fontWeight: "bold",
     color: "#000",
+    paddingBottom: 20,
   },
   description: {
-    fontSize: 14,
+    fontSize: 16,
   },
   serviceSection: {
     paddingHorizontal: 20,
@@ -523,11 +336,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   serviceInput: {
+    backgroundColor: "#F5F5F5",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: "#000",
     borderWidth: 1,
-    borderColor: "#CCC",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    fontSize: 18
+    borderColor: "#E0E0E0",
+  },
+  highlightText: {
+    color: "#70E000",
+    fontWeight: "bold",
   },
   required: {
     color: "#FF0000",

@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,14 +8,16 @@ import {
   Image,
   ScrollView,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ArrowLeft, MoreVertical, Check, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import CustomAlert from "@/components/CustomAlert";
+import { useState } from "react";
 
 export default function UploadGuideScreen() {
   const router = useRouter();
+  const { type } = useLocalSearchParams<{ type: string }>();
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -91,13 +92,16 @@ export default function UploadGuideScreen() {
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
+      aspect: [4, 3],
+      quality: 0.8,
     });
 
     if (!result.canceled) {
       // Save image to temp AsyncStorage
-      await AsyncStorage.setItem("temp_criminal_record", result.assets[0].uri);
+      await AsyncStorage.setItem(
+        `temp_car_verification_${type}`,
+        result.assets[0].uri
+      );
       // Navigate back to form with selected image
       router.back();
     }
@@ -120,20 +124,49 @@ export default function UploadGuideScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
+      aspect: [4, 3],
+      quality: 0.8,
     });
 
     if (!result.canceled) {
       // Save image to temp AsyncStorage
-      await AsyncStorage.setItem("temp_criminal_record", result.assets[0].uri);
+      await AsyncStorage.setItem(
+        `temp_car_verification_${type}`,
+        result.assets[0].uri
+      );
       // Navigate back to form with selected image
       router.back();
     }
   };
 
   const getSampleImages = () => {
-    return [require("@/assets/images/image_1-guide5.png")];
+    switch (type) {
+      case "front":
+        return [
+          require("@/assets/images/image_1-guide1.png"),
+          require("@/assets/images/image_1-guide2.png"),
+        ];
+      case "back":
+        return [
+          require("@/assets/images/image_1-guide2.png"),
+          require("@/assets/images/image_1-guide1.png"),
+        ];
+      case "side":
+        return [
+          require("@/assets/images/image_1-guide3.png"),
+          require("@/assets/images/image_1-guide4.png"),
+        ];
+      case "interior":
+        return [
+          require("@/assets/images/image_1-guide4.png"),
+          require("@/assets/images/image_1-guide3.png"),
+        ];
+      default:
+        return [
+          require("@/assets/images/image_1-guide1.png"),
+          require("@/assets/images/image_1-guide2.png"),
+        ];
+    }
   };
 
   return (
@@ -152,13 +185,34 @@ export default function UploadGuideScreen() {
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Hướng dẫn tải lên lý lịch tư pháp</Text>
+          <Text style={styles.title}>Hướng dẫn tải hình ảnh xác thực xe</Text>
 
           {/* Sample Photos */}
           <View style={styles.sampleContainer}>
             <Text style={styles.sampleLabel}>Ảnh mẫu</Text>
             <View style={styles.samplePhotos}>
-              <Image source={getSampleImages()[0]} style={styles.samplePhoto} />
+              <Image
+                source={require("@/assets/images/image_1-guide10.png")}
+                style={styles.samplePhoto}
+              />
+            </View>
+            <View style={styles.samplePhotos}>
+              <Image
+                source={require("@/assets/images/image_2-guide10.png")}
+                style={styles.samplePhoto}
+              />
+            </View>
+            <View style={styles.samplePhotos}>
+              <Image
+                source={require("@/assets/images/image_3-guide10.png")}
+                style={styles.samplePhoto}
+              />
+            </View>
+            <View style={styles.samplePhotos}>
+              <Image
+                source={require("@/assets/images/image_4-guide10.png")}
+                style={styles.samplePhoto}
+              />
             </View>
           </View>
 
@@ -171,16 +225,16 @@ export default function UploadGuideScreen() {
               </View>
               <View style={styles.requirementList}>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp còn hiệu lực
+                  • Ảnh rõ nét, đủ ánh sáng, không bị mờ
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp được cấp bởi cơ quan có thẩm quyền
+                  • Chụp toàn bộ xe trong khung hình
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp có đầy đủ thông tin cá nhân và ngày cấp
+                  • Không che khuất các chi tiết quan trọng
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp còn hạn sử dụng
+                  • Ảnh chụp trực tiếp, không qua màn hình
                 </Text>
               </View>
             </View>
@@ -194,15 +248,13 @@ export default function UploadGuideScreen() {
               </View>
               <View style={styles.requirementList}>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp chụp đầy đủ các thông tin, không mất góc
+                  • Không chụp ảnh qua màn hình hoặc sử dụng ảnh scan
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Hình ảnh không được chụp quá tầm mắt nhìn
+                  • Không bị lóa sáng, tối hoặc bị che khuất
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Không chụp ảnh qua màn hình hoặc sử dụng lý lịch tư pháp
-                  scan. Ảnh chụp rõ nét, không lóa sáng, không can thiệp chỉnh
-                  sửa
+                  • Không can thiệp chỉnh sửa ảnh
                 </Text>
               </View>
             </View>
@@ -296,7 +348,7 @@ const styles = StyleSheet.create({
   },
   samplePhoto: {
     width: "100%",
-    height: 500,
+    height: 250,
     backgroundColor: "#F0F0F0",
     borderRadius: 8,
     justifyContent: "center",

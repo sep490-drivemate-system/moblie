@@ -92,10 +92,6 @@ export default function RoleSelectionScreen() {
     }
   };
 
-  const handleBack = () => {
-    router.back();
-  };
-
   const renderRoleItem = ({ item }: { item: Role }) => (
     <TouchableOpacity
       style={[
@@ -124,14 +120,6 @@ export default function RoleSelectionScreen() {
             source={require("@/assets/images/logo_drivemate_green.png")}
             style={styles.logo}
           />
-          <View style={styles.headerButtons}>
-            <TouchableOpacity style={styles.helpButton}>
-              <Text>Cần hỗ trợ ?</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.notificationButton}>
-              <MoreVertical color="#000" size={24} />
-            </TouchableOpacity>
-          </View>
         </View>
 
         {/* Title */}
@@ -194,14 +182,6 @@ export default function RoleSelectionScreen() {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Custom Alert */}
-      <CustomAlert
-        visible={showAlert}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        onConfirm={alertConfig.onConfirm}
-      />
     </SafeAreaView>
   );
 }

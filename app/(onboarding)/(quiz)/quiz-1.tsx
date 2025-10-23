@@ -30,19 +30,7 @@ export default function Quiz1Screen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <ArrowLeft color="#000" size={24} />
-          </TouchableOpacity>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity style={styles.helpButton}>
-              <Text>Cần hỗ trợ ?</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.notificationButton}>
-              <MoreVertical color="#000" size={24} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <View style={styles.header}></View>
 
         {/* Content */}
         <View style={styles.contentArea}>
@@ -159,7 +147,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -167,7 +155,7 @@ const styles = StyleSheet.create({
   noButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#000",
+    color: "#70E000",
   },
   yesButton: {
     flex: 1,

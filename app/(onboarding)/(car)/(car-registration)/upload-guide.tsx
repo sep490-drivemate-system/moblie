@@ -174,27 +174,6 @@ export default function UploadGuideScreen() {
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <ArrowLeft color="#000" size={24} />
             </TouchableOpacity>
-
-            <View style={styles.headerButtons}>
-              <TouchableOpacity style={styles.helpButton}>
-                <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.notificationButton}>
-                <View style={styles.notificationDot} />
-                <MoreVertical color="#000" size={24} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.progressBar}>
-            <View style={styles.progressFill} />
-          </View>
-
-          <View>
-            <Image
-              source={require("@/assets/images/background_1.png")}
-              style={styles.background_1}
-            />
           </View>
 
           {/* Title */}

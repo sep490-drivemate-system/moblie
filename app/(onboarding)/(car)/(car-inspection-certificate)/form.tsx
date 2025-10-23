@@ -274,7 +274,7 @@ export default function FormScreen() {
       await AsyncStorage.removeItem("temp_car_inspection_certificate_back");
 
       // Navigate to next page
-      router.push("/(main)/(tabs)/home");
+      router.push("/(onboarding)/(car)/(car-verification-image)/form");
     } catch (error) {
       showCustomAlert("Lỗi", "Không thể lưu thông tin giấy đăng kiểm xe", [
         {
@@ -366,24 +366,7 @@ export default function FormScreen() {
       >
         <View style={styles.content}>
           {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.headerBackButton}
-              onPress={handleBack}
-            >
-              <ArrowLeft color="#000" size={24} />
-            </TouchableOpacity>
-
-            <View style={styles.headerButtons}>
-              <TouchableOpacity style={styles.helpButton}>
-                <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.notificationButton}>
-                <View style={styles.notificationDot} />
-                <MoreVertical color="#000" size={24} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <View style={styles.header}></View>
 
           <View style={styles.progressBar}>
             <View style={styles.progressFill} />
@@ -589,7 +572,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "50%",
+    width: "84%",
     height: "100%",
     backgroundColor: "#70E000",
     borderRadius: 2,

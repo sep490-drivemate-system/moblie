@@ -147,12 +147,12 @@ export default function UploadGuideScreen() {
     if (type === "front") {
       return [
         require("@/assets/images/image_1-guide3.png"),
-        require("@/assets/images/image_2-guide3.png"),
+        require("@/assets/images/image_1-guide3.png"),
       ];
     } else {
       return [
         require("@/assets/images/image_1-guide3.png"),
-        require("@/assets/images/image_1-guide3.png"),
+        require("@/assets/images/image_2-guide3.png"),
       ];
     }
   };
@@ -170,14 +170,6 @@ export default function UploadGuideScreen() {
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <ArrowLeft color="#000" size={24} />
             </TouchableOpacity>
-            <View style={styles.headerButtons}>
-              <TouchableOpacity style={styles.helpButton}>
-                <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.notificationButton}>
-                <MoreVertical color="#000" size={24} />
-              </TouchableOpacity>
-            </View>
           </View>
 
           {/* Title */}

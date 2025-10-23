@@ -19,8 +19,7 @@ import { MoreVertical, Eye, EyeOff } from "lucide-react-native";
 export default function SignUpScreen() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    fullName: "",
     email: "",
     password: "",
     retypePassword: "",
@@ -61,12 +60,10 @@ export default function SignUpScreen() {
 
   const handleSubmit = async () => {
     // Validation
-    if (!formData.firstName.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập tên", () => setShowModal(false));
-      return;
-    }
-    if (!formData.lastName.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập họ", () => setShowModal(false));
+    if (!formData.fullName.trim()) {
+      showCustomAlert("Lỗi", "Vui lòng nhập họ và tên", () =>
+        setShowModal(false)
+      );
       return;
     }
     if (!formData.email.trim()) {
@@ -102,8 +99,7 @@ export default function SignUpScreen() {
       // Simulate saving user info
       // In a real app, you would call your API here
       const userInfo = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+        fullName: formData.fullName,
         email: formData.email,
         password: formData.password,
         phone: formData.phone,
@@ -130,8 +126,16 @@ export default function SignUpScreen() {
     }
   };
 
-  const handleBackToIntro = () => {
-    router.back();
+  // Check if all fields are filled and terms are accepted
+  const isFormValid = () => {
+    return (
+      formData.fullName.trim() !== "" &&
+      formData.email.trim() !== "" &&
+      formData.password.trim() !== "" &&
+      formData.retypePassword.trim() !== "" &&
+      formData.phone.trim() !== "" &&
+      acceptTerms
+    );
   };
 
   return (
@@ -148,14 +152,6 @@ export default function SignUpScreen() {
               source={require("@/assets/images/logo_drivemate_green.png")}
               style={styles.logo}
             />
-            <View style={styles.headerButtons}>
-              <TouchableOpacity style={styles.helpButton}>
-                <Text>Cần hỗ trợ ?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.notificationButton}>
-                <MoreVertical color="#000" size={24} />
-              </TouchableOpacity>
-            </View>
           </View>
 
           {/* Title */}
@@ -189,32 +185,22 @@ export default function SignUpScreen() {
                 placeholderTextColor="#92929D"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
               />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                Tên <Text style={styles.required}>*</Text>
+                Họ và tên <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
-                style={styles.input}
-                value={formData.firstName}
-                onChangeText={(value) => handleInputChange("firstName", value)}
-                placeholder="Nhập tên"
+                style={[styles.input, styles.multilineInput]}
+                value={formData.fullName}
+                onChangeText={(value) => handleInputChange("fullName", value)}
+                placeholder="Nhập họ và tên"
                 placeholderTextColor="#92929D"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Họ <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.lastName}
-                onChangeText={(value) => handleInputChange("lastName", value)}
-                placeholder="Nhập họ"
-                placeholderTextColor="#92929D"
+                autoCorrect={false}
+                multiline={true}
               />
             </View>
 
@@ -230,6 +216,7 @@ export default function SignUpScreen() {
                   placeholder="Nhập mật khẩu"
                   placeholderTextColor="#92929D"
                   secureTextEntry={!showPassword}
+                  autoCorrect={false}
                 />
                 <TouchableOpacity
                   style={styles.eyeIcon}
@@ -258,6 +245,7 @@ export default function SignUpScreen() {
                   placeholder="Nhập lại mật khẩu"
                   placeholderTextColor="#92929D"
                   secureTextEntry={!showRetypePassword}
+                  autoCorrect={false}
                 />
                 <TouchableOpacity
                   style={styles.eyeIcon}
@@ -283,6 +271,7 @@ export default function SignUpScreen() {
                 placeholder="Nhập số điện thoại"
                 placeholderTextColor="#92929D"
                 keyboardType="phone-pad"
+                autoCorrect={false}
               />
             </View>
           </View>
@@ -313,10 +302,21 @@ export default function SignUpScreen() {
           {/* Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={styles.primaryButton}
+              style={[
+                styles.primaryButton,
+                !isFormValid() && styles.primaryButtonDisabled,
+              ]}
               onPress={handleSubmit}
+              disabled={!isFormValid()}
             >
-              <Text style={styles.primaryButtonText}>Tiếp theo</Text>
+              <Text
+                style={[
+                  styles.primaryButtonText,
+                  !isFormValid() && styles.primaryButtonTextDisabled,
+                ]}
+              >
+                Tiếp theo
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -554,5 +554,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  primaryButtonDisabled: {
+    backgroundColor: "#CCCCCC",
+  },
+  primaryButtonTextDisabled: {
+    color: "#999999",
+  },
+  multilineInput: {
+    minHeight: 50,
+    paddingTop: 14,
+    paddingBottom: 14,
   },
 });

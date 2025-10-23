@@ -35,7 +35,6 @@ export default function EmergencyContactScreen() {
     emergencyContactName: "",
     relationship: "",
     emergencyPhone: "",
-    temporaryAddress: "",
   });
 
   const relationships = [
@@ -71,7 +70,6 @@ export default function EmergencyContactScreen() {
           emergencyContactName: "",
           relationship: "",
           emergencyPhone: "",
-          temporaryAddress: "",
         });
         await AsyncStorage.removeItem("emergency_contact_data");
         return;
@@ -138,8 +136,7 @@ export default function EmergencyContactScreen() {
     return (
       formData.emergencyContactName.trim() !== "" &&
       formData.relationship.trim() !== "" &&
-      formData.emergencyPhone.trim() !== "" &&
-      formData.temporaryAddress.trim() !== ""
+      formData.emergencyPhone.trim() !== ""
     );
   };
 
@@ -187,20 +184,6 @@ export default function EmergencyContactScreen() {
       return;
     }
 
-    if (!formData.temporaryAddress.trim()) {
-      showCustomAlert(
-        "Lỗi",
-        "Vui lòng nhập địa chỉ tạm trú của người hướng dẫn",
-        [
-          {
-            text: "OK",
-            onPress: () => setShowAlert(false),
-          },
-        ]
-      );
-      return;
-    }
-
     try {
       // Save data to AsyncStorage
       await AsyncStorage.setItem(
@@ -229,24 +212,7 @@ export default function EmergencyContactScreen() {
       >
         <View style={styles.content}>
           {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.headerBackButton}
-              onPress={handleBack}
-            >
-              <ArrowLeft color="#000" size={24} />
-            </TouchableOpacity>
-
-            <View style={styles.headerButtons}>
-              <TouchableOpacity style={styles.helpButton}>
-                <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.notificationButton}>
-                <View style={styles.notificationDot} />
-                <MoreVertical color="#000" size={24} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <View style={styles.header}></View>
 
           <View style={styles.progressBar}>
             <View style={styles.progressFill} />
@@ -350,24 +316,6 @@ export default function EmergencyContactScreen() {
                 keyboardType="phone-pad"
               />
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Địa chỉ tạm trú của người hướng dẫn{" "}
-                <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.temporaryAddress}
-                onChangeText={(value) =>
-                  handleInputChange("temporaryAddress", value)
-                }
-                placeholder="Nhập địa chỉ tạm trú"
-                placeholderTextColor="#92929D"
-                multiline={true}
-                numberOfLines={3}
-              />
-            </View>
           </View>
 
           {/* Buttons */}
@@ -430,7 +378,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "50%",
+    width: "49%",
     height: "100%",
     backgroundColor: "#70E000",
     borderRadius: 2,

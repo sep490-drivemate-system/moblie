@@ -1,5 +1,5 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { ArrowLeft, MoreVertical } from "lucide-react-native";
+import { ArrowLeft, MoreVertical, Car } from "lucide-react-native";
 import {
   Image,
   StatusBar,
@@ -12,35 +12,27 @@ import {
 export default function WaitingConfirmScreen() {
   return (
     <View style={styles.container}>
+      {/* Logo Section */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBackButton}>
-          <ArrowLeft color="#000" size={24} />
-        </TouchableOpacity>
-
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.helpButton}>
-            <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.notificationButton}>
-            <View style={styles.notificationDot} />
-            <MoreVertical color="#000" size={24} />
-          </TouchableOpacity>
-        </View>
+        <Image
+          source={require("@/assets/images/logo_drivemate_green.png")}
+          style={styles.logo}
+        />
       </View>
+
       <View style={styles.titleContainer}>
         <Text style={styles.titleText}>
           Chúng tôi đã nhận được đơn đăng ký của bạn
         </Text>
         <Image
           style={styles.titleImage}
-          source={require("@/assets/images/image_confirm_page.png")}
+          source={require("@/assets/images/icon3.png")}
         />
       </View>
       <View style={styles.contentContainer}>
         {/* Step 1 */}
         <View style={styles.stepContainer}>
           <View style={styles.iconColumn}>
-            <View style={styles.lineTop} />
             <View style={[styles.circle, styles.circleCompleted]}>
               <MaterialIcons name="check" size={14} color="#fff" />
             </View>
@@ -72,12 +64,32 @@ export default function WaitingConfirmScreen() {
         <View style={styles.stepContainer}>
           <View style={styles.iconColumn}>
             <View style={styles.circleInactive} />
+            <View style={styles.lineBottom} />
           </View>
 
           <View style={styles.textContainer}>
             <Text style={styles.titleInactive}>Ký hợp đồng online</Text>
             <TouchableOpacity>
               <Text style={styles.link}>Nhấn tại đây</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Step 4 */}
+        <View style={styles.stepContainer}>
+          <View style={styles.iconColumn}>
+            <View style={styles.circleInactive} />
+          </View>
+
+          <View style={styles.textContainer}>
+            <Text style={styles.titleInactive}>
+              Chào mừng bạn đã trở thành một phần của{" "}
+              <Text style={styles.drivemateText}>Drivemate</Text>
+            </Text>
+            <TouchableOpacity>
+              <Text style={styles.link}>
+                Nhấn tại đây để chuyển đến trang chủ
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -92,12 +104,25 @@ const styles = StyleSheet.create({
     paddingTop: StatusBar.currentHeight,
     backgroundColor: "#FFF",
   },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    marginBottom: 20,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 30,
-    paddingHorizontal: 20,
+  },
+  headerButtons: {
+    flexDirection: "row",
+  },
+  logo: {
+    width: 150,
+    height: 40,
+    resizeMode: "cover",
   },
   headerBackButton: {
     width: 40,
@@ -106,10 +131,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  headerButtons: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+
   helpButton: {
     paddingVertical: 5,
     paddingHorizontal: 12,
@@ -148,10 +170,9 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   titleImage: {
-    width: 100,
-    height: 100,
+    width: 200,
+    height: 200,
     resizeMode: "contain",
-    flex: 3,
   },
   contentContainer: {
     padding: 16,
@@ -173,23 +194,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   circleCompleted: {
-    backgroundColor: "#0078D7",
+    backgroundColor: "#70E000",
   },
   circleActive: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#0078D7",
+    backgroundColor: "#70E000",
   },
   circleInactive: {
     width: 20,
     height: 20,
     borderRadius: 10,
     backgroundColor: "#D3D3D3",
-  },
-  lineTop: {
-    flex: 1,
-    backgroundColor: "transparent",
   },
   lineBottom: {
     flex: 1,
@@ -198,7 +215,7 @@ const styles = StyleSheet.create({
   },
   lineBottomActive: {
     flex: 1,
-    backgroundColor: "#0078D7",
+    backgroundColor: "#70E000",
     width: 2,
   },
   textContainer: {
@@ -226,8 +243,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   link: {
-    color: "#0078D7",
+    color: "#70E000",
     marginTop: 4,
     fontSize: 14,
+  },
+  drivemateText: {
+    color: "#70E000",
+    fontWeight: "600",
   },
 });

@@ -45,9 +45,9 @@ export default function FormScreen() {
   // Form data
   const [formData, setFormData] = useState({
     ownerName: "",
+    licensePlate: "",
     carBrand: "",
     carModel: "",
-    productionYear: "",
     carColor: "",
     seatCount: "",
     issueDate: "",
@@ -82,9 +82,9 @@ export default function FormScreen() {
         setTempBackImageUri(null);
         setFormData({
           ownerName: "",
+          licensePlate: "",
           carBrand: "",
           carModel: "",
-          productionYear: "",
           carColor: "",
           seatCount: "",
           issueDate: "",
@@ -218,22 +218,6 @@ export default function FormScreen() {
     AsyncStorage.setItem("car_registration_data", JSON.stringify(newFormData));
   };
 
-  // Check if all fields are filled
-  const isFormComplete = () => {
-    return (
-      (tempFrontImageUri || frontImageUri) &&
-      (tempBackImageUri || backImageUri) &&
-      formData.ownerName.trim() !== "" &&
-      formData.carBrand.trim() !== "" &&
-      formData.carModel.trim() !== "" &&
-      formData.productionYear.trim() !== "" &&
-      formData.carColor.trim() !== "" &&
-      formData.seatCount.trim() !== "" &&
-      formData.issueDate.trim() !== "" &&
-      formData.fuelType.trim() !== ""
-    );
-  };
-
   const handleGoBack = () => {
     router.back();
   };
@@ -260,7 +244,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.ownerName.trim()) {
+    if (!formData.ownerName?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập họ và tên trên đăng ký xe", [
         {
           text: "OK",
@@ -270,7 +254,17 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.carBrand.trim()) {
+    if (!formData.licensePlate?.trim()) {
+      showCustomAlert("Lỗi", "Vui lòng nhập biển số xe", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
+      return;
+    }
+
+    if (!formData.carBrand?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập tên hãng xe", [
         {
           text: "OK",
@@ -280,7 +274,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.carModel.trim()) {
+    if (!formData.carModel?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập tên mẫu xe", [
         {
           text: "OK",
@@ -290,17 +284,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.productionYear.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập năm sản xuất xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.carColor.trim()) {
+    if (!formData.carColor?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập màu xe", [
         {
           text: "OK",
@@ -310,7 +294,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.seatCount.trim()) {
+    if (!formData.seatCount?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập số chỗ ngồi", [
         {
           text: "OK",
@@ -320,7 +304,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.issueDate.trim()) {
+    if (!formData.issueDate?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp", [
         {
           text: "OK",
@@ -330,7 +314,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.fuelType.trim()) {
+    if (!formData.fuelType?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng chọn loại nhiên liệu", [
         {
           text: "OK",
@@ -445,24 +429,7 @@ export default function FormScreen() {
       >
         <View style={styles.content}>
           {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.headerBackButton}
-              onPress={handleBack}
-            >
-              <ArrowLeft color="#000" size={24} />
-            </TouchableOpacity>
-
-            <View style={styles.headerButtons}>
-              <TouchableOpacity style={styles.helpButton}>
-                <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.notificationButton}>
-                <View style={styles.notificationDot} />
-                <MoreVertical color="#000" size={24} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <View style={styles.header}></View>
 
           <View style={styles.progressBar}>
             <View style={styles.progressFill} />
@@ -592,6 +559,22 @@ export default function FormScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
+                Biển số xe <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={formData.licensePlate}
+                onChangeText={(value) =>
+                  handleInputChange("licensePlate", value)
+                }
+                placeholder="Nhập biển số xe"
+                placeholderTextColor="#92929D"
+                autoCapitalize="characters"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
                 Tên hãng xe <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
@@ -613,23 +596,6 @@ export default function FormScreen() {
                 onChangeText={(value) => handleInputChange("carModel", value)}
                 placeholder="Nhập tên mẫu xe"
                 placeholderTextColor="#92929D"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Năm sản xuất xe <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.productionYear}
-                onChangeText={(value) =>
-                  handleInputChange("productionYear", value)
-                }
-                placeholder="Nhập năm sản xuất"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={4}
               />
             </View>
 
@@ -782,7 +748,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "50%",
+    width: "70%",
     height: "100%",
     backgroundColor: "#70E000",
     borderRadius: 2,
