@@ -24,6 +24,7 @@ import {
   Info,
   ArrowRight,
   StepBack,
+  IdCard,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { mockPerformance, mockUserProfile } from "@/data/profile-screen";
@@ -87,14 +88,6 @@ function ProfileScreen() {
               <Text style={styles.userEmail}>{mockUserProfile.email}</Text>
               <Text style={styles.userPhone}>{mockUserProfile.phone}</Text>
             </View>
-
-            {/* Logout Button */}
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={handleLogout}
-            >
-              <LogOut size={20} color="#dc2626" />
-            </TouchableOpacity>
           </View>
 
           {/* Wallet Section */}
@@ -127,13 +120,19 @@ function ProfileScreen() {
           <View style={styles.menuItemsContainer}>
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
-                <User size={20} color="#3b82f6" />
+                <User size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Thông tin tài khoản</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
-                <Shield size={20} color="#3b82f6" />
+                <IdCard size={20} color="#70E000" />
+                <Text style={styles.menuItemText}>Giấy tờ tùy thân</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem}>
+              <View style={styles.menuItemLeft}>
+                <Shield size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Lịch sử giao dịch</Text>
               </View>
             </TouchableOpacity>
@@ -146,27 +145,27 @@ function ProfileScreen() {
             <Text style={styles.menuTitle}>Tổng quát</Text>
           </View>
           <View style={styles.menuItemsContainer}>
-            <TouchableOpacity style={styles.menuItem}>
+            {/* <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
-                <Heart size={20} color="#3b82f6" />
+                <Heart size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Yêu thích</Text>
               </View>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem}>
+            </TouchableOpacity> */}
+            {/* <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
-                <Settings size={20} color="#3b82f6" />
+                <Settings size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Cài đặt</Text>
               </View>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem}>
+            </TouchableOpacity> */}
+            {/* <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
-                <Globe size={20} color="#3b82f6" />
+                <Globe size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Ngôn ngữ</Text>
               </View>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
-                <Star size={20} color="#3b82f6" />
+                <Star size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Đánh giá</Text>
               </View>
             </TouchableOpacity>
@@ -181,19 +180,19 @@ function ProfileScreen() {
           <View style={styles.menuItemsContainer}>
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
-                <FileText size={20} color="#3b82f6" />
+                <FileText size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Điều khoản và điều kiện</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
-                <Info size={20} color="#3b82f6" />
+                <Info size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Thông tin về DriveMate</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
               <View style={styles.menuItemLeft}>
-                <LogOut size={20} color="#3b82f6" />
+                <LogOut size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Đăng xuất</Text>
               </View>
             </TouchableOpacity>
@@ -281,7 +280,7 @@ const styles = StyleSheet.create({
 
   // Wallet styles
   walletSection: {
-    backgroundColor: "#3b82f6", // blue-500 to purple-600 gradient effect
+    backgroundColor: "#70E000", // blue-500 to purple-600 gradient effect
     borderRadius: 16,
     padding: 16,
   },
@@ -343,7 +342,7 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#2563eb",
+    color: "#70E000",
   },
   menuItemsContainer: {
     gap: 4,
