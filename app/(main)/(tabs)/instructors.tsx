@@ -3,226 +3,285 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Image,
-  Alert,
   FlatList,
-  Modal,
+  TouchableOpacity,
   TextInput,
+  Modal,
+  ScrollView,
+  Alert,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { LucideUsers, Search, X } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "react-native";
+import { LucideUsers, Search, X, Filter, Star, MapPin } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
+import { Instructor } from "@/models/instructor/instructor.type";
 import {
-  instructorData,
-  getInstructorsByExperienceRange,
-  sortInstructorsByRating,
-  sortInstructorsByPrice,
-  sortInstructorsByExperience,
-} from "../../../data/instructors_data";
-import { IInstructors } from "@/models/instructor/instructor";
+  FilterType,
+  DistanceFilter,
+  ExperienceLevel,
+  MinimumRating,
+  SortType,
+} from "@/models/instructor/instructor-filter.type";
+// import { useInstructorViewModel } from "@/viewmodels/instructor/InstructorViewModel";
+// import { useInstructorViewModel } from "../../../viewmodels/instructor/InstructorViewModel";
 
-type FilterType = "all" | "available" | "busy";
-type DistanceFilter = "all" | "1-3" | "3-5" | "5-10" | "10+";
-type ExperienceFilter = "all" | "1-3" | "3-5" | "5-10" | "10+";
-type SortType = "rating" | "bookings" | "price" | "distance" | "experience";
+// Mock data for instructors
+const mockInstructors: Instructor[] = [
+  {
+    id: "1",
+    name: "Nguyễn Văn An",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+    experience: "5 năm kinh nghiệm",
+    experienceYears: 5,
+    rating: 4.8,
+    price: 350000,
+    specialties: ["Lái xe cơ bản", "Lái xe nâng cao", "Đỗ xe song song"],
+    phone: "0901234567",
+    email: "nguyenvanan@example.com",
+    description: "Giảng viên chuyên nghiệp với nhiều năm kinh nghiệm",
+    totalBookings: 120,
+    gender: "male" as any
+  },
+  {
+    id: "2",
+    name: "Trần Thị Bình",
+    avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
+    experience: "8 năm kinh nghiệm",
+    experienceYears: 8,
+    rating: 4.9,
+    price: 400000,
+    specialties: ["Lái xe phòng thủ", "Lái xe ban đêm", "Vượt xe an toàn"],
+    phone: "0912345678",
+    email: "tranthibinh@example.com",
+    description: "Chuyên gia đào tạo lái xe an toàn",
+    totalBookings: 200,
+    gender: "female" as any
+  },
+  {
+    id: "3",
+    name: "Lê Minh Cường",
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+    experience: "3 năm kinh nghiệm",
+    experienceYears: 3,
+    rating: 4.6,
+    price: 300000,
+    specialties: ["Lái xe cơ bản", "Qua ngã tư", "Lên xuống dốc"],
+    phone: "0923456789",
+    email: "leminhcuong@example.com",
+    description: "Giảng viên trẻ, nhiệt tình",
+    totalBookings: 85,
+    gender: "male" as any
+  },
+  {
+    id: "4",
+    name: "Phạm Thị Dung",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    experience: "10 năm kinh nghiệm",
+    experienceYears: 10,
+    rating: 5.0,
+    price: 450000,
+    specialties: ["Lái xe nâng cao", "Lái xe phòng thủ", "Đào tạo giảng viên"],
+    phone: "0934567890",
+    email: "phamthidung@example.com",
+    description: "Giảng viên cao cấp, chuyên đào tạo nâng cao",
+    totalBookings: 300,
+    gender: "female" as any
+  },
+  {
+    id: "5",
+    name: "Hoàng Văn Em",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
+    experience: "6 năm kinh nghiệm",
+    experienceYears: 6,
+    rating: 4.7,
+    price: 380000,
+    specialties: ["Lái xe ban đêm", "Đường cao tốc", "Chuyển làn"],
+    phone: "0945678901",
+    email: "hoangvanem@example.com",
+    description: "Chuyên gia lái xe đường dài",
+    totalBookings: 150,
+    gender: "male" as any
+  }
+];
 
-interface FilterState {
-  availability: FilterType;
-  distance: DistanceFilter;
-  experience: ExperienceFilter;
-  priceRange: [number, number];
-  minRating: number;
-}
+const initialFilters = {
+  availability: FilterType.All,
+  distance: DistanceFilter.All,
+  experience: ExperienceLevel.All,
+  priceRange: [200000, 500000] as [number, number],
+  minRating: MinimumRating.All,
+};
 
 function InstructorsScreen() {
   const router = useRouter();
-
-  // Modern filter state
-  const [filters, setFilters] = useState<FilterState>({
-    availability: "all",
-    distance: "all",
-    experience: "all",
-    priceRange: [200000, 500000],
-    minRating: 0,
-  });
-  const [sortBy, setSortBy] = useState<SortType>("rating");
-  const [sortAscending, setSortAscending] = useState(false);
-  const [instructorsWithDistance, setInstructorsWithDistance] =
-    useState<IInstructors[]>(instructorData);
-  const [filteredInstructors, setFilteredInstructors] =
-    useState<IInstructors[]>(instructorData);
-
-  // Search state
+  
+  // Local state to replace ViewModel
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Modal states
+  const [filters, setFilters] = useState(initialFilters);
+  const [tempFilters, setTempFilters] = useState(initialFilters);
+  const [sortBy, setSortBy] = useState(SortType.Rating);
+  const [sortAscending, setSortAscending] = useState(false);
+  const [allInstructors] = useState(mockInstructors);
+  const [filteredInstructors, setFilteredInstructors] = useState(mockInstructors);
+  const [displayedInstructors, setDisplayedInstructors] = useState(mockInstructors);
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [tempFilters, setTempFilters] = useState<FilterState>(filters);
-
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [filters, sortBy, sortAscending, instructorsWithDistance, searchQuery]);
-
-  const applyFiltersAndSort = () => {
-    let filtered = [...instructorsWithDistance];
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (instructor) =>
-          instructor.name.toLowerCase().includes(query) ||
-          instructor.specialties.some((s) => s.toLowerCase().includes(query)) ||
-          instructor.description.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply experience filter
-    if (filters.experience !== "all") {
-      filtered = filtered.filter((instructor) => {
-        const years = parseInt(instructor.experience);
-        switch (filters.experience) {
-          case "1-3":
-            return years >= 1 && years <= 3;
-          case "3-5":
-            return years >= 3 && years <= 5;
-          case "5-10":
-            return years >= 5 && years <= 10;
-          case "10+":
-            return years > 10;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Apply price range filter
-    filtered = filtered.filter(
-      (instructor) =>
-        instructor.price >= filters.priceRange[0] &&
-        instructor.price <= filters.priceRange[1]
-    );
-
-    // Apply minimum rating filter
-    if (filters.minRating > 0) {
-      filtered = filtered.filter(
-        (instructor) => instructor.averageRating >= filters.minRating
-      );
-    }
-
-    // Apply sorting
-    switch (sortBy) {
-      case "rating":
-        filtered = [...filtered].sort((a, b) =>
-          sortAscending
-            ? a.averageRating - b.averageRating
-            : b.averageRating - a.averageRating
-        );
-        break;
-      case "price":
-        filtered = [...filtered].sort((a, b) =>
-          sortAscending
-            ? a.pricePerHour - b.pricePerHour
-            : b.pricePerHour - a.pricePerHour
-        );
-        break;
-      case "experience":
-        filtered = [...filtered].sort((a, b) => {
-          const yearsA = parseInt(a.experience);
-          const yearsB = parseInt(b.experience);
-          return sortAscending ? yearsA - yearsB : yearsB - yearsA;
-        });
-        break;
-    }
-
-    setFilteredInstructors(filtered);
-  };
-
-  // Helper functions for modern filter system
-  const getActiveFilterCount = () => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Computed values
+  const activeFilterCount = (() => {
     let count = 0;
-    if (filters.experience !== "all") count++;
-    if (filters.priceRange[0] !== 200000 || filters.priceRange[1] !== 500000)
-      count++;
-    if (filters.minRating > 0) count++;
+    if (filters.experience !== ExperienceLevel.All) count++;
+    if (filters.priceRange[0] !== 200000 || filters.priceRange[1] !== 500000) count++;
+    if (filters.minRating !== MinimumRating.All) count++;
     return count;
-  };
-
-  const clearAllFilters = () => {
-    setFilters({
-      availability: "all",
-      distance: "all",
-      experience: "all",
-      priceRange: [200000, 500000],
-      minRating: 0,
+  })();
+  
+  const hasMoreInstructors = displayedInstructors.length < filteredInstructors.length;
+  
+  // Filter and sort logic
+  useEffect(() => {
+    let filtered = [...allInstructors];
+    
+    // Apply search
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(instructor => 
+        instructor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        instructor.specialties.some(specialty => 
+          specialty.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      );
+    }
+    
+    // Apply filters
+    if (filters.experience !== ExperienceLevel.All) {
+      const expYears = parseInt(filters.experience.split('-')[0]) || 0;
+      filtered = filtered.filter(instructor => instructor.experienceYears >= expYears);
+    }
+    
+    if (filters.minRating !== MinimumRating.All) {
+      const minRating = parseFloat(filters.minRating.replace('+', ''));
+      filtered = filtered.filter(instructor => instructor.rating >= minRating);
+    }
+    
+    // Apply price range
+    filtered = filtered.filter(instructor => 
+      instructor.price >= filters.priceRange[0] && instructor.price <= filters.priceRange[1]
+    );
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case SortType.Rating:
+          comparison = a.rating - b.rating;
+          break;
+        case SortType.Price:
+          comparison = a.price - b.price;
+          break;
+        case SortType.Experience:
+          comparison = a.experienceYears - b.experienceYears;
+          break;
+        default:
+          comparison = 0;
+      }
+      return sortAscending ? comparison : -comparison;
     });
+    
+    setFilteredInstructors(filtered);
+    setDisplayedInstructors(filtered);
+  }, [searchQuery, filters, sortBy, sortAscending, allInstructors]);
+  
+  // Action handlers
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
   };
-
-  const applyTempFilters = () => {
+  
+  const handleFilterChange = (newFilters: typeof filters) => {
+    setFilters(newFilters);
+  };
+  
+  const handleTempFilterChange = (newTempFilters: typeof tempFilters) => {
+    setTempFilters(newTempFilters);
+  };
+  
+  const handleResetFilters = () => {
+    setFilters(initialFilters);
+    setTempFilters(initialFilters);
+  };
+  
+  const handleApplyTempFilters = () => {
     setFilters(tempFilters);
     setShowFilterModal(false);
   };
-
-  const handleInstructorPress = (instructor: IInstructors) => {
-    Alert.alert(
-      `${instructor.name}`,
-      `⭐ Rating: ${instructor.averageRating}/5 (${
-        instructor.totalBookings
-      } bookings)
-💰 Pricing: ${instructor.pricePerHour.toLocaleString()}đ/giờ
-📚 Experience: ${instructor.experience}`,
-      [
-        { text: "Close", style: "cancel" },
-        {
-          text: "Xem chi tiết",
-          onPress: () =>
-            router.push({
-              pathname: "/(main)/(no-tabs)/instructor-detail",
-              params: { instructorId: instructor.id },
-            }),
-        },
-      ]
-    );
+  
+  const handleSortChange = (sortType: SortType) => {
+    if (sortBy === sortType) {
+      setSortAscending(!sortAscending);
+    } else {
+      setSortBy(sortType);
+      setSortAscending(false);
+    }
+  };
+  
+  const handleShowFilterModal = (show: boolean) => {
+    setShowFilterModal(show);
+  };
+  
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000);
+  };
+  
+  const loadMoreInstructors = () => {
+    // Mock load more functionality
+    console.log('Load more instructors');
+  };
+  
+  const setError = (error: string | null) => {
+    setErrorMessage(error);
   };
 
-  const renderInstructorCard = ({ item }: { item: IInstructors }) => (
+  const handleInstructorPress = (instructor: Instructor) => {
+    router.push({
+      pathname: "/instructor-detail",
+      params: { instructorId: instructor.id },
+    });
+  };
+
+  const renderInstructorCard = ({ item }: { item: Instructor }) => (
     <TouchableOpacity
       style={styles.instructorCard}
       onPress={() => handleInstructorPress(item)}
+      activeOpacity={0.7}
     >
-      <View style={styles.avatarContainer}>
-        <Image source={{ uri: item.avatar }} style={styles.instructorAvatar} />
-      </View>
-
-      <View style={styles.instructorInfo}>
-        <View style={styles.headerRow}>
+      <View style={styles.cardContent}>
+        {/* Avatar bên trái */}
+        <Image source={{ uri: item.avatar }} style={styles.avatar} />
+        
+        {/* Thông tin chính ở giữa */}
+        <View style={styles.mainInfo}>
           <Text style={styles.instructorName}>{item.name}</Text>
+          <Text style={styles.experience}>{item.experience}</Text>
+          <Text style={styles.price}>{item.price.toLocaleString()}đ/giờ</Text>
+        </View>
+        
+        {/* Thông tin phụ bên phải */}
+        <View style={styles.rightInfo}>
           <View style={styles.ratingContainer}>
-            <Text style={styles.ratingText}>
-              ⭐ {item.averageRating.toFixed(1)}
-            </Text>
+            <Star size={14} color="#FFD700" fill="#FFD700" />
+            <Text style={styles.rating}>{item.rating}</Text>
           </View>
-        </View>
-
-        <View style={styles.detailsRow}>
-          <Text style={styles.bookingsText}>{item.totalBookings} lượt đặt</Text>
-        </View>
-
-        <View style={styles.priceRow}>
-          <Text style={styles.instructorPrice}>
-            {item.pricePerHour.toLocaleString()}đ/giờ
-          </Text>
+          <Text style={styles.bookings}>({item.totalBookings} đặt)</Text>
           <TouchableOpacity
             style={styles.detailButton}
-            onPress={() =>
-              router.push({
-                pathname: "/(main)/(no-tabs)/instructor-detail",
-                params: { instructorId: item.id },
-              })
-            }
+            onPress={() => handleInstructorPress(item)}
           >
             <Text style={styles.detailButtonText}>Chi tiết</Text>
           </TouchableOpacity>
@@ -231,8 +290,35 @@ function InstructorsScreen() {
     </TouchableOpacity>
   );
 
+  const renderLoadingFooter = () => {
+    if (!isLoading || !hasMoreInstructors) return null;
+    return (
+      <View style={styles.loadingFooter}>
+        <ActivityIndicator size="small" color="#70E000" />
+        <Text style={styles.loadingText}>Đang tải thêm...</Text>
+      </View>
+    );
+  };
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <LucideUsers size={64} color={AppColors.gray300} />
+      <Text style={styles.emptyTitle}>Không tìm thấy giảng viên</Text>
+      <Text style={styles.emptySubtitle}>
+        Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm
+      </Text>
+      <TouchableOpacity
+        style={styles.resetButton}
+        onPress={handleResetFilters}
+      >
+        <Text style={styles.resetButtonText}>Đặt lại bộ lọc</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.modernHeader}>
         <LinearGradient
           colors={[
@@ -279,25 +365,28 @@ function InstructorsScreen() {
           </View>
         </View>
       </View>
+
+      {/* Search Container */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputWrapper}>
           <Search size={20} color={AppColors.gray400} strokeWidth={2} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Tìm kiếm người hướng dẫn..."
-            placeholderTextColor="#9ca3af"
+            placeholder="Tìm kiếm giảng viên..."
+            placeholderTextColor={AppColors.gray400}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearchChange}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <X size={20} color={AppColors.gray400} strokeWidth={2} />
+            <TouchableOpacity onPress={() => handleSearchChange("")}>
+              <X size={20} color={AppColors.gray400} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      <View style={styles.modernFilterBar}>
+      {/* Filter Bar */}
+      <View style={styles.filterBar}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -305,17 +394,13 @@ function InstructorsScreen() {
         >
           <TouchableOpacity
             style={styles.filterButton}
-            onPress={() => {
-              setTempFilters(filters);
-              setShowFilterModal(true);
-            }}
+            onPress={() => handleShowFilterModal(true)}
           >
-            <Text style={styles.filterButtonText}>🔍 Bộ lọc</Text>
-            {getActiveFilterCount() > 0 && (
+            <Filter size={16} color={AppColors.gray600} strokeWidth={2} />
+            <Text style={styles.filterButtonText}>Bộ lọc</Text>
+            {activeFilterCount > 0 && (
               <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>
-                  {getActiveFilterCount()}
-                </Text>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -323,55 +408,58 @@ function InstructorsScreen() {
           <TouchableOpacity
             style={[
               styles.filterButton,
-              sortBy === "rating" && styles.filterButtonActive,
+              sortBy === SortType.Rating && styles.filterButtonActive,
             ]}
-            onPress={() => {
-              if (sortBy === "rating") {
-                setSortAscending(!sortAscending);
-              } else {
-                setSortBy("rating");
-                setSortAscending(false);
-              }
-            }}
+            onPress={() => handleSortChange(SortType.Rating)}
           >
             <Text
               style={[
                 styles.filterButtonText,
-                sortBy === "rating" && styles.filterButtonTextActive,
+                sortBy === SortType.Rating && styles.filterButtonTextActive,
               ]}
             >
-              ⭐ Đánh giá {sortBy === "rating" && (sortAscending ? "↑" : "↓")}
+              Đánh giá {sortBy === SortType.Rating && (sortAscending ? "↑" : "↓")}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.filterButton,
-              sortBy === "price" && styles.filterButtonActive,
+              sortBy === SortType.Price && styles.filterButtonActive,
             ]}
-            onPress={() => {
-              if (sortBy === "price") {
-                setSortAscending(!sortAscending);
-              } else {
-                setSortBy("price");
-                setSortAscending(true);
-              }
-            }}
+            onPress={() => handleSortChange(SortType.Price)}
           >
             <Text
               style={[
                 styles.filterButtonText,
-                sortBy === "price" && styles.filterButtonTextActive,
+                sortBy === SortType.Price && styles.filterButtonTextActive,
               ]}
             >
-              💰 Giá tiền {sortBy === "price" && (sortAscending ? "↑" : "↓")}
+              Giá thuê {sortBy === SortType.Price && (sortAscending ? "↑" : "↓")}
             </Text>
           </TouchableOpacity>
 
-          {getActiveFilterCount() > 0 && (
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              sortBy === SortType.Experience && styles.filterButtonActive,
+            ]}
+            onPress={() => handleSortChange(SortType.Experience)}
+          >
+            <Text
+              style={[
+                styles.filterButtonText,
+                sortBy === SortType.Experience && styles.filterButtonTextActive,
+              ]}
+            >
+              Kinh nghiệm {sortBy === SortType.Experience && (sortAscending ? "↑" : "↓")}
+            </Text>
+          </TouchableOpacity>
+
+          {activeFilterCount > 0 && (
             <TouchableOpacity
               style={styles.clearButton}
-              onPress={clearAllFilters}
+              onPress={handleResetFilters}
             >
               <Text style={styles.clearButtonText}>✕ Xóa</Text>
             </TouchableOpacity>
@@ -379,29 +467,19 @@ function InstructorsScreen() {
         </ScrollView>
       </View>
 
-      {/* Results Count */}
-      {searchQuery.length > 0 && (
-        <View style={styles.resultsCount}>
-          <Text style={styles.resultsCountText}>
-            Tìm thấy {filteredInstructors.length} kết quả
-          </Text>
-        </View>
-      )}
-
       {/* Filter Modal */}
       <Modal
         visible={showFilterModal}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setShowFilterModal(false)}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+            <TouchableOpacity onPress={() => handleShowFilterModal(false)}>
               <Text style={styles.modalCloseButton}>✕</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Lọc Người hướng dẫn</Text>
-            <TouchableOpacity onPress={applyTempFilters}>
+            <Text style={styles.modalTitle}>Bộ lọc</Text>
+            <TouchableOpacity onPress={handleApplyTempFilters}>
               <Text style={styles.modalApplyButton}>Áp dụng</Text>
             </TouchableOpacity>
           </View>
@@ -411,9 +489,13 @@ function InstructorsScreen() {
             <View style={styles.filterSection}>
               <Text style={styles.sectionTitle}>Kinh nghiệm</Text>
               <View style={styles.optionGrid}>
-                {(
-                  ["all", "1-3", "3-5", "5-10", "10+"] as ExperienceFilter[]
-                ).map((option) => (
+                {[
+                  ExperienceLevel.All,
+                  ExperienceLevel.OneToThree,
+                  ExperienceLevel.ThreeToFive,
+                  ExperienceLevel.FiveToTen,
+                  ExperienceLevel.TenPlus,
+                ].map((option) => (
                   <TouchableOpacity
                     key={option}
                     style={[
@@ -422,7 +504,7 @@ function InstructorsScreen() {
                         styles.optionButtonActive,
                     ]}
                     onPress={() =>
-                      setTempFilters({ ...tempFilters, experience: option })
+                      handleTempFilterChange({ ...tempFilters, experience: option })
                     }
                   >
                     <Text
@@ -432,9 +514,9 @@ function InstructorsScreen() {
                           styles.optionTextActive,
                       ]}
                     >
-                      {option === "all"
+                      {option === ExperienceLevel.All
                         ? "Tất cả"
-                        : option === "10+"
+                        : option === ExperienceLevel.TenPlus
                         ? "10+ năm"
                         : `${option} năm`}
                     </Text>
@@ -445,9 +527,15 @@ function InstructorsScreen() {
 
             {/* Rating Filter */}
             <View style={styles.filterSection}>
-              <Text style={styles.sectionTitle}>Đánh giá</Text>
+              <Text style={styles.sectionTitle}>Đánh giá tối thiểu</Text>
               <View style={styles.optionGrid}>
-                {[0, 3, 4, 4.5, 5].map((rating) => (
+                {[
+                  MinimumRating.All,
+                  MinimumRating.ThreePlus,
+                  MinimumRating.FourPlus,
+                  MinimumRating.FourPointFivePlus,
+                  MinimumRating.Five,
+                ].map((rating) => (
                   <TouchableOpacity
                     key={rating}
                     style={[
@@ -456,7 +544,7 @@ function InstructorsScreen() {
                         styles.optionButtonActive,
                     ]}
                     onPress={() =>
-                      setTempFilters({ ...tempFilters, minRating: rating })
+                      handleTempFilterChange({ ...tempFilters, minRating: rating })
                     }
                   >
                     <Text
@@ -466,84 +554,56 @@ function InstructorsScreen() {
                           styles.optionTextActive,
                       ]}
                     >
-                      {rating === 0 ? "Tất cả" : `${rating}⭐+`}
+                      {rating === MinimumRating.All ? "Tất cả" : `${rating.replace('+', '')}⭐+`}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
 
-            {/* Price Range */}
+            {/* Reset Filters */}
             <View style={styles.filterSection}>
-              <Text style={styles.sectionTitle}>Khoảng giá</Text>
-              <View style={styles.priceRangeContainer}>
-                <Text style={styles.priceLabel}>
-                  {tempFilters.priceRange[0].toLocaleString()}đ -{" "}
-                  {tempFilters.priceRange[1].toLocaleString()}đ
-                </Text>
-                <View style={styles.priceButtons}>
-                  {[
-                    [200000, 300000],
-                    [300000, 400000],
-                    [400000, 500000],
-                    [200000, 500000],
-                  ].map(([min, max], index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={[
-                        styles.priceButton,
-                        tempFilters.priceRange[0] === min &&
-                          tempFilters.priceRange[1] === max &&
-                          styles.priceButtonActive,
-                      ]}
-                      onPress={() =>
-                        setTempFilters({
-                          ...tempFilters,
-                          priceRange: [min, max],
-                        })
-                      }
-                    >
-                      <Text
-                        style={[
-                          styles.priceButtonText,
-                          tempFilters.priceRange[0] === min &&
-                            tempFilters.priceRange[1] === max &&
-                            styles.priceButtonTextActive,
-                        ]}
-                      >
-                        {index === 3
-                          ? "Tất cả"
-                          : `${min / 1000}k-${max / 1000}k`}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
+              <TouchableOpacity
+                style={styles.resetFiltersButton}
+                onPress={handleResetFilters}
+              >
+                <Text style={styles.resetFiltersText}>Đặt lại</Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </View>
       </Modal>
 
-      {/* Results Count */}
-
       {/* Instructor List */}
       <FlatList
-        data={filteredInstructors}
+        data={displayedInstructors}
         renderItem={renderInstructorCard}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.instructorsList}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={styles.emptyText}>Không tìm thấy giảng viên</Text>
-            <Text style={styles.emptySubtext}>
-              Hãy thử điều chỉnh bộ lọc hoặc mở rộng phạm vi tìm kiếm
-            </Text>
-          </View>
-        )}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={["#70E000"]}
+            tintColor="#70E000"
+          />
+        }
+        onEndReached={loadMoreInstructors}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={renderLoadingFooter}
+        ListEmptyComponent={renderEmptyState}
       />
+
+      {/* Error Message */}
+      {errorMessage && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{errorMessage}</Text>
+          <TouchableOpacity onPress={() => setError(null)}>
+            <Text style={styles.dismissError}>Đóng</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -553,24 +613,75 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AppColors.background,
   },
-  header: {
-    backgroundColor: "#ffffff",
-    paddingTop: 20,
-    paddingBottom: 24,
+  modernHeader: {
+    position: "relative",
+    paddingTop: 50,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    borderBottomWidth: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 8,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  decorativeCircle1: {
+    display: "none",
+  },
+  decorativeCircle2: {
+    display: "none",
+  },
+  decorativeCircle3: {
+    display: "none",
+  },
+  glassOverlay: {
+    display: "none",
   },
   headerContent: {
+    zIndex: 2,
+  },
+  headerTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 0,
     zIndex: 2,
   },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  premiumHeaderTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: AppColors.white,
+    marginBottom: 4,
+  },
+  subtitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  premiumHeaderSubtitle: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.9)",
+    fontWeight: "400",
   },
   searchContainer: {
     backgroundColor: AppColors.white,
@@ -582,849 +693,239 @@ const styles = StyleSheet.create({
   searchInputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: AppColors.gray100,
+    backgroundColor: AppColors.gray50,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    gap: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
-    color: AppColors.gray800,
-    padding: 0,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#1a202c",
-    marginBottom: 4,
-    letterSpacing: -0.3,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    color: "#64748b",
-    fontWeight: "500",
-    lineHeight: 20,
-  },
-  headerRight: {
-    alignItems: "center",
-  },
-  statsContainer: {
-    backgroundColor: "#f1f5f9",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    alignItems: "center",
-    minWidth: 80,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  statsNumber: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#ffffff",
-    lineHeight: 26,
-  },
-  statsLabel: {
-    fontSize: 12,
-    color: "rgba(255, 255, 255, 0.85)",
-    fontWeight: "600",
-    textAlign: "left",
-  },
-
-  // Modern Header Styles
-  modernHeader: {
-    position: "relative",
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-
-  headerGradient: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-
-  // Decorative Elements
-  decorativeCircle1: {
-    display: "none",
-  },
-
-  decorativeCircle2: {
-    display: "none",
-  },
-
-  decorativeCircle3: {
-    display: "none",
-  },
-
-  glassOverlay: {
-    display: "none",
-  },
-
-  headerTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 0,
-    zIndex: 2,
-  },
-
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-
-  premiumHeaderTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: AppColors.white,
-    marginBottom: 4,
-  },
-
-  subtitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  liveIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: AppColors.success,
-    marginRight: 8,
-  },
-
-  premiumHeaderSubtitle: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.9)",
-    fontWeight: "400",
-  },
-
-  headerActions: {
-    alignItems: "center",
-  },
-
-  premiumNotificationButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-  },
-
-  notificationGlow: {
-    position: "absolute",
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    top: -6,
-    left: -6,
-  },
-
-  notificationIcon: {
-    fontSize: 22,
-  },
-
-  premiumNotificationBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: "#ef4444",
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 3,
-    borderColor: "#ffffff",
-    shadowColor: "#ef4444",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-
-  badgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#ffffff",
-  },
-
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    zIndex: 2,
-  },
-
-  premiumStatsCard: {
-    flex: 1,
-    position: "relative",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: 20,
-    padding: 14,
-    marginHorizontal: 4,
-    borderWidth: 1.5,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
-    overflow: "hidden",
-  },
-
-  statsGlowEffect: {
-    position: "absolute",
-    top: -20,
-    right: -20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-  },
-
-  statsShimmer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 2,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-  },
-
-  statsIconWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-
-  statsIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-
-  statsIcon: {
-    fontSize: 18,
-  },
-
-  statsTextContainer: {
-    flex: 1,
-  },
-
-  filterContainer: {
-    backgroundColor: "#ffffff",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  filterButton: {
-    backgroundColor: "#f8f9fa",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: "#dee2e6",
-  },
-  filterButtonActive: {
-    backgroundColor: AppColors.active,
-    borderColor: AppColors.active,
-  },
-  filterButtonText: {
-    fontSize: 14,
-    color: "#6c757d",
-    fontWeight: "600",
-  },
-  filterButtonTextActive: {
-    color: "#ffffff",
-    fontWeight: "700",
-  },
-  mapContainer: {
-    flex: 1,
-    position: "relative",
-  },
-  map: {
-    flex: 1,
-  },
-  calloutContainer: {
-    padding: 10,
-    minWidth: 150,
-  },
-  calloutTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2d4150",
-    marginBottom: 4,
-  },
-  calloutText: {
-    fontSize: 12,
-    color: "#6c757d",
-    marginBottom: 2,
-  },
-  myLocationButton: {
-    position: "absolute",
-    bottom: 20,
-    left: 10,
-    backgroundColor: "#4CAF50",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  myLocationText: {
-    fontSize: 12,
-    color: "#ffffff",
-    fontWeight: "600",
-  },
-  legend: {
-    position: "absolute",
-    top: 20,
-    right: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    padding: 12,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  legendTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#2d4150",
-    marginBottom: 8,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  legendText: {
-    fontSize: 10,
-    color: "#6c757d",
-  },
-  instructorCardsContainer: {
-    backgroundColor: "#ffffff",
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    maxHeight: 140,
-  },
-  instructorCardsList: {
-    paddingHorizontal: 8,
-  },
-  instructorCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 16,
-    marginVertical: 6,
-    borderWidth: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  instructorAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    marginRight: 14,
-    borderWidth: 2,
-    borderColor: "#f0f0f0",
-  },
-  instructorInfo: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  bookingsText: {
-    fontSize: 12,
-    color: "#6c757d",
     marginLeft: 8,
-  },
-  distanceText: {
-    fontSize: 12,
-    color: "#007bff",
-    marginBottom: 4,
-  },
-  instructorName: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#1a202c",
-    marginBottom: 0,
-    letterSpacing: -0.2,
-    flex: 1,
-  },
-  instructorRating: {
-    fontSize: 12,
-    color: "#6c757d",
-    marginBottom: 4,
-  },
-  instructorPrice: {
     fontSize: 16,
-    color: "#38a169",
-    fontWeight: "700",
-    marginBottom: 0,
+    color: AppColors.textPrimary,
   },
-  availabilityBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    alignSelf: "flex-start",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  availabilityText: {
-    fontSize: 11,
-    color: "#ffffff",
-    fontWeight: "700",
-    textAlign: "center",
-    letterSpacing: 0.3,
-  },
-  // Tracking styles (like Grab)
-  trackingButton: {
-    position: "absolute",
-    bottom: 80,
-    left: 10,
-    backgroundColor: "#007AFF",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  trackingButtonActive: {
-    backgroundColor: "#FF3B30",
-  },
-  trackingText: {
-    fontSize: 12,
-    color: "#ffffff",
-    fontWeight: "600",
-  },
-  trackingTextActive: {
-    color: "#ffffff",
-  },
-  trackingInfo: {
-    position: "absolute",
-    top: 80,
-    left: 10,
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-    borderRadius: 8,
-    padding: 8,
-    minWidth: 120,
-  },
-  trackingInfoText: {
-    fontSize: 12,
-    color: "#ffffff",
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  // User location marker styles
-  userLocationMarker: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "#007AFF",
-    borderWidth: 3,
-    borderColor: "#ffffff",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  userLocationMarkerTracking: {
-    backgroundColor: "#FF3B30",
-    borderColor: "#ffffff",
-  },
-  userLocationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#ffffff",
-  },
-  userLocationArrow: {
-    position: "absolute",
-    top: -15,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderBottomWidth: 12,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderBottomColor: "#FF3B30",
-  },
-  // New styles for list view
-  sortContainer: {
-    backgroundColor: "#ffffff",
+  filterBar: {
+    backgroundColor: AppColors.white,
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e9ecef",
-  },
-  sortButton: {
-    backgroundColor: "#f8f9fa",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: "#dee2e6",
-  },
-  sortButtonActive: {
-    backgroundColor: "#28a745",
-    borderColor: "#28a745",
-  },
-  sortText: {
-    fontSize: 14,
-    color: "#6c757d",
-    fontWeight: "500",
-  },
-  sortTextActive: {
-    color: "#ffffff",
-    fontWeight: "600",
-  },
-  resultsHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  refreshLocationButton: {
-    backgroundColor: "#4299e1",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: "#4299e1",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  refreshLocationText: {
-    fontSize: 13,
-    color: "#ffffff",
-    fontWeight: "700",
-  },
-  instructorsList: {
-    paddingVertical: 4,
-    paddingBottom: 20,
-  },
-  separator: {
-    height: 0,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 80,
-    paddingHorizontal: 40,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 20,
-    opacity: 0.5,
-  },
-  emptyText: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#475569",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  emptySubtext: {
-    fontSize: 15,
-    color: "#64748b",
-    textAlign: "center",
-    lineHeight: 22,
-    maxWidth: 280,
-  },
-  // Modern UI styles
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#495057",
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  filterChip: {
-    backgroundColor: "#f8f9fa",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: "#e9ecef",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  filterChipActive: {
-    backgroundColor: "#007bff",
-    borderColor: "#007bff",
-    shadowColor: "#007bff",
-    shadowOpacity: 0.3,
-  },
-  filterChipText: {
-    fontSize: 13,
-    color: "#6c757d",
-    fontWeight: "500",
-  },
-  filterChipTextActive: {
-    color: "#ffffff",
-    fontWeight: "600",
-  },
-  sortLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#495057",
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  sortChip: {
-    backgroundColor: "#f8f9fa",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: "#e9ecef",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  sortChipActive: {
-    backgroundColor: "#28a745",
-    borderColor: "#28a745",
-    shadowColor: "#28a745",
-    shadowOpacity: 0.3,
-  },
-  sortChipText: {
-    fontSize: 13,
-    color: "#6c757d",
-    fontWeight: "500",
-  },
-  sortChipTextActive: {
-    color: "#ffffff",
-    fontWeight: "600",
-  },
-  // Enhanced instructor card styles
-  avatarContainer: {
-    position: "relative",
-    marginRight: 16,
-  },
-  statusIndicator: {
-    position: "absolute",
-    bottom: 2,
-    right: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "#ffffff",
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  ratingContainer: {
-    backgroundColor: "#fff3cd",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  ratingText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#856404",
-  },
-  detailsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  experienceText: {
-    fontSize: 12,
-    color: "#6f42c1",
-    fontWeight: "500",
-  },
-  priceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  detailButton: {
-    backgroundColor: AppColors.active,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    shadowColor: AppColors.active,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  detailButtonText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  // Modern Filter System Styles
-  modernFilterBar: {
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  filterScrollContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  modernFilterButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#4299e1",
-  },
-  filterBadge: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    backgroundColor: "#e53e3e",
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  filterBadgeText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#ffffff",
-  },
-  sortButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6b7280",
-  },
-  clearButton: {
-    backgroundColor: AppColors.error,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginLeft: 8,
-  },
-  clearButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#ffffff",
-  },
-  resultsCount: {
-    backgroundColor: "#f0fdf4",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: AppColors.borderLight,
   },
-  resultsCountText: {
-    fontSize: 13,
-    color: AppColors.success,
+  filterScrollContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: AppColors.borderLight,
+    backgroundColor: AppColors.white,
+    gap: 6,
+  },
+  filterButtonActive: {
+    backgroundColor: "#70E000",
+    borderColor: "#70E000",
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: AppColors.gray600,
+  },
+  filterButtonTextActive: {
+    color: AppColors.white,
+  },
+  filterBadge: {
+    backgroundColor: AppColors.error,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 4,
+  },
+  filterBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: AppColors.white,
+  },
+  clearButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: AppColors.error,
+  },
+  clearButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: AppColors.white,
+  },
+  listContainer: {
+    padding: 20,
+    gap: 20,
+  },
+  instructorCard: {
+    backgroundColor: AppColors.white,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 16,
+  },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
+  mainInfo: {
+    flex: 1,
+    justifyContent: "flex-start",
+    paddingRight: 8,
+  },
+  rightInfo: {
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    minHeight: 64,
+    paddingLeft: 8,
+  },
+  instructorName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: AppColors.textPrimary,
+    marginBottom: 6,
+    lineHeight: 24,
+  },
+  experience: {
+    fontSize: 14,
+    color: AppColors.gray600,
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+  price: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#70E000",
+    lineHeight: 22,
+  },
+  ratingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 6,
+  },
+  rating: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: AppColors.textPrimary,
+  },
+  bookings: {
+    fontSize: 12,
+    color: AppColors.gray500,
+    marginBottom: 10,
+    lineHeight: 16,
+  },
+  specialtiesContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  specialtyTag: {
+    backgroundColor: AppColors.gray50,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  specialtyText: {
+    fontSize: 12,
+    color: AppColors.gray600,
+    fontWeight: "500",
+  },
+  moreSpecialties: {
+    fontSize: 12,
+    color: AppColors.gray500,
+    fontStyle: "italic",
+  },
+  cardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  statusText: {
+    fontSize: 12,
     fontWeight: "600",
   },
-  // Modal Styles
+  detailButton: {
+    backgroundColor: "#70E000",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 14,
+    minWidth: 70,
+    alignItems: "center",
+  },
+  detailButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: AppColors.white,
+  },
+  loadingFooter: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 16,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: AppColors.gray500,
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 48,
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: AppColors.textPrimary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: AppColors.gray500,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  resetButton: {
+    backgroundColor: "#70E000",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 20,
+  },
+  resetButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: AppColors.white,
+  },
   modalContainer: {
     flex: 1,
-    backgroundColor: "#f7fafc",
+    backgroundColor: AppColors.white,
   },
   modalHeader: {
     flexDirection: "row",
@@ -1432,115 +933,94 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderBottomColor: AppColors.borderLight,
   },
   modalCloseButton: {
     fontSize: 24,
-    fontWeight: "600",
-    color: "#6b7280",
+    color: AppColors.gray500,
+    fontWeight: "300",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#1a202c",
+    fontWeight: "600",
+    color: AppColors.textPrimary,
   },
   modalApplyButton: {
     fontSize: 16,
-    fontWeight: "700",
-    color: AppColors.active,
+    fontWeight: "600",
+    color: "#70E000",
   },
   modalContent: {
     flex: 1,
-    paddingHorizontal: 20,
+    padding: 20,
   },
   filterSection: {
-    marginVertical: 16,
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#1a202c",
-    marginBottom: 16,
+    fontWeight: "600",
+    color: AppColors.textPrimary,
+    marginBottom: 12,
   },
   optionGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 8,
   },
   optionButton: {
-    backgroundColor: "#f7fafc",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    minWidth: 80,
-    alignItems: "center",
+    borderWidth: 1,
+    borderColor: AppColors.borderLight,
+    backgroundColor: AppColors.white,
   },
   optionButtonActive: {
-    backgroundColor: AppColors.active,
-    borderColor: AppColors.active,
+    backgroundColor: "#70E000",
+    borderColor: "#70E000",
   },
   optionText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#4a5568",
+    fontWeight: "500",
+    color: AppColors.gray600,
   },
   optionTextActive: {
-    color: "#ffffff",
+    color: AppColors.white,
   },
-  priceRangeContainer: {
+  resetFiltersButton: {
+    backgroundColor: AppColors.gray100,
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: "center",
   },
-  priceLabel: {
+  resetFiltersText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#2d3748",
-    marginBottom: 16,
-    textAlign: "center",
+    color: AppColors.gray600,
   },
-  priceButtons: {
+  errorContainer: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: AppColors.error,
+    padding: 16,
+    borderRadius: 12,
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    justifyContent: "center",
-  },
-  priceButton: {
-    backgroundColor: "#f7fafc",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    minWidth: 80,
+    justifyContent: "space-between",
     alignItems: "center",
   },
-  priceButtonActive: {
-    backgroundColor: AppColors.active,
-    borderColor: AppColors.active,
+  errorText: {
+    flex: 1,
+    color: AppColors.white,
+    fontWeight: "500",
   },
-  priceButtonText: {
-    fontSize: 14,
+  dismissError: {
+    color: AppColors.white,
     fontWeight: "600",
-    color: "#4a5568",
-  },
-  priceButtonTextActive: {
-    color: "#ffffff",
+    marginLeft: 12,
   },
 });
 

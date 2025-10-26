@@ -1,4 +1,4 @@
-import { Instructor } from "@/models/instructor/instructor";
+import { Instructor } from "@/models/instructor/instructor.type";
 import { LinearGradient } from "expo-linear-gradient";
 import { LucideStar, ShieldCheck } from "lucide-react-native";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
