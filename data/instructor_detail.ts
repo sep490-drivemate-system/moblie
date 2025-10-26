@@ -1,6 +1,6 @@
 import { gender } from "@/constants/enums";
 import { ICarNew } from "@/models/car/car";
-import { IInstructor } from "@/models/instructor/instructor";
+import { IInstructor } from "@/models/instructor/instructor.type";
 
 export const instructorInfor: IInstructor = {
   id: "1",

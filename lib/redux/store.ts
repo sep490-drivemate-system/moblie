@@ -3,6 +3,7 @@ import authReducer from "@/features/auth/authSlice";
 import homeReducer from "@/features/home/homeSlice";
 import mapReducer from "@/features/map/mapSlice";
 import listCarReducer from "@/features/listCar/listCarSlice";
+import instructorReducer from "@/features/instructor/instructorSlice";
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     home: homeReducer,
     map: mapReducer,
     listCar: listCarReducer,
+    instructor: instructorReducer,
     // Thêm các reducers khác ở đây khi cần
   },
   middleware: (getDefaultMiddleware) =>

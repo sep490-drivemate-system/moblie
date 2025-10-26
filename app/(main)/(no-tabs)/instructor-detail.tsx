@@ -27,7 +27,7 @@ import {
 } from "lucide-react-native";
 import { instructorsData } from "@/data/instructors_data";
 import { AppColors } from "@/constants/Colors";
-import { Instructor } from "@/models/instructor/instructor";
+import { Instructor } from "@/models/instructor/instructor.type";
 import { instructorVehicles } from "@/data/instructor_detail";
 import { feedbackData } from "@/data/feedback_data";
 
@@ -179,7 +179,7 @@ export default function InstructorDetailScreen() {
           </View>
 
           {instructorVehicles.map((vehicle, index) => (
-            <TouchableOpacity
+            <View
               key={vehicle.id}
               style={[styles.vehicleCard, index > 0 && { marginTop: 12 }]}
             >
@@ -190,71 +190,27 @@ export default function InstructorDetailScreen() {
               <View style={styles.vehicleOverlay}>
                 <View style={styles.vehicleInfo}>
                   <Text style={styles.vehicleName}>{vehicle.name}</Text>
-                  <View style={styles.vehicleSpecs}>
-                    <View style={styles.vehicleSpecItem}>
-                      <Users size={14} color="#fff" strokeWidth={2} />
-                      <Text style={styles.vehicleSpecText}>
-                        {vehicle.seats} Chỗ
-                      </Text>
-                    </View>
-                    <View style={styles.vehicleSpecItem}>
-                      <Text style={styles.vehicleSpecText}>
-                        {vehicle.transmission}
-                      </Text>
-                    </View>
-                    <View style={styles.vehicleSpecItem}>
-                      <Text style={styles.vehicleSpecText}>{vehicle.year}</Text>
-                    </View>
-                  </View>
                   <Text style={styles.vehiclePrice}>
                     {vehicle.price} xu/giờ
                   </Text>
                 </View>
+                <TouchableOpacity
+                  style={styles.vehicleDetailButton}
+                  onPress={() => router.push({
+                    pathname: "/car-detail",
+                    params: { carId: vehicle.id }
+                  })}
+                >
+                  <Text style={styles.vehicleDetailButtonText}>Chi tiết</Text>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
+            </View>
           ))}
         </View>
 
         {/* Reviews Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Đánh giá từ học viên</Text>
-
-          <View style={styles.reviewSummaryCard}>
-            <View style={styles.reviewSummaryLeft}>
-              <Text style={styles.ratingNumber}>{feedbackData.average}</Text>
-              <View style={styles.starsRow}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    size={16}
-                    color="#f59e0b"
-                    fill="#f59e0b"
-                    strokeWidth={0}
-                  />
-                ))}
-              </View>
-              <Text style={styles.reviewCount}>
-                {feedbackData.totalReviews} đánh giá
-              </Text>
-            </View>
-
-            <View style={styles.reviewSummaryRight}>
-              {feedbackData.distribution.map((item, i) => (
-                <View key={i} style={styles.ratingBar}>
-                  <Text style={styles.ratingBarLabel}>{item.stars}★</Text>
-                  <View style={styles.ratingBarTrack}>
-                    <View
-                      style={[
-                        styles.ratingBarFill,
-                        { width: `${item.percent}%` },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.ratingBarCount}>{item.percent}%</Text>
-                </View>
-              ))}
-            </View>
-          </View>
 
           {/* Sample Reviews */}
           {feedbackData.reviews.map((review) => (
@@ -778,8 +734,12 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: "rgba(0, 0, 0, 0.6)",
     padding: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
   },
   vehicleInfo: {
+    flex: 1,
     gap: 8,
   },
   vehicleName: {
@@ -807,6 +767,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#fbbf24",
     marginTop: 8,
+  },
+  vehicleDetailButton: {
+    backgroundColor: "#70E000",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignItems: "center",
+    minWidth: 70,
+  },
+  vehicleDetailButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#fff",
   },
   // Reviews
   reviewSummaryCard: {

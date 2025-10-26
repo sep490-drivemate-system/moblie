@@ -1,5 +1,5 @@
 import { gender } from "@/constants/enums";
-import { Instructor, IInstructors } from "@/models/instructor/instructor";
+import { Instructor, IInstructors } from "@/models/instructor/instructor.type";
 
 export const instructorsData: Instructor[] = [
   {
