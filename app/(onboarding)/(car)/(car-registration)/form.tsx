@@ -29,7 +29,6 @@ export default function FormScreen() {
     null
   );
   const [tempBackImageUri, setTempBackImageUri] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
   const [showFuelTypeDropdown, setShowFuelTypeDropdown] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -46,9 +45,9 @@ export default function FormScreen() {
   // Form data
   const [formData, setFormData] = useState({
     ownerName: "",
+    licensePlate: "",
     carBrand: "",
     carModel: "",
-    productionYear: "",
     carColor: "",
     seatCount: "",
     issueDate: "",
@@ -81,7 +80,16 @@ export default function FormScreen() {
         setBackImageUri(null);
         setTempFrontImageUri(null);
         setTempBackImageUri(null);
-        setIsSaved(false);
+        setFormData({
+          ownerName: "",
+          licensePlate: "",
+          carBrand: "",
+          carModel: "",
+          carColor: "",
+          seatCount: "",
+          issueDate: "",
+          fuelType: "",
+        });
         await AsyncStorage.removeItem("temp_car_registration_front");
         await AsyncStorage.removeItem("temp_car_registration_back");
         await AsyncStorage.removeItem("car_registration_data");
@@ -138,11 +146,6 @@ export default function FormScreen() {
   };
 
   const handleImageUpload = (type: "front" | "back") => {
-    // Reset saved state when user changes image
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
     router.push(
       `/(onboarding)/(car)/(car-registration)/upload-guide?type=${type}`
     );
@@ -183,51 +186,43 @@ export default function FormScreen() {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    // Reset saved state when user changes data
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
     // Apply date formatting for date fields
+    let newFormData;
     if (field === "issueDate") {
       const formattedValue = formatDateInput(value);
-      setFormData((prev) => ({
-        ...prev,
+      newFormData = {
+        ...formData,
         [field]: formattedValue,
-      }));
+      };
     } else {
-      setFormData((prev) => ({
-        ...prev,
+      newFormData = {
+        ...formData,
         [field]: value,
-      }));
+      };
     }
+    setFormData(newFormData);
+
+    // Save form data temporarily
+    AsyncStorage.setItem("car_registration_data", JSON.stringify(newFormData));
   };
 
   const handleFuelTypeSelect = (fuelType: string) => {
-    setFormData((prev) => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       fuelType: fuelType,
-    }));
+    };
+    setFormData(newFormData);
     setShowFuelTypeDropdown(false);
+
+    // Save form data temporarily
+    AsyncStorage.setItem("car_registration_data", JSON.stringify(newFormData));
   };
 
-  // Check if all fields are filled
-  const isFormComplete = () => {
-    return (
-      (tempFrontImageUri || frontImageUri) &&
-      (tempBackImageUri || backImageUri) &&
-      formData.ownerName.trim() !== "" &&
-      formData.carBrand.trim() !== "" &&
-      formData.carModel.trim() !== "" &&
-      formData.productionYear.trim() !== "" &&
-      formData.carColor.trim() !== "" &&
-      formData.seatCount.trim() !== "" &&
-      formData.issueDate.trim() !== "" &&
-      formData.fuelType.trim() !== ""
-    );
+  const handleGoBack = () => {
+    router.back();
   };
 
-  const handleSave = async () => {
+  const handleNext = async () => {
     // Validation
     if (!tempFrontImageUri && !frontImageUri) {
       showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt trước giấy đăng ký xe", [
@@ -249,7 +244,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.ownerName.trim()) {
+    if (!formData.ownerName?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập họ và tên trên đăng ký xe", [
         {
           text: "OK",
@@ -259,7 +254,17 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.carBrand.trim()) {
+    if (!formData.licensePlate?.trim()) {
+      showCustomAlert("Lỗi", "Vui lòng nhập biển số xe", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
+      return;
+    }
+
+    if (!formData.carBrand?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập tên hãng xe", [
         {
           text: "OK",
@@ -269,7 +274,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.carModel.trim()) {
+    if (!formData.carModel?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập tên mẫu xe", [
         {
           text: "OK",
@@ -279,17 +284,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.productionYear.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập năm sản xuất xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.carColor.trim()) {
+    if (!formData.carColor?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập màu xe", [
         {
           text: "OK",
@@ -299,7 +294,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.seatCount.trim()) {
+    if (!formData.seatCount?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập số chỗ ngồi", [
         {
           text: "OK",
@@ -309,7 +304,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.issueDate.trim()) {
+    if (!formData.issueDate?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp", [
         {
           text: "OK",
@@ -319,7 +314,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.fuelType.trim()) {
+    if (!formData.fuelType?.trim()) {
       showCustomAlert("Lỗi", "Vui lòng chọn loại nhiên liệu", [
         {
           text: "OK",
@@ -333,6 +328,7 @@ export default function FormScreen() {
       const currentFrontImage = tempFrontImageUri || frontImageUri;
       const currentBackImage = tempBackImageUri || backImageUri;
 
+      // Save data to AsyncStorage
       await AsyncStorage.setItem("car_registration_front", currentFrontImage!);
       await AsyncStorage.setItem("car_registration_back", currentBackImage!);
       await AsyncStorage.setItem(
@@ -340,20 +336,16 @@ export default function FormScreen() {
         JSON.stringify(formData)
       );
 
+      // Clean up temp images
       setFrontImageUri(currentFrontImage);
       setBackImageUri(currentBackImage);
       setTempFrontImageUri(null);
       setTempBackImageUri(null);
       await AsyncStorage.removeItem("temp_car_registration_front");
       await AsyncStorage.removeItem("temp_car_registration_back");
-      setIsSaved(true);
 
-      showCustomAlert("Thành công", "Thông tin giấy đăng ký xe đã được lưu", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+      // Navigate to next page
+      router.push("/(onboarding)/(car)/(car-insurance)/form");
     } catch (error) {
       showCustomAlert("Lỗi", "Không thể lưu thông tin giấy đăng ký xe", [
         {
@@ -362,10 +354,6 @@ export default function FormScreen() {
         },
       ]);
     }
-  };
-
-  const handleNext = () => {
-    router.push("/(onboarding)/(car)/(car-insurance)/form");
   };
 
   // Auto exit delete mode after 3 seconds
@@ -398,11 +386,6 @@ export default function FormScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              // Reset saved state when user deletes image
-              if (isSaved) {
-                setIsSaved(false);
-              }
-
               if (type === "front") {
                 setTempFrontImageUri(null);
                 setFrontImageUri(null);
@@ -446,21 +429,7 @@ export default function FormScreen() {
       >
         <View style={styles.content}>
           {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <ArrowLeft color="#000" size={24} />
-            </TouchableOpacity>
-
-            <View style={styles.headerButtons}>
-              <TouchableOpacity style={styles.helpButton}>
-                <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.notificationButton}>
-                <View style={styles.notificationDot} />
-                <MoreVertical color="#000" size={24} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <View style={styles.header}></View>
 
           <View style={styles.progressBar}>
             <View style={styles.progressFill} />
@@ -590,6 +559,22 @@ export default function FormScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
+                Biển số xe <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={formData.licensePlate}
+                onChangeText={(value) =>
+                  handleInputChange("licensePlate", value)
+                }
+                placeholder="Nhập biển số xe"
+                placeholderTextColor="#92929D"
+                autoCapitalize="characters"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
                 Tên hãng xe <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
@@ -611,23 +596,6 @@ export default function FormScreen() {
                 onChangeText={(value) => handleInputChange("carModel", value)}
                 placeholder="Nhập tên mẫu xe"
                 placeholderTextColor="#92929D"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Năm sản xuất xe <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.productionYear}
-                onChangeText={(value) =>
-                  handleInputChange("productionYear", value)
-                }
-                placeholder="Nhập năm sản xuất"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={4}
               />
             </View>
 
@@ -722,37 +690,11 @@ export default function FormScreen() {
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                !isFormComplete() && styles.disabledButton,
-                isSaved && styles.savedButton,
-              ]}
-              onPress={handleSave}
-              disabled={!isFormComplete() || isSaved}
-            >
-              <Text
-                style={[
-                  styles.saveButtonText,
-                  isSaved && styles.savedButtonText,
-                ]}
-              >
-                Lưu
-              </Text>
+            <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+              <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.nextButton, !isSaved && styles.disabledNextButton]}
-              onPress={handleNext}
-              disabled={!isSaved}
-            >
-              <Text
-                style={[
-                  styles.nextButtonText,
-                  !isSaved && styles.disabledNextButtonText,
-                ]}
-              >
-                Kế tiếp
-              </Text>
+            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+              <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -791,7 +733,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     paddingHorizontal: 20,
   },
-  backButton: {
+  headerBackButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -806,7 +748,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "50%",
+    width: "70%",
     height: "100%",
     backgroundColor: "#70E000",
     borderRadius: 2,
@@ -1022,11 +964,11 @@ const styles = StyleSheet.create({
     gap: 15,
     paddingHorizontal: 20,
   },
-  saveButton: {
+  backButton: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -1038,27 +980,10 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: "center",
   },
-  disabledButton: {
-    backgroundColor: "#F0F0F0",
-    borderColor: "#E0E0E0",
-  },
-  savedButton: {
-    backgroundColor: "#E0E0E0",
-    borderColor: "#E0E0E0",
-  },
-  savedButtonText: {
-    color: "#92929D",
-  },
-  disabledNextButton: {
-    backgroundColor: "#B8E6B8",
-  },
-  disabledNextButtonText: {
-    color: "#FFFFFF",
-  },
-  saveButtonText: {
+  backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#000",
+    color: "#70E000",
   },
   nextButtonText: {
     fontSize: 16,

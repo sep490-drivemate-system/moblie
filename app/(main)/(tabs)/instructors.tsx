@@ -102,8 +102,8 @@ function InstructorsScreen() {
     // Apply price range filter
     filtered = filtered.filter(
       (instructor) =>
-        instructor.pricePerHour >= filters.priceRange[0] &&
-        instructor.pricePerHour <= filters.priceRange[1]
+        instructor.price >= filters.priceRange[0] &&
+        instructor.price <= filters.priceRange[1]
     );
 
     // Apply minimum rating filter

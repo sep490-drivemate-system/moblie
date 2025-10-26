@@ -317,6 +317,85 @@ export default function FormScreen() {
   };
 
   const handleNext = () => {
+    // Validation for images
+    if (!tempFrontImageUri && !frontImageUri) {
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng tải lên ảnh mặt trước giấy phép lái xe trước khi tiếp tục",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
+      return;
+    }
+
+    if (!tempBackImageUri && !backImageUri) {
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng tải lên ảnh mặt sau giấy phép lái xe trước khi tiếp tục",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
+      return;
+    }
+
+    // Validation for form data
+    if (!formData.licenseNumber.trim()) {
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng nhập số giấy phép lái xe trước khi tiếp tục",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
+      return;
+    }
+
+    if (!formData.issueDate.trim()) {
+      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp trước khi tiếp tục", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
+      return;
+    }
+
+    if (!formData.expiryDate.trim()) {
+      showCustomAlert("Lỗi", "Vui lòng nhập ngày hết hạn trước khi tiếp tục", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
+      return;
+    }
+
+    if (!formData.licenseClass.trim()) {
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng chọn hạng giấy phép lái xe trước khi tiếp tục",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
+      return;
+    }
+
+    // All validations passed, navigate to next page
     router.push(
       "/(onboarding)/(personal-identification)/(professional-license)/form"
     );
@@ -400,21 +479,7 @@ export default function FormScreen() {
       >
         <View style={styles.content}>
           {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <ArrowLeft color="#000" size={24} />
-            </TouchableOpacity>
-
-            <View style={styles.headerButtons}>
-              <TouchableOpacity style={styles.helpButton}>
-                <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.notificationButton}>
-                <View style={styles.notificationDot} />
-                <MoreVertical color="#000" size={24} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <View style={styles.header}></View>
 
           <View style={styles.progressBar}>
             <View style={styles.progressFill} />
@@ -622,37 +687,11 @@ export default function FormScreen() {
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                !isFormComplete() && styles.disabledButton,
-                isSaved && styles.savedButton,
-              ]}
-              onPress={handleSave}
-              disabled={!isFormComplete() || isSaved}
-            >
-              <Text
-                style={[
-                  styles.saveButtonText,
-                  isSaved && styles.savedButtonText,
-                ]}
-              >
-                Lưu
-              </Text>
+            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+              <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.nextButton, !isSaved && styles.disabledNextButton]}
-              onPress={handleNext}
-              disabled={!isSaved}
-            >
-              <Text
-                style={[
-                  styles.nextButtonText,
-                  !isSaved && styles.disabledNextButtonText,
-                ]}
-              >
-                Kế tiếp
-              </Text>
+            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+              <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -691,13 +730,6 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     paddingHorizontal: 20,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   progressBar: {
     height: 4,
     backgroundColor: "#E0E0E0",
@@ -706,7 +738,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "50%",
+    width: "21%",
     height: "100%",
     backgroundColor: "#70E000",
     borderRadius: 2,
@@ -959,5 +991,19 @@ const styles = StyleSheet.create({
   dropdownItemText: {
     fontSize: 16,
     color: "#000",
+  },
+  backButton: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#70E000",
+    paddingVertical: 16,
+    borderRadius: 25,
+    alignItems: "center",
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#70E000",
   },
 });

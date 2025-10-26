@@ -17,7 +17,6 @@ import CustomAlert from "@/components/CustomAlert";
 
 export default function EmergencyContactScreen() {
   const router = useRouter();
-  const [isSaved, setIsSaved] = useState(false);
   const [showRelationshipDropdown, setShowRelationshipDropdown] =
     useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -36,7 +35,6 @@ export default function EmergencyContactScreen() {
     emergencyContactName: "",
     relationship: "",
     emergencyPhone: "",
-    temporaryAddress: "",
   });
 
   const relationships = [
@@ -68,7 +66,11 @@ export default function EmergencyContactScreen() {
 
       // If onboarding was reset, clear all data
       if (!onboardingCompleted || !quizCompleted) {
-        setIsSaved(false);
+        setFormData({
+          emergencyContactName: "",
+          relationship: "",
+          emergencyPhone: "",
+        });
         await AsyncStorage.removeItem("emergency_contact_data");
         return;
       }
@@ -79,7 +81,6 @@ export default function EmergencyContactScreen() {
 
       if (savedFormData) {
         setFormData(JSON.parse(savedFormData));
-        setIsSaved(true);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -108,28 +109,26 @@ export default function EmergencyContactScreen() {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    // Reset saved state when user changes data
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
-    setFormData((prev) => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       [field]: value,
-    }));
+    };
+    setFormData(newFormData);
+
+    // Save form data temporarily
+    AsyncStorage.setItem("emergency_contact_data", JSON.stringify(newFormData));
   };
 
   const handleRelationshipSelect = (relationship: string) => {
-    // Reset saved state when user changes data
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
-    setFormData((prev) => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       relationship: relationship,
-    }));
+    };
+    setFormData(newFormData);
     setShowRelationshipDropdown(false);
+
+    // Save form data temporarily
+    AsyncStorage.setItem("emergency_contact_data", JSON.stringify(newFormData));
   };
 
   // Check if all fields are filled
@@ -137,12 +136,15 @@ export default function EmergencyContactScreen() {
     return (
       formData.emergencyContactName.trim() !== "" &&
       formData.relationship.trim() !== "" &&
-      formData.emergencyPhone.trim() !== "" &&
-      formData.temporaryAddress.trim() !== ""
+      formData.emergencyPhone.trim() !== ""
     );
   };
 
-  const handleSave = async () => {
+  const handleGoBack = () => {
+    router.back();
+  };
+
+  const handleNext = async () => {
     // Validation
     if (!formData.emergencyContactName.trim()) {
       showCustomAlert(
@@ -182,33 +184,15 @@ export default function EmergencyContactScreen() {
       return;
     }
 
-    if (!formData.temporaryAddress.trim()) {
-      showCustomAlert(
-        "Lỗi",
-        "Vui lòng nhập địa chỉ tạm trú của người hướng dẫn",
-        [
-          {
-            text: "OK",
-            onPress: () => setShowAlert(false),
-          },
-        ]
-      );
-      return;
-    }
-
     try {
+      // Save data to AsyncStorage
       await AsyncStorage.setItem(
         "emergency_contact_data",
         JSON.stringify(formData)
       );
-      setIsSaved(true);
 
-      showCustomAlert("Thành công", "Thông tin liên hệ khẩn cấp đã được lưu", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+      // Navigate to next page
+      router.push("/(onboarding)/commitment");
     } catch (error) {
       showCustomAlert("Lỗi", "Không thể lưu thông tin liên hệ khẩn cấp", [
         {
@@ -217,10 +201,6 @@ export default function EmergencyContactScreen() {
         },
       ]);
     }
-  };
-
-  const handleNext = () => {
-    router.push("/(onboarding)/commitment");
   };
 
   return (
@@ -232,21 +212,7 @@ export default function EmergencyContactScreen() {
       >
         <View style={styles.content}>
           {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <ArrowLeft color="#000" size={24} />
-            </TouchableOpacity>
-
-            <View style={styles.headerButtons}>
-              <TouchableOpacity style={styles.helpButton}>
-                <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.notificationButton}>
-                <View style={styles.notificationDot} />
-                <MoreVertical color="#000" size={24} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <View style={styles.header}></View>
 
           <View style={styles.progressBar}>
             <View style={styles.progressFill} />
@@ -350,59 +316,15 @@ export default function EmergencyContactScreen() {
                 keyboardType="phone-pad"
               />
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Địa chỉ tạm trú của người hướng dẫn{" "}
-                <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.temporaryAddress}
-                onChangeText={(value) =>
-                  handleInputChange("temporaryAddress", value)
-                }
-                placeholder="Nhập địa chỉ tạm trú"
-                placeholderTextColor="#92929D"
-                multiline={true}
-                numberOfLines={3}
-              />
-            </View>
           </View>
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                !isFormComplete() && styles.disabledButton,
-                isSaved && styles.savedButton,
-              ]}
-              onPress={handleSave}
-              disabled={!isFormComplete() || isSaved}
-            >
-              <Text
-                style={[
-                  styles.saveButtonText,
-                  isSaved && styles.savedButtonText,
-                ]}
-              >
-                Lưu
-              </Text>
+            <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+              <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.nextButton, !isSaved && styles.disabledNextButton]}
-              onPress={handleNext}
-              disabled={!isSaved}
-            >
-              <Text
-                style={[
-                  styles.nextButtonText,
-                  !isSaved && styles.disabledNextButtonText,
-                ]}
-              >
-                Kế tiếp
-              </Text>
+            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+              <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -441,7 +363,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     paddingHorizontal: 20,
   },
-  backButton: {
+  headerBackButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -456,7 +378,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "50%",
+    width: "49%",
     height: "100%",
     backgroundColor: "#70E000",
     borderRadius: 2,
@@ -597,11 +519,11 @@ const styles = StyleSheet.create({
     gap: 15,
     paddingHorizontal: 20,
   },
-  saveButton: {
+  backButton: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -613,27 +535,10 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: "center",
   },
-  disabledButton: {
-    backgroundColor: "#F0F0F0",
-    borderColor: "#E0E0E0",
-  },
-  savedButton: {
-    backgroundColor: "#E0E0E0",
-    borderColor: "#E0E0E0",
-  },
-  savedButtonText: {
-    color: "#92929D",
-  },
-  disabledNextButton: {
-    backgroundColor: "#B8E6B8",
-  },
-  disabledNextButtonText: {
-    color: "#FFFFFF",
-  },
-  saveButtonText: {
+  backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#000",
+    color: "#70E000",
   },
   nextButtonText: {
     fontSize: 16,

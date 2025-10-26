@@ -9,7 +9,7 @@ import {
   Image,
   ScrollView,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ArrowLeft, MoreVertical, Check, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -17,6 +17,7 @@ import CustomAlert from "@/components/CustomAlert";
 
 export default function UploadGuideScreen() {
   const router = useRouter();
+  const { type } = useLocalSearchParams<{ type: string }>();
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -97,7 +98,11 @@ export default function UploadGuideScreen() {
 
     if (!result.canceled) {
       // Save image to temp AsyncStorage
-      await AsyncStorage.setItem("temp_criminal_record", result.assets[0].uri);
+      const storageKey =
+        type === "front"
+          ? "temp_car_insurance_front"
+          : "temp_car_insurance_back";
+      await AsyncStorage.setItem(storageKey, result.assets[0].uri);
       // Navigate back to form with selected image
       router.back();
     }
@@ -126,14 +131,34 @@ export default function UploadGuideScreen() {
 
     if (!result.canceled) {
       // Save image to temp AsyncStorage
-      await AsyncStorage.setItem("temp_criminal_record", result.assets[0].uri);
+      const storageKey =
+        type === "front"
+          ? "temp_car_insurance_front"
+          : "temp_car_insurance_back";
+      await AsyncStorage.setItem(storageKey, result.assets[0].uri);
       // Navigate back to form with selected image
       router.back();
     }
   };
 
+  const getTitle = () => {
+    return type === "front"
+      ? "Hướng dẫn tải lên ảnh mặt trước bảo hiểm xe"
+      : "Hướng dẫn tải lên ảnh mặt sau bảo hiểm xe";
+  };
+
   const getSampleImages = () => {
-    return [require("@/assets/images/image_1-guide5.png")];
+    if (type === "front") {
+      return [
+        require("@/assets/images/image_1-guide8.png"),
+        require("@/assets/images/image_2-guide8.png"),
+      ];
+    } else {
+      return [
+        require("@/assets/images/image_2-guide8.png"),
+        require("@/assets/images/image_1-guide8.png"),
+      ];
+    }
   };
 
   return (
@@ -152,13 +177,16 @@ export default function UploadGuideScreen() {
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Hướng dẫn tải lên lý lịch tư pháp</Text>
+          <Text style={styles.title}>{getTitle()}</Text>
 
           {/* Sample Photos */}
           <View style={styles.sampleContainer}>
             <Text style={styles.sampleLabel}>Ảnh mẫu</Text>
             <View style={styles.samplePhotos}>
               <Image source={getSampleImages()[0]} style={styles.samplePhoto} />
+            </View>
+            <View style={styles.samplePhotos}>
+              <Image source={getSampleImages()[1]} style={styles.samplePhoto} />
             </View>
           </View>
 
@@ -171,16 +199,18 @@ export default function UploadGuideScreen() {
               </View>
               <View style={styles.requirementList}>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp còn hiệu lực
+                  • Còn hạn ít nhất 1 tháng
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp được cấp bởi cơ quan có thẩm quyền
+                  • Bảo hiểm xe được cấp bởi công ty bảo hiểm có thẩm quyền
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp có đầy đủ thông tin cá nhân và ngày cấp
+                  • Mặt trước bảo hiểm xe có đầy đủ thông tin xe và thông tin
+                  bảo hiểm
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp còn hạn sử dụng
+                  • Mặt sau bảo hiểm xe có thông tin chủ xe và ngày cấp, ngày
+                  hết hạn
                 </Text>
               </View>
             </View>
@@ -194,15 +224,14 @@ export default function UploadGuideScreen() {
               </View>
               <View style={styles.requirementList}>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp chụp đầy đủ các thông tin, không mất góc
+                  • Giấy tờ chụp đầy đủ các thông tin, không mất góc
                 </Text>
                 <Text style={styles.requirementItem}>
                   • Hình ảnh không được chụp quá tầm mắt nhìn
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Không chụp ảnh qua màn hình hoặc sử dụng lý lịch tư pháp
-                  scan. Ảnh chụp rõ nét, không lóa sáng, không can thiệp chỉnh
-                  sửa
+                  • Không chụp ảnh qua màn hình hoặc sử dụng giấy tờ scan. Ảnh
+                  chụp rõ nét, không lóa sáng, không can thiệp chỉnh sửa
                 </Text>
               </View>
             </View>
@@ -296,7 +325,7 @@ const styles = StyleSheet.create({
   },
   samplePhoto: {
     width: "100%",
-    height: 500,
+    height: 250,
     backgroundColor: "#F0F0F0",
     borderRadius: 8,
     justifyContent: "center",

@@ -7,7 +7,6 @@ import {
   SafeAreaView,
   StatusBar,
   Image,
-  TextInput,
   ScrollView,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -22,9 +21,18 @@ import CustomAlert from "@/components/CustomAlert";
 
 export default function FormScreen() {
   const router = useRouter();
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [tempImageUri, setTempImageUri] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
+  const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
+  const [backImageUri, setBackImageUri] = useState<string | null>(null);
+  const [sideImageUri, setSideImageUri] = useState<string | null>(null);
+  const [interiorImageUri, setInteriorImageUri] = useState<string | null>(null);
+  const [tempFrontImageUri, setTempFrontImageUri] = useState<string | null>(
+    null
+  );
+  const [tempBackImageUri, setTempBackImageUri] = useState<string | null>(null);
+  const [tempSideImageUri, setTempSideImageUri] = useState<string | null>(null);
+  const [tempInteriorImageUri, setTempInteriorImageUri] = useState<
+    string | null
+  >(null);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
@@ -35,11 +43,6 @@ export default function FormScreen() {
       onPress: () => void;
       style?: "default" | "cancel" | "destructive";
     }>,
-  });
-
-  // Form data
-  const [formData, setFormData] = useState({
-    issueDate: "",
   });
 
   useEffect(() => {
@@ -62,28 +65,46 @@ export default function FormScreen() {
 
       // If onboarding was reset, clear all data
       if (!onboardingCompleted || !quizCompleted) {
-        setImageUri(null);
-        setTempImageUri(null);
-        setIsSaved(false);
-        await AsyncStorage.removeItem("temp_criminal_record");
-        await AsyncStorage.removeItem("criminal_record_data");
+        setFrontImageUri(null);
+        setBackImageUri(null);
+        setSideImageUri(null);
+        setInteriorImageUri(null);
+        setTempFrontImageUri(null);
+        setTempBackImageUri(null);
+        setTempSideImageUri(null);
+        setTempInteriorImageUri(null);
+        await AsyncStorage.removeItem("temp_car_verification_front");
+        await AsyncStorage.removeItem("temp_car_verification_back");
+        await AsyncStorage.removeItem("temp_car_verification_side");
+        await AsyncStorage.removeItem("temp_car_verification_interior");
         return;
       }
 
-      const savedImage = await AsyncStorage.getItem("criminal_record");
-      const savedFormData = await AsyncStorage.getItem("criminal_record_data");
+      // Load temp images if exist
+      const tempFrontImage = await AsyncStorage.getItem(
+        "temp_car_verification_front"
+      );
+      const tempBackImage = await AsyncStorage.getItem(
+        "temp_car_verification_back"
+      );
+      const tempSideImage = await AsyncStorage.getItem(
+        "temp_car_verification_side"
+      );
+      const tempInteriorImage = await AsyncStorage.getItem(
+        "temp_car_verification_interior"
+      );
 
-      if (savedImage) {
-        setImageUri(savedImage);
+      if (tempFrontImage) {
+        setTempFrontImageUri(tempFrontImage);
       }
-      if (savedFormData) {
-        setFormData(JSON.parse(savedFormData));
+      if (tempBackImage) {
+        setTempBackImageUri(tempBackImage);
       }
-
-      // Load temp image if exists
-      const tempImage = await AsyncStorage.getItem("temp_criminal_record");
-      if (tempImage) {
-        setTempImageUri(tempImage);
+      if (tempSideImage) {
+        setTempSideImageUri(tempSideImage);
+      }
+      if (tempInteriorImage) {
+        setTempInteriorImageUri(tempInteriorImage);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -94,20 +115,20 @@ export default function FormScreen() {
     router.back();
   };
 
-  const handleImagePress = () => {
-    if (tempImageUri || imageUri) {
+  const handleImagePress = (type: "front" | "back" | "side" | "interior") => {
+    if (
+      (type === "front" && (tempFrontImageUri || frontImageUri)) ||
+      (type === "back" && (tempBackImageUri || backImageUri)) ||
+      (type === "side" && (tempSideImageUri || sideImageUri)) ||
+      (type === "interior" && (tempInteriorImageUri || interiorImageUri))
+    ) {
       setShowDeleteMode(true);
     }
   };
 
-  const handleImageUpload = () => {
-    // Reset saved state when user changes image
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
+  const handleImageUpload = (type: "front" | "back" | "side" | "interior") => {
     router.push(
-      `/(onboarding)/(personal-identification)/(criminal-record)/upload-guide`
+      `/(onboarding)/(car)/(car-verification-image)/upload-guide?type=${type}`
     );
   };
 
@@ -128,107 +149,16 @@ export default function FormScreen() {
     setShowAlert(true);
   };
 
-  const formatDateInput = (value: string) => {
-    // Remove all non-numeric characters
-    const numbers = value.replace(/\D/g, "");
-
-    // Format as DD/MM/YYYY
-    if (numbers.length <= 2) {
-      return numbers;
-    } else if (numbers.length <= 4) {
-      return `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
-    } else {
-      return `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(
-        4,
-        8
-      )}`;
-    }
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    // Reset saved state when user changes data
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
-    // Apply date formatting for date fields
-    if (field === "issueDate") {
-      const formattedValue = formatDateInput(value);
-      setFormData((prev) => ({
-        ...prev,
-        [field]: formattedValue,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-    }
-  };
-
-  // Check if all fields are filled
-  const isFormComplete = () => {
-    return (tempImageUri || imageUri) && formData.issueDate.trim() !== "";
-  };
-
-  const handleSave = async () => {
-    // Validation
-    if (!tempImageUri && !imageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên lý lịch tư pháp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.issueDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    try {
-      const currentImage = tempImageUri || imageUri;
-
-      await AsyncStorage.setItem("criminal_record", currentImage!);
-      await AsyncStorage.setItem(
-        "criminal_record_data",
-        JSON.stringify(formData)
-      );
-
-      setImageUri(currentImage);
-      setTempImageUri(null);
-      await AsyncStorage.removeItem("temp_criminal_record");
-      setIsSaved(true);
-
-      showCustomAlert("Thành công", "Thông tin lý lịch tư pháp đã được lưu", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-    } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu thông tin lý lịch tư pháp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-    }
+  const handleGoBack = () => {
+    router.back();
   };
 
   const handleNext = () => {
-    // Validation for image
-    if (!tempImageUri && !imageUri) {
+    // Validation for images
+    if (!tempFrontImageUri && !frontImageUri) {
       showCustomAlert(
         "Lỗi",
-        "Vui lòng tải lên lý lịch tư pháp trước khi tiếp tục",
+        "Vui lòng tải lên ảnh phía trước xe trước khi tiếp tục",
         [
           {
             text: "OK",
@@ -239,21 +169,50 @@ export default function FormScreen() {
       return;
     }
 
-    // Validation for form data
-    if (!formData.issueDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp trước khi tiếp tục", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+    if (!tempBackImageUri && !backImageUri) {
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng tải lên ảnh phía sau xe trước khi tiếp tục",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
+      return;
+    }
+
+    if (!tempSideImageUri && !sideImageUri) {
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng tải lên ảnh bên hông xe trước khi tiếp tục",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
+      return;
+    }
+
+    if (!tempInteriorImageUri && !interiorImageUri) {
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng tải lên ảnh nội thất xe trước khi tiếp tục",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
       return;
     }
 
     // All validations passed, navigate to next page
-    router.push(
-      "/(onboarding)/(personal-identification)/(healthcare-certificate)/form"
-    );
+    router.push("/(onboarding)/(car)/(car-services)/form");
   };
 
   // Auto exit delete mode after 3 seconds
@@ -266,10 +225,17 @@ export default function FormScreen() {
     }
   }, [showDeleteMode]);
 
-  const handleDeleteImage = () => {
+  const handleDeleteImage = (type: "front" | "back" | "side" | "interior") => {
+    const typeNames = {
+      front: "phía trước",
+      back: "phía sau",
+      side: "bên hông",
+      interior: "nội thất",
+    };
+
     showCustomAlert(
-      "Xóa ảnh lý lịch tư pháp",
-      "Bạn có chắc chắn muốn xóa ảnh lý lịch tư pháp?",
+      `Xóa ảnh ${typeNames[type]} xe`,
+      `Bạn có chắc chắn muốn xóa ảnh ${typeNames[type]} xe?`,
       [
         {
           text: "Hủy",
@@ -284,15 +250,23 @@ export default function FormScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              // Reset saved state when user deletes image
-              if (isSaved) {
-                setIsSaved(false);
+              if (type === "front") {
+                setTempFrontImageUri(null);
+                setFrontImageUri(null);
+                await AsyncStorage.removeItem("temp_car_verification_front");
+              } else if (type === "back") {
+                setTempBackImageUri(null);
+                setBackImageUri(null);
+                await AsyncStorage.removeItem("temp_car_verification_back");
+              } else if (type === "side") {
+                setTempSideImageUri(null);
+                setSideImageUri(null);
+                await AsyncStorage.removeItem("temp_car_verification_side");
+              } else if (type === "interior") {
+                setTempInteriorImageUri(null);
+                setInteriorImageUri(null);
+                await AsyncStorage.removeItem("temp_car_verification_interior");
               }
-
-              setTempImageUri(null);
-              setImageUri(null);
-              await AsyncStorage.removeItem("temp_criminal_record");
-              await AsyncStorage.removeItem("criminal_record");
               setShowDeleteMode(false);
               setShowAlert(false);
 
@@ -313,6 +287,62 @@ export default function FormScreen() {
           },
         },
       ]
+    );
+  };
+
+  const renderImageUpload = (
+    type: "front" | "back" | "side" | "interior",
+    label: string,
+    imageUri: string | null,
+    tempImageUri: string | null
+  ) => {
+    const currentImage = tempImageUri || imageUri;
+
+    return (
+      <View style={styles.imageContainer}>
+        <Text style={styles.imageLabel}>
+          {label} <Text style={styles.required}>*</Text>
+        </Text>
+        <View style={styles.imageUploadArea}>
+          {currentImage ? (
+            <TouchableOpacity
+              style={styles.imageWrapper}
+              onPress={() => handleImagePress(type)}
+            >
+              <Image
+                source={{ uri: currentImage }}
+                style={[
+                  styles.uploadedImage,
+                  showDeleteMode && styles.dimmedImage,
+                ]}
+              />
+              {showDeleteMode && (
+                <View style={styles.deleteOverlay}>
+                  <TouchableOpacity
+                    style={styles.trashButton}
+                    onPress={() => handleDeleteImage(type)}
+                  >
+                    <Trash2 color="#FFFFFF" size={24} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.uploadPlaceholder}
+              onPress={() => handleImageUpload(type)}
+            >
+              <Text style={styles.uploadText}>Tải ảnh lên</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => handleImageUpload(type)}
+          >
+            <Edit2Icon color="#70E000" size={16} />
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   };
 
@@ -340,78 +370,40 @@ export default function FormScreen() {
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Lý lịch tư pháp</Text>
+            <Text style={styles.title}>Ảnh xác thực xe</Text>
           </View>
 
-          {/* Image Upload Section */}
+          {/* Image Upload Sections */}
           <View style={styles.imageSection}>
-            <View style={styles.imageContainer}>
-              <Text style={styles.imageLabel}>
-                Lý lịch tư pháp <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.imageUploadArea}>
-                {tempImageUri || imageUri ? (
-                  <TouchableOpacity
-                    style={styles.imageWrapper}
-                    onPress={() => handleImagePress()}
-                  >
-                    <Image
-                      source={{ uri: (tempImageUri || imageUri)! }}
-                      style={[
-                        styles.uploadedImage,
-                        showDeleteMode && styles.dimmedImage,
-                      ]}
-                    />
-                    {showDeleteMode && (
-                      <View style={styles.deleteOverlay}>
-                        <TouchableOpacity
-                          style={styles.trashButton}
-                          onPress={() => handleDeleteImage()}
-                        >
-                          <Trash2 color="#FFFFFF" size={24} />
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.uploadPlaceholder}
-                    onPress={() => handleImageUpload()}
-                  >
-                    <Text style={styles.uploadText}>Tải ảnh lên</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => handleImageUpload()}
-                >
-                  <Edit2Icon color="#70E000" size={16} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-
-          {/* Form Fields */}
-          <View style={styles.formContainer}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Ngày cấp <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.issueDate}
-                onChangeText={(value) => handleInputChange("issueDate", value)}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-            </View>
+            {renderImageUpload(
+              "front",
+              "Ảnh phía trước xe",
+              frontImageUri,
+              tempFrontImageUri
+            )}
+            {renderImageUpload(
+              "back",
+              "Ảnh phía sau xe",
+              backImageUri,
+              tempBackImageUri
+            )}
+            {renderImageUpload(
+              "side",
+              "Ảnh bên hông xe",
+              sideImageUri,
+              tempSideImageUri
+            )}
+            {renderImageUpload(
+              "interior",
+              "Ảnh nội thất xe",
+              interiorImageUri,
+              tempInteriorImageUri
+            )}
           </View>
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
               <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
@@ -454,6 +446,13 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     paddingHorizontal: 20,
   },
+  headerBackButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   progressBar: {
     height: 4,
     backgroundColor: "#E0E0E0",
@@ -462,7 +461,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "35%",
+    width: "91%",
     height: "100%",
     backgroundColor: "#70E000",
     borderRadius: 2,
@@ -593,29 +592,6 @@ const styles = StyleSheet.create({
     borderColor: "#70E000",
     borderWidth: 1,
   },
-  formContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 30,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "#F5F5F5",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: "#000",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-  },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -623,11 +599,11 @@ const styles = StyleSheet.create({
     gap: 15,
     paddingHorizontal: 20,
   },
-  saveButton: {
+  backButton: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#70E000",
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -639,45 +615,14 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: "center",
   },
-  disabledButton: {
-    backgroundColor: "#F0F0F0",
-    borderColor: "#E0E0E0",
-  },
-  savedButton: {
-    backgroundColor: "#E0E0E0",
-    borderColor: "#E0E0E0",
-  },
-  savedButtonText: {
-    color: "#92929D",
-  },
-  disabledNextButton: {
-    backgroundColor: "#B8E6B8",
-  },
-  disabledNextButtonText: {
-    color: "#FFFFFF",
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-  },
-  nextButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
     color: "#70E000",
   },
-  backButton: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#70E000",
-    paddingVertical: 16,
-    borderRadius: 25,
-    alignItems: "center",
+  nextButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });

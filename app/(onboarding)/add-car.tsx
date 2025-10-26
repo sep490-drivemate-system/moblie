@@ -9,6 +9,7 @@ import {
   Image,
 } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ArrowLeft, MoreVertical } from "lucide-react-native";
 
 export default function AddCarScreen() {
@@ -18,32 +19,23 @@ export default function AddCarScreen() {
     router.back();
   };
 
-  const handleAddCar = () => {
+  const handleAddCar = async () => {
+    // Mark that user added car
+    await AsyncStorage.setItem("car_added", "true");
     router.push("/(onboarding)/(car)/(car-registration)/form");
   };
 
-  const handleSkip = () => {
-    router.push("/(main)/(tabs)/home");
+  const handleSkip = async () => {
+    // Mark that user skipped adding car
+    await AsyncStorage.setItem("car_added", "false");
+    router.push("/(onboarding)/(car)/(car-services)/form");
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <ArrowLeft color="#000" size={24} />
-          </TouchableOpacity>
-
-          <View style={styles.headerButtons}>
-            <TouchableOpacity style={styles.helpButton}>
-              <Text style={styles.helpButtonText}>Cần hỗ trợ ?</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.notificationButton}>
-              <MoreVertical color="#000" size={24} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <View style={styles.header}></View>
 
         <View style={styles.progressBar}>
           <View style={styles.progressFill} />
@@ -85,7 +77,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingBottom: 20,
+    paddingBottom: 50,
   },
   header: {
     flexDirection: "row",
@@ -93,29 +85,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 30,
     paddingHorizontal: 20,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerButtons: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  helpButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderColor: "#92929D",
-    borderWidth: 1,
-    marginRight: 10,
-  },
-  helpButtonText: {
-    fontSize: 14,
-    color: "#000",
   },
   notificationButton: {
     paddingVertical: 8,
@@ -126,7 +95,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#E0E0E0",
     borderRadius: 2,
     marginHorizontal: 20,
-    marginBottom: 20,
   },
   progressFill: {
     width: "50%",

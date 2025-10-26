@@ -27,14 +27,14 @@ import {
 } from "lucide-react-native";
 import { instructorsData } from "@/data/instructors_data";
 import { AppColors } from "@/constants/Colors";
-import { IInstructor } from "@/models/instructor/instructor";
+import { Instructor } from "@/models/instructor/instructor";
 import { instructorVehicles } from "@/data/instructor_detail";
 import { feedbackData } from "@/data/feedback_data";
 
 export default function InstructorDetailScreen() {
   const router = useRouter();
   const { instructorId } = useLocalSearchParams();
-  const [instructor, setInstructor] = useState<IInstructor | null>(null);
+  const [instructor, setInstructor] = useState<Instructor | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<"instructor" | "full">(
     "full"

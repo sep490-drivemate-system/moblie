@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,14 +8,16 @@ import {
   Image,
   ScrollView,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ArrowLeft, MoreVertical, Check, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import CustomAlert from "@/components/CustomAlert";
+import { useState } from "react";
 
 export default function UploadGuideScreen() {
   const router = useRouter();
+  const { type } = useLocalSearchParams<{ type: string }>();
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -97,7 +98,11 @@ export default function UploadGuideScreen() {
 
     if (!result.canceled) {
       // Save image to temp AsyncStorage
-      await AsyncStorage.setItem("temp_criminal_record", result.assets[0].uri);
+      const storageKey =
+        type === "front"
+          ? "temp_car_inspection_certificate_front"
+          : "temp_car_inspection_certificate_back";
+      await AsyncStorage.setItem(storageKey, result.assets[0].uri);
       // Navigate back to form with selected image
       router.back();
     }
@@ -126,14 +131,34 @@ export default function UploadGuideScreen() {
 
     if (!result.canceled) {
       // Save image to temp AsyncStorage
-      await AsyncStorage.setItem("temp_criminal_record", result.assets[0].uri);
+      const storageKey =
+        type === "front"
+          ? "temp_car_inspection_certificate_front"
+          : "temp_car_inspection_certificate_back";
+      await AsyncStorage.setItem(storageKey, result.assets[0].uri);
       // Navigate back to form with selected image
       router.back();
     }
   };
 
+  const getTitle = () => {
+    return type === "front"
+      ? "Hướng dẫn tải lên ảnh mặt trước giấy đăng kiểm xe"
+      : "Hướng dẫn tải lên ảnh mặt sau giấy đăng kiểm xe";
+  };
+
   const getSampleImages = () => {
-    return [require("@/assets/images/image_1-guide5.png")];
+    if (type === "front") {
+      return [
+        require("@/assets/images/image_1-guide9.png"),
+        require("@/assets/images/image_2-guide9.png"),
+      ];
+    } else {
+      return [
+        require("@/assets/images/image_2-guide9.png"),
+        require("@/assets/images/image_1-guide9.png"),
+      ];
+    }
   };
 
   return (
@@ -152,13 +177,16 @@ export default function UploadGuideScreen() {
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Hướng dẫn tải lên lý lịch tư pháp</Text>
+          <Text style={styles.title}>{getTitle()}</Text>
 
           {/* Sample Photos */}
           <View style={styles.sampleContainer}>
             <Text style={styles.sampleLabel}>Ảnh mẫu</Text>
             <View style={styles.samplePhotos}>
               <Image source={getSampleImages()[0]} style={styles.samplePhoto} />
+            </View>
+            <View style={styles.samplePhotos}>
+              <Image source={getSampleImages()[1]} style={styles.samplePhoto} />
             </View>
           </View>
 
@@ -171,16 +199,19 @@ export default function UploadGuideScreen() {
               </View>
               <View style={styles.requirementList}>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp còn hiệu lực
+                  • Đăng kiểm còn hạn và có thông tin trùng khớp với cà vẹt/đăng
+                  ký xe: số khung, số máy, biển số xe
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp được cấp bởi cơ quan có thẩm quyền
+                  • Sử dụng Đăng kiểm loại kinh doanh vận tải và có lắp Thiết bị
+                  giám sát hành trình
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp có đầy đủ thông tin cá nhân và ngày cấp
+                  • Đăng kiểm có đầy đủ chữ ký, họ và tên người đại diện, dấu
+                  mộc của Trung tâm đăng kiểm
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp còn hạn sử dụng
+                  • Số serial 2 mặt đăng kiểm khớp nhau
                 </Text>
               </View>
             </View>
@@ -194,15 +225,11 @@ export default function UploadGuideScreen() {
               </View>
               <View style={styles.requirementList}>
                 <Text style={styles.requirementItem}>
-                  • Lý lịch tư pháp chụp đầy đủ các thông tin, không mất góc
+                  • Không chụp ảnh qua màn hình hoặc sử dụng giấy tờ scan. Ảnh
+                  chụp rõ nét, không lóa sáng, không can thiệp chỉnh sửa
                 </Text>
                 <Text style={styles.requirementItem}>
-                  • Hình ảnh không được chụp quá tầm mắt nhìn
-                </Text>
-                <Text style={styles.requirementItem}>
-                  • Không chụp ảnh qua màn hình hoặc sử dụng lý lịch tư pháp
-                  scan. Ảnh chụp rõ nét, không lóa sáng, không can thiệp chỉnh
-                  sửa
+                  • Giấy tờ chụp đầy đủ các thông tin, không mất góc
                 </Text>
               </View>
             </View>
@@ -296,7 +323,7 @@ const styles = StyleSheet.create({
   },
   samplePhoto: {
     width: "100%",
-    height: 500,
+    height: 250,
     backgroundColor: "#F0F0F0",
     borderRadius: 8,
     justifyContent: "center",

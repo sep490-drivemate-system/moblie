@@ -17,7 +17,6 @@ import {
   MoreVertical,
   Edit2Icon,
   Trash2,
-  ChevronDown,
 } from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
 
@@ -30,7 +29,6 @@ export default function FormScreen() {
   );
   const [tempBackImageUri, setTempBackImageUri] = useState<string | null>(null);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
-  const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -44,13 +42,8 @@ export default function FormScreen() {
 
   // Form data
   const [formData, setFormData] = useState({
-    idNumber: "",
     issueDate: "",
     expiryDate: "",
-    issuePlace: "",
-    address: "",
-    gender: "",
-    birthDate: "",
   });
 
   useEffect(() => {
@@ -78,23 +71,18 @@ export default function FormScreen() {
         setTempFrontImageUri(null);
         setTempBackImageUri(null);
         setFormData({
-          idNumber: "",
           issueDate: "",
           expiryDate: "",
-          issuePlace: "",
-          address: "",
-          gender: "",
-          birthDate: "",
         });
-        await AsyncStorage.removeItem("temp_id_front");
-        await AsyncStorage.removeItem("temp_id_back");
-        await AsyncStorage.removeItem("id_card_data");
+        await AsyncStorage.removeItem("temp_car_insurance_front");
+        await AsyncStorage.removeItem("temp_car_insurance_back");
+        await AsyncStorage.removeItem("car_insurance_data");
         return;
       }
 
-      const savedFrontImage = await AsyncStorage.getItem("id_front");
-      const savedBackImage = await AsyncStorage.getItem("id_back");
-      const savedFormData = await AsyncStorage.getItem("id_card_data");
+      const savedFrontImage = await AsyncStorage.getItem("car_insurance_front");
+      const savedBackImage = await AsyncStorage.getItem("car_insurance_back");
+      const savedFormData = await AsyncStorage.getItem("car_insurance_data");
 
       if (savedFrontImage) {
         setFrontImageUri(savedFrontImage);
@@ -107,13 +95,17 @@ export default function FormScreen() {
       }
 
       // Load temp images if exist
-      const tempFront = await AsyncStorage.getItem("temp_id_front");
-      const tempBack = await AsyncStorage.getItem("temp_id_back");
-      if (tempFront) {
-        setTempFrontImageUri(tempFront);
+      const tempFrontImage = await AsyncStorage.getItem(
+        "temp_car_insurance_front"
+      );
+      const tempBackImage = await AsyncStorage.getItem(
+        "temp_car_insurance_back"
+      );
+      if (tempFrontImage) {
+        setTempFrontImageUri(tempFrontImage);
       }
-      if (tempBack) {
-        setTempBackImageUri(tempBack);
+      if (tempBackImage) {
+        setTempBackImageUri(tempBackImage);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -135,7 +127,7 @@ export default function FormScreen() {
 
   const handleImageUpload = (type: "front" | "back") => {
     router.push(
-      `/(onboarding)/(personal-identification)/(id-card)/upload-guide?type=${type}`
+      `/(onboarding)/(car)/(car-insurance)/upload-guide?type=${type}`
     );
   };
 
@@ -175,39 +167,15 @@ export default function FormScreen() {
 
   const handleInputChange = (field: string, value: string) => {
     // Apply date formatting for date fields
-    let newFormData;
-    if (
-      field === "issueDate" ||
-      field === "expiryDate" ||
-      field === "birthDate"
-    ) {
-      const formattedValue = formatDateInput(value);
-      newFormData = {
-        ...formData,
-        [field]: formattedValue,
-      };
-    } else {
-      newFormData = {
-        ...formData,
-        [field]: value,
-      };
-    }
-    setFormData(newFormData);
-
-    // Save form data temporarily
-    AsyncStorage.setItem("id_card_data", JSON.stringify(newFormData));
-  };
-
-  const handleGenderSelect = (gender: string) => {
+    const formattedValue = formatDateInput(value);
     const newFormData = {
       ...formData,
-      gender: gender,
+      [field]: formattedValue,
     };
     setFormData(newFormData);
-    setShowGenderDropdown(false);
 
     // Save form data temporarily
-    AsyncStorage.setItem("id_card_data", JSON.stringify(newFormData));
+    AsyncStorage.setItem("car_insurance_data", JSON.stringify(newFormData));
   };
 
   // Check if all fields are filled
@@ -215,13 +183,8 @@ export default function FormScreen() {
     return (
       (tempFrontImageUri || frontImageUri) &&
       (tempBackImageUri || backImageUri) &&
-      formData.idNumber.trim() !== "" &&
       formData.issueDate.trim() !== "" &&
-      formData.expiryDate.trim() !== "" &&
-      formData.issuePlace.trim() !== "" &&
-      formData.address.trim() !== "" &&
-      formData.gender.trim() !== "" &&
-      formData.birthDate.trim() !== ""
+      formData.expiryDate.trim() !== ""
     );
   };
 
@@ -232,7 +195,7 @@ export default function FormScreen() {
   const handleNext = async () => {
     // Validation
     if (!tempFrontImageUri && !frontImageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt trước thẻ căn cước", [
+      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt trước bảo hiểm xe", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -242,17 +205,7 @@ export default function FormScreen() {
     }
 
     if (!tempBackImageUri && !backImageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt sau thẻ căn cước", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.idNumber.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập số căn cước công dân", [
+      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt sau bảo hiểm xe", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -281,67 +234,30 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.issuePlace.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập nơi cấp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.address.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập địa chỉ thường trú", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.gender.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng chọn giới tính", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.birthDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày sinh", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
     try {
       const currentFrontImage = tempFrontImageUri || frontImageUri;
       const currentBackImage = tempBackImageUri || backImageUri;
 
       // Save data to AsyncStorage
-      await AsyncStorage.setItem("id_front", currentFrontImage!);
-      await AsyncStorage.setItem("id_back", currentBackImage!);
-      await AsyncStorage.setItem("id_card_data", JSON.stringify(formData));
+      await AsyncStorage.setItem("car_insurance_front", currentFrontImage!);
+      await AsyncStorage.setItem("car_insurance_back", currentBackImage!);
+      await AsyncStorage.setItem(
+        "car_insurance_data",
+        JSON.stringify(formData)
+      );
 
       // Clean up temp images
       setFrontImageUri(currentFrontImage);
       setBackImageUri(currentBackImage);
       setTempFrontImageUri(null);
       setTempBackImageUri(null);
-      await AsyncStorage.removeItem("temp_id_front");
-      await AsyncStorage.removeItem("temp_id_back");
+      await AsyncStorage.removeItem("temp_car_insurance_front");
+      await AsyncStorage.removeItem("temp_car_insurance_back");
 
       // Navigate to next page
-      router.push("/(onboarding)/(personal-identification)/(license)/form");
+      router.push("/(onboarding)/(car)/(car-inspection-certificate)/form");
     } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu thông tin thẻ căn cước", [
+      showCustomAlert("Lỗi", "Không thể lưu thông tin bảo hiểm xe", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -362,10 +278,10 @@ export default function FormScreen() {
 
   const handleDeleteImage = (type: "front" | "back") => {
     showCustomAlert(
-      "Xóa ảnh thẻ căn cước",
+      `Xóa ảnh mặt ${type === "front" ? "trước" : "sau"} bảo hiểm xe`,
       `Bạn có chắc chắn muốn xóa ảnh mặt ${
         type === "front" ? "trước" : "sau"
-      } thẻ căn cước?`,
+      } bảo hiểm xe?`,
       [
         {
           text: "Hủy",
@@ -383,13 +299,13 @@ export default function FormScreen() {
               if (type === "front") {
                 setTempFrontImageUri(null);
                 setFrontImageUri(null);
-                await AsyncStorage.removeItem("temp_id_front");
-                await AsyncStorage.removeItem("id_front");
+                await AsyncStorage.removeItem("temp_car_insurance_front");
+                await AsyncStorage.removeItem("car_insurance_front");
               } else {
                 setTempBackImageUri(null);
                 setBackImageUri(null);
-                await AsyncStorage.removeItem("temp_id_back");
-                await AsyncStorage.removeItem("id_back");
+                await AsyncStorage.removeItem("temp_car_insurance_back");
+                await AsyncStorage.removeItem("car_insurance_back");
               }
               setShowDeleteMode(false);
               setShowAlert(false);
@@ -438,7 +354,7 @@ export default function FormScreen() {
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Thẻ căn cước</Text>
+            <Text style={styles.title}>Bảo hiểm xe</Text>
           </View>
 
           {/* Image Upload Sections */}
@@ -540,20 +456,6 @@ export default function FormScreen() {
           <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                Số căn cước công dân <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.idNumber}
-                onChangeText={(value) => handleInputChange("idNumber", value)}
-                placeholder="Nhập số căn cước công dân"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
                 Ngày cấp <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
@@ -575,92 +477,6 @@ export default function FormScreen() {
                 style={styles.input}
                 value={formData.expiryDate}
                 onChangeText={(value) => handleInputChange("expiryDate", value)}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Nơi cấp <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.issuePlace}
-                onChangeText={(value) => handleInputChange("issuePlace", value)}
-                placeholder="Nhập nơi cấp"
-                placeholderTextColor="#92929D"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Địa chỉ thường trú <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.address}
-                onChangeText={(value) => handleInputChange("address", value)}
-                placeholder="Nhập địa chỉ thường trú"
-                placeholderTextColor="#92929D"
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Giới tính <Text style={styles.required}>*</Text>
-              </Text>
-              <TouchableOpacity
-                style={styles.dropdownContainer}
-                onPress={() => setShowGenderDropdown(!showGenderDropdown)}
-              >
-                <Text
-                  style={[
-                    styles.dropdownText,
-                    !formData.gender && styles.placeholderText,
-                  ]}
-                >
-                  {formData.gender || "Chọn giới tính"}
-                </Text>
-                <ChevronDown
-                  color="#92929D"
-                  size={20}
-                  style={[
-                    styles.dropdownIcon,
-                    showGenderDropdown && styles.dropdownIconRotated,
-                  ]}
-                />
-              </TouchableOpacity>
-              {showGenderDropdown && (
-                <View style={styles.dropdownList}>
-                  <TouchableOpacity
-                    style={styles.dropdownItem}
-                    onPress={() => handleGenderSelect("Nam")}
-                  >
-                    <Text style={styles.dropdownItemText}>Nam</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.dropdownItem}
-                    onPress={() => handleGenderSelect("Nữ")}
-                  >
-                    <Text style={styles.dropdownItemText}>Nữ</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Ngày sinh <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.birthDate}
-                onChangeText={(value) => handleInputChange("birthDate", value)}
                 placeholder="DD/MM/YYYY"
                 placeholderTextColor="#92929D"
                 keyboardType="numeric"
@@ -729,7 +545,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "14%",
+    width: "77%",
     height: "100%",
     backgroundColor: "#70E000",
     borderRadius: 2,
@@ -866,6 +682,7 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     marginBottom: 20,
+    position: "relative",
   },
   label: {
     fontSize: 16,
@@ -882,10 +699,6 @@ const styles = StyleSheet.create({
     color: "#000",
     borderWidth: 1,
     borderColor: "#E0E0E0",
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: "top",
   },
   buttonContainer: {
     flexDirection: "row",
@@ -919,55 +732,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
-  },
-  dropdownContainer: {
-    backgroundColor: "#F5F5F5",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  dropdownText: {
-    fontSize: 16,
-    color: "#000",
-  },
-  placeholderText: {
-    color: "#92929D",
-  },
-  dropdownIcon: {
-    transform: [{ rotate: "0deg" }],
-  },
-  dropdownIconRotated: {
-    transform: [{ rotate: "180deg" }],
-  },
-  dropdownList: {
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    zIndex: 1000,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  dropdownItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  dropdownItemText: {
-    fontSize: 16,
-    color: "#000",
   },
 });
