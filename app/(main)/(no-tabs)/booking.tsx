@@ -11,26 +11,9 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { Calendar } from "react-native-calendars";
 import {
-  MapPin,
-  Clock,
-  Car,
-  Target,
   CheckCircle,
   X,
-  CalendarDays,
-  Users,
-  Navigation,
-  Route,
-  Award,
-  CreditCard,
-  Home,
-  Mountain,
-  Construction,
-  Moon,
-  Repeat,
-  Settings,
   Coins,
 } from "lucide-react-native";
 import {
@@ -40,6 +23,11 @@ import {
   ShiftType,
   Skill,
 } from "@/models/booking/booking";
+import Step1 from "@/components/Booking/Step1";
+import Step2 from "@/components/Booking/Step2";
+import Step3 from "@/components/Booking/Step3";
+import Step4 from "@/components/Booking/Step4";
+import Step5 from "@/components/Booking/Step5";
 
 export default function BookingScreen() {
   const router = useRouter();
@@ -87,118 +75,6 @@ export default function BookingScreen() {
     { number: 5, label: "Xác nhận thanh toán" },
   ];
 
-  const roadTypes: RoadType[] = [
-    { id: "residential", label: "Đường khu dân cư vắng", icon: "Home" },
-    { id: "urban", label: "Đường đô thị (trong thành phố)", icon: "Users" },
-    {
-      id: "national",
-      label: "Quốc lộ (lưu lượng xe trung bình – cao)",
-      icon: "Route",
-    },
-    {
-      id: "highway",
-      label: "Đường cao tốc (tốc độ cao, giữ làn, vượt xe)",
-      icon: "Car",
-    },
-    {
-      id: "mountain",
-      label: "Đường đèo / đường núi (nhiều dốc, cua gấp)",
-      icon: "Mountain",
-    },
-    {
-      id: "long_distance",
-      label: "Đường dài / đường trường (liên tỉnh, đi xa)",
-      icon: "Navigation",
-    },
-    {
-      id: "crowded",
-      label: "Đường qua khu đông dân cư / chợ / trường học",
-      icon: "Users",
-    },
-    {
-      id: "construction",
-      label: "Đường đang thi công / mặt đường xấu",
-      icon: "Construction",
-    },
-    {
-      id: "slippery",
-      label: "Đường trơn trượt (mưa, sình lầy)",
-      icon: "Clock",
-    },
-    { id: "night", label: "Đường ban đêm", icon: "Moon" },
-  ];
-
-  const skills: Skill[] = [
-    {
-      id: "basic_control",
-      label: "Điều khiển cơ bản (ga, phanh, vô lăng)",
-      icon: "Settings",
-    },
-    { id: "parking", label: "Đỗ xe (song song, dọc, ngang)", icon: "Car" },
-    {
-      id: "lane_change",
-      label: "Chuyển làn đường an toàn",
-      icon: "Navigation",
-    },
-    { id: "overtaking", label: "Vượt xe đúng cách", icon: "Target" },
-    { id: "intersection", label: "Qua ngã tư, đèn đỏ", icon: "Route" },
-    { id: "roundabout", label: "Đi vòng xuyến", icon: "Repeat" },
-    { id: "reverse", label: "Lùi xe an toàn", icon: "Navigation" },
-    { id: "uphill_downhill", label: "Lên dốc, xuống dốc", icon: "Mountain" },
-    { id: "night_driving", label: "Lái xe ban đêm", icon: "Moon" },
-    { id: "rain_driving", label: "Lái xe trong mưa", icon: "Clock" },
-    { id: "highway_driving", label: "Lái xe cao tốc", icon: "Car" },
-    { id: "defensive_driving", label: "Lái xe phòng thủ", icon: "Award" },
-  ];
-
-  const shifts = [
-    { id: "morning" as ShiftType, label: "Ca sáng", time: "6:00 - 10:00" },
-    { id: "afternoon" as ShiftType, label: "Ca chiều", time: "14:00 - 18:00" },
-    { id: "evening" as ShiftType, label: "Ca tối", time: "18:00 - 22:00" },
-  ];
-
-  const weekDays = [
-    { id: "mon", label: "T2" },
-    { id: "tue", label: "T3" },
-    { id: "wed", label: "T4" },
-    { id: "thu", label: "T5" },
-    { id: "fri", label: "T6" },
-    { id: "sat", label: "T7" },
-    { id: "sun", label: "CN" },
-  ];
-
-  const pickupLocations = [
-    {
-      id: "fpt_hcm",
-      name: "FPT University Hồ Chí Minh",
-      address: "Khu Công nghệ cao, Quận 9, TP.HCM",
-    },
-    {
-      id: "fpt_hanoi",
-      name: "FPT University Hà Nội",
-      address: "Khu Công nghệ cao Hòa Lạc, Thạch Thất, Hà Nội",
-    },
-    {
-      id: "fpt_danang",
-      name: "FPT University Đà Nẵng",
-      address: "Khu Công nghệ cao, Quận Liên Chiểu, Đà Nẵng",
-    },
-    {
-      id: "fpt_cantho",
-      name: "FPT University Cần Thơ",
-      address: "Khu Công nghệ cao, Quận Ninh Kiều, Cần Thơ",
-    },
-    {
-      id: "fpt_quynhon",
-      name: "FPT University Quy Nhơn",
-      address: "Khu Công nghệ cao, Quận Bình Định, Quy Nhơn",
-    },
-    {
-      id: "fpt_hoian",
-      name: "FPT University Hội An",
-      address: "Khu Công nghệ cao, Quận Hội An, Quảng Nam",
-    },
-  ];
 
   const toggleDay = (dayId: string) => {
     setSelectedDays((prev) =>
@@ -407,15 +283,16 @@ export default function BookingScreen() {
             </View>
           )}
 
-          {selectedDate && selectedShift && (
+          {(selectedDate && selectedShift) || (startDate && endDate) ? (
             <View style={styles.trackingRow}>
               <Text style={styles.trackingLabel}>Thời gian:</Text>
               <Text style={styles.trackingValue}>
-                {selectedDate} -{" "}
-                {shifts.find((s) => s.id === selectedShift.id)?.label}
+                {bookingMode === "daily" 
+                  ? `${selectedDate} - ${selectedShift?.label || ""}`
+                  : `${startDate} → ${endDate}`}
               </Text>
             </View>
-          )}
+          ) : null}
 
           {pickupLocation && (
             <View style={styles.trackingRow}>
@@ -449,573 +326,79 @@ export default function BookingScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Step 1: Booking Mode */}
         {currentStep === 1 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Chọn phương thức đặt lịch</Text>
-            </View>
-            <View style={styles.modeContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.modeCard,
-                  bookingMode === "daily" && styles.modeCardActive,
-                ]}
-                onPress={() => setBookingMode("daily")}
-              >
-                <View style={styles.modeIconContainer}>
-                  <CalendarDays
-                    size={32}
-                    color={bookingMode === "daily" ? "#667eea" : "#64748b"}
-                    strokeWidth={2}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.modeText,
-                    bookingMode === "daily" && styles.modeTextActive,
-                  ]}
-                >
-                  Theo ca trong ngày
-                </Text>
-                <Text style={styles.modeDesc}>
-                  Đặt lịch theo từng ngày cụ thể
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.modeCard,
-                  bookingMode === "recurring" && styles.modeCardActive,
-                ]}
-                onPress={() => setBookingMode("recurring")}
-              >
-                <View style={styles.modeIconContainer}>
-                  <Repeat
-                    size={32}
-                    color={bookingMode === "recurring" ? "#667eea" : "#64748b"}
-                    strokeWidth={2}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.modeText,
-                    bookingMode === "recurring" && styles.modeTextActive,
-                  ]}
-                >
-                  Theo chu kỳ
-                </Text>
-                <Text style={styles.modeDesc}>Đặt lịch lặp lại theo tuần</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <Step1
+            bookingMode={bookingMode}
+            onModeChange={setBookingMode}
+          />
         )}
 
         {/* Step 2: Time Selection */}
         {currentStep === 2 && (
-          <>
-            {bookingMode === "daily" ? (
-              <>
-                <View style={styles.section}>
-                  <View style={styles.sectionHeader}>
-                    <CalendarDays size={24} color="#667eea" strokeWidth={2} />
-                    <Text style={styles.sectionTitle}>Chọn ngày</Text>
-                  </View>
-                  <Calendar
-                    current={new Date().toISOString().split("T")[0]}
-                    onDayPress={(day) => setSelectedDate(day.dateString)}
-                    markedDates={{
-                      [selectedDate]: {
-                        selected: true,
-                        selectedColor: "#667eea",
-                      },
-                    }}
-                    theme={{
-                      todayTextColor: "#667eea",
-                      selectedDayBackgroundColor: "#667eea",
-                      selectedDayTextColor: "#ffffff",
-                      arrowColor: "#667eea",
-                    }}
-                    style={styles.calendar}
-                  />
-                </View>
-
-                {selectedDate && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Chọn ca thuê</Text>
-                    {shifts.map((shift) => (
-                      <TouchableOpacity
-                        key={shift.id}
-                        style={[
-                          styles.shiftCard,
-                          selectedShift?.id === shift.id &&
-                            styles.shiftCardActive,
-                        ]}
-                        onPress={() => setSelectedShift(shift)}
-                      >
-                        <View style={styles.shiftInfo}>
-                          <Text style={styles.shiftLabel}>{shift.label}</Text>
-                          <Text style={styles.shiftTime}>{shift.time}</Text>
-                        </View>
-                        {selectedShift?.id === shift.id && (
-                          <CheckCircle
-                            size={24}
-                            color="#667eea"
-                            strokeWidth={2}
-                          />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </>
-            ) : (
-              <>
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>
-                    📅 Chọn khoảng thời gian
-                  </Text>
-                  <View style={styles.dateRangeContainer}>
-                    <View style={styles.dateInputWrapper}>
-                      <Text style={styles.dateInputLabel}>Từ ngày:</Text>
-                      <TextInput
-                        style={styles.dateInput}
-                        placeholder="DD/MM/YYYY"
-                        value={startDate}
-                        onChangeText={setStartDate}
-                      />
-                    </View>
-                    <View style={styles.dateInputWrapper}>
-                      <Text style={styles.dateInputLabel}>Đến ngày:</Text>
-                      <TextInput
-                        style={styles.dateInput}
-                        placeholder="DD/MM/YYYY"
-                        value={endDate}
-                        onChangeText={setEndDate}
-                      />
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>
-                    📆 Chọn các thứ trong tuần
-                  </Text>
-                  <View style={styles.weekDaysContainer}>
-                    {weekDays.map((day) => (
-                      <TouchableOpacity
-                        key={day.id}
-                        style={[
-                          styles.dayButton,
-                          selectedDays.includes(day.id) &&
-                            styles.dayButtonActive,
-                        ]}
-                        onPress={() => toggleDay(day.id)}
-                      >
-                        <Text
-                          style={[
-                            styles.dayButtonText,
-                            selectedDays.includes(day.id) &&
-                              styles.dayButtonTextActive,
-                          ]}
-                        >
-                          {day.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {selectedDays.length > 0 && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>⏰ Chọn ca học</Text>
-                    {shifts.map((shift) => (
-                      <TouchableOpacity
-                        key={shift.id}
-                        style={[
-                          styles.shiftCard,
-                          selectedShiftsRecurring.includes(shift.id) &&
-                            styles.shiftCardActive,
-                        ]}
-                        onPress={() => {
-                          setSelectedShiftsRecurring((prev) =>
-                            prev.includes(shift.id)
-                              ? prev.filter((s) => s !== shift.id)
-                              : [...prev, shift.id]
-                          );
-                        }}
-                      >
-                        <View style={styles.shiftInfo}>
-                          <Text style={styles.shiftLabel}>{shift.label}</Text>
-                          <Text style={styles.shiftTime}>{shift.time}</Text>
-                        </View>
-                        {selectedShiftsRecurring.includes(shift.id) && (
-                          <CheckCircle
-                            size={24}
-                            color="#667eea"
-                            strokeWidth={2}
-                          />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </>
-            )}
-          </>
+          <Step2
+            bookingMode={bookingMode}
+            selectedDate={selectedDate}
+            selectedShift={selectedShift}
+            onDateSelect={setSelectedDate}
+            onShiftSelect={setSelectedShift}
+            startDate={startDate}
+            endDate={endDate}
+            selectedDays={selectedDays}
+            selectedShiftsRecurring={selectedShiftsRecurring}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            onDayToggle={toggleDay}
+            onRecurringShiftToggle={(shiftId: ShiftType) => {
+              setSelectedShiftsRecurring((prev) =>
+                prev.includes(shiftId)
+                  ? prev.filter((s) => s !== shiftId)
+                  : [...prev, shiftId]
+              );
+            }}
+          />
         )}
 
         {/* Step 3: Location */}
         {currentStep === 3 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📍 Chọn địa điểm đón</Text>
-            <Text style={styles.sectionDesc}>
-              Địa điểm đón và trả sẽ là cùng một vị trí. Vui lòng chọn một địa
-              điểm từ danh sách bên dưới.
-            </Text>
-
-            <View style={styles.locationNote}>
-              <Text style={styles.locationNoteText}>
-                💡 Lưu ý: Điểm đón cũng chính là điểm thả. Bạn sẽ được đón và
-                trả tại cùng một địa điểm đã chọn.
-              </Text>
-            </View>
-
-            <View style={styles.locationList}>
-              {pickupLocations.map((location) => (
-                <TouchableOpacity
-                  key={location.id}
-                  style={[
-                    styles.locationCard,
-                    selectedLocationId === location.id &&
-                      styles.locationCardSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedLocationId(location.id);
-                    setPickupLocation(location.name);
-                  }}
-                >
-                  <View style={styles.locationCardContent}>
-                    <View style={styles.locationIconContainer}>
-                      <MapPin
-                        size={20}
-                        color={
-                          selectedLocationId === location.id
-                            ? "#667eea"
-                            : "#64748b"
-                        }
-                        strokeWidth={2}
-                      />
-                    </View>
-                    <View style={styles.locationInfo}>
-                      <Text
-                        style={[
-                          styles.locationName,
-                          selectedLocationId === location.id &&
-                            styles.locationNameSelected,
-                        ]}
-                      >
-                        {location.name}
-                      </Text>
-                      <Text style={styles.locationAddress}>
-                        {location.address}
-                      </Text>
-                    </View>
-                    {selectedLocationId === location.id && (
-                      <CheckCircle size={20} color="#667eea" strokeWidth={2} />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {pickupLocation && (
-              <View style={styles.locationPreview}>
-                <MapPin size={16} color="#10b981" strokeWidth={2} />
-                <Text style={styles.locationPreviewText}>
-                  Đã chọn: {pickupLocation}
-                </Text>
-              </View>
-            )}
-          </View>
+          <Step3
+            selectedLocationId={selectedLocationId}
+            pickupLocation={pickupLocation}
+            onLocationSelect={(locationId: string, locationName: string) => {
+              setSelectedLocationId(locationId);
+              setPickupLocation(locationName);
+            }}
+          />
         )}
 
         {/* Step 4: Road Types & Skills Combined */}
         {currentStep === 4 && (
-          <>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                🛣️ Chọn loại đường muốn di chuyển
-              </Text>
-              <Text style={styles.sectionDesc}>
-                Chọn một hoặc nhiều loại đường để luyện tập
-              </Text>
-
-              {roadTypes.map((road) => {
-                const IconComponent = {
-                  Home,
-                  Users,
-                  Route,
-                  Car,
-                  Mountain,
-                  Navigation,
-                  Construction,
-                  Clock,
-                  Moon,
-                }[road.icon];
-
-                return (
-                  <TouchableOpacity
-                    key={road.id}
-                    style={[
-                      styles.optionCard,
-                      selectedRoadTypes.find((r) => r.id === road.id) &&
-                        styles.optionCardActive,
-                    ]}
-                    onPress={() => toggleRoadType(road)}
-                  >
-                    <View style={styles.optionIconContainer}>
-                      {IconComponent && (
-                        <IconComponent
-                          size={24}
-                          color={
-                            selectedRoadTypes.find((r) => r.id === road.id)
-                              ? "#667eea"
-                              : "#64748b"
-                          }
-                          strokeWidth={2}
-                        />
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.optionText,
-                        selectedRoadTypes.find((r) => r.id === road.id) &&
-                          styles.optionTextActive,
-                      ]}
-                    >
-                      {road.label}
-                    </Text>
-                    {selectedRoadTypes.find((r) => r.id === road.id) && (
-                      <CheckCircle size={20} color="#667eea" strokeWidth={2} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                🎯 Chọn kỹ năng muốn được huấn luyện
-              </Text>
-              <Text style={styles.sectionDesc}>
-                Chọn các kỹ năng bạn muốn cải thiện
-              </Text>
-
-              {skills.map((skill) => {
-                const IconComponent = {
-                  Settings,
-                  Car,
-                  Navigation,
-                  Target,
-                  Route,
-                  Repeat,
-                  Mountain,
-                  Moon,
-                  Clock,
-                  Award,
-                }[skill.icon];
-
-                return (
-                  <TouchableOpacity
-                    key={skill.id}
-                    style={[
-                      styles.optionCard,
-                      selectedSkills.find((s) => s.id === skill.id) &&
-                        styles.optionCardActive,
-                    ]}
-                    onPress={() => toggleSkill(skill)}
-                  >
-                    <View style={styles.optionIconContainer}>
-                      {IconComponent && (
-                        <IconComponent
-                          size={24}
-                          color={
-                            selectedSkills.find((s) => s.id === skill.id)
-                              ? "#667eea"
-                              : "#64748b"
-                          }
-                          strokeWidth={2}
-                        />
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.optionText,
-                        selectedSkills.find((s) => s.id === skill.id) &&
-                          styles.optionTextActive,
-                      ]}
-                    >
-                      {skill.label}
-                    </Text>
-                    {selectedSkills.find((s) => s.id === skill.id) && (
-                      <CheckCircle size={20} color="#667eea" strokeWidth={2} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </>
+          <Step4
+            selectedRoadTypes={selectedRoadTypes}
+            selectedSkills={selectedSkills}
+            onRoadTypeToggle={toggleRoadType}
+            onSkillToggle={toggleSkill}
+          />
         )}
 
         {/* Step 5: Payment & Confirmation */}
         {currentStep === 5 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              ✅ Xác nhận thông tin đặt lịch
-            </Text>
-
-            <View style={styles.summaryCard}>
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>📦 Gói thuê:</Text>
-                <Text style={styles.summaryValue}>
-                  {packageType === "instructor"
-                    ? "Thuê người hướng dẫn"
-                    : packageType === "full"
-                    ? "Thuê trọn gói"
-                    : "Chưa chọn gói"}
-                </Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>📅 Phương thức:</Text>
-                <Text style={styles.summaryValue}>
-                  {bookingMode === "daily"
-                    ? "Theo ca trong ngày"
-                    : "Theo chu kỳ"}
-                </Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>⏰ Thời gian:</Text>
-                <Text style={styles.summaryValue}>
-                  {bookingMode === "daily"
-                    ? `${selectedDate} - ${
-                        shifts.find((s) => s.id === selectedShift?.id)?.label
-                      }`
-                    : `${startDate} → ${endDate}`}
-                </Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>📍 Địa điểm:</Text>
-                <Text style={styles.summaryValue}>{pickupLocation}</Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>🛣️ Loại đường:</Text>
-                <Text style={styles.summaryValue}>
-                  {selectedRoadTypes.map((road) => road.label).join(", ")}
-                </Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>🎯 Kỹ năng:</Text>
-                <Text style={styles.summaryValue}>
-                  {selectedSkills.map((skill) => skill.label).join(", ")}
-                </Text>
-              </View>
-
-              <View style={styles.summaryDivider} />
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>💰 Chi phí:</Text>
-                <Text style={styles.summaryPrice}>{bookingCost} xu</Text>
-              </View>
-            </View>
-
-            {/* Payment Section */}
-            <View style={styles.paymentCard}>
-              <View style={styles.paymentHeader}>
-                <CreditCard size={24} color="#667eea" strokeWidth={2} />
-                <Text style={styles.paymentTitle}>Thanh toán</Text>
-              </View>
-
-              <View style={styles.walletInfo}>
-                <View style={styles.walletRow}>
-                  <Text style={styles.walletLabel}>Số dư hiện tại:</Text>
-                  <Text style={styles.walletAmount}>{userCoins} xu</Text>
-                </View>
-                <View style={styles.walletRow}>
-                  <Text style={styles.walletLabel}>Chi phí đặt lịch:</Text>
-                  <Text style={styles.walletCost}>-{bookingCost} xu</Text>
-                </View>
-                <View style={styles.walletDivider} />
-                <View style={styles.walletRow}>
-                  <Text style={styles.walletLabelBold}>
-                    Số dư sau thanh toán:
-                  </Text>
-                  <Text
-                    style={[
-                      styles.walletRemaining,
-                      userCoins >= bookingCost
-                        ? styles.walletRemainingSuccess
-                        : styles.walletRemainingError,
-                    ]}
-                  >
-                    {userCoins - bookingCost} xu
-                  </Text>
-                </View>
-              </View>
-
-              {userCoins < bookingCost && (
-                <View style={styles.errorCard}>
-                  <Text style={styles.errorText}>
-                    ❌ Số dư không đủ! Vui lòng nạp thêm{" "}
-                    {bookingCost - userCoins} xu
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
+          <Step5
+            packageType={packageType}
+            bookingMode={bookingMode}
+            selectedDate={selectedDate}
+            selectedShift={selectedShift}
+            startDate={startDate}
+            endDate={endDate}
+            pickupLocation={pickupLocation}
+            selectedRoadTypes={selectedRoadTypes}
+            selectedSkills={selectedSkills}
+            bookingCost={bookingCost}
+            userCoins={userCoins}
+          />
         )}
 
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Location Modal */}
-      <Modal
-        visible={showLocationModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowLocationModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Nhập địa chỉ đón</Text>
-              <TouchableOpacity onPress={() => setShowLocationModal(false)}>
-                <X size={24} color="#64748b" strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Nhập địa chỉ..."
-              value={pickupLocation}
-              onChangeText={setPickupLocation}
-              multiline
-              numberOfLines={3}
-              autoFocus
-            />
-
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setShowLocationModal(false)}
-            >
-              <Text style={styles.modalButtonText}>Xác nhận</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       {/* Bottom Actions */}
       <View style={styles.bottomContainer}>
@@ -1326,349 +709,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     lineHeight: 20,
   },
-  modeContainer: {
-    gap: 12,
-  },
-  modeCard: {
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#f8fafc",
-    alignItems: "center",
-  },
-  modeCardActive: {
-    borderColor: "#667eea",
-    backgroundColor: "#f0f4ff",
-  },
-  modeIconContainer: {
-    marginBottom: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modeIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  modeText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#64748b",
-    marginBottom: 4,
-  },
-  modeTextActive: {
-    color: "#667eea",
-  },
-  modeDesc: {
-    fontSize: 13,
-    color: "#94a3b8",
-    textAlign: "center",
-  },
-  calendar: {
-    borderRadius: 12,
-  },
-  shiftCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#f8fafc",
-    marginBottom: 12,
-  },
-  shiftCardActive: {
-    borderColor: "#667eea",
-    backgroundColor: "#f0f4ff",
-  },
-  shiftIcon: {
-    fontSize: 32,
-    marginRight: 16,
-  },
-  shiftInfo: {
-    flex: 1,
-  },
-  shiftLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 4,
-  },
-  shiftTime: {
-    fontSize: 14,
-    color: "#64748b",
-    fontWeight: "600",
-  },
-  dateRangeContainer: {
-    gap: 12,
-  },
-  dateInputWrapper: {
-    gap: 8,
-  },
-  dateInputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748b",
-  },
-  dateInput: {
-    backgroundColor: "#f8fafc",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 10,
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1e293b",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  weekDaysContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  dayButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#f8fafc",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-  },
-  dayButtonActive: {
-    backgroundColor: "#667eea",
-    borderColor: "#667eea",
-  },
-  dayButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#64748b",
-  },
-  dayButtonTextActive: {
-    color: "#ffffff",
-  },
-  locationInput: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#f8fafc",
-    gap: 12,
-  },
-  locationInputText: {
-    flex: 1,
-    fontSize: 15,
-    color: "#94a3b8",
-    fontWeight: "500",
-  },
-  locationInputTextFilled: {
-    color: "#1e293b",
-    fontWeight: "600",
-  },
-  locationPreview: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: "#f0fdf4",
-    marginTop: 12,
-    gap: 8,
-  },
-  locationPreviewText: {
-    flex: 1,
-    fontSize: 14,
-    color: "#15803d",
-    fontWeight: "600",
-  },
-  locationNote: {
-    backgroundColor: "#f0f9ff",
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: "#3b82f6",
-  },
-  locationNoteText: {
-    fontSize: 13,
-    color: "#1e40af",
-    fontWeight: "600",
-    lineHeight: 18,
-  },
-  locationList: {
-    gap: 12,
-  },
-  locationCard: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    padding: 16,
-  },
-  locationCardSelected: {
-    borderColor: "#667eea",
-    backgroundColor: "#f0f4ff",
-  },
-  locationCardContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  locationIconContainer: {
-    marginRight: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  locationInfo: {
-    flex: 1,
-  },
-  locationName: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 4,
-  },
-  locationNameSelected: {
-    color: "#667eea",
-  },
-  locationAddress: {
-    fontSize: 13,
-    color: "#64748b",
-    fontWeight: "500",
-    lineHeight: 18,
-  },
-  optionsGrid: {
-    gap: 12,
-  },
-  optionCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#f8fafc",
-    position: "relative",
-  },
-  optionCardActive: {
-    borderColor: "#667eea",
-    backgroundColor: "#f0f4ff",
-  },
-  optionIconContainer: {
-    marginRight: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  optionIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  optionText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748b",
-    lineHeight: 20,
-  },
-  optionTextActive: {
-    color: "#667eea",
-    fontWeight: "700",
-  },
-  optionCheck: {
-    marginLeft: 8,
-  },
-  summaryCard: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-  },
-  summaryRow: {
-    gap: 4,
-  },
-  summaryLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#64748b",
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1e293b",
-    lineHeight: 20,
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: "#e2e8f0",
-    marginVertical: 8,
-  },
-  summaryPrice: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#667eea",
-  },
-  warningCard: {
-    backgroundColor: "#fef3c7",
-    padding: 12,
-    borderRadius: 10,
-    marginTop: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: "#f59e0b",
-  },
-  warningText: {
-    fontSize: 13,
-    color: "#92400e",
-    fontWeight: "600",
-    lineHeight: 18,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 40,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1e293b",
-  },
-  modalInput: {
-    backgroundColor: "#f8fafc",
-    padding: 16,
-    borderRadius: 12,
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#1e293b",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    marginBottom: 16,
-    minHeight: 80,
-    textAlignVertical: "top",
-  },
-  modalButton: {
-    backgroundColor: "#667eea",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#ffffff",
-  },
   bottomContainer: {
     flexDirection: "row",
     paddingHorizontal: 16,
@@ -1714,93 +754,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: "#ffffff",
-  },
-  checkIcon: {
-    fontSize: 24,
-    color: "#667eea",
-    fontWeight: "800",
-  },
-  paymentCard: {
-    backgroundColor: "#ffffff",
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  paymentHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
-  },
-  paymentTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1e293b",
-  },
-  walletInfo: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    padding: 16,
-  },
-  walletRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  walletLabel: {
-    fontSize: 14,
-    color: "#64748b",
-    fontWeight: "600",
-  },
-  walletLabelBold: {
-    fontSize: 14,
-    color: "#1e293b",
-    fontWeight: "800",
-  },
-  walletAmount: {
-    fontSize: 14,
-    color: "#10b981",
-    fontWeight: "800",
-  },
-  walletCost: {
-    fontSize: 14,
-    color: "#ef4444",
-    fontWeight: "800",
-  },
-  walletDivider: {
-    height: 1,
-    backgroundColor: "#e2e8f0",
-    marginVertical: 8,
-  },
-  walletRemaining: {
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  walletRemainingSuccess: {
-    color: "#10b981",
-  },
-  walletRemainingError: {
-    color: "#ef4444",
-  },
-  errorCard: {
-    backgroundColor: "#fee2e2",
-    padding: 12,
-    borderRadius: 10,
-    marginTop: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: "#ef4444",
-  },
-  errorText: {
-    fontSize: 13,
-    color: "#dc2626",
-    fontWeight: "600",
-    lineHeight: 18,
   },
 });

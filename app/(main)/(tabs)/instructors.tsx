@@ -16,13 +16,13 @@ import { useRouter } from "expo-router";
 import { LucideUsers, Search, X } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import {
-  instructorsData,
+  instructorData,
   getInstructorsByExperienceRange,
   sortInstructorsByRating,
   sortInstructorsByPrice,
   sortInstructorsByExperience,
 } from "../../../data/instructors_data";
-import { IInstructor } from "@/models/instructor/instructor";
+import { IInstructors } from "@/models/instructor/instructor";
 
 type FilterType = "all" | "available" | "busy";
 type DistanceFilter = "all" | "1-3" | "3-5" | "5-10" | "10+";
@@ -51,9 +51,9 @@ function InstructorsScreen() {
   const [sortBy, setSortBy] = useState<SortType>("rating");
   const [sortAscending, setSortAscending] = useState(false);
   const [instructorsWithDistance, setInstructorsWithDistance] =
-    useState<IInstructor[]>(instructorsData);
+    useState<IInstructors[]>(instructorData);
   const [filteredInstructors, setFilteredInstructors] =
-    useState<IInstructor[]>(instructorsData);
+    useState<IInstructors[]>(instructorData);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -82,22 +82,21 @@ function InstructorsScreen() {
 
     // Apply experience filter
     if (filters.experience !== "all") {
-      switch (filters.experience) {
-        case "1-3":
-          filtered = getInstructorsByExperienceRange(filtered, 1, 3);
-          break;
-        case "3-5":
-          filtered = getInstructorsByExperienceRange(filtered, 3, 5);
-          break;
-        case "5-10":
-          filtered = getInstructorsByExperienceRange(filtered, 5, 10);
-          break;
-        case "10+":
-          filtered = filtered.filter(
-            (instructor) => instructor.experienceYears > 10
-          );
-          break;
-      }
+      filtered = filtered.filter((instructor) => {
+        const years = parseInt(instructor.experience);
+        switch (filters.experience) {
+          case "1-3":
+            return years >= 1 && years <= 3;
+          case "3-5":
+            return years >= 3 && years <= 5;
+          case "5-10":
+            return years >= 5 && years <= 10;
+          case "10+":
+            return years > 10;
+          default:
+            return true;
+        }
+      });
     }
 
     // Apply price range filter
@@ -110,20 +109,32 @@ function InstructorsScreen() {
     // Apply minimum rating filter
     if (filters.minRating > 0) {
       filtered = filtered.filter(
-        (instructor) => instructor.rating >= filters.minRating
+        (instructor) => instructor.averageRating >= filters.minRating
       );
     }
 
     // Apply sorting
     switch (sortBy) {
       case "rating":
-        filtered = sortInstructorsByRating(filtered, sortAscending);
+        filtered = [...filtered].sort((a, b) =>
+          sortAscending
+            ? a.averageRating - b.averageRating
+            : b.averageRating - a.averageRating
+        );
         break;
       case "price":
-        filtered = sortInstructorsByPrice(filtered, sortAscending);
+        filtered = [...filtered].sort((a, b) =>
+          sortAscending
+            ? a.pricePerHour - b.pricePerHour
+            : b.pricePerHour - a.pricePerHour
+        );
         break;
       case "experience":
-        filtered = sortInstructorsByExperience(filtered, sortAscending);
+        filtered = [...filtered].sort((a, b) => {
+          const yearsA = parseInt(a.experience);
+          const yearsB = parseInt(b.experience);
+          return sortAscending ? yearsA - yearsB : yearsB - yearsA;
+        });
         break;
     }
 
@@ -155,31 +166,29 @@ function InstructorsScreen() {
     setShowFilterModal(false);
   };
 
-  const handleInstructorPress = (instructor: IInstructor) => {
+  const handleInstructorPress = (instructor: IInstructors) => {
     Alert.alert(
       `${instructor.name}`,
-      `⭐ Rating: ${instructor.rating}/5 (${instructor.totalBookings} bookings)
-💰 Pricing: ${instructor.pricing}
-📚 Experience: ${instructor.experience}
-📱 Phone: ${instructor.phone}
-📧 Email: ${instructor.email}
-
-🎯 Specialties:
-${instructor.specialties.join(", ")}
-
-📝 ${instructor.description}`,
+      `⭐ Rating: ${instructor.averageRating}/5 (${
+        instructor.totalBookings
+      } bookings)
+💰 Pricing: ${instructor.pricePerHour.toLocaleString()}đ/giờ
+📚 Experience: ${instructor.experience}`,
       [
         { text: "Close", style: "cancel" },
         {
-          text: "Call Now",
+          text: "Xem chi tiết",
           onPress: () =>
-            Alert.alert("Calling...", `Calling ${instructor.phone}`),
+            router.push({
+              pathname: "/(main)/(no-tabs)/instructor-detail",
+              params: { instructorId: instructor.id },
+            }),
         },
       ]
     );
   };
 
-  const renderInstructorCard = ({ item }: { item: IInstructor }) => (
+  const renderInstructorCard = ({ item }: { item: IInstructors }) => (
     <TouchableOpacity
       style={styles.instructorCard}
       onPress={() => handleInstructorPress(item)}
@@ -190,11 +199,11 @@ ${instructor.specialties.join(", ")}
 
       <View style={styles.instructorInfo}>
         <View style={styles.headerRow}>
-          <Text style={styles.instructorName}>
-            {item.name} ({item.experienceYears} năm)
-          </Text>
+          <Text style={styles.instructorName}>{item.name}</Text>
           <View style={styles.ratingContainer}>
-            <Text style={styles.ratingText}>⭐ {item.rating}</Text>
+            <Text style={styles.ratingText}>
+              ⭐ {item.averageRating.toFixed(1)}
+            </Text>
           </View>
         </View>
 
@@ -203,7 +212,9 @@ ${instructor.specialties.join(", ")}
         </View>
 
         <View style={styles.priceRow}>
-          <Text style={styles.instructorPrice}>{item.pricing}</Text>
+          <Text style={styles.instructorPrice}>
+            {item.pricePerHour.toLocaleString()}đ/giờ
+          </Text>
           <TouchableOpacity
             style={styles.detailButton}
             onPress={() =>
