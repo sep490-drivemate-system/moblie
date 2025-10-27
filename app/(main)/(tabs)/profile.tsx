@@ -8,6 +8,7 @@ import {
   Alert,
   StyleSheet,
 } from "react-native";
+import { router } from "expo-router";
 import {
   Check,
   MessageCircle,
@@ -130,7 +131,12 @@ function ProfileScreen() {
                 <Text style={styles.menuItemText}>Giấy tờ tùy thân</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() =>
+                router.push("/(main)/(no-tabs)/transaction/transaction")
+              }
+            >
               <View style={styles.menuItemLeft}>
                 <Shield size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Lịch sử giao dịch</Text>
