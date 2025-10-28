@@ -28,26 +28,6 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   }
 
   // Validation logic trong ViewModel
-  private validateLoginForm(formData: ISignInRequest): boolean {
-    if (!formData.email || !formData.password) {
-      return false;
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      this.dispatch(setError("Please enter a valid email address"));
-      return false;
-    }
-
-    // Password validation
-    if (formData.password.length < 6) {
-      this.dispatch(setError("Password must be at least 6 characters"));
-      return false;
-    }
-
-    return true;
-  }
 
   // async logout(): Promise<void> {
   //   await this.executeAsync(
@@ -139,58 +119,42 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   //   }
   // }
 
-  // // Handle login với tất cả logic
-  // async handleLogin(): Promise<void> {
-  //   await this.executeAsync(
-  //     async () => {
-  //       const currentState = this.getCurrentState();
+  // Handle login với tất cả logic
+  async handleLogin(): Promise<void> {
+    await this.executeAsync(
+      async () => {
+        const currentState = this.getCurrentState();  
+       
+        const result = await this.dispatch(
+          signIn(currentState.formData)
+        ).unwrap();
+        if (result?.data?.accessToken) {
+          await AsyncStorage.setItem(
+            ENV.STORAGE_KEYS.ACCESS_TOKEN,
+            result.data.accessToken
+          );
+          await AsyncStorage.setItem(
+            ENV.STORAGE_KEYS.REFRESH_TOKEN,
+            result.data.refreshToken
+          );
+        }
 
-  //       // Validation logic trong ViewModel
-  //       // if (!this.validateLoginForm(currentState.formData)) {
-  //       //   throw new Error("Please fill in all required fields");
-  //       // }
-
-  //       console.log("Attempting login with", currentState.formData.email);
-  //       console.log("Attempting login with", currentState.formData.password);
-  //       // Gọi signIn thunk để call API
-  //       const result = await this.dispatch(
-  //         signIn(currentState.formData)
-  //       ).unwrap();
-
-  //       // Lưu token vào AsyncStorage
-  //       if (result?.data?.accessToken) {
-  //         await AsyncStorage.setItem(
-  //           ENV.STORAGE_KEYS.ACCESS_TOKEN,
-  //           result.data.accessToken
-  //         );
-  //         await AsyncStorage.setItem(
-  //           ENV.STORAGE_KEYS.REFRESH_TOKEN,
-  //           result.data.refreshToken
-  //         );
-  //       }
-
-  //       // Cập nhật user info
-  //       this.dispatch(
-  //         setUser({
-  //           email: currentState.formData.email,
-  //         })
-  //       );
-
-  //       console.log("Login successful");
-  //     },
-  //     () => {
-  //       console.log("Login completed successfully");
-  //     },
-  //     (error) => {
-  //       console.error("Login failed:", error);
-  //     },
-  //     {
-  //       setLoading,
-  //       setError,
-  //       setSuccess,
-  //     }
-  //   );
-  // }
+        // Cập nhật user info
+      
+      },
+      () => {
+        console.log("Login completed successfully");
+      },
+      (error) => {
+        console.error("Login failed:", error);
+      },
+      {
+        setLoading,
+        setError,
+        setSuccess,
+      }
+    );
+  }
 
   // Handle reset form
   handleResetForm(): void {

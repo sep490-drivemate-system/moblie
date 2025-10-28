@@ -11,6 +11,9 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
     async (config) => {
+        console.log("🚀 REQUEST:", config.method?.toUpperCase(), `${config.baseURL || ''}${config.url || ''}`);
+        console.log("🚀 DATA:", config.data);
+        
         try {
             const token = await AsyncStorage.getItem(ENV.STORAGE_KEYS.ACCESS_TOKEN);
             if (token) {
@@ -23,12 +26,22 @@ axiosInstance.interceptors.request.use(
         }
         return config;
     },
-    (error) => Promise.reject(error)
+    (error) => {
+        console.error("❌ REQUEST ERROR:", error);
+        return Promise.reject(error);
+    }
 );
 
 axiosInstance.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        console.log("✅ RESPONSE:", response.status, response.statusText);
+        return response;
+    },
     async (error: AxiosError) => {
+        console.error("❌ RESPONSE ERROR:", error.message);
+        console.error("❌ ERROR CODE:", error.code);
+        console.error("❌ STATUS:", error.response?.status);
+        console.error("❌ RESPONSE DATA:", error.response?.data);
         if (error.response?.status === 401) {
             try {
                 // Clear all auth-related storage

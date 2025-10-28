@@ -1,6 +1,6 @@
 // Environment configuration
 export const ENV = {
-    API_URL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api',
+    API_URL: process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:5000',
     API_TIMEOUT: 30000, // 30 seconds
 
     // Development flags

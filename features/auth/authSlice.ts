@@ -17,11 +17,11 @@ interface AuthState extends BaseState {
 }
 
 const initialState: AuthState = {
-  isAuthenticated: true,
+  isAuthenticated: false,
   user: null,
 
   formData: {
-    email: "",
+    emailOrPhone: "",
     password: "",
   },
 
@@ -51,7 +51,7 @@ const authSlice = createSlice({
     },
     resetForm: (state) => {
       state.formData = {
-        email: "",
+        emailOrPhone: "",
         password: "",
       };
     },
@@ -112,7 +112,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.user = null;
       state.formData = {
-        email: "",
+        emailOrPhone: "",
         password: "",
       };
     },

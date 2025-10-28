@@ -8,7 +8,7 @@ export const AUTH_PATH = "auth";
 export const signIn = createThunk<ISignInResponse, ISignInRequest>(
     HttpMethod.POST,
     `signin`,
-    `${AUTH_PATH}/signin`,
+    `/${AUTH_PATH}/signin`,
 );
 
 export const signInWithGoogle = createThunk<void, void>(

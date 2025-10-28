@@ -18,9 +18,6 @@ export function createThunk<ResponseType = void, RequestType = void>(
     const url = options?.buildUrl?.(payload) ?? defaultUrl;
     const config = options?.config?.(payload);
 
-    console.log(`[Thunk] Sending request - ${method} ${url}`);
-    console.log(`[Thunk] Payload:`, payload);
-
     try {
       let response;
 

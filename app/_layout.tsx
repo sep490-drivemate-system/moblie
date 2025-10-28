@@ -66,7 +66,6 @@ function RootLayoutNav() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsMounted(true);
-      console.log("RootLayoutNav mounted and ready for navigation");
     }, 100);
     return () => clearTimeout(timer);
   }, []);
@@ -78,15 +77,8 @@ function RootLayoutNav() {
     });
   }, [authViewModel, router]);
 
-  // AUTH STATUS CHECK - CHỈ CHẠY MỘT LẦN
-  useEffect(() => {
-    console.log("🔍 Auth check conditions:", {
-      isMounted,
-      isLoading: authState.isLoading,
-      hasUser: !!authState.user,
-      isAuthenticated: authState.isAuthenticated,
-    });
 
+  useEffect(() => {
     if (
       isMounted &&
       !authState.isLoading &&
@@ -97,19 +89,7 @@ function RootLayoutNav() {
     }
   }, [isMounted]);
 
-  console.log("Conditional rendering - Current state:", {
-    isMounted,
-    isLoading: authState.isLoading,
-    isAuthenticated: authState.isAuthenticated,
-    hasUser: !!authState.user,
-    userEmail: authState.user?.email,
-    renderDecision:
-      authState.isLoading || !isMounted
-        ? "Loading"
-        : authState.isAuthenticated
-        ? "Tabs"
-        : "Login",
-  });
+ 
 
   if (authState.isLoading || !isMounted) {
     return <LoadingSpinner message="Initializing app..." />;

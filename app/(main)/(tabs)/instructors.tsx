@@ -127,7 +127,7 @@ function InstructorsScreen() {
   const [allInstructors] = useState(mockInstructors);
   const [filteredInstructors, setFilteredInstructors] = useState(mockInstructors);
   const [displayedInstructors, setDisplayedInstructors] = useState(mockInstructors);
-  const [showFilterModal, setShowFilterModal] = useState(false);
+  // const [showFilterModal, setShowFilterModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -201,23 +201,16 @@ function InstructorsScreen() {
     setSearchQuery(query);
   };
   
-  const handleFilterChange = (newFilters: typeof filters) => {
-    setFilters(newFilters);
-  };
-  
-  const handleTempFilterChange = (newTempFilters: typeof tempFilters) => {
-    setTempFilters(newTempFilters);
-  };
   
   const handleResetFilters = () => {
     setFilters(initialFilters);
     setTempFilters(initialFilters);
   };
   
-  const handleApplyTempFilters = () => {
-    setFilters(tempFilters);
-    setShowFilterModal(false);
-  };
+  // const handleApplyTempFilters = () => {
+  //   setFilters(tempFilters);
+  //   setShowFilterModal(false);
+  // };
   
   const handleSortChange = (sortType: SortType) => {
     if (sortBy === sortType) {
@@ -228,9 +221,9 @@ function InstructorsScreen() {
     }
   };
   
-  const handleShowFilterModal = (show: boolean) => {
-    setShowFilterModal(show);
-  };
+  // const handleShowFilterModal = (show: boolean) => {
+  //   setShowFilterModal(show);
+  // };
   
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -319,7 +312,7 @@ function InstructorsScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.modernHeader}>
+      {/* <View style={styles.modernHeader}>
         <LinearGradient
           colors={[
             AppColors.gradientStart,
@@ -330,21 +323,16 @@ function InstructorsScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.headerGradient}
         >
-          {/* Decorative Circles */}
           <View style={styles.decorativeCircle1} />
           <View style={styles.decorativeCircle2} />
           <View style={styles.decorativeCircle3} />
         </LinearGradient>
 
-        {/* Glass Overlay */}
         <View style={styles.glassOverlay} />
 
-        {/* Header Content */}
         <View style={styles.headerContent}>
-          {/* Top Row */}
           <View style={styles.headerTopRow}>
             <View style={styles.headerLeft}>
-              {/* Icon Container */}
               <View style={styles.iconContainer}>
                 <LucideUsers
                   size={24}
@@ -364,16 +352,16 @@ function InstructorsScreen() {
             </View>
           </View>
         </View>
-      </View>
+      </View> */}
 
       {/* Search Container */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputWrapper}>
-          <Search size={20} color={AppColors.gray400} strokeWidth={2} />
+          <Search size={20} color={AppColors.gray500} strokeWidth={2} />
           <TextInput
             style={styles.searchInput}
             placeholder="Tìm kiếm giảng viên..."
-            placeholderTextColor={AppColors.gray400}
+            placeholderTextColor={AppColors.gray500}
             value={searchQuery}
             onChangeText={handleSearchChange}
           />
@@ -392,7 +380,7 @@ function InstructorsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScrollContent}
         >
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.filterButton}
             onPress={() => handleShowFilterModal(true)}
           >
@@ -403,7 +391,7 @@ function InstructorsScreen() {
                 <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
               </View>
             )}
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <TouchableOpacity
             style={[
@@ -468,7 +456,7 @@ function InstructorsScreen() {
       </View>
 
       {/* Filter Modal */}
-      <Modal
+      {/* <Modal
         visible={showFilterModal}
         animationType="slide"
         presentationStyle="pageSheet"
@@ -485,7 +473,6 @@ function InstructorsScreen() {
           </View>
 
           <ScrollView style={styles.modalContent}>
-            {/* Experience Filter */}
             <View style={styles.filterSection}>
               <Text style={styles.sectionTitle}>Kinh nghiệm</Text>
               <View style={styles.optionGrid}>
@@ -525,7 +512,6 @@ function InstructorsScreen() {
               </View>
             </View>
 
-            {/* Rating Filter */}
             <View style={styles.filterSection}>
               <Text style={styles.sectionTitle}>Đánh giá tối thiểu</Text>
               <View style={styles.optionGrid}>
@@ -561,7 +547,6 @@ function InstructorsScreen() {
               </View>
             </View>
 
-            {/* Reset Filters */}
             <View style={styles.filterSection}>
               <TouchableOpacity
                 style={styles.resetFiltersButton}
@@ -572,7 +557,7 @@ function InstructorsScreen() {
             </View>
           </ScrollView>
         </View>
-      </Modal>
+      </Modal> */}
 
       {/* Instructor List */}
       <FlatList
@@ -686,7 +671,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     backgroundColor: AppColors.white,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: AppColors.borderLight,
   },

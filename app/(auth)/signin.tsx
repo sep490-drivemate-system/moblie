@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,60 +12,51 @@ import {
   ScrollView,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Eye, EyeOff } from "lucide-react-native";
 import { Video, ResizeMode } from "expo-av";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import { RootState } from "@/lib/redux/store";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { ISignInRequest } from "@/models/auth/signin";
 
 const { width, height } = Dimensions.get("window");
 
 export default function SignInScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ email và mật khẩu");
-      return;
+  
+  const dispatch = useAppDispatch();
+  const authState = useAppSelector((state: RootState) => state.auth);
+  const { formData, isLoading, errorMessage, isAuthenticated, user } = authState;
+  
+  // Tạo AuthViewModel với getCurrentState function đúng cách
+  const [authViewModel] = useState(() => new AuthViewModel(
+    dispatch, 
+    () => {
+      // Lấy state mới nhất từ store thay vì closure
+      const store = require('@/lib/redux/store').store;
+      return store.getState().auth;
     }
+  ));
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert("Lỗi", "Vui lòng nhập email hợp lệ");
-      return;
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      router.replace("/(main)/(tabs)/home");
     }
+  }, [isAuthenticated, user, router]);
 
-    try {
-      // TODO: Implement actual login logic here
-      console.log("Login attempt:", { email, password });
-
-      // Simulate login success
-      Alert.alert("Thành công", "Đăng nhập thành công!", [
-        {
-          text: "OK",
-          onPress: () => {
-            // Navigate to main app
-            router.replace("/(main)/(tabs)/home");
-          },
-        },
-      ]);
-    } catch (error) {
-      console.error("Login error:", error);
-      Alert.alert("Lỗi", "Đăng nhập thất bại. Vui lòng thử lại.");
+    const handleInputChange = (field: keyof ISignInRequest, value: string) => {
+    authViewModel.updateFormData(field, value);
+    if (errorMessage) {
+      authViewModel.clearError();
     }
-  };
-
-  const handleGoBack = () => {
-    router.back();
   };
 
   const handleGoogleLogin = async () => {
     try {
-      // TODO: Implement Google login logic here
-      console.log("Google login attempt");
 
       // Simulate Google login success
       Alert.alert("Thành công", "Đăng nhập với Google thành công!", [
@@ -122,8 +113,8 @@ export default function SignInScreen() {
                 style={styles.input}
                 placeholder="Nhập email"
                 placeholderTextColor="#9ca3af"
-                value={email}
-                onChangeText={setEmail}
+                value={formData.emailOrPhone}
+                onChangeText={(value) => handleInputChange('emailOrPhone', value)}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -136,8 +127,8 @@ export default function SignInScreen() {
                 style={styles.input}
                 placeholder="Nhập mật khẩu"
                 placeholderTextColor="#9ca3af"
-                value={password}
-                onChangeText={setPassword}
+                value={formData.password}
+                onChangeText={(value) => handleInputChange('password', value)}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -159,9 +150,24 @@ export default function SignInScreen() {
               <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
             </TouchableOpacity>
 
+            {/* Error Message */}
+            {errorMessage && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            )}
+
             {/* Login Button */}
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>Đăng nhập</Text>
+            <TouchableOpacity 
+              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]} 
+              onPress={() => authViewModel.handleLogin()}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text style={styles.loginButtonText}>Đăng nhập</Text>
+              )}
             </TouchableOpacity>
 
             {/* Divider */}
@@ -291,6 +297,20 @@ const styles = StyleSheet.create({
     color: "#70E000",
     fontWeight: "500",
   },
+  errorContainer: {
+    backgroundColor: "#fef2f2",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  errorText: {
+    color: "#dc2626",
+    fontSize: 14,
+    textAlign: "center",
+    fontWeight: "500",
+  },
   loginButton: {
     backgroundColor: "#70E000",
     borderRadius: 12,
@@ -299,6 +319,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 24,
+  },
+  loginButtonDisabled: {
+    backgroundColor: "#9ca3af",
+    opacity: 0.7,
   },
   loginButtonText: {
     color: "white",
