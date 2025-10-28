@@ -119,7 +119,11 @@ function ProfileScreen() {
             <Text style={styles.menuTitle}>Tài khoản</Text>
           </View>
           <View style={styles.menuItemsContainer}>
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push("/(main)/(no-tabs)/profile-detail")}
+              activeOpacity={0.7}
+            >
               <View style={styles.menuItemLeft}>
                 <User size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Thông tin tài khoản</Text>
