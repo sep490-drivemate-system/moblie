@@ -3749,19 +3749,20 @@ export default function ScheduleScreen() {
   };
 
   // navigate to the map
-  // const handleBookingPress = (booking: BookingItem) => {
-  //   router.push({
-  //     pathname: "/booking-details",
-  //     params: {
-  //       booking: JSON.stringify(booking),
-  //     },
-  //   });
-  // };
+  const handleBookingPress = (booking: BookingItem) => {
+    router.push({
+      pathname: "/booking-details",
+      params: {
+        booking: JSON.stringify(booking),
+      },
+    });
+  };
 
   const renderBookingCard = (booking: BookingItem) => (
     <TouchableOpacity
       key={booking.id}
       style={styles.bookingCard}
+      onPress={() => handleBookingPress(booking)}
     >
       <View style={styles.bookingHeader}>
         <View style={styles.bookingInfo}>

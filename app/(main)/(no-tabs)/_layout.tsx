@@ -86,6 +86,13 @@ export default function NoTabsLayout() {
                     animation: 'slide_from_right',
                 }}
             />
+            <Stack.Screen
+                name="booking-details"
+                options={{
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                }}
+            />
         </Stack>
     );
 }
