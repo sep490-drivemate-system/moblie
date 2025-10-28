@@ -8,8 +8,6 @@ import { ISignUpRequest } from "@/models/auth/signup";
 interface AuthState extends BaseState {
   isAuthenticated: boolean;
   user: {
-    email: string;
-    name?: string;
     role?: UserRole;
   } | null;
   formData: ISignInRequest;
@@ -72,38 +70,10 @@ const authSlice = createSlice({
         confirmPassword: "",
       };
     },
-    setUser: (
-      state,
-      action: PayloadAction<{ email: string; name?: string; role?: UserRole }>
-    ) => {
-      state.user = action.payload;
-      state.isAuthenticated = true;
-      console.log(
-        "🔄 setUser called → isAuthenticated = true, user =",
-        action.payload
-      );
-    },
-    setUserRole: (state, action: PayloadAction<UserRole>) => {
-      if (!state.user) {
-        state.user = { email: "", role: action.payload };
-      } else {
-        state.user.role = action.payload;
-      }
-    },
 
-    // ===========================================
-    // 🔐 SET AUTHENTICATION STATUS MANUALLY
-    // ===========================================
+
     setAuthenticated: (state, action: PayloadAction<boolean>) => {
-      /**
-       * 🎯 Manual override cho authentication status
-       * Dùng khi cần force logout hoặc set authenticated mà không có user data
-       */
       state.isAuthenticated = action.payload;
-      console.log(
-        "🔄 setAuthenticated called → isAuthenticated =",
-        action.payload
-      );
     },
     clearError: (state) => {
       state.errorMessage = null;
@@ -116,7 +86,6 @@ const authSlice = createSlice({
         password: "",
       };
     },
-    // Generic state actions
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
@@ -152,9 +121,7 @@ export const {
   resetForm,
   updateRegisterFormData, // Export new register actions
   resetRegisterForm,
-  setUser,
   setAuthenticated,
-  setUserRole,
   clearError,
   logout,
   setLoading,

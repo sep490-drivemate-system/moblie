@@ -70,7 +70,7 @@ export function createThunk<ResponseType = void, RequestType = void>(
       const message =
         error.response?.data?.message ||
         `${method.toUpperCase()} request failed`;
-
+      console.log(`[Thunk] Request URL: ${url}`);
       console.error(`[Thunk] Error:`, error);
       options?.onError?.(error, payload);
       return rejectWithValue(message);

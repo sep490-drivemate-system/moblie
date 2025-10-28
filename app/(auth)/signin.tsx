@@ -26,17 +26,14 @@ const { width, height } = Dimensions.get("window");
 
 export default function SignInScreen() {
   const router = useRouter();
-  const [showPassword, setShowPassword] = useState(false);
-  
+  const [showPassword, setShowPassword] = useState(false); 
   const dispatch = useAppDispatch();
   const authState = useAppSelector((state: RootState) => state.auth);
   const { formData, isLoading, errorMessage, isAuthenticated, user } = authState;
   
-  // Tạo AuthViewModel với getCurrentState function đúng cách
   const [authViewModel] = useState(() => new AuthViewModel(
     dispatch, 
     () => {
-      // Lấy state mới nhất từ store thay vì closure
       const store = require('@/lib/redux/store').store;
       return store.getState().auth;
     }
@@ -52,25 +49,6 @@ export default function SignInScreen() {
     authViewModel.updateFormData(field, value);
     if (errorMessage) {
       authViewModel.clearError();
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-
-      // Simulate Google login success
-      Alert.alert("Thành công", "Đăng nhập với Google thành công!", [
-        {
-          text: "OK",
-          onPress: () => {
-            // Navigate to main app
-            router.replace("/(main)/(tabs)/home");
-          },
-        },
-      ]);
-    } catch (error) {
-      console.error("Google login error:", error);
-      Alert.alert("Lỗi", "Đăng nhập với Google thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -111,7 +89,7 @@ export default function SignInScreen() {
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
-                placeholder="Nhập email"
+                placeholder="Nhập email hoặt số điện thoại"
                 placeholderTextColor="#9ca3af"
                 value={formData.emailOrPhone}
                 onChangeText={(value) => handleInputChange('emailOrPhone', value)}
@@ -180,7 +158,7 @@ export default function SignInScreen() {
             {/* Google Login Button */}
             <TouchableOpacity
               style={styles.googleButton}
-              onPress={handleGoogleLogin}
+              onPress={() => authViewModel.handleGoogleLogin()}
             >
               <Image
                 source={require("@/assets/images/gg_icon.png")}

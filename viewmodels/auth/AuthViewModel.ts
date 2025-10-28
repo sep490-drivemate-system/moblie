@@ -7,99 +7,39 @@ import {
   resetForm,
   updateRegisterFormData,
   resetRegisterForm,
-  setUser,
-  setAuthenticated,
   clearError,
-  logout,
   setLoading,
   setError,
   setSuccess,
+  setAuthenticated,
 } from "@/features/auth/authSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootState } from "@/lib/redux/store";
-import { ENV } from "@/config/env";
+import { Alert } from "react-native";
+
 
 
 type AuthState = RootState["auth"];
 
 export class AuthViewModel extends BaseViewModel<AuthState> {
+
   updateFormData(field: keyof ISignInRequest, value: string): void {
     this.dispatch(updateFormData({ field, value }));
   }
 
-  // Validation logic trong ViewModel
-
-  // async logout(): Promise<void> {
-  //   await this.executeAsync(
-  //     async () => {
-  //       // Xóa tokens và user data
-  //       await AsyncStorage.multiRemove([
-  //         ENV.STORAGE_KEYS.ACCESS_TOKEN,
-  //         ENV.STORAGE_KEYS.REFRESH_TOKEN,
-  //         ENV.STORAGE_KEYS.USER_DATA,
-  //       ]);
-
-  //       // Reset state
-  //       this.dispatch(logout());
-  //     },
-  //     () => {
-  //       console.log("Logout successful");
-  //     },
-  //     (error) => {
-  //       console.error("Logout failed:", error);
-  //     },
-  //     {
-  //       setLoading,
-  //       setError,
-  //       setSuccess,
-  //     }
-  //   );
-  // }
 
   async checkAuthStatus(): Promise<void> {
     await this.executeAsync(
       async () => {
-        const token = await AsyncStorage.getItem(ENV.STORAGE_KEYS.ACCESS_TOKEN);
-
-        if (token) {
-          /**
-           * 🎯 TRƯỜNG HỢP: Token tồn tại
-           *
-           * BƯỚC 1: Set user data vào Redux state
-           * - Có thể hardcode tạm hoặc fetch từ API
-           * - Việc gọi setUser() sẽ tự động set isAuthenticated = true
-           *   (xem authSlice.ts - setUser reducer)
-           *
-           * BƯỚC 2: State sẽ thay đổi:
-           * - isAuthenticated: false → true
-           * - user: null → { email, name? }
-           * - isLoading: true → false
-           *
-           * BƯỚC 3: _layout.tsx sẽ detect state change và navigate
-           */
-          console.log("✅ Token exists → Setting user as authenticated");
-
+        const token = await AsyncStorage.getItem(process.env.EXPO_PUBLIC_STORAGE_ACCESS_TOKEN || '@access_token');
+        if (token) {        
           this.dispatch(
-            setUser({
-              email: "user@example.com", // 📝 TODO: Fetch từ API profile endpoint
-              name: "John Doe", // 📝 TODO: Có thể thêm name từ API
-            })
+           setAuthenticated(true)
           );
-
-          console.log(
-            "🔄 User state updated → _layout.tsx will handle navigation"
-          );
-          // 🚨 QUAN TRỌNG: Không navigate ở đây!
-          // _layout.tsx sẽ detect isAuthenticated = true và tự động navigate
         }
       },
-      () => {
-        console.log("✅ Auth status check completed successfully");
-      },
-      (error) => {
-        console.error("❌ Failed to check auth status:", error);
-        // Nếu có lỗi, user sẽ bị redirect về login
-      },
+      undefined,
+      undefined,
       {
         setLoading,
         setError,
@@ -107,19 +47,9 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       }
     );
   }
-
-  // // Handle input change với debouncing (optional)
-  // handleInputChange(field: keyof ISignInRequest, value: string): void {
-  //   this.updateFormData(field, value);
-
-  //   // Clear error khi user bắt đầu nhập
-  //   const currentState = this.getCurrentState();
-  //   if (currentState.errorMessage) {
-  //     this.clearError();
-  //   }
-  // }
-
-  // Handle login với tất cả logic
+   handleGoogleLogin = async () => {
+      // handle logic signin google    
+  };
   async handleLogin(): Promise<void> {
     await this.executeAsync(
       async () => {
@@ -128,18 +58,19 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         const result = await this.dispatch(
           signIn(currentState.formData)
         ).unwrap();
-        if (result?.data?.accessToken) {
-          await AsyncStorage.setItem(
-            ENV.STORAGE_KEYS.ACCESS_TOKEN,
-            result.data.accessToken
+        if (result?.value?.accessToken) {
+          this.dispatch(
+           setAuthenticated(true)
           );
           await AsyncStorage.setItem(
-            ENV.STORAGE_KEYS.REFRESH_TOKEN,
-            result.data.refreshToken
+            process.env.EXPO_PUBLIC_STORAGE_ACCESS_TOKEN || '@access_token',
+            result.value.accessToken
+          );
+          await AsyncStorage.setItem(
+            process.env.EXPO_PUBLIC_STORAGE_REFRESH_TOKEN || '@refresh_token',
+            result.value.refreshToken
           );
         }
-
-        // Cập nhật user info
       
       },
       () => {
@@ -156,7 +87,6 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     );
   }
 
-  // Handle reset form
   handleResetForm(): void {
     this.resetForm();
     this.clearError();
@@ -173,12 +103,11 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     this.dispatch(updateRegisterFormData({ field, value }));
   }
 
-  async register(): Promise<void> {
+  async signup(): Promise<void> {
     await this.executeAsync(
       async () => {
         const currentState = this.getCurrentState();
 
-        // Validation logic trong ViewModel
         if (!this.validateRegisterForm(currentState.registerFormData)) {
           throw new Error("Please fill in all required fields correctly");
         }
@@ -187,15 +116,9 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
           signUp(currentState.registerFormData)
         ).unwrap();
 
-        // Set user data và authenticate
-        this.dispatch(
-          setUser({
-            email: currentState.registerFormData.email,
-            name: currentState.registerFormData.name,
-          })
-        );
 
-        console.log("✅ Registration successful");
+
+       
       },
       () => {
         console.log("Registration successful");
@@ -251,7 +174,6 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     return true;
   }
 
-  // Handler methods for register UI
   handleRegisterInputChange(field: keyof ISignUpRequest, value: string): void {
     this.updateRegisterFormData(field, value);
     const currentState = this.getCurrentState();
@@ -261,65 +183,11 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   }
 
   async handleRegister(): Promise<void> {
-    await this.register();
+    await this.signup();
   }
 
   handleResetRegisterForm(): void {
     this.dispatch(resetRegisterForm());
     this.clearError();
   }
-
-  // ===========================================
-  // 🧪 TEST METHODS - CHỈ DÙNG CHO DEVELOPMENT
-  // ===========================================
-
-  /**
-   * 🧪 TEST: Simulate user đã authenticated với token
-   *
-   * MỤCDÍCH: Test trường hợp isAuthenticated = true
-   * - Có thể gọi từ console: authViewModel.simulateAuthenticatedUser()
-   * - Hoặc thêm button test trong UI
-   */
-  simulateAuthenticatedUser(): void {
-    console.log("🧪 TEST: Simulating authenticated user...");
-
-    // Giả lập set user data (như thể đã có token)
-    this.dispatch(
-      setUser({
-        email: "test@example.com",
-        name: "Test User",
-      })
-    );
-
-    console.log(
-      "✅ TEST: User set as authenticated - Check _layout.tsx navigation"
-    );
-  }
-
-  /**
-   * 🧪 TEST: Simulate chỉ set isAuthenticated = true (không có user data)
-   *
-   * MỤCDÍCH: Test CASE 2 trong _layout.tsx
-   * - isAuthenticated = true
-   * - user = null
-   */
-  simulateAuthenticatedOnly(): void {
-    console.log("🧪 TEST: Simulating authenticated only (no user data)...");
-
-    // Chỉ set authenticated, không set user
-    this.dispatch(setAuthenticated(true));
-
-    console.log(
-      "✅ TEST: Only isAuthenticated = true - Check _layout.tsx navigation"
-    );
-  }
-
-  /**
-   * 🧪 TEST: Force logout để test trường hợp isAuthenticated = false
-   */
-  // testLogout(): void {
-  //   console.log("🧪 TEST: Force logout...");
-  //   this.logout();
-  //   console.log("✅ TEST: User logged out - Should navigate to /login");
-  // }
 }

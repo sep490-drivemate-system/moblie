@@ -1,11 +1,13 @@
 import { useAppDispatch, useAppSelector } from '@/lib/redux/hooks';
 import { BaseState } from '@/models/generic/baseState';
+import { Router } from 'expo-router';
 import { useMemo } from 'react';
 
 
 export type NavigationCallback = (route: string) => void;
 
 export abstract class BaseViewModel<T extends BaseState> {
+    protected router?: Router;
     protected dispatch: ReturnType<typeof useAppDispatch>;
     protected getCurrentState: () => T;
     protected navigationCallback?: NavigationCallback;
@@ -15,16 +17,19 @@ export abstract class BaseViewModel<T extends BaseState> {
         this.getCurrentState = getCurrentState;
     }
 
-    // Set navigation callback để ViewModel có thể điều hướng
     setNavigationCallback(callback: NavigationCallback): void {
         this.navigationCallback = callback;
     }
 
-    // Protected method để subclass có thể navigate
+      setRouter(router: Router): void {
+    this.router = router;
+     }
     protected navigate(route: string): void {
-        if (this.navigationCallback) {
-            this.navigationCallback(route);
-        }
+         if (this.router) {
+      this.router.replace(route as any);
+    } else if (this.navigationCallback) {
+      this.navigationCallback(route);
+    }
     }
 
     protected async executeAsync<TResult>(
@@ -38,7 +43,6 @@ export abstract class BaseViewModel<T extends BaseState> {
         }
     ): Promise<TResult | null> {
         try {
-            // Dispatch loading action using provided actions
             if (actions) {
                 this.dispatch(actions.setLoading(true));
                 this.dispatch(actions.setError(null));
@@ -46,7 +50,6 @@ export abstract class BaseViewModel<T extends BaseState> {
 
             const result = await operation();
 
-            // Dispatch success action
             if (actions) {
                 this.dispatch(actions.setSuccess(true));
             }
@@ -68,7 +71,6 @@ export abstract class BaseViewModel<T extends BaseState> {
     }
 }
 
-// Hook để sử dụng ViewModel với Redux
 export function useViewModel<T extends BaseState, VM extends BaseViewModel<T>>(
     ViewModelClass: new (dispatch: ReturnType<typeof useAppDispatch>, getCurrentState: () => T) => VM,
     selector: (state: any) => T
