@@ -212,7 +212,7 @@ export default function FormScreen() {
     }
 
     // All validations passed, navigate to next page
-    router.push("/(onboarding)/(car)/(car-services)/form");
+    router.push("/(onboarding)/waiting-confirm");
   };
 
   // Auto exit delete mode after 3 seconds
@@ -407,7 +407,7 @@ export default function FormScreen() {
               <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.nextButtonText}>Kế tiếp</Text>
+              <Text style={styles.nextButtonText}>Gửi</Text>
             </TouchableOpacity>
           </View>
         </View>

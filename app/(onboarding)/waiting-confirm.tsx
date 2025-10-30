@@ -88,7 +88,7 @@ export default function WaitingConfirmScreen() {
             </Text>
             <TouchableOpacity>
               <Text style={styles.link}>
-                Nhấn tại đây để chuyển đến trang chủ
+                Nhấn tại đây để thiết kế gói thuê của bạn
               </Text>
             </TouchableOpacity>
           </View>

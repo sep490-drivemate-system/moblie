@@ -26,14 +26,19 @@ import {
   ArrowRight,
   StepBack,
   IdCard,
+  Package,
+  Package2,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { mockPerformance, mockUserProfile } from "@/data/profile-screen";
+import { useAppSelector } from "@/lib/redux/hooks";
+import { UserRole } from "@/models/enum/UserRole.enum";
 
 // Mock data matching the UI design
 
 function ProfileScreen() {
   const router = useRouter();
+  const role = UserRole.Instructor;
 
   const handleManageExams = () => {
     Alert.alert("Manage Exams", "Exam management coming soon!");
@@ -92,7 +97,7 @@ function ProfileScreen() {
           </View>
 
           {/* Wallet Section */}
-          <View style={styles.walletSection}>
+          {/* <View style={styles.walletSection}>
             <View style={styles.walletContent}>
               <View style={styles.walletInfo}>
                 <View style={styles.walletHeader}>
@@ -110,7 +115,7 @@ function ProfileScreen() {
                 <Text style={styles.topupButtonText}>Nạp xu</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </View> */}
         </View>
 
         {/* Account Section */}
@@ -138,7 +143,7 @@ function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() =>
-                router.push("/(main)/(no-tabs)/transaction/transaction")
+                router.push("/(main)/(no-tabs)/(transaction)/transaction")
               }
             >
               <View style={styles.menuItemLeft}>
@@ -155,24 +160,21 @@ function ProfileScreen() {
             <Text style={styles.menuTitle}>Tổng quát</Text>
           </View>
           <View style={styles.menuItemsContainer}>
-            {/* <TouchableOpacity style={styles.menuItem}>
-              <View style={styles.menuItemLeft}>
-                <Heart size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Yêu thích</Text>
-              </View>
-            </TouchableOpacity> */}
-            {/* <TouchableOpacity style={styles.menuItem}>
-              <View style={styles.menuItemLeft}>
-                <Settings size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Cài đặt</Text>
-              </View>
-            </TouchableOpacity> */}
-            {/* <TouchableOpacity style={styles.menuItem}>
-              <View style={styles.menuItemLeft}>
-                <Globe size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Ngôn ngữ</Text>
-              </View>
-            </TouchableOpacity> */}
+            {role === UserRole.Instructor && (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() =>
+                  router.push(
+                    "/(main)/(no-tabs)/(service-package)/service-package-management"
+                  )
+                }
+              >
+                <View style={styles.menuItemLeft}>
+                  <Package2 size={20} color="#70E000" />
+                  <Text style={styles.menuItemText}>Gói thuê</Text>
+                </View>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
                 <Star size={20} color="#70E000" />
@@ -247,7 +249,6 @@ const styles = StyleSheet.create({
   profileHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 20,
   },
   avatarContainer: {
     marginRight: 16,
