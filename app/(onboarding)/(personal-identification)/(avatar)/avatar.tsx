@@ -47,22 +47,7 @@ export default function AvatarScreen() {
 
   const loadUserData = async () => {
     try {
-      // Check if onboarding was reset
-      const onboardingCompleted = await AsyncStorage.getItem(
-        "onboarding_completed"
-      );
-      const quizCompleted = await AsyncStorage.getItem("quiz_completed");
-
-      // If onboarding was reset, clear all avatar data
-      if (!onboardingCompleted || !quizCompleted) {
-        setAvatarUri(null);
-        setTempAvatarUri(null);
-        setIsSaved(false);
-        await AsyncStorage.removeItem("temp_user_avatar");
-        return;
-      }
-
-      // Load temp avatar from AsyncStorage (from upload-guide)
+      // Always try to load temp avatar from AsyncStorage (from upload-guide)
       const tempAvatar = await AsyncStorage.getItem("temp_user_avatar");
       if (tempAvatar) {
         setTempAvatarUri(tempAvatar);

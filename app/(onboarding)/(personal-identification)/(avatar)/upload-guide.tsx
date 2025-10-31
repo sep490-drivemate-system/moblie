@@ -94,12 +94,13 @@ export default function UploadGuideScreen() {
       aspect: [1, 1],
       quality: 1,
     });
-
-    if (!result.canceled) {
-      // Save image to temp AsyncStorage
-      await AsyncStorage.setItem("temp_user_avatar", result.assets[0].uri);
-      // Navigate back to avatar with selected image
-      router.back();
+    const isCanceled = (result as any).canceled ?? (result as any).cancelled;
+    if (!isCanceled) {
+      const pickedUri = (result as any).assets?.[0]?.uri ?? (result as any).uri;
+      if (pickedUri) {
+        await AsyncStorage.setItem("temp_user_avatar", pickedUri);
+        router.back();
+      }
     }
   };
 
@@ -123,12 +124,13 @@ export default function UploadGuideScreen() {
       aspect: [1, 1],
       quality: 1,
     });
-
-    if (!result.canceled) {
-      // Save image to temp AsyncStorage
-      await AsyncStorage.setItem("temp_user_avatar", result.assets[0].uri);
-      // Navigate back to avatar with selected image
-      router.back();
+    const isCanceled = (result as any).canceled ?? (result as any).cancelled;
+    if (!isCanceled) {
+      const pickedUri = (result as any).assets?.[0]?.uri ?? (result as any).uri;
+      if (pickedUri) {
+        await AsyncStorage.setItem("temp_user_avatar", pickedUri);
+        router.back();
+      }
     }
   };
 

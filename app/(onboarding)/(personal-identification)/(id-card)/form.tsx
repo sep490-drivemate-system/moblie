@@ -65,33 +65,6 @@ export default function FormScreen() {
 
   const loadUserData = async () => {
     try {
-      // Check if onboarding was reset
-      const onboardingCompleted = await AsyncStorage.getItem(
-        "onboarding_completed"
-      );
-      const quizCompleted = await AsyncStorage.getItem("quiz_completed");
-
-      // If onboarding was reset, clear all data
-      if (!onboardingCompleted || !quizCompleted) {
-        setFrontImageUri(null);
-        setBackImageUri(null);
-        setTempFrontImageUri(null);
-        setTempBackImageUri(null);
-        setFormData({
-          idNumber: "",
-          issueDate: "",
-          expiryDate: "",
-          issuePlace: "",
-          address: "",
-          gender: "",
-          birthDate: "",
-        });
-        await AsyncStorage.removeItem("temp_id_front");
-        await AsyncStorage.removeItem("temp_id_back");
-        await AsyncStorage.removeItem("id_card_data");
-        return;
-      }
-
       const savedFrontImage = await AsyncStorage.getItem("id_front");
       const savedBackImage = await AsyncStorage.getItem("id_back");
       const savedFormData = await AsyncStorage.getItem("id_card_data");
