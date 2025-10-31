@@ -22,6 +22,7 @@ const DEFAULT_PACKAGE = {
   roadTypes: ["Đường trơn trượt", "Đường đông dân cư"],
   duration: "01:30",
   carOption: "Có thể đi xe của khách hàng hoặc của tôi",
+  price: "150000",
 };
 const EMPTY_PACKAGE = {
   title: "",
@@ -29,6 +30,7 @@ const EMPTY_PACKAGE = {
   roadTypes: [] as string[],
   duration: "",
   carOption: "",
+  price: "",
 };
 const SKILL_OPTIONS = [
   "Lùi xe",
@@ -58,6 +60,13 @@ const formatDuration = (value: string) => {
   return `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
 };
 
+const formatCurrencyVND = (value: string) => {
+  const digitsOnly = value.replace(/\D/g, "");
+  if (!digitsOnly) return "";
+  // Format with dot as thousand separator (e.g., 150000 -> 150.000)
+  return digitsOnly.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
 export default function ServicePackageDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string }>();
@@ -82,6 +91,10 @@ export default function ServicePackageDetailScreen() {
         ? f.skills.filter((s) => s !== skill)
         : [...f.skills, skill],
     }));
+  };
+  const handlePriceChange = (value: string) => {
+    const formatted = formatCurrencyVND(value);
+    handleChange("price", formatted);
   };
   const handleRoadToggle = (road: string) => {
     setForm((f) => ({
@@ -136,6 +149,21 @@ export default function ServicePackageDetailScreen() {
             placeholder="Nhập tên gói dịch vụ"
             onChangeText={(v) => handleChange("title", v)}
             placeholderTextColor="#AAB391"
+          />
+        </View>
+        {/* Giá tiền */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>
+            Giá tiền (đồng) <Text style={styles.required}>*</Text>
+          </Text>
+          <TextInput
+            style={[styles.input, styles.inputMono]}
+            value={form.price}
+            onChangeText={handlePriceChange}
+            placeholder="VD: 150.000"
+            placeholderTextColor="#AAB391"
+            keyboardType="number-pad"
+            maxLength={15}
           />
         </View>
         {/* Thời lượng */}

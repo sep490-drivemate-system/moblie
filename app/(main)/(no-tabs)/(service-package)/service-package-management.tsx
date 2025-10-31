@@ -21,8 +21,15 @@ const DUMMY_SERVICE_PACKAGES = [
     roadTypes: ["Đường trơn trượt", "Đường đông dân cư"],
     duration: "1:30",
     carOption: "Có thể đi xe của khách hàng hoặc của tôi",
+    price: 150000,
   },
 ];
+
+const formatCurrencyVND = (value: number | string) => {
+  const digitsOnly = String(value).replace(/\D/g, "");
+  if (!digitsOnly) return "0";
+  return digitsOnly.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
 
 function ServicePackageManagementScreen() {
   const router = useRouter();
@@ -81,6 +88,9 @@ function ServicePackageManagementScreen() {
                 <Text style={styles.cardDuration}>{item.duration}h</Text>
               </View>
             </View>
+            <Text style={styles.cardPrice}>
+              Giá: {formatCurrencyVND((item as any).price)} đ
+            </Text>
             <View style={styles.cardInfoSection}>
               <View style={styles.infoBlock}>
                 <View style={styles.infoLabelRow}>
@@ -247,6 +257,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 22,
     letterSpacing: 0.3,
+  },
+  cardPrice: {
+    color: "#374151",
+    fontWeight: "700",
+    fontSize: 16,
+    marginTop: 2,
+    marginBottom: 6,
   },
   durationBadge: {
     paddingHorizontal: 14,
