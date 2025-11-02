@@ -6,112 +6,74 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  Modal,
   ScrollView,
-  Alert,
   RefreshControl,
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "react-native";
-import { LucideUsers, Search, X, Filter, Star, MapPin } from "lucide-react-native";
+import { LucideUsers, Search, X, Star } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
-import { Instructor } from "@/models/instructor/instructor.type";
+import { IInstructors } from "@/models/instructor/instructor.type";
 import {
   FilterType,
-  DistanceFilter,
   ExperienceLevel,
   MinimumRating,
   SortType,
 } from "@/models/instructor/instructor-filter.type";
-// import { useInstructorViewModel } from "@/viewmodels/instructor/InstructorViewModel";
-// import { useInstructorViewModel } from "../../../viewmodels/instructor/InstructorViewModel";
 
 // Mock data for instructors
-const mockInstructors: Instructor[] = [
+const mockInstructors: IInstructors[] = [
   {
     id: "1",
     name: "Nguyễn Văn An",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
     experience: "5 năm kinh nghiệm",
-    experienceYears: 5,
-    rating: 4.8,
-    price: 350000,
-    specialties: ["Lái xe cơ bản", "Lái xe nâng cao", "Đỗ xe song song"],
-    phone: "0901234567",
-    email: "nguyenvanan@example.com",
-    description: "Giảng viên chuyên nghiệp với nhiều năm kinh nghiệm",
+    averageRating: 4.8,
+    totalPackages: 3,
     totalBookings: 120,
-    gender: "male" as any
   },
   {
     id: "2",
     name: "Trần Thị Bình",
     avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
     experience: "8 năm kinh nghiệm",
-    experienceYears: 8,
-    rating: 4.9,
-    price: 400000,
-    specialties: ["Lái xe phòng thủ", "Lái xe ban đêm", "Vượt xe an toàn"],
-    phone: "0912345678",
-    email: "tranthibinh@example.com",
-    description: "Chuyên gia đào tạo lái xe an toàn",
+    averageRating: 4.9,
+    totalPackages: 3,
     totalBookings: 200,
-    gender: "female" as any
   },
   {
     id: "3",
     name: "Lê Minh Cường",
     avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
     experience: "3 năm kinh nghiệm",
-    experienceYears: 3,
-    rating: 4.6,
-    price: 300000,
-    specialties: ["Lái xe cơ bản", "Qua ngã tư", "Lên xuống dốc"],
-    phone: "0923456789",
-    email: "leminhcuong@example.com",
-    description: "Giảng viên trẻ, nhiệt tình",
+    averageRating: 4.6,
+    totalPackages: 3,
     totalBookings: 85,
-    gender: "male" as any
   },
   {
     id: "4",
     name: "Phạm Thị Dung",
     avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
     experience: "10 năm kinh nghiệm",
-    experienceYears: 10,
-    rating: 5.0,
-    price: 450000,
-    specialties: ["Lái xe nâng cao", "Lái xe phòng thủ", "Đào tạo giảng viên"],
-    phone: "0934567890",
-    email: "phamthidung@example.com",
-    description: "Giảng viên cao cấp, chuyên đào tạo nâng cao",
+    averageRating: 5.0,
+    totalPackages: 3,
     totalBookings: 300,
-    gender: "female" as any
   },
   {
     id: "5",
     name: "Hoàng Văn Em",
     avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
     experience: "6 năm kinh nghiệm",
-    experienceYears: 6,
-    rating: 4.7,
-    price: 380000,
-    specialties: ["Lái xe ban đêm", "Đường cao tốc", "Chuyển làn"],
-    phone: "0945678901",
-    email: "hoangvanem@example.com",
-    description: "Chuyên gia lái xe đường dài",
+    averageRating: 4.7,
+    totalPackages: 3,
     totalBookings: 150,
-    gender: "male" as any
   }
 ];
 
 const initialFilters = {
   availability: FilterType.All,
-  distance: DistanceFilter.All,
   experience: ExperienceLevel.All,
-  priceRange: [200000, 500000] as [number, number],
   minRating: MinimumRating.All,
 };
 
@@ -121,22 +83,18 @@ function InstructorsScreen() {
   // Local state to replace ViewModel
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState(initialFilters);
-  const [tempFilters, setTempFilters] = useState(initialFilters);
   const [sortBy, setSortBy] = useState(SortType.Rating);
   const [sortAscending, setSortAscending] = useState(false);
   const [allInstructors] = useState(mockInstructors);
   const [filteredInstructors, setFilteredInstructors] = useState(mockInstructors);
   const [displayedInstructors, setDisplayedInstructors] = useState(mockInstructors);
-  // const [showFilterModal, setShowFilterModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // Computed values
   const activeFilterCount = (() => {
     let count = 0;
     if (filters.experience !== ExperienceLevel.All) count++;
-    if (filters.priceRange[0] !== 200000 || filters.priceRange[1] !== 500000) count++;
     if (filters.minRating !== MinimumRating.All) count++;
     return count;
   })();
@@ -150,47 +108,48 @@ function InstructorsScreen() {
     // Apply search
     if (searchQuery.trim()) {
       filtered = filtered.filter(instructor => 
-        instructor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        instructor.specialties.some(specialty => 
-          specialty.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+        instructor.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     
     // Apply filters
     if (filters.experience !== ExperienceLevel.All) {
       const expYears = parseInt(filters.experience.split('-')[0]) || 0;
-      filtered = filtered.filter(instructor => instructor.experienceYears >= expYears);
+      filtered = filtered.filter(instructor => {
+        const instructorYears = parseInt(instructor.experience.split(' ')[0]) || 0;
+        return instructorYears >= expYears;
+      });
     }
     
     if (filters.minRating !== MinimumRating.All) {
       const minRating = parseFloat(filters.minRating.replace('+', ''));
-      filtered = filtered.filter(instructor => instructor.rating >= minRating);
+      filtered = filtered.filter(instructor => instructor.averageRating >= minRating);
     }
-    
-    // Apply price range
-    filtered = filtered.filter(instructor => 
-      instructor.price >= filters.priceRange[0] && instructor.price <= filters.priceRange[1]
-    );
     
     // Apply sorting
     filtered.sort((a, b) => {
       let comparison = 0;
+      
       switch (sortBy) {
         case SortType.Rating:
-          comparison = a.rating - b.rating;
-          break;
-        case SortType.Price:
-          comparison = a.price - b.price;
+          comparison = a.averageRating - b.averageRating;
           break;
         case SortType.Experience:
-          comparison = a.experienceYears - b.experienceYears;
+          const aYears = parseInt(a.experience.split(' ')[0]) || 0;
+          const bYears = parseInt(b.experience.split(' ')[0]) || 0;
+          comparison = aYears - bYears;
+          break;
+        case SortType.Price:
+          // For IInstructors, we can sort by totalPackages as a proxy
+          comparison = a.totalPackages - b.totalPackages;
           break;
         default:
           comparison = 0;
       }
+      
       return sortAscending ? comparison : -comparison;
     });
+   
     
     setFilteredInstructors(filtered);
     setDisplayedInstructors(filtered);
@@ -204,13 +163,7 @@ function InstructorsScreen() {
   
   const handleResetFilters = () => {
     setFilters(initialFilters);
-    setTempFilters(initialFilters);
   };
-  
-  // const handleApplyTempFilters = () => {
-  //   setFilters(tempFilters);
-  //   setShowFilterModal(false);
-  // };
   
   const handleSortChange = (sortType: SortType) => {
     if (sortBy === sortType) {
@@ -221,10 +174,6 @@ function InstructorsScreen() {
     }
   };
   
-  // const handleShowFilterModal = (show: boolean) => {
-  //   setShowFilterModal(show);
-  // };
-  
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
@@ -234,21 +183,21 @@ function InstructorsScreen() {
   
   const loadMoreInstructors = () => {
     // Mock load more functionality
-    console.log('Load more instructors');
+   // console.log('Load more instructors');
   };
   
   const setError = (error: string | null) => {
     setErrorMessage(error);
   };
 
-  const handleInstructorPress = (instructor: Instructor) => {
+  const handleInstructorPress = (instructor: IInstructors) => {
     router.push({
       pathname: "/instructor-detail",
       params: { instructorId: instructor.id },
     });
   };
 
-  const renderInstructorCard = ({ item }: { item: Instructor }) => (
+  const renderInstructorCard = ({ item }: { item: IInstructors }) => (
     <TouchableOpacity
       style={styles.instructorCard}
       onPress={() => handleInstructorPress(item)}
@@ -262,16 +211,16 @@ function InstructorsScreen() {
         <View style={styles.mainInfo}>
           <Text style={styles.instructorName}>{item.name}</Text>
           <Text style={styles.experience}>{item.experience}</Text>
-          <Text style={styles.price}>{item.price.toLocaleString()}đ/giờ</Text>
+          <Text style={styles.packages}>{item.totalPackages} gói thuê</Text>
         </View>
         
         {/* Thông tin phụ bên phải */}
         <View style={styles.rightInfo}>
           <View style={styles.ratingContainer}>
             <Star size={14} color="#FFD700" fill="#FFD700" />
-            <Text style={styles.rating}>{item.rating}</Text>
+            <Text style={styles.rating}>{item.averageRating}</Text>
           </View>
-          <Text style={styles.bookings}>({item.totalBookings} đặt)</Text>
+          <Text style={styles.bookings}>({item.totalBookings} lượt đặt)</Text>
           <TouchableOpacity
             style={styles.detailButton}
             onPress={() => handleInstructorPress(item)}
@@ -284,7 +233,7 @@ function InstructorsScreen() {
   );
 
   const renderLoadingFooter = () => {
-    if (!isLoading || !hasMoreInstructors) return null;
+    if (!hasMoreInstructors) return null;
     return (
       <View style={styles.loadingFooter}>
         <ActivityIndicator size="small" color="#70E000" />
@@ -311,48 +260,6 @@ function InstructorsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      {/* <View style={styles.modernHeader}>
-        <LinearGradient
-          colors={[
-            AppColors.gradientStart,
-            AppColors.gradientMiddle,
-            AppColors.gradientEnd,
-          ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
-        >
-          <View style={styles.decorativeCircle1} />
-          <View style={styles.decorativeCircle2} />
-          <View style={styles.decorativeCircle3} />
-        </LinearGradient>
-
-        <View style={styles.glassOverlay} />
-
-        <View style={styles.headerContent}>
-          <View style={styles.headerTopRow}>
-            <View style={styles.headerLeft}>
-              <View style={styles.iconContainer}>
-                <LucideUsers
-                  size={24}
-                  color={AppColors.white}
-                  strokeWidth={2.5}
-                />
-              </View>
-
-              <View style={styles.headerTextContainer}>
-                <Text style={styles.premiumHeaderTitle}>Người hướng dẫn</Text>
-                <View style={styles.subtitleRow}>
-                  <Text style={styles.premiumHeaderSubtitle}>
-                    Tìm người hướng dẫn chuyên nghiệp
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-      </View> */}
 
       {/* Search Container */}
       <View style={styles.searchContainer}>
@@ -380,18 +287,6 @@ function InstructorsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScrollContent}
         >
-          {/* <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => handleShowFilterModal(true)}
-          >
-            <Filter size={16} color={AppColors.gray600} strokeWidth={2} />
-            <Text style={styles.filterButtonText}>Bộ lọc</Text>
-            {activeFilterCount > 0 && (
-              <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity> */}
 
           <TouchableOpacity
             style={[
@@ -410,7 +305,7 @@ function InstructorsScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[
               styles.filterButton,
               sortBy === SortType.Price && styles.filterButtonActive,
@@ -425,7 +320,7 @@ function InstructorsScreen() {
             >
               Giá thuê {sortBy === SortType.Price && (sortAscending ? "↑" : "↓")}
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <TouchableOpacity
             style={[
@@ -455,109 +350,6 @@ function InstructorsScreen() {
         </ScrollView>
       </View>
 
-      {/* Filter Modal */}
-      {/* <Modal
-        visible={showFilterModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => handleShowFilterModal(false)}>
-              <Text style={styles.modalCloseButton}>✕</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Bộ lọc</Text>
-            <TouchableOpacity onPress={handleApplyTempFilters}>
-              <Text style={styles.modalApplyButton}>Áp dụng</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.filterSection}>
-              <Text style={styles.sectionTitle}>Kinh nghiệm</Text>
-              <View style={styles.optionGrid}>
-                {[
-                  ExperienceLevel.All,
-                  ExperienceLevel.OneToThree,
-                  ExperienceLevel.ThreeToFive,
-                  ExperienceLevel.FiveToTen,
-                  ExperienceLevel.TenPlus,
-                ].map((option) => (
-                  <TouchableOpacity
-                    key={option}
-                    style={[
-                      styles.optionButton,
-                      tempFilters.experience === option &&
-                        styles.optionButtonActive,
-                    ]}
-                    onPress={() =>
-                      handleTempFilterChange({ ...tempFilters, experience: option })
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.optionText,
-                        tempFilters.experience === option &&
-                          styles.optionTextActive,
-                      ]}
-                    >
-                      {option === ExperienceLevel.All
-                        ? "Tất cả"
-                        : option === ExperienceLevel.TenPlus
-                        ? "10+ năm"
-                        : `${option} năm`}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.filterSection}>
-              <Text style={styles.sectionTitle}>Đánh giá tối thiểu</Text>
-              <View style={styles.optionGrid}>
-                {[
-                  MinimumRating.All,
-                  MinimumRating.ThreePlus,
-                  MinimumRating.FourPlus,
-                  MinimumRating.FourPointFivePlus,
-                  MinimumRating.Five,
-                ].map((rating) => (
-                  <TouchableOpacity
-                    key={rating}
-                    style={[
-                      styles.optionButton,
-                      tempFilters.minRating === rating &&
-                        styles.optionButtonActive,
-                    ]}
-                    onPress={() =>
-                      handleTempFilterChange({ ...tempFilters, minRating: rating })
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.optionText,
-                        tempFilters.minRating === rating &&
-                          styles.optionTextActive,
-                      ]}
-                    >
-                      {rating === MinimumRating.All ? "Tất cả" : `${rating.replace('+', '')}⭐+`}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.filterSection}>
-              <TouchableOpacity
-                style={styles.resetFiltersButton}
-                onPress={handleResetFilters}
-              >
-                <Text style={styles.resetFiltersText}>Đặt lại</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      </Modal> */}
 
       {/* Instructor List */}
       <FlatList
@@ -597,76 +389,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: AppColors.background,
-  },
-  modernHeader: {
-    position: "relative",
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerGradient: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  decorativeCircle1: {
-    display: "none",
-  },
-  decorativeCircle2: {
-    display: "none",
-  },
-  decorativeCircle3: {
-    display: "none",
-  },
-  glassOverlay: {
-    display: "none",
-  },
-  headerContent: {
-    zIndex: 2,
-  },
-  headerTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 0,
-    zIndex: 2,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  premiumHeaderTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: AppColors.white,
-    marginBottom: 4,
-  },
-  subtitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  premiumHeaderSubtitle: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.9)",
-    fontWeight: "400",
   },
   searchContainer: {
     backgroundColor: AppColors.white,
@@ -802,6 +524,12 @@ const styles = StyleSheet.create({
     color: "#70E000",
     lineHeight: 22,
   },
+  packages: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#70E000",
+    lineHeight: 20,
+  },
   ratingContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -907,83 +635,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: AppColors.white,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: AppColors.white,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: AppColors.borderLight,
-  },
-  modalCloseButton: {
-    fontSize: 24,
-    color: AppColors.gray500,
-    fontWeight: "300",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: AppColors.textPrimary,
-  },
-  modalApplyButton: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#70E000",
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  filterSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: AppColors.textPrimary,
-    marginBottom: 12,
-  },
-  optionGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  optionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-    backgroundColor: AppColors.white,
-  },
-  optionButtonActive: {
-    backgroundColor: "#70E000",
-    borderColor: "#70E000",
-  },
-  optionText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: AppColors.gray600,
-  },
-  optionTextActive: {
-    color: AppColors.white,
-  },
-  resetFiltersButton: {
-    backgroundColor: AppColors.gray100,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  resetFiltersText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: AppColors.gray600,
   },
   errorContainer: {
     position: "absolute",

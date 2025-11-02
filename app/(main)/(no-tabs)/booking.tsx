@@ -16,41 +16,31 @@ import {
   X,
   Coins,
 } from "lucide-react-native";
-import {
-  BookingMode,
-  RoadType,
-  Shift,
-  ShiftType,
-  Skill,
-} from "@/models/booking/booking";
+// Booking models (if needed later)
+// import { BookingMode, Shift, ShiftType } from "@/models/booking/booking";
 import Step1 from "@/components/Booking/Step1";
 import Step2 from "@/components/Booking/Step2";
 import Step3 from "@/components/Booking/Step3";
-import Step4 from "@/components/Booking/Step4";
 import Step5 from "@/components/Booking/Step5";
+import { instructorsData } from "@/data/instructors_data";
+import { instructorVehicles } from "@/data/instructor_detail";
 
 export default function BookingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const instructorId = params.instructorId;
-  const packageType = params.package as "instructor" | "full" | undefined;
+  const packageId = params.packageId as string | undefined;
   const vehicleId = params.vehicleId as string | undefined;
 
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Step 1: Booking mode
-  const [bookingMode, setBookingMode] = useState<BookingMode>("daily");
+  // Step 1: Date selection
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  // Step 2: Time selection
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [selectedShiftsRecurring, setSelectedShiftsRecurring] = useState<
-    ShiftType[]
-  >([]);
+  // Step 2: Time and duration selection
+  const [selectedStartTime, setSelectedStartTime] = useState("");
+  const [selectedDuration, setSelectedDuration] = useState(2); // default 2 hours
 
   // Step 3: Location
   const [pickupLocation, setPickupLocation] = useState("");
@@ -59,65 +49,42 @@ export default function BookingScreen() {
     null
   );
 
-  // Step 3: Road types & Skills (combined)
-  const [selectedRoadTypes, setSelectedRoadTypes] = useState<RoadType[]>([]);
-  const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
+  // Vehicle selection for packages with vehicle
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
 
   // User wallet
   const [userCoins, setUserCoins] = useState(500);
   const bookingCost = 200;
 
   const steps = [
-    { number: 1, label: "Gói thuê" },
+    { number: 1, label: "Chọn ngày" },
     { number: 2, label: "Thời gian" },
     { number: 3, label: "Địa điểm" },
-    { number: 4, label: "Yêu cầu" },
-    { number: 5, label: "Xác nhận thanh toán" },
+    { number: 4, label: "Xác nhận" },
   ];
 
+  // Get instructor and package info
+  const instructor = instructorsData.find(i => i.id === instructorId);
+  const selectedPackage = instructor?.packages?.find(p => p.id === packageId);
+  const maxDuration = selectedPackage?.duration || 8;
 
-  const toggleDay = (dayId: string) => {
-    setSelectedDays((prev) =>
-      prev.includes(dayId) ? prev.filter((d) => d !== dayId) : [...prev, dayId]
-    );
-  };
+  // Get vehicle info if vehicleId is provided (from instructorVehicles)
+  const selectedVehicle = vehicleId && vehicleId !== "" ?
+    instructorVehicles.find(v => v.id === vehicleId)
+    : null;
 
-  const toggleRoadType = (road: RoadType) => {
-    setSelectedRoadTypes((prev) =>
-      prev.find((r) => r.id === road.id)
-        ? prev.filter((r) => r.id !== road.id)
-        : [...prev, road]
-    );
-  };
-
-  const toggleSkill = (skill: Skill) => {
-    setSelectedSkills((prev) =>
-      prev.find((s) => s.id === skill.id)
-        ? prev.filter((s) => s.id !== skill.id)
-        : [...prev, skill]
-    );
-  };
+  // Get instructor busy dates (mock data - would come from API)
+  const instructorBusyDates = ["2025-11-10", "2025-11-15", "2025-11-20"];
 
   const canProceedToNextStep = () => {
     switch (currentStep) {
       case 1:
-        return true; // Mode is always selected
+        return selectedDate !== null;
       case 2:
-        if (bookingMode === "daily") {
-          return selectedDate && selectedShift;
-        } else {
-          return (
-            startDate &&
-            endDate &&
-            selectedDays.length > 0 &&
-            selectedShiftsRecurring.length > 0
-          );
-        }
+        return selectedStartTime !== "" && selectedDuration > 0;
       case 3:
         return selectedLocationId !== null;
       case 4:
-        return selectedRoadTypes.length > 0 && selectedSkills.length > 0;
-      case 5:
         return userCoins >= bookingCost;
       default:
         return false;
@@ -125,7 +92,7 @@ export default function BookingScreen() {
   };
 
   const handleNext = () => {
-    if (canProceedToNextStep() && currentStep < 5) {
+    if (canProceedToNextStep() && currentStep < 4) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -138,19 +105,28 @@ export default function BookingScreen() {
     }
   };
 
+  const calculateEndTime = (startTime: string, duration: number): string => {
+    if (!startTime) return "00:00";
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const endHours = hours + duration;
+    return `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
   const handleConfirmBooking = () => {
     if (userCoins >= bookingCost) {
       setUserCoins(userCoins - bookingCost);
       console.log("Booking confirmed:", {
+        instructor: instructor?.name,
         instructorId,
-        packageType,
-        vehicleId,
-        bookingMode,
+        package: selectedPackage?.name,
+        packageId,
+        vehicle: selectedVehicle?.name || "Xe riêng",
+        vehicleId: vehicleId || null,
         selectedDate,
-        selectedShift,
+        selectedStartTime,
+        selectedDuration,
+        endTime: calculateEndTime(selectedStartTime, selectedDuration),
         pickupLocation,
-        selectedRoadTypes,
-        selectedSkills,
         paidAmount: bookingCost,
         remainingCoins: userCoins - bookingCost,
       });
@@ -167,7 +143,7 @@ export default function BookingScreen() {
 
       {/* Modern Header with Integrated Progress */}
       <LinearGradient
-        colors={["#667eea", "#764ba2", "#8b5fbf"]}
+        colors={["#10b981", "#059669", "#047857"]}
         style={styles.modernHeader}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -193,9 +169,9 @@ export default function BookingScreen() {
                     style={[
                       styles.modernStepCircle,
                       step.number < currentStep &&
-                        styles.modernStepCircleCompleted,
+                      styles.modernStepCircleCompleted,
                       step.number === currentStep &&
-                        styles.modernStepCircleActive,
+                      styles.modernStepCircleActive,
                     ]}
                   >
                     {step.number < currentStep ? (
@@ -209,7 +185,7 @@ export default function BookingScreen() {
                         style={[
                           styles.modernStepNumber,
                           step.number <= currentStep &&
-                            styles.modernStepNumberActive,
+                          styles.modernStepNumberActive,
                         ]}
                       >
                         {step.number}
@@ -220,9 +196,9 @@ export default function BookingScreen() {
                     style={[
                       styles.modernStepLabel,
                       step.number === currentStep &&
-                        styles.modernStepLabelActive,
+                      styles.modernStepLabelActive,
                       step.number < currentStep &&
-                        styles.modernStepLabelCompleted,
+                      styles.modernStepLabelCompleted,
                     ]}
                   >
                     {step.label}
@@ -234,7 +210,7 @@ export default function BookingScreen() {
                       style={[
                         styles.modernStepLine,
                         step.number < currentStep &&
-                          styles.modernStepLineCompleted,
+                        styles.modernStepLineCompleted,
                       ]}
                     />
                   </View>
@@ -254,42 +230,68 @@ export default function BookingScreen() {
           <View style={styles.trackingTitleContainer}>
             <Text style={styles.trackingTitle}>Thông tin đặt lịch</Text>
           </View>
-          <View style={styles.coinBadge}>
-            <Coins size={16} color="#92400e" strokeWidth={2} />
-            <Text style={styles.coinText}>{userCoins} xu</Text>
-          </View>
         </View>
 
         <View style={styles.trackingContent}>
-          {packageType && (
+          {instructor && (
             <View style={styles.trackingRow}>
-              <Text style={styles.trackingLabel}>Gói thuê</Text>
-              <Text style={styles.trackingValue}>
-                {packageType === "instructor"
-                  ? "Thuê người hướng dẫn"
-                  : packageType === "full"
-                  ? "Thuê trọn gói"
-                  : "Chưa chọn gói"}
+              <Text style={styles.trackingLabel}>Người hướng dẫn:</Text>
+              <Text style={styles.trackingValue} numberOfLines={1}>
+                {instructor.name}
               </Text>
             </View>
           )}
 
-          {bookingMode && (
+          {selectedPackage && (
             <View style={styles.trackingRow}>
-              <Text style={styles.trackingLabel}>Phương thức</Text>
-              <Text style={styles.trackingValue}>
-                {bookingMode === "daily" ? "Theo ca" : "Theo chu kỳ"}
+              <Text style={styles.trackingLabel}>Gói thuê:</Text>
+              <Text style={styles.trackingValue} numberOfLines={1}>
+                {selectedPackage.name}
               </Text>
             </View>
           )}
 
-          {(selectedDate && selectedShift) || (startDate && endDate) ? (
+          {selectedPackage && (
+            <View style={styles.trackingRow}>
+              <Text style={styles.trackingLabel}>Thời lượng:</Text>
+              <Text style={styles.trackingValue}>
+                {selectedPackage.duration} giờ
+              </Text>
+            </View>
+          )}
+
+          {selectedVehicle && (
+            <View style={styles.trackingRow}>
+              <Text style={styles.trackingLabel}>Xe:</Text>
+              <Text style={styles.trackingValue} numberOfLines={1}>
+                {selectedVehicle.name}
+              </Text>
+            </View>
+          )}
+
+          {!selectedVehicle && vehicleId === "" && (
+            <View style={styles.trackingRow}>
+              <Text style={styles.trackingLabel}>Xe:</Text>
+              <Text style={styles.trackingValue}>
+                🚙 Xe riêng
+              </Text>
+            </View>
+          )}
+
+          {selectedDate && (
+            <View style={styles.trackingRow}>
+              <Text style={styles.trackingLabel}>Ngày:</Text>
+              <Text style={styles.trackingValue}>
+                {new Date(selectedDate).toLocaleDateString('vi-VN')}
+              </Text>
+            </View>
+          )}
+
+          {selectedStartTime && selectedDuration > 0 ? (
             <View style={styles.trackingRow}>
               <Text style={styles.trackingLabel}>Thời gian:</Text>
               <Text style={styles.trackingValue}>
-                {bookingMode === "daily" 
-                  ? `${selectedDate} - ${selectedShift?.label || ""}`
-                  : `${startDate} → ${endDate}`}
+                {selectedStartTime} - {calculateEndTime(selectedStartTime, selectedDuration)} ({selectedDuration}h)
               </Text>
             </View>
           ) : null}
@@ -303,57 +305,27 @@ export default function BookingScreen() {
             </View>
           )}
 
-          {selectedRoadTypes.length > 0 && (
-            <View style={styles.trackingRow}>
-              <Text style={styles.trackingLabel}>Loại đường:</Text>
-              <Text style={styles.trackingValue}>
-                {selectedRoadTypes.length} loại
-              </Text>
-            </View>
-          )}
-
-          {selectedSkills.length > 0 && (
-            <View style={styles.trackingRow}>
-              <Text style={styles.trackingLabel}>Kỹ năng:</Text>
-              <Text style={styles.trackingValue}>
-                {selectedSkills.length} kỹ năng
-              </Text>
-            </View>
-          )}
         </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Step 1: Booking Mode */}
+        {/* Step 1: Date Selection */}
         {currentStep === 1 && (
           <Step1
-            bookingMode={bookingMode}
-            onModeChange={setBookingMode}
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+            instructorBusyDates={instructorBusyDates}
           />
         )}
 
-        {/* Step 2: Time Selection */}
+        {/* Step 2: Time & Duration Selection */}
         {currentStep === 2 && (
           <Step2
-            bookingMode={bookingMode}
-            selectedDate={selectedDate}
-            selectedShift={selectedShift}
-            onDateSelect={setSelectedDate}
-            onShiftSelect={setSelectedShift}
-            startDate={startDate}
-            endDate={endDate}
-            selectedDays={selectedDays}
-            selectedShiftsRecurring={selectedShiftsRecurring}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            onDayToggle={toggleDay}
-            onRecurringShiftToggle={(shiftId: ShiftType) => {
-              setSelectedShiftsRecurring((prev) =>
-                prev.includes(shiftId)
-                  ? prev.filter((s) => s !== shiftId)
-                  : [...prev, shiftId]
-              );
-            }}
+            selectedStartTime={selectedStartTime}
+            selectedDuration={selectedDuration}
+            onStartTimeSelect={setSelectedStartTime}
+            onDurationChange={setSelectedDuration}
+            maxDuration={maxDuration}
           />
         )}
 
@@ -369,28 +341,14 @@ export default function BookingScreen() {
           />
         )}
 
-        {/* Step 4: Road Types & Skills Combined */}
+        {/* Step 4: Payment & Confirmation */}
         {currentStep === 4 && (
-          <Step4
-            selectedRoadTypes={selectedRoadTypes}
-            selectedSkills={selectedSkills}
-            onRoadTypeToggle={toggleRoadType}
-            onSkillToggle={toggleSkill}
-          />
-        )}
-
-        {/* Step 5: Payment & Confirmation */}
-        {currentStep === 5 && (
           <Step5
-            packageType={packageType}
-            bookingMode={bookingMode}
-            selectedDate={selectedDate}
-            selectedShift={selectedShift}
-            startDate={startDate}
-            endDate={endDate}
+            packageId={packageId}
+            bookingMode={"daily"}
+            selectedDates={selectedDate ? [selectedDate] : []}
+            selectedStartTime={selectedStartTime}
             pickupLocation={pickupLocation}
-            selectedRoadTypes={selectedRoadTypes}
-            selectedSkills={selectedSkills}
             bookingCost={bookingCost}
             userCoins={userCoins}
           />
@@ -413,19 +371,19 @@ export default function BookingScreen() {
             styles.continueButton,
             !canProceedToNextStep() && styles.continueButtonDisabled,
           ]}
-          onPress={currentStep === 5 ? handleConfirmBooking : handleNext}
+          onPress={currentStep === 4 ? handleConfirmBooking : handleNext}
           disabled={!canProceedToNextStep()}
         >
           <LinearGradient
             colors={
               canProceedToNextStep()
-                ? ["#667eea", "#764ba2"]
+                ? ["#10b981", "#059669"]
                 : ["#cbd5e1", "#cbd5e1"]
             }
             style={styles.continueButtonGradient}
           >
             <Text style={styles.continueButtonText}>
-              {currentStep === 5 ? "Thanh toán & Đặt lịch" : "Tiếp tục"}
+              {currentStep === 4 ? "Thanh toán & Đặt lịch" : "Tiếp tục"}
             </Text>
           </LinearGradient>
         </TouchableOpacity>

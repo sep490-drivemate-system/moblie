@@ -11,7 +11,8 @@ export type TabKey =
     | 'schedule'
     | 'mycar'
     | 'notifications'
-    | 'map';
+    | 'map'
+    | 'packages';
 
 export interface TabConfigItem {
     key: TabKey;
@@ -33,6 +34,7 @@ export class TabsViewModel {
         mycar: { key: 'mycar', routeName: 'mycar', title: 'My Car', icon: 'car' },
         notifications: { key: 'notifications', routeName: 'notifications', title: 'Notifications', icon: 'bell' },
         map: { key: 'map', routeName: 'map', title: 'Map', icon: 'map' },
+        packages: { key: 'packages', routeName: 'packages', title: 'Gói', icon: 'package' },
     };
 
     private normalizeRole(role?: UserRole | null): UserRole {
@@ -44,8 +46,9 @@ export class TabsViewModel {
         if (normalizedRole === UserRole.NoviceDriver) {
             return [
                 this.allTabs.home,
-                this.allTabs.cars,
+                this.allTabs.packages,
                 this.allTabs.instructors,
+                this.allTabs.cars,
                 this.allTabs.rental,
                 this.allTabs.profile,
             ];
@@ -56,6 +59,7 @@ export class TabsViewModel {
                 this.allTabs.overview,
                 this.allTabs.schedule,
                 this.allTabs.mycar,
+                this.allTabs.rental,
                 this.allTabs.profile,
             ];
         }

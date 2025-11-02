@@ -4,7 +4,7 @@ const tintColorDark = '#fff';
 // App Theme Colors
 export const AppColors = {
   // Primary Colors
-  primary: '#667eea',
+  primary: '#1AD562',
   primaryDark: '#5568d3',
   primaryLight: '#8b9cff',
 
@@ -17,9 +17,9 @@ export const AppColors = {
   accent: '#f093fb',
 
   // Gradient Colors
-  gradientStart: '#667eea',
-  gradientMiddle: '#764ba2',
-  gradientEnd: '#f093fb',
+  gradientStart: '#43cea2',
+  gradientMiddle: '#a8e063',
+  gradientEnd: '#56ab2f',
 
   // Status Colors
   success: '#10b981',

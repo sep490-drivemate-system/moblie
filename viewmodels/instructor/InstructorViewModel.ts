@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/lib/redux/hooks';
-import { Instructor, IInstructors } from '@/models/instructor/instructor.type';
+import { IInstructor, IInstructors } from '@/models/instructor/instructor.type';
 import {
   FilterType,
   DistanceFilter,
@@ -50,14 +50,13 @@ export const useInstructorViewModel = () => {
       const responseData = (response as any).data || response;
       
       // Convert IInstructors[] to Instructor[] if needed
-      const instructors: Instructor[] = (responseData as IGetInstructorsResponse).instructors.map((item: IInstructors) => ({
+      const instructors: IInstructor[] = (responseData as IGetInstructorsResponse).instructors.map((item: IInstructors) => ({
         id: item.id,
         name: item.name,
         avatar: item.avatar,
         experience: item.experience,
         experienceYears: parseInt(item.experience.split(' ')[0]) || 0,
         rating: item.averageRating,
-        price: item.pricePerHour,
         specialties: ['Lái xe cơ bản', 'Lái xe nâng cao'], // Default specialties
         phone: '0123456789', // Default phone
         email: `${item.name.toLowerCase().replace(' ', '.')}@example.com`, // Generated email
@@ -95,14 +94,13 @@ export const useInstructorViewModel = () => {
       const responseData = (response as any).data || response;
       
       // Convert IInstructors[] to Instructor[] if needed
-      const instructors: Instructor[] = (responseData as IGetInstructorsResponse).instructors.map((item: IInstructors) => ({
+      const instructors: IInstructor[] = (responseData as IGetInstructorsResponse).instructors.map((item: IInstructors) => ({
         id: item.id,
         name: item.name,
         avatar: item.avatar,
         experience: item.experience,
         experienceYears: parseInt(item.experience.split(' ')[0]) || 0,
         rating: item.averageRating,
-        price: item.pricePerHour,
         specialties: ['Lái xe cơ bản', 'Lái xe nâng cao'],
         phone: '0123456789',
         email: `${item.name.toLowerCase().replace(' ', '.')}@example.com`,
@@ -132,8 +130,8 @@ export const useInstructorViewModel = () => {
 
   // Update displayed instructors based on pagination
   const updateDisplayedInstructors = useCallback((
-    instructors: Instructor[],
-    page: number
+    instructors: IInstructor[],
+    page: number  
   ) => {
     const startIndex = (page - 1) * state.pagination.itemsPerPage;
     const endIndex = startIndex + state.pagination.itemsPerPage;

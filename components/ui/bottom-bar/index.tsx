@@ -1,6 +1,6 @@
 import React, { useMemo, useRef } from 'react';
 import { View, Pressable, Text, Platform, Animated, Dimensions } from 'react-native';
-import { Home as LucideHome, Car as LucideCar, Users as LucideUsers, Bookmark as LucideBookmark, User as LucideUser, Gauge as LucideGauge, Calendar as LucideCalendar, CalendarDays as LucideCalendarDays, ClipboardPlus as LucideClipboardPlus, Bell as LucideBell, Map as LucideMap, Circle as LucideCircle } from 'lucide-react-native';
+import { Home as LucideHome, Car as LucideCar, Users as LucideUsers, Bookmark as LucideBookmark, User as LucideUser, Gauge as LucideGauge, Calendar as LucideCalendar, CalendarDays as LucideCalendarDays, ClipboardPlus as LucideClipboardPlus, Bell as LucideBell, Map as LucideMap, Package as LucidePackage, Circle as LucideCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CENTER_SIZE = 64; // diameter of floating button
@@ -48,6 +48,7 @@ export const ModernBottomBar: React.FC<Props> = ({
         clipboardPlus: LucideClipboardPlus,
         bell: LucideBell,
         map: LucideMap,
+        package: LucidePackage,
     } as const), []);
     const scales = useMemo(() => {
         const map: Record<string, Animated.Value> = {};

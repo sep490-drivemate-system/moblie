@@ -1,7 +1,7 @@
 import { gender } from "@/constants/enums";
-import { Instructor, IInstructors } from "@/models/instructor/instructor.type";
+import { IInstructor, IInstructors } from "@/models/instructor/instructor.type";
 
-export const instructorsData: Instructor[] = [
+export const instructorsData: IInstructor[] = [
   {
     id: "1",
     name: "Nguyễn Văn An",
@@ -10,13 +10,66 @@ export const instructorsData: Instructor[] = [
     experience: "8 năm kinh nghiệm",
     experienceYears: 8,
     rating: 4.9,
-    price: 300000, // 300 xu -> 300000 VNĐ
-    specialties: ["Lái xe số tự động", "Lái xe trong thành phố", "Đỗ xe song song"],
-    phone: "0901234567",
-    email: "nguyenvanan@email.com",
     description: "Giảng viên giàu kinh nghiệm, chuyên dạy lái xe an toàn trong thành phố.",
     totalBookings: 245,
     gender: gender.male,
+    packages: [
+      {
+        id: "pkg_1_1",
+        name: "Gói Cơ Bản Thành Phố",
+        duration: 2,
+        roadTypes: ["Khu dân cư", "Đô thị"],
+        skills: ["Điều khiển cơ bản", "Đỗ xe", "Qua ngã tư"],
+        hasVehicle: false,
+        basePrice: 200000,
+      },
+      {
+        id: "pkg_1_2", 
+        name: "Gói Thành Phố + Xe",
+        duration: 2,
+        roadTypes: ["Khu dân cư", "Đô thị"],
+        skills: ["Điều khiển cơ bản", "Đỗ xe", "Qua ngã tư"],
+        hasVehicle: true,
+        basePrice: 200000,
+        vehiclePrice: 100000,
+        vehicle: {
+          id: "car_1",
+          name: "Toyota Vios",
+          brand: "Toyota",
+          imageUrl: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=300&h=200&fit=crop",
+          price: 100000,
+          location: "TP.HCM",
+          rating: 4.8,
+          seats: 5,
+          type: "Sedan",
+          fuel: "Xăng",
+          totalRentalCount: 150
+        },
+      },
+      {
+        id: "pkg_1_3",
+        name: "Gói Nâng Cao",
+        duration: 3,
+        roadTypes: ["Khu dân cư", "Đô thị", "Quốc lộ"],
+        skills: ["Điều khiển cơ bản", "Đỗ xe", "Chuyển làn", "Vượt xe", "Qua ngã tư"],
+        hasVehicle: true,
+        basePrice: 280000,
+        vehiclePrice: 120000,
+        vehicle: {
+          id: "car_2",
+          name: "Honda City",
+          brand: "Honda", 
+          imageUrl: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=300&h=200&fit=crop",
+          price: 120000,
+          location: "TP.HCM",
+          rating: 4.9,
+          seats: 5,
+          type: "Sedan",
+          fuel: "Xăng",
+          totalRentalCount: 120
+        },
+      }
+    ]
   },
   {
     id: "2",
@@ -26,13 +79,43 @@ export const instructorsData: Instructor[] = [
     experience: "5 năm kinh nghiệm",
     experienceYears: 5,
     rating: 4.7,
-    price: 280000,
-    specialties: ["Lái xe số sàn", "Lái xe đường dài", "Kỹ thuật lái xe"],
-    phone: "0912345678",
-    email: "tranthibinh@email.com",
     description: "Chuyên gia dạy lái xe số sàn và kỹ thuật lái xe nâng cao.",
     totalBookings: 189,
     gender: gender.female,
+    packages: [
+      {
+        id: "pkg_2_1",
+        name: "Gói Số Sàn Cơ Bản",
+        duration: 2,
+        roadTypes: ["Khu dân cư", "Đô thị"],  
+        skills: ["Điều khiển cơ bản", "Số sàn", "Đỗ xe"],
+        hasVehicle: false,
+        basePrice: 180000,
+      },
+      {
+        id: "pkg_2_2",
+        name: "Gói Đường Dài",
+        duration: 4,
+        roadTypes: ["Đô thị", "Quốc lộ", "Cao tốc"],
+        skills: ["Điều khiển cơ bản", "Chuyển làn", "Vượt xe", "Lái đường dài"],
+        hasVehicle: true,
+        basePrice: 320000,
+        vehiclePrice: 150000,
+        vehicle: {
+          id: "car_3",
+          name: "Mazda 3",
+          brand: "Mazda",
+          imageUrl: "https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=300&h=200&fit=crop",
+          price: 150000,
+          location: "TP.HCM",
+          rating: 4.7,
+          seats: 5,
+          type: "Sedan",
+          fuel: "Xăng",
+          totalRentalCount: 95
+        },
+      }
+    ]
   },
   {
     id: "3",
@@ -42,13 +125,10 @@ export const instructorsData: Instructor[] = [
     experience: "10 năm kinh nghiệm",
     experienceYears: 10,
     rating: 4.8,
-    price: 350000,
-    specialties: ["Lái xe tải", "Lái xe container", "Bằng lái hạng C"],
-    phone: "0923456789",
-    email: "leminhcuong@email.com",
     description: "Chuyên gia dạy lái xe tải và container, có bằng lái hạng C.",
     totalBookings: 156,
     gender: gender.male,
+    price: 250000,
     vehicels: [],
   },
   {
@@ -59,13 +139,10 @@ export const instructorsData: Instructor[] = [
     experience: "6 năm kinh nghiệm",
     experienceYears: 6,
     rating: 4.6,
-    price: 290000,
-    specialties: ["Lái xe cho phụ nữ", "Lái xe an toàn", "Đỗ xe trong hẻm"],
-    phone: "0934567890",
-    email: "phamthidung@email.com",
     description: "Chuyên dạy lái xe cho phụ nữ với phương pháp nhẹ nhàng, kiên trì.",
     totalBookings: 203,
     gender: gender.female,
+    price: 220000,
   },
   {
     id: "5",
@@ -75,13 +152,10 @@ export const instructorsData: Instructor[] = [
     experience: "7 năm kinh nghiệm",
     experienceYears: 7,
     rating: 4.5,
-    price: 320000,
-    specialties: ["Lái xe cao tốc", "Lái xe đường xa", "Kỹ thuật vượt xe"],
-    phone: "0945678901",
-    email: "hoangvanem@email.com",
     description: "Giảng viên chuyên dạy lái xe cao tốc và đường xa an toàn.",
     totalBookings: 178,
     gender: gender.male,
+    price: 240000,
   },
   {
     id: "6",
@@ -91,13 +165,10 @@ export const instructorsData: Instructor[] = [
     experience: "4 năm kinh nghiệm",
     experienceYears: 4,
     rating: 4.4,
-    price: 270000,
-    specialties: ["Lái xe ban đêm", "Lái xe trong mưa", "Xử lý tình huống"],
-    phone: "0956789012",
-    email: "vuthiphuong@email.com",
     description: "Chuyên gia dạy lái xe trong điều kiện thời tiết khó khăn.",
     totalBookings: 134,
     gender: gender.female,
+    price: 190000,
   },
   {
     id: "7",
@@ -107,13 +178,10 @@ export const instructorsData: Instructor[] = [
     experience: "9 năm kinh nghiệm",
     experienceYears: 9,
     rating: 4.9,
-    price: 340000,
-    specialties: ["Lái xe thể thao", "Kỹ thuật drift", "Lái xe hiệu suất cao"],
-    phone: "0967890123",
-    email: "dominhgiang@email.com",
     description: "Chuyên gia dạy lái xe thể thao và kỹ thuật lái xe nâng cao.",
     totalBookings: 298,
     gender: gender.male,
+    price: 280000,
   },
   {
     id: "8",
@@ -123,13 +191,10 @@ export const instructorsData: Instructor[] = [
     experience: "3 năm kinh nghiệm",
     experienceYears: 3,
     rating: 4.3,
-    price: 250000,
-    specialties: ["Lái xe cho người mới", "Cơ bản về giao thông", "Lý thuyết lái xe"],
-    phone: "0978901234",
-    email: "ngothihanh@email.com",
     description: "Giảng viên trẻ, nhiệt tình, chuyên dạy cho người mới bắt đầu.",
     totalBookings: 87,
     gender: gender.female,
+    price: 170000,
   },
   {
     id: "9",
@@ -139,13 +204,10 @@ export const instructorsData: Instructor[] = [
     experience: "12 năm kinh nghiệm",
     experienceYears: 12,
     rating: 5.0,
-    price: 400000,
-    specialties: ["Lái xe chuyên nghiệp", "Đào tạo giảng viên", "Thi bằng lái"],
-    phone: "0989012345",
-    email: "buivanich@email.com",
     description: "Giảng viên cao cấp, chuyên đào tạo giảng viên và chuẩn bị thi bằng lái.",
     totalBookings: 412,
     gender: gender.male,
+    price: 350000,
   },
   {
     id: "10",
@@ -155,13 +217,10 @@ export const instructorsData: Instructor[] = [
     experience: "6 năm kinh nghiệm",
     experienceYears: 6,
     rating: 4.7,
-    price: 310000,
-    specialties: ["Lái xe ô tô điện", "Công nghệ mới", "Lái xe thông minh"],
-    phone: "0990123456",
-    email: "lythikim@email.com",
     description: "Chuyên gia về công nghệ ô tô mới và lái xe thông minh.",
     totalBookings: 167,
     gender: gender.female,
+    price: 230000,
   },
 ];
 
@@ -174,7 +233,7 @@ export const instructorData: IInstructors[] = [
       "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
     experience: "8 năm kinh nghiệm",
     totalBookings: 245,
-    pricePerHour: 300000,
+    totalPackages: 3,
     averageRating: 4.9,
   },
   {
@@ -185,7 +244,7 @@ export const instructorData: IInstructors[] = [
     experience: "5 năm kinh nghiệm",
     averageRating: 4.7,
     totalBookings: 189,
-    pricePerHour: 280000,
+    totalPackages: 3,
   },
   {
     id: "3",
@@ -195,7 +254,7 @@ export const instructorData: IInstructors[] = [
     experience: "10 năm kinh nghiệm",
     averageRating: 4.8,
     totalBookings: 156,
-    pricePerHour: 350000,
+    totalPackages: 3,
   },
   {
     id: "4",
@@ -205,7 +264,7 @@ export const instructorData: IInstructors[] = [
     experience: "6 năm kinh nghiệm",
     averageRating: 4.6,
     totalBookings: 203,
-    pricePerHour: 290000,
+    totalPackages: 3,
   },
   {
     id: "5",
@@ -215,7 +274,7 @@ export const instructorData: IInstructors[] = [
     experience: "7 năm kinh nghiệm",
     averageRating: 4.5,
     totalBookings: 178,
-    pricePerHour: 320000,
+    totalPackages: 3,
   },
   {
     id: "6",
@@ -225,7 +284,7 @@ export const instructorData: IInstructors[] = [
     experience: "4 năm kinh nghiệm",
     averageRating: 4.4,
     totalBookings: 178,
-    pricePerHour: 320000,
+    totalPackages: 3,
   },
   {
     id: "6",
@@ -235,7 +294,7 @@ export const instructorData: IInstructors[] = [
     experience: "4 năm kinh nghiệm",
     averageRating: 4.4,
     totalBookings: 134,
-    pricePerHour: 270000,
+    totalPackages: 3,
   },
   {
     id: "7",
@@ -245,7 +304,7 @@ export const instructorData: IInstructors[] = [
     experience: "9 năm kinh nghiệm",
     averageRating: 4.9,
     totalBookings: 298,
-    pricePerHour: 340000,
+    totalPackages: 3,
   },
   {
     id: "8",
@@ -255,7 +314,7 @@ export const instructorData: IInstructors[] = [
     experience: "3 năm kinh nghiệm",
     averageRating: 4.3,
     totalBookings: 87,
-    pricePerHour: 250000,
+    totalPackages: 3,
   },
   {
     id: "9",
@@ -265,7 +324,7 @@ export const instructorData: IInstructors[] = [
     experience: "12 năm kinh nghiệm",
     averageRating: 5.0,
     totalBookings: 412,
-    pricePerHour: 400000,
+    totalPackages: 3,
   },
   {
     id: "10",
@@ -275,7 +334,7 @@ export const instructorData: IInstructors[] = [
     experience: "6 năm kinh nghiệm",
     averageRating: 4.7,
     totalBookings: 167,
-    pricePerHour: 310000,
+    totalPackages: 3,
   },
 ];
 
@@ -285,31 +344,21 @@ export const getInstructorById = (id: string) => {
 
 // Sort functions
 export const sortInstructorsByRating = (
-  instructors: Instructor[],
+  instructors: IInstructor[],
   ascending: boolean = false
-): Instructor[] => {
+): IInstructor[] => {
   return [...instructors].sort((a, b) =>
     ascending ? a.rating - b.rating : b.rating - a.rating
   );
 };
 
-export const sortInstructorsByPrice = (
-  instructors: Instructor[],
-  ascending: boolean = true
-): Instructor[] => {
-  return [...instructors].sort((a, b) =>
-    ascending
-      ? a.price - b.price
-      : b.price - a.price
-  );
-};
 
 // Filter by experience years
 export const getInstructorsByExperienceRange = (
-  instructors: Instructor[],
+  instructors: IInstructor[],
   minYears: number,
   maxYears: number
-): Instructor[] => {
+): IInstructor[] => {
   return instructors.filter(
     (instructor) =>
       instructor.experienceYears >= minYears &&
@@ -318,9 +367,9 @@ export const getInstructorsByExperienceRange = (
 };
 
 export const sortInstructorsByExperience = (
-  instructors: Instructor[],
+  instructors: IInstructor[],
   ascending: boolean = false
-): Instructor[] => {
+): IInstructor[] => {
   return [...instructors].sort((a, b) =>
     ascending
       ? a.experienceYears - b.experienceYears

@@ -397,7 +397,6 @@ export default function DetailScreen() {
                         <Text style={styles.carName}>{selectedCar.name}</Text>
                         <Text style={styles.carDetails}>{selectedCar.year} • {selectedCar.fuelType} • {selectedCar.transmission}</Text>
                         <Text style={styles.carDescription}>{selectedCar.description}</Text>
-                        <Text style={styles.carPrice}>Từ {selectedCar.price.toLocaleString()} VNĐ/ngày</Text>
                     </View>
                 </View>
 
@@ -428,7 +427,6 @@ export default function DetailScreen() {
                         >
                             <View style={styles.packageHeader}>
                                 <Text style={styles.packageName}>{pkg.name}</Text>
-                                <Text style={styles.packagePrice}>{pkg.price.toLocaleString()} VNĐ</Text>
                             </View>
                             <Text style={styles.packageDescription}>{pkg.description}</Text>
                             <Text style={styles.packageDuration}>Thời gian: {pkg.duration}</Text>

@@ -1,185 +1,177 @@
-import React from "react";
-import { View, Text, TouchableOpacity, TextInput, StyleSheet } from "react-native";
-import { Calendar } from "react-native-calendars";
-import { CalendarDays, CheckCircle } from "lucide-react-native";
-import { BookingMode, Shift, ShiftType } from "@/models/booking/booking";
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import { Clock, Plus, Minus } from "lucide-react-native";
+import { AppColors } from "@/constants/Colors";
 
 interface Step2Props {
-  bookingMode: BookingMode;
-  // Daily mode props
-  selectedDate: string;
-  selectedShift: Shift | null;
-  onDateSelect: (date: string) => void;
-  onShiftSelect: (shift: Shift) => void;
-  // Recurring mode props
-  startDate: string;
-  endDate: string;
-  selectedDays: string[];
-  selectedShiftsRecurring: ShiftType[];
-  onStartDateChange: (date: string) => void;
-  onEndDateChange: (date: string) => void;
-  onDayToggle: (dayId: string) => void;
-  onRecurringShiftToggle: (shiftId: ShiftType) => void;
+  selectedStartTime: string;
+  selectedDuration: number; // in hours
+  onStartTimeSelect: (time: string) => void;
+  onDurationChange: (duration: number) => void;
+  maxDuration?: number;
 }
 
-const shifts = [
-  { id: "morning" as ShiftType, label: "Ca sáng", time: "6:00 - 10:00" },
-  { id: "afternoon" as ShiftType, label: "Ca chiều", time: "14:00 - 18:00" },
-  { id: "evening" as ShiftType, label: "Ca tối", time: "18:00 - 22:00" },
+const timeSlots = [
+  "06:00", "07:00", "08:00", "09:00", "10:00", "11:00",
+  "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
+  "18:00", "19:00", "20:00"
 ];
 
-const weekDays = [
-  { id: "mon", label: "T2" },
-  { id: "tue", label: "T3" },
-  { id: "wed", label: "T4" },
-  { id: "thu", label: "T5" },
-  { id: "fri", label: "T6" },
-  { id: "sat", label: "T7" },
-  { id: "sun", label: "CN" },
-];
+const calculateEndTime = (startTime: string, duration: number): string => {
+  if (!startTime) return "00:00";
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const endHours = hours + duration;
+  return `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+};
 
 export default function Step2({
-  bookingMode,
-  selectedDate,
-  selectedShift,
-  onDateSelect,
-  onShiftSelect,
-  startDate,
-  endDate,
-  selectedDays,
-  selectedShiftsRecurring,
-  onStartDateChange,
-  onEndDateChange,
-  onDayToggle,
-  onRecurringShiftToggle,
+  selectedStartTime,
+  selectedDuration,
+  onStartTimeSelect,
+  onDurationChange,
+  maxDuration = 8,
 }: Step2Props) {
-  if (bookingMode === "daily") {
-    return (
-      <>
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <CalendarDays size={24} color="#667eea" strokeWidth={2} />
-            <Text style={styles.sectionTitle}>Chọn ngày</Text>
-          </View>
-          <Calendar
-            current={new Date().toISOString().split("T")[0]}
-            onDayPress={(day) => onDateSelect(day.dateString)}
-            markedDates={{
-              [selectedDate]: {
-                selected: true,
-                selectedColor: "#667eea",
-              },
-            }}
-            theme={{
-              todayTextColor: "#667eea",
-              selectedDayBackgroundColor: "#667eea",
-              selectedDayTextColor: "#ffffff",
-              arrowColor: "#667eea",
-            }}
-            style={styles.calendar}
-          />
-        </View>
+  const handleIncreaseDuration = () => {
+    if (selectedDuration < maxDuration) {
+      onDurationChange(selectedDuration + 0.5);
+    }
+  };
 
-        {selectedDate && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Chọn ca thuê</Text>
-            {shifts.map((shift) => (
-              <TouchableOpacity
-                key={shift.id}
-                style={[
-                  styles.shiftCard,
-                  selectedShift?.id === shift.id && styles.shiftCardActive,
-                ]}
-                onPress={() => onShiftSelect(shift)}
-              >
-                <View style={styles.shiftInfo}>
-                  <Text style={styles.shiftLabel}>{shift.label}</Text>
-                  <Text style={styles.shiftTime}>{shift.time}</Text>
-                </View>
-                {selectedShift?.id === shift.id && (
-                  <CheckCircle size={24} color="#667eea" strokeWidth={2} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </>
-    );
-  }
+  const handleDecreaseDuration = () => {
+    if (selectedDuration > 0.5) {
+      onDurationChange(selectedDuration - 0.5);
+    }
+  };
 
-  // Recurring mode
   return (
     <>
+      {/* Time Selection */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📅 Chọn khoảng thời gian</Text>
-        <View style={styles.dateRangeContainer}>
-          <View style={styles.dateInputWrapper}>
-            <Text style={styles.dateInputLabel}>Từ ngày:</Text>
-            <TextInput
-              style={styles.dateInput}
-              placeholder="DD/MM/YYYY"
-              value={startDate}
-              onChangeText={onStartDateChange}
-            />
-          </View>
-          <View style={styles.dateInputWrapper}>
-            <Text style={styles.dateInputLabel}>Đến ngày:</Text>
-            <TextInput
-              style={styles.dateInput}
-              placeholder="DD/MM/YYYY"
-              value={endDate}
-              onChangeText={onEndDateChange}
-            />
-          </View>
+        <View style={styles.sectionHeader}>
+          <Clock size={24} color={AppColors.primary} strokeWidth={2} />
+          <Text style={styles.sectionTitle}>Chọn giờ bắt đầu</Text>
         </View>
-      </View>
+        <Text style={styles.sectionDesc}>
+          Chọn thời gian bắt đầu cho buổi học của bạn
+        </Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📆 Chọn các thứ trong tuần</Text>
-        <View style={styles.weekDaysContainer}>
-          {weekDays.map((day) => (
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.timeScroll}
+          contentContainerStyle={styles.timeContent}
+        >
+          {timeSlots.map((time) => (
             <TouchableOpacity
-              key={day.id}
+              key={time}
               style={[
-                styles.dayButton,
-                selectedDays.includes(day.id) && styles.dayButtonActive,
+                styles.timeSlot,
+                selectedStartTime === time && styles.timeSlotActive,
               ]}
-              onPress={() => onDayToggle(day.id)}
+              onPress={() => onStartTimeSelect(time)}
             >
-              <Text
-                style={[
-                  styles.dayButtonText,
-                  selectedDays.includes(day.id) && styles.dayButtonTextActive,
-                ]}
-              >
-                {day.label}
+              <Text style={[
+                styles.timeText,
+                selectedStartTime === time && styles.timeTextActive,
+              ]}>
+                {time}
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
-      {selectedDays.length > 0 && (
+      {/* Duration Selection */}
+      {selectedStartTime && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>⏰ Chọn ca học</Text>
-          {shifts.map((shift) => (
+          <View style={styles.sectionHeader}>
+            <Clock size={24} color={AppColors.primary} strokeWidth={2} />
+            <Text style={styles.sectionTitle}>Chọn thời lượng</Text>
+          </View>
+          <Text style={styles.sectionDesc}>
+            Tùy chỉnh thời lượng buổi học (tối đa {maxDuration} giờ)
+          </Text>
+
+          {/* Duration Control */}
+          <View style={styles.durationControl}>
             <TouchableOpacity
-              key={shift.id}
               style={[
-                styles.shiftCard,
-                selectedShiftsRecurring.includes(shift.id) && styles.shiftCardActive,
+                styles.durationButton,
+                selectedDuration <= 0.5 && styles.durationButtonDisabled,
               ]}
-              onPress={() => onRecurringShiftToggle(shift.id)}
+              onPress={handleDecreaseDuration}
+              disabled={selectedDuration <= 0.5}
             >
-              <View style={styles.shiftInfo}>
-                <Text style={styles.shiftLabel}>{shift.label}</Text>
-                <Text style={styles.shiftTime}>{shift.time}</Text>
-              </View>
-              {selectedShiftsRecurring.includes(shift.id) && (
-                <CheckCircle size={24} color="#667eea" strokeWidth={2} />
-              )}
+              <Minus
+                size={24}
+                color={selectedDuration <= 0.5 ? "#cbd5e1" : AppColors.primary}
+                strokeWidth={3}
+              />
             </TouchableOpacity>
-          ))}
+
+            <View style={styles.durationDisplay}>
+              <Text style={styles.durationValue}>{selectedDuration}</Text>
+              <Text style={styles.durationUnit}>giờ</Text>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.durationButton,
+                selectedDuration >= maxDuration && styles.durationButtonDisabled,
+              ]}
+              onPress={handleIncreaseDuration}
+              disabled={selectedDuration >= maxDuration}
+            >
+              <Plus
+                size={24}
+                color={selectedDuration >= maxDuration ? "#cbd5e1" : AppColors.primary}
+                strokeWidth={3}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Quick Duration Buttons */}
+          <View style={styles.quickDurations}>
+            {[1, 1.5, 2, 2.5, 3].map((duration) => (
+              <TouchableOpacity
+                key={duration}
+                style={[
+                  styles.quickDurationButton,
+                  selectedDuration === duration && styles.quickDurationButtonActive,
+                ]}
+                onPress={() => onDurationChange(duration)}
+              >
+                <Text
+                  style={[
+                    styles.quickDurationText,
+                    selectedDuration === duration && styles.quickDurationTextActive,
+                  ]}
+                >
+                  {duration}h
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Time Summary */}
+          <View style={styles.timeSummary}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Thời gian bắt đầu:</Text>
+              <Text style={styles.summaryValue}>{selectedStartTime}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Thời gian kết thúc:</Text>
+              <Text style={styles.summaryValue}>
+                {calculateEndTime(selectedStartTime, selectedDuration)}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Tổng thời lượng:</Text>
+              <Text style={[styles.summaryValue, { color: AppColors.primary, fontWeight: "800" }]}>
+                {selectedDuration} giờ
+              </Text>
+            </View>
+          </View>
         </View>
       )}
     </>
@@ -203,91 +195,133 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#1e293b",
   },
-  calendar: {
-    borderRadius: 12,
-  },
-  shiftCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#f8fafc",
-    marginBottom: 12,
-  },
-  shiftCardActive: {
-    borderColor: "#667eea",
-    backgroundColor: "#f0f4ff",
-  },
-  shiftInfo: {
-    flex: 1,
-  },
-  shiftLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 4,
-  },
-  shiftTime: {
+  sectionDesc: {
     fontSize: 14,
     color: "#64748b",
-    fontWeight: "600",
+    marginBottom: 20,
+    lineHeight: 20,
   },
-  dateRangeContainer: {
+  timeScroll: {
+    marginHorizontal: -24,
+  },
+  timeContent: {
+    paddingHorizontal: 24,
     gap: 12,
   },
-  dateInputWrapper: {
-    gap: 8,
-  },
-  dateInputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748b",
-  },
-  dateInput: {
-    backgroundColor: "#f8fafc",
-    paddingHorizontal: 16,
+  timeSlot: {
     paddingVertical: 12,
-    borderRadius: 10,
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1e293b",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  weekDaysContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  dayButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#f8fafc",
-    justifyContent: "center",
-    alignItems: "center",
+    paddingHorizontal: 20,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
+    minWidth: 80,
+    alignItems: "center",
   },
-  dayButtonActive: {
-    backgroundColor: "#667eea",
-    borderColor: "#667eea",
+  timeSlotActive: {
+    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary + "15",
   },
-  dayButtonText: {
-    fontSize: 14,
+  timeText: {
+    fontSize: 16,
     fontWeight: "700",
     color: "#64748b",
   },
-  dayButtonTextActive: {
-    color: "#ffffff",
+  timeTextActive: {
+    color: AppColors.primary,
+  },
+  durationControl: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 24,
+    marginBottom: 24,
+  },
+  durationButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: AppColors.primary,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  durationButtonDisabled: {
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
+  },
+  durationDisplay: {
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  durationValue: {
+    fontSize: 56,
+    fontWeight: "800",
+    color: AppColors.primary,
+    lineHeight: 64,
+  },
+  durationUnit: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#64748b",
+    marginTop: -8,
+  },
+  quickDurations: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 24,
+  },
+  quickDurationButton: {
+    flex: 1,
+    minWidth: 60,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+  },
+  quickDurationButtonActive: {
+    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary + "15",
+  },
+  quickDurationText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#64748b",
+  },
+  quickDurationTextActive: {
+    color: AppColors.primary,
+  },
+  timeSummary: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: "#64748b",
+    fontWeight: "600",
+  },
+  summaryValue: {
+    fontSize: 16,
+    color: "#1e293b",
+    fontWeight: "700",
   },
 });

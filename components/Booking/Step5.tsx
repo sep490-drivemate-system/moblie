@@ -1,18 +1,14 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { CreditCard } from "lucide-react-native";
-import { BookingMode, Shift, ShiftType, RoadType, Skill } from "@/models/booking/booking";
+import { BookingMode, Shift, ShiftType } from "@/models/booking/booking";
 
 interface Step5Props {
-  packageType?: "instructor" | "full";
+  packageId?: string;
   bookingMode: BookingMode;
-  selectedDate: string;
-  selectedShift: Shift | null;
-  startDate: string;
-  endDate: string;
+  selectedDates: string[];
+  selectedStartTime: string;
   pickupLocation: string;
-  selectedRoadTypes: RoadType[];
-  selectedSkills: Skill[];
   bookingCost: number;
   userCoins: number;
 }
@@ -24,15 +20,11 @@ const shifts = [
 ];
 
 export default function Step5({
-  packageType,
+  packageId,
   bookingMode,
-  selectedDate,
-  selectedShift,
-  startDate,
-  endDate,
+  selectedDates,
+  selectedStartTime,
   pickupLocation,
-  selectedRoadTypes,
-  selectedSkills,
   bookingCost,
   userCoins,
 }: Step5Props) {
@@ -46,11 +38,7 @@ export default function Step5({
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>📦 Gói thuê:</Text>
           <Text style={styles.summaryValue}>
-            {packageType === "instructor"
-              ? "Thuê người hướng dẫn"
-              : packageType === "full"
-              ? "Thuê trọn gói"
-              : "Chưa chọn gói"}
+            {packageId ? "Đã chọn gói học" : "Chưa chọn gói"}
           </Text>
         </View>
 
@@ -66,31 +54,15 @@ export default function Step5({
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>⏰ Thời gian:</Text>
           <Text style={styles.summaryValue}>
-            {bookingMode === "daily"
-              ? `${selectedDate} - ${
-                  shifts.find((s) => s.id === selectedShift?.id)?.label
-                }`
-              : `${startDate} → ${endDate}`}
+            {selectedDates.length === 1 
+              ? `${selectedDates[0]} - ${selectedStartTime}`
+              : `${selectedDates.length} ngày - ${selectedStartTime}`}
           </Text>
         </View>
 
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>📍 Địa điểm:</Text>
           <Text style={styles.summaryValue}>{pickupLocation}</Text>
-        </View>
-
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>🛣️ Loại đường:</Text>
-          <Text style={styles.summaryValue}>
-            {selectedRoadTypes.map((road) => road.label).join(", ")}
-          </Text>
-        </View>
-
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>🎯 Kỹ năng:</Text>
-          <Text style={styles.summaryValue}>
-            {selectedSkills.map((skill) => skill.label).join(", ")}
-          </Text>
         </View>
 
         <View style={styles.summaryDivider} />

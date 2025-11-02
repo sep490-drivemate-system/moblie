@@ -1,10 +1,10 @@
-import { Instructor } from "@/models/instructor/instructor.type";
+import { IInstructor } from "@/models/instructor/instructor.type";
 import { LinearGradient } from "expo-linear-gradient";
 import { LucideStar, ShieldCheck } from "lucide-react-native";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type Props = {
-  instructor: Instructor;
+  instructor: IInstructor;
   variant?: "compact" | "full";
 };
 const InstructorItem: React.FC<Props> = ({
@@ -42,7 +42,7 @@ const InstructorItem: React.FC<Props> = ({
             <Text style={styles.experienceText}>{instructor.experience}</Text>
           </View>
           <Text style={styles.price}>
-            {instructor.price.toLocaleString("vi-VN")} GF /{" "}
+            {instructor.price ? instructor.price.toLocaleString("vi-VN") : "Liên hệ"} GF /{" "}
             <Text style={{ fontWeight: "400" }}>giờ</Text>
           </Text>
         </View>
