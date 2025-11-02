@@ -147,7 +147,7 @@ export default function UploadGuideScreen() {
     if (type === "front") {
       return [
         require("@/assets/images/image_1-guide3.png"),
-        require("@/assets/images/image_1-guide3.png"),
+        require("@/assets/images/image_2-guide3.png"),
       ];
     } else {
       return [

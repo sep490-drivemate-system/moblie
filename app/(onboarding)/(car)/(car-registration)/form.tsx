@@ -68,34 +68,6 @@ export default function FormScreen() {
 
   const loadUserData = async () => {
     try {
-      // Check if onboarding was reset
-      const onboardingCompleted = await AsyncStorage.getItem(
-        "onboarding_completed"
-      );
-      const quizCompleted = await AsyncStorage.getItem("quiz_completed");
-
-      // If onboarding was reset, clear all data
-      if (!onboardingCompleted || !quizCompleted) {
-        setFrontImageUri(null);
-        setBackImageUri(null);
-        setTempFrontImageUri(null);
-        setTempBackImageUri(null);
-        setFormData({
-          ownerName: "",
-          licensePlate: "",
-          carBrand: "",
-          carModel: "",
-          carColor: "",
-          seatCount: "",
-          issueDate: "",
-          fuelType: "",
-        });
-        await AsyncStorage.removeItem("temp_car_registration_front");
-        await AsyncStorage.removeItem("temp_car_registration_back");
-        await AsyncStorage.removeItem("car_registration_data");
-        return;
-      }
-
       const savedFrontImage = await AsyncStorage.getItem(
         "car_registration_front"
       );

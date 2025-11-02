@@ -9,9 +9,11 @@ import {
   View,
 } from "react-native";
 import { useEffect } from "react";
+import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function WaitingConfirmScreen() {
+  const router = useRouter();
   // Reset tất cả dữ liệu onboarding khi vào trang này
   useEffect(() => {
     const resetOnboardingData = async () => {
@@ -24,66 +26,66 @@ export default function WaitingConfirmScreen() {
           "quiz_completed",
           "car_added",
           "otp_verified",
-          
+
           // Form data
           "terms_and_conditions_data",
           "emergency_contact_data",
           "commitment_data",
-          
+
           // Personal Identification - Avatar
           "temp_user_avatar",
           "user_avatar",
-          
+
           // Personal Identification - ID Card
           "temp_id_front",
           "temp_id_back",
           "id_front",
           "id_back",
           "id_card_data",
-          
+
           // Personal Identification - License
           "temp_license_front",
           "temp_license_back",
           "license_front",
           "license_back",
           "license_data",
-          
+
           // Personal Identification - Professional License/Certificate
           "temp_certificate",
           "certificate",
           "certificate_data",
-          
+
           // Personal Identification - Healthcare Certificate
           "temp_healthcare_certificate",
           "healthcare_certificate",
           "healthcare_certificate_data",
-          
+
           // Personal Identification - Criminal Record
           "temp_criminal_record",
           "criminal_record",
           "criminal_record_data",
-          
+
           // Car - Registration
           "temp_car_registration_front",
           "temp_car_registration_back",
           "car_registration_front",
           "car_registration_back",
           "car_registration_data",
-          
+
           // Car - Insurance
           "temp_car_insurance_front",
           "temp_car_insurance_back",
           "car_insurance_front",
           "car_insurance_back",
           "car_insurance_data",
-          
+
           // Car - Inspection Certificate
           "temp_car_inspection_certificate_front",
           "temp_car_inspection_certificate_back",
           "car_inspection_certificate_front",
           "car_inspection_certificate_back",
           "car_inspection_certificate_data",
-          
+
           // Car - Verification Images
           "temp_car_verification_front",
           "temp_car_verification_back",
@@ -181,9 +183,9 @@ export default function WaitingConfirmScreen() {
               Chào mừng bạn đã trở thành một phần của{" "}
               <Text style={styles.drivemateText}>Drivemate</Text>
             </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push("/(auth)/signin")}>
               <Text style={styles.link}>
-                Nhấn tại đây để thiết kế gói thuê của bạn
+                Nhấn tại đây để đăng nhập vô hệ thống
               </Text>
             </TouchableOpacity>
           </View>

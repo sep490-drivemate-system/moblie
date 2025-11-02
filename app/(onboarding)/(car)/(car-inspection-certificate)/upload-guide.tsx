@@ -155,8 +155,8 @@ export default function UploadGuideScreen() {
       ];
     } else {
       return [
-        require("@/assets/images/image_2-guide9.png"),
         require("@/assets/images/image_1-guide9.png"),
+        require("@/assets/images/image_2-guide9.png"),
       ];
     }
   };

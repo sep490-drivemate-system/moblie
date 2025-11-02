@@ -67,25 +67,6 @@ export default function FormScreen() {
 
   const loadUserData = async () => {
     try {
-      // Check if onboarding was reset
-      const onboardingCompleted = await AsyncStorage.getItem(
-        "onboarding_completed"
-      );
-      const quizCompleted = await AsyncStorage.getItem("quiz_completed");
-
-      // If onboarding was reset, clear all data
-      if (!onboardingCompleted || !quizCompleted) {
-        setFrontImageUri(null);
-        setBackImageUri(null);
-        setTempFrontImageUri(null);
-        setTempBackImageUri(null);
-        setIsSaved(false);
-        await AsyncStorage.removeItem("temp_license_front");
-        await AsyncStorage.removeItem("temp_license_back");
-        await AsyncStorage.removeItem("license_data");
-        return;
-      }
-
       const savedFrontImage = await AsyncStorage.getItem("license_front");
       const savedBackImage = await AsyncStorage.getItem("license_back");
       const savedFormData = await AsyncStorage.getItem("license_data");

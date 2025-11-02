@@ -17,7 +17,8 @@ import CustomAlert from "@/components/CustomAlert";
 
 export default function UploadGuideScreen() {
   const router = useRouter();
-  const { type } = useLocalSearchParams<{ type: string }>();
+  const { type } = useLocalSearchParams<{ type: string | string[] }>();
+  const resolvedType = Array.isArray(type) ? type[0] : type;
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -95,16 +96,17 @@ export default function UploadGuideScreen() {
       aspect: [1, 1],
       quality: 1,
     });
-
-    if (!result.canceled) {
-      // Save image to temp AsyncStorage
-      const storageKey =
-        type === "front"
-          ? "temp_car_insurance_front"
-          : "temp_car_insurance_back";
-      await AsyncStorage.setItem(storageKey, result.assets[0].uri);
-      // Navigate back to form with selected image
-      router.back();
+    const isCanceled = (result as any).canceled ?? (result as any).cancelled;
+    if (!isCanceled) {
+      const pickedUri = (result as any).assets?.[0]?.uri ?? (result as any).uri;
+      if (pickedUri) {
+        const storageKey =
+          resolvedType === "front"
+            ? "temp_car_insurance_front"
+            : "temp_car_insurance_back";
+        await AsyncStorage.setItem(storageKey, pickedUri);
+        router.back();
+      }
     }
   };
 
@@ -128,27 +130,28 @@ export default function UploadGuideScreen() {
       aspect: [1, 1],
       quality: 1,
     });
-
-    if (!result.canceled) {
-      // Save image to temp AsyncStorage
-      const storageKey =
-        type === "front"
-          ? "temp_car_insurance_front"
-          : "temp_car_insurance_back";
-      await AsyncStorage.setItem(storageKey, result.assets[0].uri);
-      // Navigate back to form with selected image
-      router.back();
+    const isCanceled = (result as any).canceled ?? (result as any).cancelled;
+    if (!isCanceled) {
+      const pickedUri = (result as any).assets?.[0]?.uri ?? (result as any).uri;
+      if (pickedUri) {
+        const storageKey =
+          resolvedType === "front"
+            ? "temp_car_insurance_front"
+            : "temp_car_insurance_back";
+        await AsyncStorage.setItem(storageKey, pickedUri);
+        router.back();
+      }
     }
   };
 
   const getTitle = () => {
-    return type === "front"
+    return resolvedType === "front"
       ? "Hướng dẫn tải lên ảnh mặt trước bảo hiểm xe"
       : "Hướng dẫn tải lên ảnh mặt sau bảo hiểm xe";
   };
 
   const getSampleImages = () => {
-    if (type === "front") {
+    if (resolvedType === "front") {
       return [
         require("@/assets/images/image_1-guide8.png"),
         require("@/assets/images/image_2-guide8.png"),
