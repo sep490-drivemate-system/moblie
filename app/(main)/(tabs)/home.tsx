@@ -1,6 +1,7 @@
 import CarItem from "@/components/ui/car-item";
 import InstructorItem from "@/components/ui/instructor-item";
-import { drivingLicenses, listCar } from "@/data/home_data";
+import PackageItem from "@/components/ui/package-item";
+import { drivingLicenses, listCar, popularPackages } from "@/data/home_data";
 import { instructorData, instructorsData } from "@/data/instructors_data";
 import { LicenseType } from "@/models/license/license";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -101,6 +102,17 @@ export default function HomeScreen() {
           />
         </View>
         <View style={styles.listItemContainer}>
+          <Text style={styles.listLabel}>Gói được thuê thường xuyên</Text>
+          <FlatList
+            data={popularPackages}
+            keyExtractor={(item) => item.id}
+            horizontal
+            contentContainerStyle={styles.listItem}
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => <PackageItem package={item} key={item.id} />}
+          />
+        </View>
+        <View style={styles.listItemContainer}>
           <Text style={styles.listLabel}>Xe được thuê thường xuyên</Text>
           <FlatList
             data={listCar}
@@ -111,6 +123,7 @@ export default function HomeScreen() {
             renderItem={({ item }) => <CarItem car={item} key={item.id} />}
           />
         </View>
+
         <View style={styles.listItemContainer}>
           <Text style={styles.listLabel}>Người hướng dẫn nổi bật</Text>
           <FlatList

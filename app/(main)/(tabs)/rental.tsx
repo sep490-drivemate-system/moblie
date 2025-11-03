@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StatusBar,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,145 +26,139 @@ import {
   MessageCircle,
   Star,
   XCircle,
+  Navigation,
 } from 'lucide-react-native';
+import { IDrivingSession } from '@/models/package/user-package';
+import { instructorsData } from '@/data/instructors_data';
 
 const { width } = Dimensions.get('window');
 
-interface BookingItem {
+// Extended driving session with route planning status
+interface IDrivingSessionExtended {
   id: string;
+  packageId: string;
+  instructorId: string;
   instructorName: string;
   date: string;
-  time: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
   location: string;
-  status: 'requested' | 'pending_confirmation' | 'rejected' | 'in_progress' | 'completed' | 'cancelled';
-  packageType: 'instructor' | 'full';
-  selectedRoadTypes: string[];
-  selectedSkills: string[];
-  instructorRoute?: string;
-  instructorNotes?: string;
-  studentResponse?: 'accepted' | 'rejected';
-  studentNotes?: string;
+  vehicleId?: string;
+  vehicleName?: string;
+  status: "requested" | "pending_confirmation" | "scheduled" | "completed" | "cancelled";
   createdAt: string;
-  price: number;
-  coins: number;
-  sessions?: BookingSession[];
-  isMultiSession?: boolean;
-}
-
-interface BookingSession {
-  id: string;
-  date: string;
-  time: string;
-  status: 'upcoming' | 'completed' | 'cancelled';
-  price: number;
+  packageName?: string;
+  instructorAvatar?: string;
+  hasRoute?: boolean;
 }
 
 export default function RentalScreen() {
   const router = useRouter();
-  const [selectedTab, setSelectedTab] = useState<'all' | 'requested' | 'pending' | 'rejected' | 'in_progress'>('all');
+  const [selectedTab, setSelectedTab] = useState<'all' | 'requested' | 'pending' | 'in_progress' | 'completed'>('all');
 
-  const bookings: BookingItem[] = [
+  // Mock driving sessions data
+  const drivingSessions: IDrivingSessionExtended[] = [
     {
-      id: '1',
-      instructorName: 'Thầy Nguyễn Văn B',
-      date: '2025-01-15',
-      time: 'Ca sáng (6:00 - 10:00)',
-      location: 'FPT University Hồ Chí Minh',
+      id: 'session-1',
+      packageId: 'user-pkg-1',
+      instructorId: '1',
+      instructorName: 'Nguyễn Văn An',
+      date: '2025-11-15',
+      startTime: '08:00',
+      endTime: '11:00',
+      duration: 3,
+      location: '123 Nguyễn Huệ, Q1, TP.HCM',
       status: 'requested',
-      packageType: 'instructor',
-      selectedRoadTypes: ['urban', 'highway'],
-      selectedSkills: ['basic_control', 'parking'],
-      createdAt: '2025-01-10T10:00:00Z',
-      price: 200000,
-      coins: 200,
+      createdAt: '2025-11-10T10:00:00Z',
+      packageName: 'Gói Thành Phố Cơ Bản',
+      instructorAvatar: 'https://i.pravatar.cc/150?img=1',
+      hasRoute: false,
     },
     {
-      id: '2',
-      instructorName: 'Thầy Trần Văn C',
-      date: '2025-01-18',
-      time: 'Ca chiều (14:00 - 18:00)',
-      location: 'FPT University Hà Nội',
+      id: 'session-2',
+      packageId: 'user-pkg-1',
+      instructorId: '1',
+      instructorName: 'Nguyễn Văn An',
+      date: '2025-11-18',
+      startTime: '14:00',
+      endTime: '16:00',
+      duration: 2,
+      location: '456 Lê Lợi, Q1, TP.HCM',
       status: 'pending_confirmation',
-      packageType: 'full',
-      selectedRoadTypes: ['residential', 'urban'],
-      selectedSkills: ['lane_change', 'overtaking'],
-      instructorRoute: 'Lộ trình từ FPT University → Khu vực luyện tập → Trở về',
-      instructorNotes: 'Sẽ tập trung vào kỹ năng chuyển làn và vượt xe an toàn',
-      createdAt: '2025-01-12T14:30:00Z',
-      price: 300000,
-      coins: 300,
+      createdAt: '2025-11-12T14:30:00Z',
+      packageName: 'Gói Thành Phố Cơ Bản',
+      instructorAvatar: 'https://i.pravatar.cc/150?img=1',
+      hasRoute: false,
     },
     {
-      id: '3',
-      instructorName: 'Thầy Lê Văn D',
-      date: '2025-01-12',
-      time: 'Ca sáng (6:00 - 10:00)',
-      location: 'FPT University Đà Nẵng',
-      status: 'in_progress',
-      packageType: 'instructor',
-      selectedRoadTypes: ['highway', 'mountain'],
-      selectedSkills: ['highway_driving', 'defensive_driving'],
-      instructorRoute: 'Lộ trình cao tốc Đà Nẵng → Đèo Hải Vân → Trở về',
-      instructorNotes: 'Luyện tập lái xe cao tốc và đường đèo',
-      studentResponse: 'accepted',
-      createdAt: '2025-01-08T09:15:00Z',
-      price: 250000,
-      coins: 250,
-      isMultiSession: true,
-      sessions: [
-        { id: '3-1', date: '2025-01-12', time: 'Ca sáng (6:00 - 10:00)', status: 'completed', price: 250000 },
-        { id: '3-2', date: '2025-01-13', time: 'Ca sáng (6:00 - 10:00)', status: 'upcoming', price: 250000 },
-        { id: '3-3', date: '2025-01-14', time: 'Ca sáng (6:00 - 10:00)', status: 'upcoming', price: 250000 },
-      ],
+      id: 'session-3',
+      packageId: 'user-pkg-2',
+      instructorId: '2',
+      instructorName: 'Trần Thị Bình',
+      date: '2025-11-12',
+      startTime: '09:00',
+      endTime: '12:00',
+      duration: 3,
+      location: '789 Điện Biên Phủ, Q.Bình Thạnh, TP.HCM',
+      status: 'scheduled',
+      createdAt: '2025-11-08T09:15:00Z',
+      packageName: 'Gói Cao Tốc + Xe',
+      instructorAvatar: 'https://i.pravatar.cc/150?img=2',
+      vehicleId: 'vehicle-1',
+      vehicleName: 'Toyota Vios 2023',
+      hasRoute: true,
     },
     {
-      id: '4',
-      instructorName: 'Thầy Phạm Văn E',
-      date: '2025-01-05',
-      time: 'Ca tối (18:00 - 22:00)',
-      location: 'FPT University Cần Thơ',
+      id: 'session-4',
+      packageId: 'user-pkg-1',
+      instructorId: '1',
+      instructorName: 'Nguyễn Văn An',
+      date: '2025-11-05',
+      startTime: '08:00',
+      endTime: '11:00',
+      duration: 3,
+      location: '123 Nguyễn Huệ, Q1, TP.HCM',
       status: 'completed',
-      packageType: 'full',
-      selectedRoadTypes: ['urban', 'night'],
-      selectedSkills: ['night_driving', 'parking'],
-      instructorRoute: 'Lộ trình đô thị ban đêm',
-      instructorNotes: 'Hoàn thành tốt, cần cải thiện kỹ năng đỗ xe',
-      studentResponse: 'accepted',
-      createdAt: '2025-01-01T16:45:00Z',
-      price: 350000,
-      coins: 350,
+      createdAt: '2025-10-25T10:00:00Z',
+      packageName: 'Gói Thành Phố Cơ Bản',
+      instructorAvatar: 'https://i.pravatar.cc/150?img=1',
+      vehicleId: 'vehicle-1',
+      vehicleName: 'Toyota Vios 2023',
+      hasRoute: true,
     },
     {
-      id: '5',
-      instructorName: 'Thầy Hoàng Văn F',
-      date: '2025-01-20',
-      time: 'Ca sáng (6:00 - 10:00)',
-      location: 'FPT University Quy Nhơn',
-      status: 'rejected',
-      packageType: 'instructor',
-      selectedRoadTypes: ['construction', 'slippery'],
-      selectedSkills: ['rain_driving', 'defensive_driving'],
-      instructorNotes: 'Không thể thực hiện do thời tiết xấu và đường đang thi công',
-      createdAt: '2025-01-15T11:20:00Z',
-      price: 180000,
-      coins: 180,
+      id: 'session-5',
+      packageId: 'user-pkg-2',
+      instructorId: '2',
+      instructorName: 'Trần Thị Bình',
+      date: '2025-11-20',
+      startTime: '15:00',
+      endTime: '17:00',
+      duration: 2,
+      location: '321 Võ Văn Tần, Q3, TP.HCM',
+      status: 'requested',
+      createdAt: '2025-11-15T11:20:00Z',
+      packageName: 'Gói Cao Tốc + Xe',
+      instructorAvatar: 'https://i.pravatar.cc/150?img=2',
+      hasRoute: false,
     },
   ];
 
-  const getFilteredBookings = () => {
+  const getFilteredSessions = () => {
     if (selectedTab === 'all') {
-      return bookings;
+      return drivingSessions;
     }
-    return bookings.filter(booking => {
+    return drivingSessions.filter(session => {
       switch (selectedTab) {
         case 'requested':
-          return booking.status === 'requested';
+          return session.status === 'requested';
         case 'pending':
-          return booking.status === 'pending_confirmation';
-        case 'rejected':
-          return booking.status === 'rejected';
+          return session.status === 'pending_confirmation';
         case 'in_progress':
-          return booking.status === 'in_progress';
+          return session.status === 'scheduled';
+        case 'completed':
+          return session.status === 'completed';
         default:
           return true;
       }
@@ -174,8 +169,7 @@ export default function RentalScreen() {
     switch (status) {
       case 'requested': return '#3b82f6';
       case 'pending_confirmation': return '#f59e0b';
-      case 'rejected': return '#ef4444';
-      case 'in_progress': return '#10b981';
+      case 'scheduled': return '#10b981';
       case 'completed': return '#6b7280';
       case 'cancelled': return '#9ca3af';
       default: return '#6b7280';
@@ -184,10 +178,9 @@ export default function RentalScreen() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'requested': return 'Yêu cầu';
+      case 'requested': return 'Đợi yêu cầu';
       case 'pending_confirmation': return 'Đợi xác nhận';
-      case 'rejected': return 'Từ chối';
-      case 'in_progress': return 'Đang thực hiện';
+      case 'scheduled': return 'Đã lên lịch';
       case 'completed': return 'Hoàn thành';
       case 'cancelled': return 'Đã hủy';
       default: return 'Không xác định';
@@ -198,36 +191,36 @@ export default function RentalScreen() {
     switch (status) {
       case 'requested': return Clock;
       case 'pending_confirmation': return AlertCircle;
-      case 'rejected': return X;
-      case 'in_progress': return CheckCircle;
+      case 'scheduled': return CheckCircle;
       case 'completed': return Check;
       case 'cancelled': return X;
       default: return Clock;
     }
   };
 
-  const handleViewRoute = (bookingId: string) => {
+  const handlePlanRoute = (sessionId: string, location: string) => {
+    router.push({
+      pathname: '/(main)/(no-tabs)/route-planning' as any,
+      params: {
+        sessionId,
+        pickupLocation: location,
+      }
+    });
+  };
+
+  const handleViewRoute = (sessionId: string) => {
     router.push({
       pathname: '/(main)/(no-tabs)/route-notification',
-      params: { routeId: bookingId }
+      params: { routeId: sessionId }
     });
   };
 
-  const handleRespondToRoute = (bookingId: string, response: 'accepted' | 'rejected') => {
-    // Handle student response to instructor route
-    console.log(`Student ${response} route for booking ${bookingId}`);
-    alert(`Đã ${response === 'accepted' ? 'chấp nhận' : 'từ chối'} lộ trình!`);
+  const getInstructorAvatar = (instructorId: string) => {
+    const instructor = instructorsData.find(i => i.id === instructorId);
+    return instructor?.avatar || 'https://i.pravatar.cc/150?img=1';
   };
 
-
-  const handleCancelBooking = (booking: BookingItem) => {
-    router.push({
-      pathname: '/(main)/(no-tabs)/cancel-booking',
-      params: { bookingId: booking.id }
-    });
-  };
-
-  const filteredBookings = getFilteredBookings();
+  const filteredSessions = getFilteredSessions();
 
   return (
     <View style={styles.container}>
@@ -242,12 +235,12 @@ export default function RentalScreen() {
       >
         <View style={styles.headerContent}>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Lịch sử đặt lịch</Text>
-
+            <Text style={styles.headerTitle}>Buổi học của tôi</Text>
+            <Text style={styles.headerSubtitle}>Quản lý các buổi học đang diễn ra</Text>
           </View>
           <View style={styles.headerStats}>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{filteredBookings.length}</Text>
+              <Text style={styles.statNumber}>{filteredSessions.length}</Text>
               <Text style={styles.statLabel}>Tổng</Text>
             </View>
           </View>
@@ -292,24 +285,24 @@ export default function RentalScreen() {
             </View>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, selectedTab === 'rejected' && styles.activeTab]}
-            onPress={() => setSelectedTab('rejected')}
-          >
-            <View style={styles.tabContent}>
-              <X size={16} color={selectedTab === 'rejected' ? '#ffffff' : '#6b7280'} strokeWidth={2} />
-              <Text style={[styles.tabText, selectedTab === 'rejected' && styles.activeTabText]}>
-                Từ chối
-              </Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
             style={[styles.tab, selectedTab === 'in_progress' && styles.activeTab]}
             onPress={() => setSelectedTab('in_progress')}
           >
             <View style={styles.tabContent}>
               <CheckCircle size={16} color={selectedTab === 'in_progress' ? '#ffffff' : '#6b7280'} strokeWidth={2} />
               <Text style={[styles.tabText, selectedTab === 'in_progress' && styles.activeTabText]}>
-                Đang thực hiện
+                Đã lên lịch
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'completed' && styles.activeTab]}
+            onPress={() => setSelectedTab('completed')}
+          >
+            <View style={styles.tabContent}>
+              <Check size={16} color={selectedTab === 'completed' ? '#ffffff' : '#6b7280'} strokeWidth={2} />
+              <Text style={[styles.tabText, selectedTab === 'completed' && styles.activeTabText]}>
+                Hoàn thành
               </Text>
             </View>
           </TouchableOpacity>
@@ -317,27 +310,27 @@ export default function RentalScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {filteredBookings.length === 0 ? (
+        {filteredSessions.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconContainer}>
               <Calendar size={48} color="#667eea" strokeWidth={1.5} />
             </View>
             <Text style={styles.emptyTitle}>
-              {selectedTab === 'all' ? 'Chưa có lịch đặt nào' :
-                selectedTab === 'requested' ? 'Chưa có yêu cầu nào' :
-                  selectedTab === 'pending' ? 'Chưa có yêu cầu chờ xác nhận' :
-                    selectedTab === 'rejected' ? 'Chưa có yêu cầu bị từ chối' :
-                      'Chưa có lịch đang thực hiện'}
+              {selectedTab === 'all' ? 'Chưa có buổi học nào' :
+                selectedTab === 'requested' ? 'Chưa có buổi học đợi yêu cầu' :
+                  selectedTab === 'pending' ? 'Chưa có buổi học chờ xác nhận' :
+                    selectedTab === 'in_progress' ? 'Chưa có buổi học đã lên lịch' :
+                      'Chưa có buổi học hoàn thành'}
             </Text>
             <Text style={styles.emptySubtitle}>
               Hãy đặt lịch với instructor để bắt đầu học lái xe
             </Text>
           </View>
         ) : (
-          filteredBookings.map((booking) => {
-            const StatusIcon = getStatusIcon(booking.status);
+          filteredSessions.map((session) => {
+            const StatusIcon = getStatusIcon(session.status);
             return (
-              <View key={booking.id} style={styles.bookingCard}>
+              <View key={session.id} style={styles.bookingCard}>
                 <LinearGradient
                   colors={['#ffffff', '#f8fafc']}
                   style={styles.cardGradient}
@@ -346,27 +339,29 @@ export default function RentalScreen() {
                 >
                   <View style={styles.bookingHeader}>
                     <View style={styles.instructorInfo}>
-                      <View style={styles.instructorAvatar}>
-                        <User size={18} color="#ffffff" strokeWidth={2} />
-                      </View>
+                      <Image
+                        source={{ uri: session.instructorAvatar || getInstructorAvatar(session.instructorId) }}
+                        style={styles.instructorAvatarImage}
+                      />
                       <View style={styles.instructorDetails}>
-                        <Text style={styles.instructorName}>{booking.instructorName}</Text>
-                        <View style={styles.ratingContainer}>
-                          <Star size={12} color="#fbbf24" strokeWidth={2} fill="#fbbf24" />
-                          <Text style={styles.ratingText}>4.8</Text>
-                        </View>
+                        <Text style={styles.instructorName}>{session.instructorName}</Text>
+                        {session.packageName && (
+                          <Text style={styles.packageNameText} numberOfLines={1}>
+                            {session.packageName}
+                          </Text>
+                        )}
                       </View>
                     </View>
                     <View style={[
                       styles.statusBadge,
-                      { backgroundColor: getStatusColor(booking.status) + '15' }
+                      { backgroundColor: getStatusColor(session.status) + '15' }
                     ]}>
-                      <StatusIcon size={16} color={getStatusColor(booking.status)} strokeWidth={2} />
+                      <StatusIcon size={16} color={getStatusColor(session.status)} strokeWidth={2} />
                       <Text style={[
                         styles.statusText,
-                        { color: getStatusColor(booking.status) }
+                        { color: getStatusColor(session.status) }
                       ]}>
-                        {getStatusText(booking.status)}
+                        {getStatusText(session.status)}
                       </Text>
                     </View>
                   </View>
@@ -374,82 +369,49 @@ export default function RentalScreen() {
                   <View style={styles.bookingDetails}>
                     <View style={styles.detailRow}>
                       <Calendar size={16} color="#6b7280" strokeWidth={2} />
-                      <Text style={styles.detailText}>{booking.date}</Text>
+                      <Text style={styles.detailText}>{session.date}</Text>
                     </View>
                     <View style={styles.detailRow}>
                       <Clock size={16} color="#6b7280" strokeWidth={2} />
-                      <Text style={styles.detailText}>{booking.time}</Text>
+                      <Text style={styles.detailText}>
+                        {session.startTime} - {session.endTime} ({session.duration} giờ)
+                      </Text>
                     </View>
                     <View style={styles.detailRow}>
                       <MapPin size={16} color="#6b7280" strokeWidth={2} />
-                      <Text style={styles.detailText} numberOfLines={1}>
-                        {booking.location}
+                      <Text style={styles.detailText} numberOfLines={2}>
+                        {session.location}
                       </Text>
                     </View>
-                    <View style={styles.detailRow}>
-                      <FileText size={16} color="#6b7280" strokeWidth={2} />
-                      <Text style={styles.detailText}>
-                        {booking.packageType === 'instructor' ? 'Thuê người hướng dẫn' : 'Thuê trọn gói'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Instructor Route & Notes */}
-                  {booking.instructorRoute && (
-                    <View style={styles.routeSection}>
-                      <View style={styles.routeHeader}>
-                        <Route size={16} color="#10b981" strokeWidth={2} />
-                        <Text style={styles.routeTitle}>Lộ trình từ instructor</Text>
+                    {session.vehicleName && (
+                      <View style={styles.detailRow}>
+                        <FileText size={16} color="#6b7280" strokeWidth={2} />
+                        <Text style={styles.detailText}>Xe: {session.vehicleName}</Text>
                       </View>
-                      <Text style={styles.routeText}>{booking.instructorRoute}</Text>
-                      {booking.instructorNotes && (
-                        <View style={styles.notesSection}>
-                          <MessageCircle size={14} color="#6b7280" strokeWidth={2} />
-                          <Text style={styles.notesText}>{booking.instructorNotes}</Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
+                    )}
+                  </View>
 
                   {/* Action Buttons */}
                   <View style={styles.actionButtons}>
-                    {booking.status === 'pending_confirmation' && (
-                      <>
-                        <TouchableOpacity
-                          style={[styles.actionButton, styles.acceptButton]}
-                          onPress={() => handleRespondToRoute(booking.id, 'accepted')}
-                        >
-                          <Check size={16} color="#ffffff" strokeWidth={2} />
-                          <Text style={styles.acceptButtonText}>Chấp nhận</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.actionButton, styles.rejectButton]}
-                          onPress={() => handleRespondToRoute(booking.id, 'rejected')}
-                        >
-                          <X size={16} color="#ffffff" strokeWidth={2} />
-                          <Text style={styles.rejectButtonText}>Từ chối</Text>
-                        </TouchableOpacity>
-                      </>
-                    )}
-
-                    {booking.instructorRoute && (
+                    {/* Xét lộ trình button - Show for requested and pending_confirmation */}
+                    {(session.status === 'requested' || session.status === 'pending_confirmation') && !session.hasRoute && (
                       <TouchableOpacity
-                        style={[styles.actionButton, styles.viewButton]}
-                        onPress={() => handleViewRoute(booking.id)}
+                        style={[styles.actionButton, styles.routeButton]}
+                        onPress={() => handlePlanRoute(session.id, session.location)}
                       >
-                        <Eye size={16} color="#3b82f6" strokeWidth={2} />
-                        <Text style={styles.viewButtonText}>Xem chi tiết</Text>
+                        <Navigation size={16} color="#ffffff" strokeWidth={2} />
+                        <Text style={styles.routeButtonText}>Xét lộ trình</Text>
                       </TouchableOpacity>
                     )}
 
-                    {/* Cancel Button - Show for cancelable bookings */}
-                    {(booking.status === 'requested' || booking.status === 'pending_confirmation' || booking.status === 'in_progress') && (
+                    {/* View Route button - Show for sessions with route */}
+                    {session.hasRoute && (
                       <TouchableOpacity
-                        style={[styles.actionButton, styles.cancelButton]}
-                        onPress={() => handleCancelBooking(booking)}
+                        style={[styles.actionButton, styles.viewButton]}
+                        onPress={() => handleViewRoute(session.id)}
                       >
-                        <XCircle size={16} color="#ffffff" strokeWidth={2} />
-                        <Text style={styles.cancelButtonText}>Hủy lịch</Text>
+                        <Eye size={16} color="#ffffff" strokeWidth={2} />
+                        <Text style={styles.viewButtonText}>Xem lộ trình</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -677,6 +639,33 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+  },
+  instructorAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+  },
+  packageNameText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  routeButton: {
+    backgroundColor: '#667eea',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  routeButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   instructorDetails: {
     flex: 1,

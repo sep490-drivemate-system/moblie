@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   StatusBar,
   Modal,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,6 +21,8 @@ import {
   Clock,
   X,
   Zap,
+  Car,
+  User,
 } from "lucide-react-native";
 import { instructorsData } from "@/data/instructors_data";
 import { AppColors } from "@/constants/Colors";
@@ -133,14 +136,14 @@ export default function InstructorDetailScreen() {
                   <View style={styles.packageTypeContainer}>
                     {pkg.hasVehicle || pkg.vehicle ? (
                       <View style={styles.packageTypeWithVehicle}>
-                        <Text style={styles.packageTypeIcon}>🚗</Text>
+                        <Text style={styles.packageTypeIcon}><Car /></Text>
                         <Text style={styles.packageTypeText}>
                           Gói này có xe và người hướng dẫn
                         </Text>
                       </View>
                     ) : (
                       <View style={styles.packageTypeInstructor}>
-                        <Text style={styles.packageTypeIcon}>👨‍🏫</Text>
+                        <Text style={styles.packageTypeIcon}><User /></Text>
                         <Text style={styles.packageTypeText}>
                           Chỉ có người hướng dẫn
                         </Text>
@@ -276,7 +279,7 @@ export default function InstructorDetailScreen() {
           onPress={() => setShowBookingModal(true)}
           activeOpacity={0.9}
         >
-          <Text style={styles.bookButtonText}>Đặt lịch ngay</Text>
+          <Text style={styles.bookButtonText}>Mua ngay</Text>
         </TouchableOpacity>
       </View>
 
@@ -332,13 +335,13 @@ export default function InstructorDetailScreen() {
                         <View style={styles.packageBadgeContainer}>
                           {pkg.hasVehicle || pkg.vehicle ? (
                             <View style={styles.packageBadgeWithVehicle}>
-                              <Text style={styles.packageBadgeIcon}>🚗</Text>
+                              <Text style={styles.packageBadgeIcon}><Car /></Text>
                               <Text style={styles.packageBadgeText}>Có xe</Text>
                             </View>
                           ) : (
                             <View style={styles.packageBadgeInstructor}>
-                              <Text style={styles.packageBadgeIcon}>👨‍🏫</Text>
-                              <Text style={styles.packageBadgeText}>Chỉ giảng viên</Text>
+                              <Text style={styles.packageBadgeIcon}><User /></Text>
+                              <Text style={styles.packageBadgeText}>Chỉ có người hướng dẫn</Text>
                             </View>
                           )}
                         </View>
@@ -452,19 +455,37 @@ export default function InstructorDetailScreen() {
                 ]}
                 onPress={() => {
                   if (!selectedPackage) return;
-                  setShowBookingModal(false);
-                  router.push({
-                    pathname: "/(main)/(no-tabs)/booking",
-                    params: {
-                      instructorId: instructor.id,
-                      packageId: selectedPackage,
-                      vehicleId: selectedVehicle || "",
-                    },
-                  });
+
+                  const selectedPkg = instructor.packages?.find(p => p.id === selectedPackage);
+                  const packagePrice = selectedPkg?.basePrice || 0;
+
+                  Alert.alert(
+                    'Xác nhận mua gói',
+                    `Bạn muốn mua gói "${selectedPkg?.name}" với giá ${packagePrice.toLocaleString('vi-VN')} vnd?`,
+                    [
+                      { text: 'Hủy', style: 'cancel' },
+                      {
+                        text: 'Xác nhận',
+                        onPress: () => {
+                          // Simulate payment process
+                          setTimeout(() => {
+                            setShowBookingModal(false);
+                            router.push({
+                              pathname: "/(main)/(no-tabs)/transaction-success",
+                              params: {
+                                instructorId: instructor.id,
+                                packageId: selectedPackage,
+                              },
+                            });
+                          }, 800);
+                        }
+                      }
+                    ]
+                  );
                 }}
                 disabled={!selectedPackage}
               >
-                <Text style={styles.continueButtonText}>Tiếp tục</Text>
+                <Text style={styles.continueButtonText}>Mua gói</Text>
               </TouchableOpacity>
             </View>
           </View>

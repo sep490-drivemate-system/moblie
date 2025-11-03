@@ -97,7 +97,7 @@ function ProfileScreen() {
           </View>
 
           {/* Wallet Section */}
-          {/* <View style={styles.walletSection}>
+          <View style={styles.walletSection}>
             <View style={styles.walletContent}>
               <View style={styles.walletInfo}>
                 <View style={styles.walletHeader}>
@@ -105,17 +105,17 @@ function ProfileScreen() {
                   <Text style={styles.walletLabel}>Số dư ví</Text>
                 </View>
                 <Text style={styles.walletBalance}>
-                  {mockUserProfile.walletBalance.toLocaleString("vi-VN")} xu
+                  {mockUserProfile.walletBalance.toLocaleString("vi-VN")} vnd
                 </Text>
               </View>
               <TouchableOpacity
                 style={styles.topupButton}
                 onPress={handleTopup}
               >
-                <Text style={styles.topupButtonText}>Nạp xu</Text>
+                <Text style={styles.topupButtonText}>Nạp tiền</Text>
               </TouchableOpacity>
             </View>
-          </View> */}
+          </View>
         </View>
 
         {/* Account Section */}
@@ -160,7 +160,7 @@ function ProfileScreen() {
             <Text style={styles.menuTitle}>Tổng quát</Text>
           </View>
           <View style={styles.menuItemsContainer}>
-            {role === UserRole.Instructor && (
+            {role as UserRole === UserRole.Instructor && (
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() =>
@@ -175,6 +175,22 @@ function ProfileScreen() {
                 </View>
               </TouchableOpacity>
             )}
+            {/* {role as UserRole === UserRole.NoviceDriver && (
+              
+            )} */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() =>
+                router.push(
+                  "/(main)/(no-tabs)/my-packages"
+                )
+              }
+            >
+              <View style={styles.menuItemLeft}>
+                <Package2 size={20} color="#70E000" />
+                <Text style={styles.menuItemText}>Gói đã mua</Text>
+              </View>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
                 <Star size={20} color="#70E000" />
@@ -249,6 +265,7 @@ const styles = StyleSheet.create({
   profileHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
+    bottom: 10,
   },
   avatarContainer: {
     marginRight: 16,

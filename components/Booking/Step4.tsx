@@ -1,205 +1,270 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { CheckCircle, Home, Users, Route, Car, Mountain, Navigation, Construction, Clock, Moon, Settings, Target, Repeat, Award } from "lucide-react-native";
-import { RoadType, Skill } from "@/models/booking/booking";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import { CreditCard, CheckCircle, Circle, Shield, AlertTriangle } from "lucide-react-native";
+import { AppColors } from "@/constants/Colors";
 
 interface Step4Props {
-  selectedRoadTypes: RoadType[];
-  selectedSkills: Skill[];
-  onRoadTypeToggle: (road: RoadType) => void;
-  onSkillToggle: (skill: Skill) => void;
+  packageId?: string;
+  selectedDate: string | null;
+  selectedStartTime: string;
+  selectedDuration: number;
+  pickupLocation: string;
+  bookingCost: number;
+  userCoins: number;
+  instructorName?: string;
+  packageName?: string;
+  onConfirmBooking?: () => void;
+  onPoliciesAcceptedChange?: (allAccepted: boolean) => void;
 }
 
-const roadTypes: RoadType[] = [
-  { id: "residential", label: "Đường khu dân cư vắng", icon: "Home" },
-  { id: "urban", label: "Đường đô thị (trong thành phố)", icon: "Users" },
+// Policy items that user must accept
+const policies = [
   {
-    id: "national",
-    label: "Quốc lộ (lưu lượng xe trung bình – cao)",
-    icon: "Route",
+    id: "cancellation",
+    title: "Chính sách hủy lịch",
+    content: "Có thể hủy lịch trước 24h với phí 20% học phí. Hủy trong 24h hoặc không đến sẽ mất 100% phí.",
   },
   {
-    id: "highway",
-    label: "Đường cao tốc (tốc độ cao, giữ làn, vượt xe)",
-    icon: "Car",
+    id: "safety",
+    title: "Cam kết an toàn",
+    content: "Đảm bảo xe và người hướng dẫn được kiểm tra an toàn. Học viên phải tuân thủ luật giao thông.",
   },
   {
-    id: "mountain",
-    label: "Đường đèo / đường núi (nhiều dốc, cua gấp)",
-    icon: "Mountain",
+    id: "payment",
+    title: "Chính sách thanh toán",
+    content: "Thanh toán được thực hiện ngay sau khi đặt lịch thành công. Hoàn tiền chỉ áp dụng theo chính sách hủy.",
   },
   {
-    id: "long_distance",
-    label: "Đường dài / đường trường (liên tỉnh, đi xa)",
-    icon: "Navigation",
+    id: "responsibility",
+    title: "Trách nhiệm",
+    content: "Học viên phải có giấy phép lái xe hợp lệ và chịu trách nhiệm về hành vi của mình trong quá trình học.",
   },
-  {
-    id: "crowded",
-    label: "Đường qua khu đông dân cư / chợ / trường học",
-    icon: "Users",
-  },
-  {
-    id: "construction",
-    label: "Đường đang thi công / mặt đường xấu",
-    icon: "Construction",
-  },
-  {
-    id: "slippery",
-    label: "Đường trơn trượt (mưa, sình lầy)",
-    icon: "Clock",
-  },
-  { id: "night", label: "Đường ban đêm", icon: "Moon" },
 ];
 
-const skills: Skill[] = [
-  {
-    id: "basic_control",
-    label: "Điều khiển cơ bản (ga, phanh, vô lăng)",
-    icon: "Settings",
-  },
-  { id: "parking", label: "Đỗ xe (song song, dọc, ngang)", icon: "Car" },
-  {
-    id: "lane_change",
-    label: "Chuyển làn đường an toàn",
-    icon: "Navigation",
-  },
-  { id: "overtaking", label: "Vượt xe đúng cách", icon: "Target" },
-  { id: "intersection", label: "Qua ngã tư, đèn đỏ", icon: "Route" },
-  { id: "roundabout", label: "Đi vòng xuyến", icon: "Repeat" },
-  { id: "reverse", label: "Lùi xe an toàn", icon: "Navigation" },
-  { id: "uphill_downhill", label: "Lên dốc, xuống dốc", icon: "Mountain" },
-  { id: "night_driving", label: "Lái xe ban đêm", icon: "Moon" },
-  { id: "rain_driving", label: "Lái xe trong mưa", icon: "Clock" },
-  { id: "highway_driving", label: "Lái xe cao tốc", icon: "Car" },
-  { id: "defensive_driving", label: "Lái xe phòng thủ", icon: "Award" },
-];
-
-const iconComponents = {
-  Home,
-  Users,
-  Route,
-  Car,
-  Mountain,
-  Navigation,
-  Construction,
-  Clock,
-  Moon,
-  Settings,
-  Target,
-  Repeat,
-  Award,
+const calculateEndTime = (startTime: string, duration: number): string => {
+  if (!startTime) return "00:00";
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + duration * 60;
+  const endHours = Math.floor(totalMinutes / 60);
+  const endMinutes = totalMinutes % 60;
+  return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
 };
 
 export default function Step4({
-  selectedRoadTypes,
-  selectedSkills,
-  onRoadTypeToggle,
-  onSkillToggle,
+  packageId,
+  selectedDate,
+  selectedStartTime,
+  selectedDuration,
+  pickupLocation,
+  bookingCost,
+  userCoins,
+  instructorName,
+  packageName,
+  onConfirmBooking,
+  onPoliciesAcceptedChange,
 }: Step4Props) {
+  const [acceptedPolicies, setAcceptedPolicies] = useState<Set<string>>(new Set());
+
+  const togglePolicyAcceptance = (policyId: string) => {
+    const newAccepted = new Set(acceptedPolicies);
+    if (newAccepted.has(policyId)) {
+      newAccepted.delete(policyId);
+    } else {
+      newAccepted.add(policyId);
+    }
+    setAcceptedPolicies(newAccepted);
+  };
+
+  const allPoliciesAccepted = acceptedPolicies.size === policies.length;
+
+  // Notify parent when policies acceptance changes
+  useEffect(() => {
+    if (onPoliciesAcceptedChange) {
+      onPoliciesAcceptedChange(allPoliciesAccepted);
+    }
+  }, [allPoliciesAccepted, onPoliciesAcceptedChange]);
   return (
-    <>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          🛣️ Chọn loại đường muốn di chuyển
-        </Text>
-        <Text style={styles.sectionDesc}>
-          Chọn một hoặc nhiều loại đường để luyện tập
-        </Text>
-
-        {roadTypes.map((road) => {
-          const IconComponent = iconComponents[road.icon as keyof typeof iconComponents];
-
-          return (
-            <TouchableOpacity
-              key={road.id}
-              style={[
-                styles.optionCard,
-                selectedRoadTypes.find((r) => r.id === road.id) &&
-                  styles.optionCardActive,
-              ]}
-              onPress={() => onRoadTypeToggle(road)}
-            >
-              <View style={styles.optionIconContainer}>
-                {IconComponent && (
-                  <IconComponent
-                    size={24}
-                    color={
-                      selectedRoadTypes.find((r) => r.id === road.id)
-                        ? "#667eea"
-                        : "#64748b"
-                    }
-                    strokeWidth={2}
-                  />
-                )}
-              </View>
-              <Text
-                style={[
-                  styles.optionText,
-                  selectedRoadTypes.find((r) => r.id === road.id) &&
-                    styles.optionTextActive,
-                ]}
-              >
-                {road.label}
-              </Text>
-              {selectedRoadTypes.find((r) => r.id === road.id) && (
-                <CheckCircle size={20} color="#667eea" strokeWidth={2} />
-              )}
-            </TouchableOpacity>
-          );
-        })}
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Shield size={24} color={AppColors.primary} strokeWidth={2} />
+        <Text style={styles.sectionTitle}>Xác nhận đặt lịch</Text>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          🎯 Chọn kỹ năng muốn được huấn luyện
-        </Text>
-        <Text style={styles.sectionDesc}>
-          Chọn các kỹ năng bạn muốn cải thiện
-        </Text>
+      {/* Booking Summary */}
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>Thông tin đặt lịch</Text>
 
-        {skills.map((skill) => {
-          const IconComponent = iconComponents[skill.icon as keyof typeof iconComponents];
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>👨‍🏫 Người hướng dẫn:</Text>
+          <Text style={styles.summaryValue}>{instructorName || "Chưa chọn"}</Text>
+        </View>
 
-          return (
-            <TouchableOpacity
-              key={skill.id}
-              style={[
-                styles.optionCard,
-                selectedSkills.find((s) => s.id === skill.id) &&
-                  styles.optionCardActive,
-              ]}
-              onPress={() => onSkillToggle(skill)}
-            >
-              <View style={styles.optionIconContainer}>
-                {IconComponent && (
-                  <IconComponent
-                    size={24}
-                    color={
-                      selectedSkills.find((s) => s.id === skill.id)
-                        ? "#667eea"
-                        : "#64748b"
-                    }
-                    strokeWidth={2}
-                  />
-                )}
-              </View>
-              <Text
-                style={[
-                  styles.optionText,
-                  selectedSkills.find((s) => s.id === skill.id) &&
-                    styles.optionTextActive,
-                ]}
-              >
-                {skill.label}
-              </Text>
-              {selectedSkills.find((s) => s.id === skill.id) && (
-                <CheckCircle size={20} color="#667eea" strokeWidth={2} />
-              )}
-            </TouchableOpacity>
-          );
-        })}
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>📦 Gói học:</Text>
+          <Text style={styles.summaryValue}>{packageName || "Chưa chọn gói"}</Text>
+        </View>
+
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>📅 Ngày học:</Text>
+          <Text style={styles.summaryValue}>
+            {selectedDate ? new Date(selectedDate).toLocaleDateString('vi-VN') : "Chưa chọn"}
+          </Text>
+        </View>
+
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>⏰ Thời gian:</Text>
+          <Text style={styles.summaryValue}>
+            {selectedStartTime && selectedDuration > 0
+              ? `${selectedStartTime} - ${calculateEndTime(selectedStartTime, selectedDuration)} (${selectedDuration}h)`
+              : "Chưa chọn thời gian"}
+          </Text>
+        </View>
+
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>📍 Địa điểm:</Text>
+          <Text style={styles.summaryValue} numberOfLines={1}>
+            {pickupLocation || "Chưa chọn địa điểm"}
+          </Text>
+        </View>
+
+        <View style={styles.summaryDivider} />
+
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>💰 Chi phí:</Text>
+          <Text style={styles.summaryPrice}>{bookingCost.toLocaleString("vi-VN")} vnd</Text>
+        </View>
       </View>
-    </>
+
+      {/* Payment Section */}
+      <View style={styles.paymentCard}>
+        <View style={styles.paymentHeader}>
+          <CreditCard size={24} color="#667eea" strokeWidth={2} />
+          <Text style={styles.paymentTitle}>Thanh toán</Text>
+        </View>
+
+        <View style={styles.walletInfo}>
+          <View style={styles.walletRow}>
+            <Text style={styles.walletLabel}>Số dư hiện tại:</Text>
+            <Text style={styles.walletAmount}>{userCoins} xu</Text>
+          </View>
+          <View style={styles.walletRow}>
+            <Text style={styles.walletLabel}>Chi phí đặt lịch:</Text>
+            <Text style={styles.walletCost}>-{bookingCost} xu</Text>
+          </View>
+          <View style={styles.walletDivider} />
+          <View style={styles.walletRow}>
+            <Text style={styles.walletLabelBold}>
+              Số dư sau thanh toán:
+            </Text>
+            <Text
+              style={[
+                styles.walletRemaining,
+                userCoins >= bookingCost
+                  ? styles.walletRemainingSuccess
+                  : styles.walletRemainingError,
+              ]}
+            >
+              {userCoins - bookingCost} xu
+            </Text>
+          </View>
+        </View>
+
+        {userCoins < bookingCost && (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>
+              ❌ Số dư không đủ! Vui lòng nạp thêm{" "}
+              {(bookingCost - userCoins).toLocaleString("vi-VN")} vnd
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Policy Confirmation */}
+      <View style={styles.policyCard}>
+        <View style={styles.policyHeader}>
+          <AlertTriangle size={20} color={AppColors.primary} strokeWidth={2} />
+          <Text style={styles.policyTitle}>Xác nhận chính sách</Text>
+        </View>
+        <Text style={styles.policySubtitle}>
+          Vui lòng đọc và chấp nhận các chính sách sau để tiếp tục đặt lịch:
+        </Text>
+
+        <ScrollView style={styles.policyScroll} showsVerticalScrollIndicator={false}>
+          {policies.map((policy) => (
+            <View key={policy.id} style={styles.policyItem}>
+              <TouchableOpacity
+                style={styles.policyCheckbox}
+                onPress={() => togglePolicyAcceptance(policy.id)}
+              >
+                {acceptedPolicies.has(policy.id) ? (
+                  <CheckCircle size={20} color={AppColors.primary} fill={AppColors.primary} strokeWidth={2} />
+                ) : (
+                  <Circle size={20} color="#cbd5e1" strokeWidth={2} />
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.policyContent}>
+                <Text style={styles.policyItemTitle}>{policy.title}</Text>
+                <Text style={styles.policyItemContent}>{policy.content}</Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Accept All Policies Button */}
+        {!allPoliciesAccepted && (
+          <TouchableOpacity
+            style={styles.acceptAllButton}
+            onPress={() => {
+              const allPolicyIds = policies.map(p => p.id);
+              setAcceptedPolicies(new Set(allPolicyIds));
+            }}
+          >
+            <CheckCircle size={18} color="#ffffff" strokeWidth={2} />
+            <Text style={styles.acceptAllButtonText}>
+              Chấp nhận tất cả điều khoản
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Policy Status */}
+        <View style={[
+          styles.policyStatus,
+          allPoliciesAccepted ? styles.policyStatusAccepted : styles.policyStatusPending
+        ]}>
+          {allPoliciesAccepted ? (
+            <>
+              <CheckCircle size={16} color="#16a34a" strokeWidth={2} />
+              <Text style={styles.policyStatusTextAccepted}>
+                Đã chấp nhận tất cả chính sách
+              </Text>
+            </>
+          ) : (
+            <>
+              <Circle size={16} color="#f59e0b" strokeWidth={2} />
+              <Text style={styles.policyStatusTextPending}>
+                Chưa chấp nhận {policies.length - acceptedPolicies.size} chính sách
+              </Text>
+            </>
+          )}
+        </View>
+      </View>
+
+      {/* Payment Block Warning */}
+      {(!allPoliciesAccepted || userCoins < bookingCost) && (
+        <View style={styles.blockWarning}>
+          <AlertTriangle size={20} color="#ef4444" strokeWidth={2} />
+          <Text style={styles.blockWarningText}>
+            {!allPoliciesAccepted && userCoins >= bookingCost
+              ? "Vui lòng chấp nhận tất cả chính sách để tiếp tục"
+              : userCoins < bookingCost
+                ? "Số dư không đủ để thanh toán"
+                : "Vui lòng chấp nhận chính sách và đảm bảo đủ số dư"
+            }
+          </Text>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -216,47 +281,252 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#1e293b",
+  },
+  summaryCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    marginBottom: 16,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1e293b",
     marginBottom: 8,
   },
-  sectionDesc: {
+  summaryRow: {
+    gap: 4,
+  },
+  summaryLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1e293b",
+    lineHeight: 20,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: "#e2e8f0",
+    marginVertical: 8,
+  },
+  summaryPrice: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#667eea",
+  },
+  paymentCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  paymentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  paymentTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  walletInfo: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 16,
+  },
+  walletRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  walletLabel: {
+    fontSize: 14,
+    color: "#64748b",
+    fontWeight: "600",
+  },
+  walletLabelBold: {
+    fontSize: 14,
+    color: "#1e293b",
+    fontWeight: "800",
+  },
+  walletAmount: {
+    fontSize: 14,
+    color: "#10b981",
+    fontWeight: "800",
+  },
+  walletCost: {
+    fontSize: 14,
+    color: "#ef4444",
+    fontWeight: "800",
+  },
+  walletDivider: {
+    height: 1,
+    backgroundColor: "#e2e8f0",
+    marginVertical: 8,
+  },
+  walletRemaining: {
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  walletRemainingSuccess: {
+    color: "#10b981",
+  },
+  walletRemainingError: {
+    color: "#ef4444",
+  },
+  errorCard: {
+    backgroundColor: "#fee2e2",
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#ef4444",
+  },
+  errorText: {
+    fontSize: 13,
+    color: "#dc2626",
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  policyCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    marginTop: 16,
+  },
+  policyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  policyTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  policySubtitle: {
     fontSize: 14,
     color: "#64748b",
     marginBottom: 16,
     lineHeight: 20,
   },
-  optionCard: {
+  policyScroll: {
+    maxHeight: 200,
+  },
+  policyItem: {
+    flexDirection: "row",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  policyCheckbox: {
+    paddingTop: 2,
+  },
+  policyContent: {
+    flex: 1,
+    gap: 4,
+  },
+  policyItemTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  policyItemContent: {
+    fontSize: 13,
+    color: "#64748b",
+    lineHeight: 18,
+  },
+  acceptAllButton: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#f8fafc",
-    position: "relative",
-    marginBottom: 12,
-  },
-  optionCardActive: {
-    borderColor: "#667eea",
-    backgroundColor: "#f0f4ff",
-  },
-  optionIconContainer: {
-    marginRight: 12,
-    alignItems: "center",
     justifyContent: "center",
+    gap: 8,
+    backgroundColor: AppColors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
   },
-  optionText: {
-    flex: 1,
+  acceptAllButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  policyStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  policyStatusAccepted: {
+    backgroundColor: "#f0fdf4",
+    borderWidth: 1,
+    borderColor: "#86efac",
+  },
+  policyStatusPending: {
+    backgroundColor: "#fef3c7",
+    borderWidth: 1,
+    borderColor: "#fcd34d",
+  },
+  policyStatusTextAccepted: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#64748b",
-    lineHeight: 20,
+    color: "#16a34a",
   },
-  optionTextActive: {
-    color: "#667eea",
-    fontWeight: "700",
+  policyStatusTextPending: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#d97706",
+  },
+  blockWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fef2f2",
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  blockWarningText: {
+    fontSize: 14,
+    color: "#dc2626",
+    fontWeight: "600",
+    flex: 1,
+    lineHeight: 20,
   },
 });

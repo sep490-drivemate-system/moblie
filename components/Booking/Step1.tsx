@@ -1,47 +1,291 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
-import { Calendar as CalendarIcon } from "lucide-react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput } from "react-native";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle, Check } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
+
+const { width } = Dimensions.get("window");
 
 interface Step1Props {
   selectedDate: string | null;
+  selectedTime: string | null;
   onDateSelect: (date: string) => void;
-  instructorBusyDates?: string[];
+  onTimeSelect?: (time: string) => void;
+  instructorBusyTimes?: { instructorId: string; date: string; busySlots: { startTime: string; endTime: string }[] }[];
 }
 
-// Generate next 30 days
-const generateDates = () => {
-  const dates = [];
-  const today = new Date();
-  
-  for (let i = 0; i < 30; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    dates.push(date);
+interface BusyTime {
+  startTime: string;
+  endTime: string;
+}
+
+const formatTime = (time: string) => {
+  return time.replace(':', 'h');
+};
+
+// Generate available time slots (6:00 - 22:00 in 1 hour intervals)
+const generateTimeSlots = () => {
+  const slots = [];
+  for (let hour = 6; hour <= 22; hour++) {
+    slots.push(`${hour.toString().padStart(2, '0')}:00`);
   }
-  
-  return dates;
+  return slots;
 };
 
-const getDayName = (date: Date) => {
-  const days = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-  return days[date.getDay()];
+// Check if time slot is available (not in busy times)
+const isTimeSlotAvailable = (time: string, busySlots: BusyTime[]): boolean => {
+  if (!busySlots || busySlots.length === 0) return true;
+
+  const [hour, minute] = time.split(':').map(Number);
+  const timeMinutes = hour * 60 + minute;
+
+  for (const busySlot of busySlots) {
+    const [busyStartHour, busyStartMin] = busySlot.startTime.split(':').map(Number);
+    const [busyEndHour, busyEndMin] = busySlot.endTime.split(':').map(Number);
+    const busyStartMinutes = busyStartHour * 60 + busyStartMin;
+    const busyEndMinutes = busyEndHour * 60 + busyEndMin;
+
+    if (timeMinutes >= busyStartMinutes && timeMinutes < busyEndMinutes) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
-export default function Step1({ selectedDate, onDateSelect, instructorBusyDates = [] }: Step1Props) {
-  const dates = generateDates();
+export default function Step1({
+  selectedDate,
+  selectedTime,
+  onDateSelect,
+  onTimeSelect,
+  instructorBusyTimes = []
+}: Step1Props) {
+  const today = new Date();
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  const [customTime, setCustomTime] = useState<string>("");
+
+  const timeSlots = generateTimeSlots();
 
   const formatDate = (date: Date) => {
     return date.toISOString().split('T')[0]; // YYYY-MM-DD
   };
 
   const isToday = (date: Date) => {
-    const today = new Date();
     return date.toDateString() === today.toDateString();
   };
 
-  const isBusy = (date: Date) => {
-    return instructorBusyDates.includes(formatDate(date));
+  const isCurrentMonth = (date: Date) => {
+    return date.getMonth() === currentMonth;
+  };
+
+  const isPastDate = (date: Date) => {
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    return dateStart < todayStart;
+  };
+
+  const getBusyTimesForDate = (date: Date): BusyTime[] => {
+    const dateStr = formatDate(date);
+    const busyTime = instructorBusyTimes.find(bt => bt.date === dateStr);
+    return busyTime?.busySlots || [];
+  };
+
+  const getDateStatus = (date: Date): 'free' | 'partial' | 'busy' => {
+    const busyTimes = getBusyTimesForDate(date);
+    if (busyTimes.length === 0) return 'free';
+
+    // Calculate total busy hours
+    const totalBusyHours = busyTimes.reduce((total, slot) => {
+      const [startHour, startMin] = slot.startTime.split(':').map(Number);
+      const [endHour, endMin] = slot.endTime.split(':').map(Number);
+      const startMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+      return total + (endMinutes - startMinutes) / 60;
+    }, 0);
+
+    // Consider fully busy if more than 14 hours (out of 16 hours 6:00-22:00)
+    if (totalBusyHours >= 14) return 'busy';
+
+    // Partial busy if has any bookings but not fully busy
+    return 'partial';
+  };
+
+  const isDateFullyBusy = (date: Date) => {
+    return getDateStatus(date) === 'busy';
+  };
+
+  const isDateFree = (date: Date) => {
+    return getDateStatus(date) === 'free';
+  };
+
+  const isDatePartial = (date: Date) => {
+    return getDateStatus(date) === 'partial';
+  };
+
+  const current = new Date(currentYear, currentMonth);
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      if (currentMonth === 0) {
+        setCurrentMonth(11);
+        setCurrentYear(currentYear - 1);
+      } else {
+        setCurrentMonth(currentMonth - 1);
+      }
+    } else {
+      if (currentMonth === 11) {
+        setCurrentMonth(0);
+        setCurrentYear(currentYear + 1);
+      } else {
+        setCurrentMonth(currentMonth + 1);
+      }
+    }
+    setExpandedDate(null); // Close expanded date when navigating
+    setCustomTime(""); // Clear custom time when navigating
+  };
+
+  const handleDatePress = (date: Date) => {
+    const dateStr = formatDate(date);
+    const isFullyBusy = isDateFullyBusy(date);
+    const isPast = isPastDate(date);
+
+    if (isFullyBusy || isPast) return;
+
+    if (expandedDate === dateStr) {
+      setExpandedDate(null);
+      setCustomTime(""); // Clear custom time when closing
+    } else {
+      setExpandedDate(dateStr);
+      setCustomTime(""); // Clear custom time when selecting new date
+      onDateSelect(dateStr);
+    }
+  };
+
+  const handleTimeSlotPress = (time: string, busySlots: BusyTime[]) => {
+    if (isTimeSlotAvailable(time, busySlots) && onTimeSelect) {
+      onTimeSelect(time);
+      setCustomTime(""); // Clear custom time when selecting from grid
+    }
+  };
+
+  const handleCustomTimeSubmit = (busySlots: BusyTime[]) => {
+    // Validate time format (HH:MM)
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/;
+    if (!timeRegex.test(customTime)) {
+      return; // Invalid format
+    }
+
+    // Check if time is available
+    if (isTimeSlotAvailable(customTime, busySlots) && onTimeSelect) {
+      onTimeSelect(customTime);
+    }
+  };
+
+  const renderCalendar = () => {
+    const year = current.getFullYear();
+    const month = current.getMonth();
+    const firstDay = new Date(year, month, 1);
+
+    // Calculate start date of calendar grid (Monday of the week containing first day)
+    const startDate = new Date(firstDay);
+    const dayOfWeek = firstDay.getDay();
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startDate.setDate(startDate.getDate() - daysToSubtract);
+
+    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    // Header with day names
+    const headerDays = dayNames.map((day) => (
+      <View key={day} style={styles.dayHeader}>
+        <Text style={styles.dayHeaderText}>{day}</Text>
+      </View>
+    ));
+
+    // Generate calendar days in week rows
+    const days = [];
+    for (let week = 0; week < 6; week++) {
+      const weekDays = [];
+      for (let day = 0; day < 7; day++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + week * 7 + day);
+
+        const dateStr = formatDate(currentDate);
+        const isCurrent = currentDate.getMonth() === current.getMonth();
+        const isSelected = dateStr === selectedDate;
+        const isTodayDate = isToday(currentDate);
+        const isFullyBusy = isDateFullyBusy(currentDate);
+        const isPast = isPastDate(currentDate);
+        const busySlots = getBusyTimesForDate(currentDate);
+        const isDisabled = isFullyBusy || isPast;
+        const dayNumber = currentDate.getDate();
+        const dateStatus = !isPast ? getDateStatus(currentDate) : null;
+
+        weekDays.push(
+          <TouchableOpacity
+            key={dateStr}
+            style={[
+              styles.dayButton,
+              !isCurrent && styles.dayButtonOtherMonth,
+              isSelected && styles.dayButtonSelected,
+              isDisabled && styles.dayButtonDisabled,
+              dateStatus === 'free' && !isSelected && !isDisabled && styles.dayButtonFree,
+              dateStatus === 'partial' && !isSelected && !isDisabled && styles.dayButtonPartial,
+              dateStatus === 'busy' && !isSelected && !isDisabled && styles.dayButtonBusy,
+            ]}
+            onPress={() => handleDatePress(currentDate)}
+            disabled={isDisabled}
+          >
+            <Text
+              style={[
+                styles.dayText,
+                !isCurrent && styles.dayTextOtherMonth,
+                isSelected && styles.dayTextSelected,
+                isDisabled && styles.dayTextDisabled,
+              ]}
+            >
+              {dayNumber}
+            </Text>
+          </TouchableOpacity>
+        );
+      }
+      days.push(
+        <View key={week} style={styles.weekRow}>
+          {weekDays}
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.calendarContainer}>
+        <View style={styles.calendarHeader}>
+          <TouchableOpacity
+            style={styles.monthButton}
+            onPress={() => navigateMonth('prev')}
+          >
+            <ChevronLeft size={20} color={AppColors.primary} strokeWidth={2} />
+          </TouchableOpacity>
+
+          <Text style={styles.monthTitle}>
+            {current.toLocaleDateString("vi-VN", {
+              month: "long",
+              year: "numeric",
+            })}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.monthButton}
+            onPress={() => navigateMonth('next')}
+          >
+            <ChevronRight size={20} color={AppColors.primary} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.dayHeaders}>{headerDays}</View>
+
+        {days}
+      </View>
+    );
   };
 
   return (
@@ -51,73 +295,148 @@ export default function Step1({ selectedDate, onDateSelect, instructorBusyDates 
         <Text style={styles.sectionTitle}>Chọn ngày học</Text>
       </View>
       <Text style={styles.sectionDesc}>
-        Chọn ngày bạn muốn đặt lịch học lái xe
+        Chọn ngày và thời gian phù hợp với bạn
       </Text>
 
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.calendarScroll}
-        contentContainerStyle={styles.calendarContent}
-      >
-        {dates.map((date, index) => {
-          const dateStr = formatDate(date);
-          const isSelected = selectedDate === dateStr;
-          const isTodayDate = isToday(date);
-          const isBusyDate = isBusy(date);
+      {/* Calendar */}
+      {renderCalendar()}
 
-          return (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.dateCard,
-                isSelected && styles.dateCardActive,
-                isBusyDate && styles.dateCardBusy,
-              ]}
-              onPress={() => onDateSelect(dateStr)}
-              disabled={isBusyDate}
-            >
-              <Text style={[
-                styles.dayName,
-                isSelected && styles.dayNameActive,
-                isBusyDate && styles.dayNameBusy,
-              ]}>
-                {getDayName(date)}
-              </Text>
-              <Text style={[
-                styles.dateNumber,
-                isSelected && styles.dateNumberActive,
-                isBusyDate && styles.dateNumberBusy,
-              ]}>
-                {date.getDate()}
-              </Text>
-              <Text style={[
-                styles.monthName,
-                isSelected && styles.monthNameActive,
-                isBusyDate && styles.monthNameBusy,
-              ]}>
-                Th{date.getMonth() + 1}
-              </Text>
-              {isTodayDate && !isSelected && (
-                <View style={styles.todayDot} />
-              )}
-              {isBusyDate && (
-                <Text style={styles.busyText}>Bận</Text>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      {/* Expanded Time Slots - Outside Calendar Grid */}
+      {expandedDate && (
+        <View style={styles.expandedTimeSlotsWrapper}>
+          {(() => {
+            const expandedDateObj = new Date(expandedDate + 'T00:00:00');
+            const busySlots = getBusyTimesForDate(expandedDateObj);
+            const isFullyBusy = isDateFullyBusy(expandedDateObj);
+
+            if (isFullyBusy) {
+              return (
+                <View style={styles.fullyBusyMessage}>
+                  <AlertCircle size={20} color="#ef4444" strokeWidth={2} />
+                  <Text style={styles.fullyBusyText}>
+                    Ngày này đã bận cả ngày
+                  </Text>
+                </View>
+              );
+            }
+
+            return (
+              <View style={styles.timeSlotsContainer}>
+                <Text style={styles.timeSlotsTitle}>
+                  Chọn giờ bắt đầu cho ngày {expandedDateObj.toLocaleDateString('vi-VN')}:
+                </Text>
+
+                {/* Custom Time Input */}
+                <View style={styles.customTimeSection}>
+                  <Text style={styles.customTimeLabel}>Nhập giờ bắt đầu (HH:MM):</Text>
+                  <View style={styles.customTimeInputContainer}>
+                    <TextInput
+                      style={styles.customTimeInput}
+                      value={customTime}
+                      onChangeText={setCustomTime}
+                      placeholder="VD: 08:30"
+                      placeholderTextColor="#94a3b8"
+                      keyboardType="numeric"
+                      maxLength={5}
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.customTimeButton,
+                        customTime && styles.customTimeButtonActive,
+                      ]}
+                      onPress={() => handleCustomTimeSubmit(busySlots)}
+                      disabled={!customTime}
+                    >
+                      <Text
+                        style={[
+                          styles.customTimeButtonText,
+                          customTime && styles.customTimeButtonTextActive,
+                        ]}
+                      >
+                        OK
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  {selectedTime && (
+                    <View style={styles.selectedTimeDisplay}>
+                      <Check size={16} color={AppColors.primary} strokeWidth={3} />
+                      <Text style={styles.selectedTimeText}>
+                        Đã chọn: {formatTime(selectedTime)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Quick Time Slots (Optional) */}
+                <Text style={styles.quickSlotsTitle}>Hoặc chọn nhanh:</Text>
+                <View style={styles.timeSlotsGrid}>
+                  {timeSlots.map((time) => {
+                    const isAvailable = isTimeSlotAvailable(time, busySlots);
+                    const isTimeSelected = selectedTime === time;
+
+                    return (
+                      <TouchableOpacity
+                        key={time}
+                        style={[
+                          styles.timeSlot,
+                          isAvailable ? styles.timeSlotAvailable : styles.timeSlotBusy,
+                          isTimeSelected && styles.timeSlotSelected,
+                        ]}
+                        onPress={() => handleTimeSlotPress(time, busySlots)}
+                        disabled={!isAvailable}
+                      >
+                        {isTimeSelected && (
+                          <Check size={14} color="#ffffff" strokeWidth={3} />
+                        )}
+                        <Text
+                          style={[
+                            styles.timeSlotText,
+                            isAvailable ? styles.timeSlotTextAvailable : styles.timeSlotTextBusy,
+                            isTimeSelected && styles.timeSlotTextSelected,
+                          ]}
+                        >
+                          {formatTime(time)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Busy Times Info */}
+                {busySlots.length > 0 && (
+                  <View style={styles.busyTimesInfo}>
+                    <Text style={styles.busyTimesTitle}>Thời gian bận:</Text>
+                    <View style={styles.busyTimesList}>
+                      {busySlots.map((slot, slotIndex) => (
+                        <View key={slotIndex} style={styles.busyTimeItem}>
+                          <Clock size={12} color="#ef4444" strokeWidth={2} />
+                          <Text style={styles.busyTimeText}>
+                            {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </View>
+            );
+          })()}
+        </View>
+      )}
 
       {/* Legend */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={styles.legendDot} />
-          <Text style={styles.legendText}>Hôm nay</Text>
+          <View style={styles.legendGreenBox} />
+          <Text style={styles.legendText}>Rảnh nguyên ngày</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendBox, { backgroundColor: "#fecaca" }]} />
-          <Text style={styles.legendText}>Đã bận</Text>
+          <View style={styles.legendYellowBox} />
+          <Text style={styles.legendText}>Có người đặt</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={styles.legendRedBox} />
+          <Text style={styles.legendText}>Bận cả ngày</Text>
         </View>
       </View>
     </View>
@@ -154,111 +473,315 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     lineHeight: 20,
   },
-  calendarScroll: {
-    marginHorizontal: -24,
+  calendarContainer: {
     marginBottom: 16,
   },
-  calendarContent: {
-    paddingHorizontal: 24,
-    gap: 12,
-  },
-  dateCard: {
-    width: 70,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#ffffff",
+  calendarHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    position: "relative",
+    marginBottom: 16,
   },
-  dateCardActive: {
+  monthButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 5,
+    borderWidth: 1,
     borderColor: AppColors.primary,
-    backgroundColor: AppColors.primary + "15",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  dateCardBusy: {
-    borderColor: "#fecaca",
-    backgroundColor: "#fef2f2",
-    opacity: 0.6,
+  monthTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#000000",
   },
-  dayName: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#94a3b8",
+  dayHeaders: {
+    flexDirection: "row",
     marginBottom: 8,
   },
-  dayNameActive: {
-    color: AppColors.primary,
+  dayHeader: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 8,
   },
-  dayNameBusy: {
-    color: "#ef4444",
+  dayHeaderText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#666666",
   },
-  dateNumber: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#1e293b",
+  weekRow: {
+    flexDirection: "row",
     marginBottom: 4,
   },
-  dateNumberActive: {
-    color: AppColors.primary,
+  dayButton: {
+    flex: 1,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    margin: 2,
+    borderRadius: 8,
+    position: "relative",
   },
-  dateNumberBusy: {
-    color: "#ef4444",
+  dayButtonOtherMonth: {
+    opacity: 0.3,
   },
-  monthName: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#94a3b8",
-  },
-  monthNameActive: {
-    color: AppColors.primary,
-  },
-  monthNameBusy: {
-    color: "#ef4444",
-  },
-  todayDot: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  dayButtonSelected: {
     backgroundColor: AppColors.primary,
   },
-  busyText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#ef4444",
-    marginTop: 4,
+  dayButtonDisabled: {
+    opacity: 0.4,
   },
-  legend: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 20,
+  dayButtonFree: {
+    backgroundColor: "#dcfce7", // Light green
+    borderWidth: 1,
+    borderColor: "#86efac",
+  },
+  dayButtonPartial: {
+    backgroundColor: "#fef3c7", // Light yellow
+    borderWidth: 1,
+    borderColor: "#fcd34d",
+  },
+  dayButtonBusy: {
+    backgroundColor: "#fee2e2", // Light red
+    borderWidth: 1,
+    borderColor: "#fca5a5",
+  },
+  dayText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#000000",
+  },
+  dayTextOtherMonth: {
+    color: "#cccccc",
+  },
+  dayTextSelected: {
+    color: "#ffffff",
+    fontWeight: "bold",
+  },
+  dayTextDisabled: {
+    color: "#999999",
+    opacity: 0.5,
+  },
+  expandedTimeSlotsWrapper: {
+    marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: "#e2e8f0",
   },
-  legendItem: {
+  fullyBusyMessage: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fef2f2",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  fullyBusyText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#dc2626",
+  },
+  timeSlotsContainer: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  timeSlotsTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 12,
+  },
+  timeSlotsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  timeSlot: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    minWidth: 70,
+    justifyContent: "center",
+  },
+  timeSlotAvailable: {
+    borderColor: "#86efac",
+    backgroundColor: "#f0fdf4",
+  },
+  timeSlotBusy: {
+    borderColor: "#fecaca",
+    backgroundColor: "#fef2f2",
+    opacity: 0.6,
+  },
+  timeSlotSelected: {
+    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary,
+  },
+  timeSlotText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  timeSlotTextAvailable: {
+    color: "#16a34a",
+  },
+  timeSlotTextBusy: {
+    color: "#ef4444",
+  },
+  timeSlotTextSelected: {
+    color: "#ffffff",
+  },
+  busyTimesInfo: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+  },
+  busyTimesTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+    marginBottom: 6,
+  },
+  busyTimesList: {
+    gap: 4,
+  },
+  busyTimeItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: AppColors.primary,
+  busyTimeText: {
+    fontSize: 11,
+    color: "#ef4444",
+    fontWeight: "600",
   },
-  legendBox: {
-    width: 16,
-    height: 16,
+  legend: {
+    flexDirection: "row",
+    justifyContent: "center",
+    paddingVertical: 12,
+    marginTop: 16,
+    borderRadius: 8,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+  },
+  customTimeSection: {
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  customTimeLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 12,
+  },
+  customTimeInputContainer: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
+  customTimeInput: {
+    flex: 1,
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: "#1e293b",
+    backgroundColor: "#f8fafc",
+  },
+  customTimeButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: "#f1f5f9",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  customTimeButtonActive: {
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
+  },
+  customTimeButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#94a3b8",
+  },
+  customTimeButtonTextActive: {
+    color: "#ffffff",
+  },
+  selectedTimeDisplay: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#86efac",
+  },
+  selectedTimeText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: AppColors.primary,
+  },
+  quickSlotsTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748b",
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  legendGreenBox: {
+    width: 20,
+    height: 20,
     borderRadius: 4,
+    backgroundColor: "#dcfce7",
+    borderWidth: 1,
+    borderColor: "#86efac",
+    marginRight: 6,
+  },
+  legendYellowBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    backgroundColor: "#fef3c7",
+    borderWidth: 1,
+    borderColor: "#fcd34d",
+    marginRight: 6,
+  },
+  legendRedBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    backgroundColor: "#fee2e2",
+    borderWidth: 1,
+    borderColor: "#fca5a5",
+    marginRight: 6,
   },
   legendText: {
     fontSize: 12,
-    color: "#64748b",
-    fontWeight: "500",
+    color: "#666666",
   },
 });

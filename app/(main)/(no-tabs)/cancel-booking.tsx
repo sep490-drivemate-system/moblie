@@ -131,11 +131,11 @@ export default function CancelBookingScreen() {
         const sessionDate = new Date(booking.date);
         const now = new Date();
         const hoursUntilSession = Math.max(0, (sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60));
-        
+
         let refundPercentage = 0;
         let cancellationFee = 0;
         let penaltyAmount = 0;
-        
+
         if (hoursUntilSession >= 48) {
             // Trước 48h: hoàn tiền 100%
             refundPercentage = 100;
@@ -150,11 +150,11 @@ export default function CancelBookingScreen() {
             refundPercentage = 0;
             cancellationFee = booking.coins * 0.5;
         }
-        
+
         const refundAmount = (booking.coins * refundPercentage) / 100;
         const instructorCompensation = booking.coins - refundAmount;
         const systemFee = cancellationFee * 0.1; // 10% system fee từ cancellation fee
-        
+
         return {
             refundAmount,
             refundPercentage,
@@ -178,15 +178,15 @@ export default function CancelBookingScreen() {
         let totalSystemFee = 0;
 
         const upcomingSessions = booking.sessions.filter(session => session.status === 'upcoming');
-        
+
         upcomingSessions.forEach(session => {
             const sessionDate = new Date(session.date);
             const now = new Date();
             const hoursUntilSession = Math.max(0, (sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60));
-            
+
             let refundPercentage = 0;
             let cancellationFee = 0;
-            
+
             if (hoursUntilSession >= 48) {
                 refundPercentage = 100;
             } else if (hoursUntilSession >= 24) {
@@ -197,23 +197,23 @@ export default function CancelBookingScreen() {
                 refundPercentage = 0;
                 cancellationFee = (session.price / 1000) * 0.5; // Convert to coins
             }
-            
+
             const sessionRefund = ((session.price / 1000) * refundPercentage) / 100;
             const sessionInstructorComp = (session.price / 1000) - sessionRefund;
             const sessionSystemFee = cancellationFee * 0.1;
-            
+
             totalRefund += sessionRefund;
             totalCancellationFee += cancellationFee;
             totalInstructorCompensation += sessionInstructorComp;
             totalSystemFee += sessionSystemFee;
         });
 
-        const avgHoursUntilSession = upcomingSessions.length > 0 
+        const avgHoursUntilSession = upcomingSessions.length > 0
             ? upcomingSessions.reduce((sum, session) => {
                 const sessionDate = new Date(session.date);
                 const now = new Date();
                 return sum + Math.max(0, (sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60));
-            }, 0) / upcomingSessions.length 
+            }, 0) / upcomingSessions.length
             : 0;
 
         return {
@@ -234,12 +234,12 @@ export default function CancelBookingScreen() {
             const foundBooking = mockBookings.find(b => b.id === bookingId);
             if (foundBooking) {
                 setBooking(foundBooking);
-                
+
                 // Calculate refund info
-                const refundInfo = foundBooking.isMultiSession 
+                const refundInfo = foundBooking.isMultiSession
                     ? calculateMultiSessionRefund(foundBooking)
                     : calculateRefundInfo(foundBooking);
-                    
+
                 setRefundInfo(refundInfo);
             }
         }
@@ -248,7 +248,7 @@ export default function CancelBookingScreen() {
 
     const handleConfirmCancel = () => {
         if (!booking || !refundInfo) return;
-        
+
         Alert.alert(
             '✅ Hủy lịch thành công!',
             `Đã hủy lịch với ${booking.instructorName}\n\n` +

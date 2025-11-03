@@ -1,7 +1,6 @@
 import { BaseViewModel } from '@/viewmodels/shared/BaseViewModel';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootState } from '@/lib/redux/store';
-import { ENV } from '@/config/env';
 import {
     setWelcomeMessage,
     setUserInfo,
@@ -19,7 +18,7 @@ export class HomeViewModel extends BaseViewModel<HomeState> {
         await this.executeAsync(
             async () => {
                 // Giả lập API call để lấy thông tin user
-                const token = await AsyncStorage.getItem(ENV.STORAGE_KEYS.ACCESS_TOKEN);
+                const token = await AsyncStorage.getItem(process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token');
                 if (token) {
                     // Trong thực tế, bạn sẽ gọi API để lấy thông tin user
                     this.dispatch(setUserInfo({

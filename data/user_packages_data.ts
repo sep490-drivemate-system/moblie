@@ -98,5 +98,20 @@ export const instructorBusyTimes = [
       { startTime: "08:00", endTime: "10:00" },
     ],
   },
+  {
+    instructorId: "2",
+    date: "2025-11-05",
+    busySlots: [
+      { startTime: "10:00", endTime: "12:00" },
+      { startTime: "15:00", endTime: "17:00" },
+    ],
+  },
+  {
+    instructorId: "3",
+    date: "2025-11-05",
+    busySlots: [
+      { startTime: "08:00", endTime: "10:00" },
+    ],
+  },
 ];
 

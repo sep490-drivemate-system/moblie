@@ -9,17 +9,17 @@ const axiosInstance = axios.create({
 });
 
 axiosInstance.interceptors.request.use(
-    async (config) => {        
+    async (config) => {
         console.log("🚀 REQUEST CONFIG baseURL:", config.baseURL);
         console.log("🚀 REQUEST CONFIG url:", config.url);
         console.log("🚀 REQUEST CONFIG method:", config.method);
         console.log("🚀 REQUEST CONFIG headers:", config.headers);
-            const token = await AsyncStorage.getItem(
-                process.env.EXPO_PUBLIC_STORAGE_ACCESS_TOKEN || '@access_token'
-            );
-            if (token) {
-                config.headers.Authorization = `Bearer ${token}`;
-            }
+        const token = await AsyncStorage.getItem(
+            process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token'
+        );
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
         return config;
     },
     (error) => {
@@ -35,8 +35,7 @@ axiosInstance.interceptors.response.use(
     async (error: AxiosError) => {
         if (error.response?.status === 401) {
             await AsyncStorage.multiRemove([
-                process.env.EXPO_PUBLIC_STORAGE_ACCESS_TOKEN || '@access_token',
-                process.env.EXPO_PUBLIC_STORAGE_REFRESH_TOKEN || '@refresh_token',
+                process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token',
             ]);
         }
         return Promise.reject(error);

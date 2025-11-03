@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { MapPin, CheckCircle } from "lucide-react-native";
+import { AppColors } from "@/constants/Colors";
 
 interface Step3Props {
   selectedLocationId: string | null;
@@ -66,37 +67,23 @@ export default function Step3({
           <TouchableOpacity
             key={location.id}
             style={[
-              styles.locationCard,
-              selectedLocationId === location.id && styles.locationCardSelected,
+              styles.locationItem,
+              selectedLocationId === location.id && styles.locationItemSelected,
             ]}
             onPress={() => onLocationSelect(location.id, location.name)}
           >
-            <View style={styles.locationCardContent}>
-              <View style={styles.locationIconContainer}>
-                <MapPin
-                  size={20}
-                  color={
-                    selectedLocationId === location.id ? "#667eea" : "#64748b"
-                  }
-                  strokeWidth={2}
-                />
-              </View>
-              <View style={styles.locationInfo}>
-                <Text
-                  style={[
-                    styles.locationName,
-                    selectedLocationId === location.id &&
-                      styles.locationNameSelected,
-                  ]}
-                >
-                  {location.name}
-                </Text>
-                <Text style={styles.locationAddress}>{location.address}</Text>
-              </View>
-              {selectedLocationId === location.id && (
-                <CheckCircle size={20} color="#667eea" strokeWidth={2} />
-              )}
-            </View>
+            <Text
+              style={[
+                styles.locationItemText,
+                selectedLocationId === location.id &&
+                  styles.locationItemTextSelected,
+              ]}
+            >
+              {location.name}
+            </Text>
+            {selectedLocationId === location.id && (
+              <CheckCircle size={18} color={AppColors.primary} strokeWidth={2} />
+            )}
           </TouchableOpacity>
         ))}
       </View>
@@ -153,45 +140,32 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   locationList: {
-    gap: 12,
+    gap: 8,
   },
-  locationCard: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    padding: 16,
-  },
-  locationCardSelected: {
-    borderColor: "#667eea",
-    backgroundColor: "#f0f4ff",
-  },
-  locationCardContent: {
+  locationItem: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f8fafc",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
-  locationIconContainer: {
-    marginRight: 12,
-    alignItems: "center",
-    justifyContent: "center",
+  locationItemSelected: {
+    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary + "10",
   },
-  locationInfo: {
+  locationItemText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1e293b",
     flex: 1,
   },
-  locationName: {
-    fontSize: 15,
+  locationItemTextSelected: {
+    color: AppColors.primary,
     fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 4,
-  },
-  locationNameSelected: {
-    color: "#667eea",
-  },
-  locationAddress: {
-    fontSize: 13,
-    color: "#64748b",
-    fontWeight: "500",
-    lineHeight: 18,
   },
   locationPreview: {
     flexDirection: "row",

@@ -31,10 +31,10 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   async checkAuthStatus(): Promise<void> {
     await this.executeAsync(
       async () => {
-        const token = await AsyncStorage.getItem(process.env.EXPO_PUBLIC_STORAGE_ACCESS_TOKEN || '@access_token');
-        if (token) {        
+        const token = await AsyncStorage.getItem(process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token');
+        if (token) {
           this.dispatch(
-           setAuthenticated(true)
+            setAuthenticated(true)
           );
         }
       },
@@ -47,23 +47,23 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       }
     );
   }
-   handleGoogleLogin = async () => {
-      // handle logic signin google    
+  handleGoogleLogin = async () => {
+    // handle logic signin google    
   };
   async handleLogin(): Promise<void> {
     await this.executeAsync(
       async () => {
-        const currentState = this.getCurrentState();  
-       
+        const currentState = this.getCurrentState();
+
         const result = await this.dispatch(
           signIn(currentState.formData)
         ).unwrap();
         if (result?.value?.accessToken) {
           this.dispatch(
-           setAuthenticated(true)
+            setAuthenticated(true)
           );
           await AsyncStorage.setItem(
-            process.env.EXPO_PUBLIC_STORAGE_ACCESS_TOKEN || '@access_token',
+            process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token',
             result.value.accessToken
           );
           await AsyncStorage.setItem(
@@ -71,7 +71,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
             result.value.refreshToken
           );
         }
-      
+
       },
       () => {
         console.log("Login completed successfully");
@@ -118,7 +118,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
 
 
 
-       
+
       },
       () => {
         console.log("Registration successful");

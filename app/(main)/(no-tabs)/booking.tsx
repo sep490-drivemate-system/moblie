@@ -15,15 +15,19 @@ import {
   CheckCircle,
   X,
   Coins,
+  ArrowLeft,
+  CreditCard,
 } from "lucide-react-native";
 // Booking models (if needed later)
 // import { BookingMode, Shift, ShiftType } from "@/models/booking/booking";
 import Step1 from "@/components/Booking/Step1";
 import Step2 from "@/components/Booking/Step2";
 import Step3 from "@/components/Booking/Step3";
-import Step5 from "@/components/Booking/Step5";
+import Step4 from "@/components/Booking/Step4";
 import { instructorsData } from "@/data/instructors_data";
 import { instructorVehicles } from "@/data/instructor_detail";
+import { instructorBusyTimes } from "@/data/user_packages_data";
+import { AppColors } from "@/constants/Colors";
 
 export default function BookingScreen() {
   const router = useRouter();
@@ -35,10 +39,11 @@ export default function BookingScreen() {
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Step 1: Date selection
+  // Step 1: Date and time selection
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  // Step 2: Time and duration selection
+  // Step 2: Duration selection (time already selected in Step1)
   const [selectedStartTime, setSelectedStartTime] = useState("");
   const [selectedDuration, setSelectedDuration] = useState(2); // default 2 hours
 
@@ -56,9 +61,12 @@ export default function BookingScreen() {
   const [userCoins, setUserCoins] = useState(500);
   const bookingCost = 200;
 
+  // Policy acceptance state
+  const [allPoliciesAccepted, setAllPoliciesAccepted] = useState(false);
+
   const steps = [
-    { number: 1, label: "Chọn ngày" },
-    { number: 2, label: "Thời gian" },
+    { number: 1, label: "Ngày & giờ" },
+    { number: 2, label: "Thời lượng" },
     { number: 3, label: "Địa điểm" },
     { number: 4, label: "Xác nhận" },
   ];
@@ -66,20 +74,24 @@ export default function BookingScreen() {
   // Get instructor and package info
   const instructor = instructorsData.find(i => i.id === instructorId);
   const selectedPackage = instructor?.packages?.find(p => p.id === packageId);
-  const maxDuration = selectedPackage?.duration || 8;
+  const maxDuration = selectedPackage?.duration || 40;
 
   // Get vehicle info if vehicleId is provided (from instructorVehicles)
   const selectedVehicle = vehicleId && vehicleId !== "" ?
     instructorVehicles.find(v => v.id === vehicleId)
     : null;
 
-  // Get instructor busy dates (mock data - would come from API)
-  const instructorBusyDates = ["2025-11-10", "2025-11-15", "2025-11-20"];
+  // Update selectedStartTime when time is selected in Step1
+  useEffect(() => {
+    if (selectedTime) {
+      setSelectedStartTime(selectedTime);
+    }
+  }, [selectedTime]);
 
   const canProceedToNextStep = () => {
     switch (currentStep) {
       case 1:
-        return selectedDate !== null;
+        return selectedDate !== null && selectedTime !== null;
       case 2:
         return selectedStartTime !== "" && selectedDuration > 0;
       case 3:
@@ -94,12 +106,20 @@ export default function BookingScreen() {
   const handleNext = () => {
     if (canProceedToNextStep() && currentStep < 4) {
       setCurrentStep(currentStep + 1);
+      // Reset policies acceptance when moving to step 4
+      if (currentStep === 3) {
+        setAllPoliciesAccepted(false);
+      }
     }
   };
 
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+      // Reset policies acceptance when leaving step 4
+      if (currentStep === 4) {
+        setAllPoliciesAccepted(false);
+      }
     } else {
       router.back();
     }
@@ -113,7 +133,7 @@ export default function BookingScreen() {
   };
 
   const handleConfirmBooking = () => {
-    if (userCoins >= bookingCost) {
+    if (userCoins >= bookingCost && allPoliciesAccepted) {
       setUserCoins(userCoins - bookingCost);
       console.log("Booking confirmed:", {
         instructor: instructor?.name,
@@ -130,10 +150,10 @@ export default function BookingScreen() {
         paidAmount: bookingCost,
         remainingCoins: userCoins - bookingCost,
       });
-      // Navigate to payment success page
+      // Navigate to my-packages screen after successful payment
       setTimeout(() => {
-        router.replace('/(main)/(no-tabs)/payment-success');
-      }, 1000);
+        router.replace('/(main)/(no-tabs)/my-packages');
+      }, 500);
     }
   };
 
@@ -150,8 +170,11 @@ export default function BookingScreen() {
       >
         {/* Header Section */}
         <View style={styles.headerSection}>
-          <TouchableOpacity onPress={handleBack}>
-            <Text style={styles.backIcon}>←</Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={24} color="#fff" strokeWidth={2.5} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.modernHeaderTitle}>Đặt lịch thuê</Text>
@@ -287,11 +310,11 @@ export default function BookingScreen() {
             </View>
           )}
 
-          {selectedStartTime && selectedDuration > 0 ? (
+          {selectedTime && selectedDuration > 0 ? (
             <View style={styles.trackingRow}>
               <Text style={styles.trackingLabel}>Thời gian:</Text>
               <Text style={styles.trackingValue}>
-                {selectedStartTime} - {calculateEndTime(selectedStartTime, selectedDuration)} ({selectedDuration}h)
+                {selectedTime} - {calculateEndTime(selectedTime, selectedDuration)} ({selectedDuration}h)
               </Text>
             </View>
           ) : null}
@@ -309,12 +332,14 @@ export default function BookingScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Step 1: Date Selection */}
+        {/* Step 1: Date & Time Selection */}
         {currentStep === 1 && (
           <Step1
             selectedDate={selectedDate}
+            selectedTime={selectedTime}
             onDateSelect={setSelectedDate}
-            instructorBusyDates={instructorBusyDates}
+            onTimeSelect={setSelectedTime}
+            instructorBusyTimes={instructorBusyTimes.filter(bt => bt.instructorId === instructorId)}
           />
         )}
 
@@ -326,6 +351,7 @@ export default function BookingScreen() {
             onStartTimeSelect={setSelectedStartTime}
             onDurationChange={setSelectedDuration}
             maxDuration={maxDuration}
+            busyTimes={instructorBusyTimes.find(bt => bt.instructorId === instructorId && bt.date === selectedDate)?.busySlots || []}
           />
         )}
 
@@ -343,14 +369,18 @@ export default function BookingScreen() {
 
         {/* Step 4: Payment & Confirmation */}
         {currentStep === 4 && (
-          <Step5
+          <Step4
             packageId={packageId}
-            bookingMode={"daily"}
-            selectedDates={selectedDate ? [selectedDate] : []}
+            selectedDate={selectedDate}
             selectedStartTime={selectedStartTime}
+            selectedDuration={selectedDuration}
             pickupLocation={pickupLocation}
             bookingCost={bookingCost}
             userCoins={userCoins}
+            instructorName={instructor?.name}
+            packageName={selectedPackage?.name}
+            onConfirmBooking={handleConfirmBooking}
+            onPoliciesAcceptedChange={setAllPoliciesAccepted}
           />
         )}
 
@@ -366,27 +396,54 @@ export default function BookingScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            !canProceedToNextStep() && styles.continueButtonDisabled,
-          ]}
-          onPress={currentStep === 4 ? handleConfirmBooking : handleNext}
-          disabled={!canProceedToNextStep()}
-        >
-          <LinearGradient
-            colors={
-              canProceedToNextStep()
-                ? ["#10b981", "#059669"]
-                : ["#cbd5e1", "#cbd5e1"]
-            }
-            style={styles.continueButtonGradient}
+        {/* Continue button for steps 1-3 */}
+        {currentStep !== 4 && (
+          <TouchableOpacity
+            style={[
+              styles.continueButton,
+              !canProceedToNextStep() && styles.continueButtonDisabled,
+            ]}
+            onPress={handleNext}
+            disabled={!canProceedToNextStep()}
           >
-            <Text style={styles.continueButtonText}>
-              {currentStep === 4 ? "Thanh toán & Đặt lịch" : "Tiếp tục"}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={
+                canProceedToNextStep()
+                  ? ["#10b981", "#059669"]
+                  : ["#cbd5e1", "#cbd5e1"]
+              }
+              style={styles.continueButtonGradient}
+            >
+              <Text style={styles.continueButtonText}>Tiếp tục</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
+
+        {/* Payment button for step 4 */}
+        {currentStep === 4 && (
+          <TouchableOpacity
+            style={[
+              styles.paymentButton,
+              (!allPoliciesAccepted || userCoins < bookingCost) && styles.paymentButtonDisabled,
+            ]}
+            onPress={handleConfirmBooking}
+            disabled={!allPoliciesAccepted || userCoins < bookingCost}
+          >
+            <LinearGradient
+              colors={
+                allPoliciesAccepted && userCoins >= bookingCost
+                  ? [AppColors.primary, "#667eea"]
+                  : ["#cbd5e1", "#cbd5e1"]
+              }
+              style={styles.paymentButtonGradient}
+            >
+              <CreditCard size={20} color="#ffffff" strokeWidth={2} />
+              <Text style={styles.paymentButtonText}>
+                Thanh toán & Đặt lịch ({bookingCost.toLocaleString("vi-VN")} vnd)
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -593,6 +650,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  backButton: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
   trackingTitle: {
     fontSize: 16,
     fontWeight: "700",
@@ -709,6 +772,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   continueButtonText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  paymentButton: {
+    flex: 2,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  paymentButtonDisabled: {
+    opacity: 0.5,
+  },
+  paymentButtonGradient: {
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  paymentButtonText: {
     fontSize: 16,
     fontWeight: "800",
     color: "#ffffff",
