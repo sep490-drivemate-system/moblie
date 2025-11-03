@@ -1,25 +1,23 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  TextInput,
-} from "react-native";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Calendar,
-  Car,
-  Route,
-  SquarePen,
-} from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useRouter } from "expo-router";
+import {
+  Calendar,
+  Car,
+  ChevronLeft,
+  ChevronRight,
+  Route,
+  SquarePen
+} from "lucide-react-native";
+import { useEffect, useState } from "react";
+import {
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
 
 interface BookingItem {
   id: string;
@@ -679,7 +677,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     marginHorizontal: 16,
     marginVertical: 8,
-    marginBottom: 50,
+    marginBottom: 40,
     borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },

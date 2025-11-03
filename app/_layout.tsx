@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -12,6 +13,7 @@ import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { RootState } from "@/lib/redux/store";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export {
   ErrorBoundary,
@@ -45,11 +47,13 @@ export default function RootLayout() {
   }
 
   return (
-    <Provider store={store}>
-      <ErrorBoundary>
-        <RootLayoutNav />
-      </ErrorBoundary>
-    </Provider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Provider store={store}>
+        <ErrorBoundary>
+          <RootLayoutNav />
+        </ErrorBoundary>
+      </Provider>
+    </GestureHandlerRootView>
   );
 }
 
