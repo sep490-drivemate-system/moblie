@@ -1,14 +1,20 @@
 export interface Car {
-  id: string;
+  id: number | string;
   name: string;
   brand: string;
   imageUrl: string;
-  price: number;
+  images?: string[];
+  price?: number;
+  pricing?: {
+    halfDay: { price: number; duration: number };
+    fullDay: { price: number; duration: number };
+  };
   location: string;
-  rating: number;
+  rating: number | { score: number; totalStudents: number };
   seats: number;
   type: string;
   fuel: string;
-  totalRentalCount: number;
+  totalRentalCount?: number;
+  instructor?: { experience: string };
 }
 

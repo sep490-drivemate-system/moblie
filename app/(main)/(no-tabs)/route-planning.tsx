@@ -891,25 +891,6 @@ export default function RoutePlanningScreen() {
           </View>
         )}
 
-        {/* Map Instructions Overlay */}
-        {isSelectingLocation && (
-          <View style={styles.mapOverlay}>
-            <View style={styles.overlayCard}>
-              <MapPin size={24} color={AppColors.primary} strokeWidth={2} />
-              <Text style={styles.overlayText}>
-                {isSelectingLocation === 'pickup'
-                  ? 'Chạm vào bản đồ để chọn điểm đón/trả'
-                  : 'Chạm vào bản đồ để thêm điểm dừng'}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setIsSelectingLocation(null)}
-                style={styles.overlayCloseButton}
-              >
-                <X size={20} color="#64748b" strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
       </View>
 
       {/* Bottom Panel */}
@@ -949,11 +930,6 @@ export default function RoutePlanningScreen() {
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => {
-                  if (waypoints.length >= 10) {
-                    Alert.alert('Thông báo', 'Tối đa 10 điểm dừng');
-                    return;
-                  }
-                  console.log('➕ Add waypoint button pressed');
                   setIsSelectingLocation('waypoint');
                 }}
               >
