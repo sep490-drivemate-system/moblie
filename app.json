@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "moblie",
+    "name": "DriveMate",
     "slug": "moblie",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo_whitebg.png",
     "scheme": "moblie",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/logo_whitebg.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -25,7 +25,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/logo_whitebg.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
