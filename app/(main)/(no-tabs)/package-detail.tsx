@@ -30,7 +30,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 type StatusFilter =
   | "all"
-  | "route_planning"
+  | "planning"
   | "upcoming"
   | "cancelled"
   | "rescheduled"
@@ -321,8 +321,9 @@ export default function PackageDetailScreen() {
                   style={[
                     styles.progressFill,
                     {
-                      width: `${(packageData.usedHours / packageData.totalHours) * 100
-                        }%`,
+                      width: `${
+                        (packageData.usedHours / packageData.totalHours) * 100
+                      }%`,
                     },
                   ]}
                 />
