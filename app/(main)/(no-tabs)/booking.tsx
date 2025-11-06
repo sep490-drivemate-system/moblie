@@ -155,28 +155,9 @@ export default function BookingScreen() {
   };
 
   const handleConfirmBooking = () => {
-    if (userCoins >= bookingCost && allPoliciesAccepted) {
-      setUserCoins(userCoins - bookingCost);
-      console.log("Booking confirmed:", {
-        instructor: instructor?.name,
-        instructorId,
-        package: selectedPackage?.name,
-        packageId,
-        vehicle: selectedVehicle?.name || "Xe riêng",
-        vehicleId: vehicleId || null,
-        selectedDate,
-        selectedStartTime,
-        selectedDuration,
-        endTime: calculateEndTime(selectedStartTime, selectedDuration),
-        pickupLocation,
-        paidAmount: bookingCost,
-        remainingCoins: userCoins - bookingCost,
-      });
-      // Navigate to my-packages screen after successful payment
-      setTimeout(() => {
-        router.replace("/(main)/(no-tabs)/my-packages");
-      }, 500);
-    }
+    setTimeout(() => {
+      router.replace("/(main)/(no-tabs)/my-packages");
+    }, 500);
   };
 
   return (
@@ -203,9 +184,9 @@ export default function BookingScreen() {
                     style={[
                       styles.modernStepCircle,
                       step.number < currentStep &&
-                        styles.modernStepCircleCompleted,
+                      styles.modernStepCircleCompleted,
                       step.number === currentStep &&
-                        styles.modernStepCircleActive,
+                      styles.modernStepCircleActive,
                     ]}
                   >
                     {step.number < currentStep ? (
@@ -219,7 +200,7 @@ export default function BookingScreen() {
                         style={[
                           styles.modernStepNumber,
                           step.number <= currentStep &&
-                            styles.modernStepNumberActive,
+                          styles.modernStepNumberActive,
                         ]}
                       >
                         {step.number}
@@ -230,9 +211,9 @@ export default function BookingScreen() {
                     style={[
                       styles.modernStepLabel,
                       step.number === currentStep &&
-                        styles.modernStepLabelActive,
+                      styles.modernStepLabelActive,
                       step.number < currentStep &&
-                        styles.modernStepLabelCompleted,
+                      styles.modernStepLabelCompleted,
                     ]}
                   >
                     {step.label}
@@ -244,7 +225,7 @@ export default function BookingScreen() {
                       style={[
                         styles.modernStepLine,
                         step.number < currentStep &&
-                          styles.modernStepLineCompleted,
+                        styles.modernStepLineCompleted,
                       ]}
                     />
                   </View>
@@ -533,25 +514,25 @@ export default function BookingScreen() {
           <TouchableOpacity
             style={[
               styles.paymentButton,
-              (!allPoliciesAccepted || userCoins < bookingCost) &&
-                styles.paymentButtonDisabled,
+              (!allPoliciesAccepted) &&
+              styles.paymentButtonDisabled,
             ]}
             onPress={handleConfirmBooking}
-            disabled={!allPoliciesAccepted || userCoins < bookingCost}
+            //disabled={!allPoliciesAccepted}
           >
             <View
               style={[
                 styles.paymentButtonGradient,
                 {
                   backgroundColor:
-                    !allPoliciesAccepted || userCoins < bookingCost
+                    !allPoliciesAccepted
                       ? "#cbd5e1"
                       : "#1AD562",
                 },
               ]}
             >
               <Text style={styles.paymentButtonText}>
-                Thanh toán & Đặt lịch
+                Đặt lịch
               </Text>
             </View>
           </TouchableOpacity>

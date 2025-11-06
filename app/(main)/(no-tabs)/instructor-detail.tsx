@@ -58,7 +58,8 @@ export default function InstructorDetailScreen() {
         friction: 7,
         tension: 40,
         useNativeDriver: true,
-      }).start(() => {});
+      }).start(() => {
+      });
     } else {
       scaleAnim.setValue(0.95);
     }
@@ -185,29 +186,28 @@ export default function InstructorDetailScreen() {
         </View>
         {/* Packages Section */}
         <View style={styles.pricingSection}>
-          <Text style={styles.sectionTitle}>
-            Gói thuê có sẵn ({instructor.packages?.length || 0})
-          </Text>
+          <Text style={styles.sectionTitle}>Gói thuê({instructor.packages?.length || 0})</Text>
           {instructor.packages?.map((pkg) => (
-            <View key={pkg.id} style={[styles.priceCard]}>
+            <View
+              key={pkg.id}
+              style={[
+                styles.priceCard,
+              ]}
+            >
               <View style={styles.priceCardHeader}>
                 <View style={styles.priceCardInfo}>
                   <Text style={styles.priceCardTitle}>{pkg.name}</Text>
                   <View style={styles.packageTypeContainer}>
                     {pkg.hasVehicle || pkg.vehicle ? (
                       <View style={styles.packageTypeWithVehicle}>
-                        <Text style={styles.packageTypeIcon}>
-                          <Car />
-                        </Text>
+                        <Text style={styles.packageTypeIcon}><Car /></Text>
                         <Text style={styles.packageTypeText}>
                           Có xe và người hướng dẫn
                         </Text>
                       </View>
                     ) : (
                       <View style={styles.packageTypeInstructor}>
-                        <Text style={styles.packageTypeIcon}>
-                          <User />
-                        </Text>
+                        <Text style={styles.packageTypeIcon}><User /></Text>
                         <Text style={styles.packageTypeText}>
                           Chỉ có người hướng dẫn
                         </Text>
@@ -220,9 +220,7 @@ export default function InstructorDetailScreen() {
               <View style={styles.packageDetails}>
                 <View style={styles.packageDetailRow}>
                   <Clock size={16} color="#64748b" strokeWidth={2} />
-                  <Text style={styles.packageDetailText}>
-                    {pkg.duration} giờ
-                  </Text>
+                  <Text style={styles.packageDetailText}>{pkg.duration} giờ</Text>
                 </View>
 
                 <View style={styles.packageDetailRow}>
@@ -242,11 +240,25 @@ export default function InstructorDetailScreen() {
               </View>
 
               <View style={styles.priceCardBottom}>
-                <Text style={styles.priceAmount}>{pkg.basePrice} vnd</Text>
+                <View style={styles.priceInfo}>
+                  <Text style={styles.priceAmount}>
+                    {pkg.basePrice.toLocaleString('vi-VN')} vnd
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.buyButton}
+                  onPress={() => handleBuyPackage(pkg)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.buyButtonText}>Mua gói</Text>
+                </TouchableOpacity>
               </View>
             </View>
           ))}
+
         </View>
+
+
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -273,12 +285,10 @@ export default function InstructorDetailScreen() {
                 </View>
                 <TouchableOpacity
                   style={styles.vehicleDetailButton}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/car-detail",
-                      params: { carId: vehicle.id },
-                    })
-                  }
+                  onPress={() => router.push({
+                    pathname: "/car-detail",
+                    params: { carId: vehicle.id }
+                  })}
                 >
                   <Text style={styles.vehicleDetailButtonText}>Chi tiết</Text>
                 </TouchableOpacity>
@@ -326,18 +336,7 @@ export default function InstructorDetailScreen() {
         <View style={{ height: 20 }} />
       </ScrollView>
 
-      {/* Bottom Action Buttons */}
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          style={styles.bookButton}
-          onPress={() => setShowConfirmModal(true)}
-          activeOpacity={0.9}
-        >
-          <Text style={styles.bookButtonText}>Mua gói ngay</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Booking Options Modal */}
+      {/* Confirmation Modal */}
       <Modal
         visible={showConfirmModal}
         transparent
@@ -355,7 +354,7 @@ export default function InstructorDetailScreen() {
               styles.confirmModalContent,
               {
                 transform: [{ scale: scaleAnim }],
-              },
+              }
             ]}
           >
             {/* Modal Header */}
@@ -371,140 +370,93 @@ export default function InstructorDetailScreen() {
               )}
             </View>
 
-            <ScrollView
-              style={styles.modalScroll}
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Package Options */}
-              <View style={styles.packageOptions}>
-                {instructor.packages && instructor.packages.length > 0
-                  ? instructor.packages.map((pkg) => (
-                      <TouchableOpacity
-                        key={pkg.id}
-                        style={[
-                          styles.packageOption,
-                          selectedPackage === pkg.id &&
-                            styles.packageOptionSelected,
-                        ]}
-                        onPress={() => {
-                          setSelectedPackage(pkg.id);
-                          setSelectedVehicle(null);
-                        }}
-                      >
-                        <View style={styles.radioButton}>
-                          {selectedPackage === pkg.id && (
-                            <View style={styles.radioButtonInner} />
-                          )}
-                        </View>
-                        <View style={styles.packageInfo}>
-                          <Text style={styles.packageTitle}>{pkg.name}</Text>
-
-                          {/* Badge: Has Vehicle or Not */}
-                          <View style={styles.packageBadgeContainer}>
-                            {pkg.hasVehicle || pkg.vehicle ? (
-                              <View style={styles.packageBadgeWithVehicle}>
-                                <Text style={styles.packageBadgeIcon}>
-                                  <Car />
-                                </Text>
-                                <Text style={styles.packageBadgeText}>
-                                  Có xe
-                                </Text>
-                              </View>
-                            ) : (
-                              <View style={styles.packageBadgeInstructor}>
-                                <Text style={styles.packageBadgeIcon}>
-                                  <User />
-                                </Text>
-                                <Text style={styles.packageBadgeText}>
-                                  Chỉ có người hướng dẫn
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-
-                          {/* Duration */}
-                          <View style={styles.packageDetailRow}>
-                            <Clock size={14} color="#64748b" strokeWidth={2} />
-                            <Text style={styles.packageDetailText}>
-                              {pkg.duration} giờ
-                            </Text>
-                          </View>
-
-                          {/* Price */}
-                          <Text style={styles.packagePrice}>
-                            {pkg.basePrice.toLocaleString("vi-VN")} vnd
-                          </Text>
-
-                          <View style={styles.confirmDetailRow}>
-                            <MapPin size={16} color="#64748b" />
-                            <Text style={styles.confirmDetailText}>
-                              {pkg.roadTypes.join(", ")}
-                            </Text>
-                          </View>
-
-                          {/* Skills */}
-                          {pkg.skills && pkg.skills.length > 0 && (
-                            <View style={styles.confirmSkillsContainer}>
-                              <Text style={styles.confirmSkillsLabel}>
-                                Kỹ năng học được:
-                              </Text>
-                              <View style={styles.confirmSkillsList}>
-                                {pkg.skills.map(
-                                  (skill: string, index: number) => (
-                                    <View
-                                      key={index}
-                                      style={styles.confirmSkillChip}
-                                    >
-                                      <Text style={styles.confirmSkillText}>
-                                        {skill}
-                                      </Text>
-                                    </View>
-                                  )
-                                )}
-                              </View>
-                            </View>
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                    ))
-                  : null}
-              </View>
-
-              {/* Vehicle Selection (only show if selected package has vehicle) */}
-              {selectedPackage &&
-                instructor.packages?.find((p) => p.id === selectedPackage)
-                  ?.hasVehicle && (
-                  <View style={styles.vehicleSelection}>
-                    <Text style={styles.vehicleSelectionTitleModal}>
-                      🚗 Chọn xe (Tùy chọn)
+            {/* Package Info */}
+            {selectedPackage && (
+              <ScrollView
+                style={styles.confirmModalBody}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Package Details */}
+                <View style={styles.confirmPackageSection}>
+                  <Text style={styles.confirmSectionTitle}>Thông tin gói</Text>
+                  <View style={styles.confirmPackageCard}>
+                    <Text style={styles.confirmPackageName}>
+                      {selectedPackage.name}
                     </Text>
-                    <Text style={styles.vehicleSelectionSubtitle}>
+
+                    <View style={styles.confirmPackageBadge}>
+                      {selectedPackage.hasVehicle || selectedPackage.vehicle ? (
+                        <View style={styles.confirmBadgeWithVehicle}>
+                          <Car size={14} color="#16a34a" />
+                          <Text style={styles.confirmBadgeText}>Có xe</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.confirmBadgeInstructor}>
+                          <User size={14} color="#ca8a04" />
+                          <Text style={styles.confirmBadgeText}>Chỉ có người hướng dẫn</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.confirmPackageDetails}>
+                      <View style={styles.confirmDetailRow}>
+                        <Clock size={16} color="#64748b" />
+                        <Text style={styles.confirmDetailText}>
+                          {selectedPackage.duration} giờ
+                        </Text>
+                      </View>
+                      <View style={styles.confirmDetailRow}>
+                        <MapPin size={16} color="#64748b" />
+                        <Text style={styles.confirmDetailText}>
+                          {selectedPackage.roadTypes.join(", ")}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Skills */}
+                    {selectedPackage.skills && selectedPackage.skills.length > 0 && (
+                      <View style={styles.confirmSkillsContainer}>
+                        <Text style={styles.confirmSkillsLabel}>Kỹ năng học được:</Text>
+                        <View style={styles.confirmSkillsList}>
+                          {selectedPackage.skills.map((skill: string, index: number) => (
+                            <View key={index} style={styles.confirmSkillChip}>
+                              <Text style={styles.confirmSkillText}>{skill}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                {/* Vehicle Selection (only show if package has vehicle) */}
+                {selectedPackage && (selectedPackage.hasVehicle || selectedPackage.vehicle) && (
+                  <View style={styles.confirmVehicleSection}>
+                    <Text style={styles.confirmSectionTitle}>Chọn xe (Tùy chọn)</Text>
+                    <Text style={styles.confirmVehicleSubtitle}>
                       Bạn có thể chọn xe hoặc sử dụng xe riêng của mình
                     </Text>
 
                     {/* Option: No vehicle - Use own car */}
                     <TouchableOpacity
                       style={[
-                        styles.vehicleOption,
-                        selectedVehicle === null &&
-                          styles.vehicleOptionSelected,
+                        styles.confirmVehicleOption,
+                        selectedVehicle === null && styles.confirmVehicleOptionSelected,
                       ]}
                       onPress={() => setSelectedVehicle(null)}
                     >
-                      <View style={styles.noVehicleIcon}>
-                        <Text style={styles.noVehicleIconText}>🚙</Text>
+                      <View style={styles.confirmNoVehicleIcon}>
+                        <Text style={styles.confirmNoVehicleIconText}>🚙</Text>
                       </View>
-                      <View style={styles.vehicleOptionInfo}>
-                        <Text style={styles.vehicleOptionName}>
-                          Tôi có xe riêng
-                        </Text>
-                        <Text style={styles.vehicleOptionSpec}>
+                      <View style={styles.confirmVehicleOptionInfo}>
+                        <Text style={styles.confirmVehicleOptionName}>Tôi có xe riêng</Text>
+                        <Text style={styles.confirmVehicleOptionSpec}>
                           Không cần thuê xe từ giảng viên
                         </Text>
                       </View>
-                      <View style={styles.vehicleRadioButton}>
+                      <View style={styles.confirmVehicleRadioButton}>
                         {selectedVehicle === null && (
-                          <View style={styles.vehicleRadioButtonInner} />
+                          <View style={styles.confirmVehicleRadioButtonInner} />
                         )}
                       </View>
                     </TouchableOpacity>
@@ -514,48 +466,56 @@ export default function InstructorDetailScreen() {
                       <TouchableOpacity
                         key={vehicle.id}
                         style={[
-                          styles.vehicleOption,
-                          selectedVehicle === vehicle.id &&
-                            styles.vehicleOptionSelected,
+                          styles.confirmVehicleOption,
+                          selectedVehicle === String(vehicle.id) && styles.confirmVehicleOptionSelected,
                         ]}
                         onPress={() => setSelectedVehicle(String(vehicle.id))}
                       >
                         <Image
                           source={{ uri: vehicle.imageUrl }}
-                          style={styles.vehicleOptionImage}
+                          style={styles.confirmVehicleOptionImage}
                         />
-                        <View style={styles.vehicleOptionInfo}>
-                          <Text style={styles.vehicleOptionName}>
-                            {vehicle.name}
-                          </Text>
-                          <View style={styles.vehicleOptionSpecs}>
-                            <Text style={styles.vehicleOptionSpec}>
-                              {vehicle.seats} chỗ
-                            </Text>
-                            <Text style={styles.vehicleOptionDot}> • </Text>
-                            <Text style={styles.vehicleOptionSpec}>
-                              {vehicle.fuel}
-                            </Text>
-                            <Text style={styles.vehicleOptionDot}> • </Text>
-                            <Text style={styles.vehicleOptionSpec}>
-                              {vehicle.type}
-                            </Text>
+                        <View style={styles.confirmVehicleOptionInfo}>
+                          <Text style={styles.confirmVehicleOptionName}>{vehicle.name}</Text>
+                          <View style={styles.confirmVehicleOptionSpecs}>
+                            <Text style={styles.confirmVehicleOptionSpec}>{vehicle.seats} chỗ</Text>
+                            <Text style={styles.confirmVehicleOptionDot}> • </Text>
+                            <Text style={styles.confirmVehicleOptionSpec}>{vehicle.fuel}</Text>
+                            <Text style={styles.confirmVehicleOptionDot}> • </Text>
+                            <Text style={styles.confirmVehicleOptionSpec}>{vehicle.type}</Text>
                           </View>
-                          <Text style={styles.vehicleOptionPrice}>
-                            +{(vehicle.price ?? 0).toLocaleString("vi-VN")}{" "}
-                            vnd/giờ
+                          <Text style={styles.confirmVehicleOptionPrice}>
+                            +{vehicle.price ? vehicle.price.toLocaleString('vi-VN') : '0'} vnd/giờ
                           </Text>
                         </View>
-                        <View style={styles.vehicleRadioButton}>
-                          {selectedVehicle === vehicle.id && (
-                            <View style={styles.vehicleRadioButtonInner} />
+                        <View style={styles.confirmVehicleRadioButton}>
+                          {selectedVehicle === String(vehicle.id) && (
+                            <View style={styles.confirmVehicleRadioButtonInner} />
                           )}
                         </View>
                       </TouchableOpacity>
                     ))}
                   </View>
                 )}
-            </ScrollView>
+
+                {/* Price Summary */}
+                <View style={styles.confirmPriceSection}>
+                  <View style={styles.confirmPriceRow}>
+                    <Text style={styles.confirmPriceLabel}>Giá gói:</Text>
+                    <Text style={styles.confirmPriceValue}>
+                      {selectedPackage.basePrice.toLocaleString('vi-VN')} vnd
+                    </Text>
+                  </View>
+                  <View style={styles.confirmDivider} />
+                  <View style={styles.confirmPriceRow}>
+                    <Text style={styles.confirmTotalLabel}>Tổng cộng:</Text>
+                    <Text style={styles.confirmTotalValue}>
+                      {selectedPackage.basePrice.toLocaleString('vi-VN')} vnd
+                    </Text>
+                  </View>
+                </View>
+              </ScrollView>
+            )}
 
             {/* Modal Actions */}
             <View style={styles.confirmModalActions}>
@@ -570,50 +530,24 @@ export default function InstructorDetailScreen() {
               <TouchableOpacity
                 style={[
                   styles.confirmPurchaseButton,
-                  isProcessing && styles.confirmPurchaseButtonDisabled,
+                  isProcessing && styles.confirmPurchaseButtonDisabled
                 ]}
-                onPress={() => {
-                  if (!selectedPackage) return;
-
-                  const selectedPkg = instructor.packages?.find(
-                    (p) => p.id === selectedPackage
-                  );
-                  const packagePrice = selectedPkg?.basePrice || 0;
-
-                  Alert.alert(
-                    "Xác nhận mua gói",
-                    `Bạn muốn mua gói "${
-                      selectedPkg?.name
-                    }" với giá ${packagePrice.toLocaleString("vi-VN")} vnd?`,
-                    [
-                      { text: "Hủy", style: "cancel" },
-                      {
-                        text: "Xác nhận",
-                        onPress: () => {
-                          // Simulate payment process
-                          setTimeout(() => {
-                            setShowConfirmModal(false);
-                            router.push({
-                              pathname: "/(main)/(no-tabs)/transaction-success",
-                              params: {
-                                instructorId: instructor.id,
-                                packageId: selectedPackage,
-                              },
-                            });
-                          }, 800);
-                        },
-                      },
-                    ]
-                  );
-                }}
-                disabled={!selectedPackage}
+                onPress={handleConfirmPurchase}
+                disabled={isProcessing}
               >
-                <Text style={styles.continueButtonText}>Mua gói</Text>
+                {isProcessing ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.confirmPurchaseButtonText}>
+                    Xác nhận mua
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </Animated.View>
         </View>
       </Modal>
+
     </View>
   );
 }
@@ -622,29 +556,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f9fa",
-  },
-  bottomContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 16,
-    backgroundColor: AppColors.white,
-    borderTopWidth: 1,
-    borderTopColor: AppColors.borderLight,
-  },
-  bookButton: {
-    backgroundColor: AppColors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bookButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "700",
   },
   loadingContainer: {
     flex: 1,
@@ -1241,9 +1152,6 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     position: "relative",
   },
-  modalScroll: {
-    maxHeight: "100%",
-  },
   confirmModalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1361,192 +1269,6 @@ const styles = StyleSheet.create({
   },
   confirmPackageDetails: {
     gap: 8,
-  },
-  packageOptions: {
-    gap: 12,
-  },
-  packageOption: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: AppColors.borderLight,
-    backgroundColor: AppColors.white,
-    marginBottom: 12,
-  },
-  packageOptionSelected: {
-    borderColor: AppColors.primary,
-    backgroundColor: "#dbeafe",
-    borderWidth: 2.5,
-  },
-  radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: AppColors.borderLight,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-    marginTop: 4,
-  },
-  radioButtonInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: AppColors.primary,
-  },
-  packageInfo: {
-    flex: 1,
-  },
-  packageTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: AppColors.textPrimary,
-    marginBottom: 8,
-  },
-  packageBadgeContainer: {
-    marginBottom: 8,
-  },
-  packageBadgeWithVehicle: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f0fdf4",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: "#86efac",
-  },
-  packageBadgeInstructor: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fef3c7",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: "#fcd34d",
-  },
-  packageBadgeIcon: {
-    fontSize: 14,
-  },
-  packageBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#1f2937",
-  },
-  packagePrice: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: AppColors.textPrimary,
-    marginTop: 6,
-    marginBottom: 6,
-  },
-  vehicleSelection: {
-    marginTop: 20,
-    marginBottom: 12,
-  },
-  vehicleSelectionTitleModal: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: AppColors.textPrimary,
-    marginBottom: 4,
-  },
-  vehicleSelectionSubtitle: {
-    fontSize: 13,
-    color: AppColors.textSecondary,
-    fontWeight: "500",
-    marginBottom: 16,
-  },
-  vehicleOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: AppColors.borderLight,
-    backgroundColor: AppColors.white,
-    marginBottom: 12,
-  },
-  vehicleOptionSelected: {
-    borderColor: AppColors.primary,
-    backgroundColor: "#dbeafe",
-    borderWidth: 2.5,
-  },
-  noVehicleIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: "#f0fdf4",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#86efac",
-  },
-  noVehicleIconText: {
-    fontSize: 32,
-  },
-  vehicleOptionInfo: {
-    flex: 1,
-  },
-  vehicleOptionName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: AppColors.textPrimary,
-    marginBottom: 4,
-  },
-  vehicleOptionSpecs: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  vehicleOptionSpec: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-    fontWeight: "500",
-  },
-  vehicleOptionDot: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-  },
-  vehicleOptionPrice: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: AppColors.primary,
-    marginTop: 6,
-  },
-  vehicleRadioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: AppColors.borderLight,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  vehicleRadioButtonInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: AppColors.primary,
-  },
-  vehicleOptionImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  continueButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#ffffff",
-    letterSpacing: 0.5,
   },
   confirmDetailRow: {
     flexDirection: "row",

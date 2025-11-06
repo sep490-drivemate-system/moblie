@@ -10,22 +10,10 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Video, ResizeMode } from "expo-av";
-import axios from "axios";
 
-const { width, height } = Dimensions.get("window");
 
 export default function IntroScreen() {
   const router = useRouter();
-
-  const handletest = async () => {
-    try {
-      console.log('process.env.EXPO_PUBLIC_API_URL', process.env.EXPO_PUBLIC_API_URL);
-      const response = await axios.get(`${process.env.EXPO_PUBLIC_API_URL}/api/skills`);
-      console.log('Skills data:', response.data);
-    } catch (error) {
-      console.error('Error fetching skills:', error);
-    }
-  };
 
   const handleSignUp = () => {
     router.push("/(auth)/signup");
@@ -49,7 +37,7 @@ export default function IntroScreen() {
         {/* Slogan */}
         <View style={styles.sloganContainer}>
           <Text style={styles.sloganLine1}>
-            VỚI <Text style={styles.appNameHighlight} onPress={handletest}>DRIVEMATE</Text>,
+            VỚI <Text style={styles.appNameHighlight}>DRIVEMATE</Text>,
           </Text>
           <Text style={styles.sloganLine2}>
             mỗi chiếc xe, một người hướng dẫn –

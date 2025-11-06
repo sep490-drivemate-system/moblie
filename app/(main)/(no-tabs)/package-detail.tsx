@@ -321,9 +321,8 @@ export default function PackageDetailScreen() {
                   style={[
                     styles.progressFill,
                     {
-                      width: `${
-                        (packageData.usedHours / packageData.totalHours) * 100
-                      }%`,
+                      width: `${(packageData.usedHours / packageData.totalHours) * 100
+                        }%`,
                     },
                   ]}
                 />
