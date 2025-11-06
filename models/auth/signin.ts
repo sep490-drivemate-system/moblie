@@ -4,6 +4,5 @@ export interface ISignInRequest {
 }
 
 export interface ISignInResponse {
-    accessToken: string;
-    refreshToken: string;
+    token: string;
 }

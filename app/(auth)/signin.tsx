@@ -15,7 +15,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Eye, EyeOff } from "lucide-react-native";
+import { Eye, EyeOff, X } from "lucide-react-native";
 import { Video, ResizeMode } from "expo-av";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { RootState } from "@/lib/redux/store";
@@ -26,26 +26,26 @@ const { width, height } = Dimensions.get("window");
 
 export default function SignInScreen() {
   const router = useRouter();
-  const [showPassword, setShowPassword] = useState(false); 
+  const [showPassword, setShowPassword] = useState(false);
   const dispatch = useAppDispatch();
   const authState = useAppSelector((state: RootState) => state.auth);
   const { formData, isLoading, errorMessage, isAuthenticated, user } = authState;
-  
+
   const [authViewModel] = useState(() => new AuthViewModel(
-    dispatch, 
+    dispatch,
     () => {
       const store = require('@/lib/redux/store').store;
       return store.getState().auth;
     }
   ));
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      router.replace("/(main)/(tabs)/home");
-    }
-  }, [isAuthenticated, user, router]);
+  // useEffect(() => {
+  //   if (isAuthenticated && user) {
+  //     router.replace("/(main)/(tabs)/home");
+  //   }
+  // }, [isAuthenticated, user, router]);
 
-    const handleInputChange = (field: keyof ISignInRequest, value: string) => {
+  const handleInputChange = (field: keyof ISignInRequest, value: string) => {
     authViewModel.updateFormData(field, value);
     if (errorMessage) {
       authViewModel.clearError();
@@ -69,6 +69,14 @@ export default function SignInScreen() {
 
       {/* Login Form Section */}
       <View style={styles.formSection}>
+        {/* Close Button */}
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => router.back()}
+        >
+          <X size={24} color="#6b7280" />
+        </TouchableOpacity>
+
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -89,7 +97,7 @@ export default function SignInScreen() {
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
-                placeholder="Nhập email hoặt số điện thoại"
+                placeholder="Nhập email hoặc số điện thoại"
                 placeholderTextColor="#9ca3af"
                 value={formData.emailOrPhone}
                 onChangeText={(value) => handleInputChange('emailOrPhone', value)}
@@ -136,8 +144,8 @@ export default function SignInScreen() {
             )}
 
             {/* Login Button */}
-            <TouchableOpacity 
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]} 
+            <TouchableOpacity
+              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
               onPress={() => authViewModel.handleLogin()}
               disabled={isLoading}
             >
@@ -215,6 +223,27 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     marginTop: -20,
     zIndex: 1,
+    position: "relative",
+  },
+  closeButton: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f3f4f6",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   scrollView: {
     flex: 1,

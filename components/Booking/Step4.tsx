@@ -13,6 +13,9 @@ interface Step4Props {
   userCoins: number;
   instructorName?: string;
   packageName?: string;
+  selectedVehicle?: { id: string | number; name: string; price?: number } | null;
+  vehicleId?: string;
+  packageBasePrice?: number;
   onConfirmBooking?: () => void;
   onPoliciesAcceptedChange?: (allAccepted: boolean) => void;
 }
@@ -60,6 +63,9 @@ export default function Step4({
   userCoins,
   instructorName,
   packageName,
+  selectedVehicle,
+  vehicleId,
+  packageBasePrice = 0,
   onConfirmBooking,
   onPoliciesAcceptedChange,
 }: Step4Props) {
@@ -77,16 +83,20 @@ export default function Step4({
 
   const allPoliciesAccepted = acceptedPolicies.size === policies.length;
 
+  // Calculate vehicle cost
+  const vehicleCost = selectedVehicle && selectedVehicle.price && selectedDuration > 0
+    ? selectedVehicle.price * selectedDuration
+    : 0;
+
   // Notify parent when policies acceptance changes
   useEffect(() => {
     if (onPoliciesAcceptedChange) {
       onPoliciesAcceptedChange(allPoliciesAccepted);
     }
-  }, [allPoliciesAccepted, onPoliciesAcceptedChange]);
+  }, [allPoliciesAccepted]);
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Shield size={24} color={AppColors.primary} strokeWidth={2} />
         <Text style={styles.sectionTitle}>Xác nhận đặt lịch</Text>
       </View>
 
@@ -95,24 +105,19 @@ export default function Step4({
         <Text style={styles.summaryTitle}>Thông tin đặt lịch</Text>
 
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>👨‍🏫 Người hướng dẫn:</Text>
-          <Text style={styles.summaryValue}>{instructorName || "Chưa chọn"}</Text>
-        </View>
-
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>📦 Gói học:</Text>
+          <Text style={styles.summaryLabel}> Gói học:</Text>
           <Text style={styles.summaryValue}>{packageName || "Chưa chọn gói"}</Text>
         </View>
 
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>📅 Ngày học:</Text>
+          <Text style={styles.summaryLabel}>Ngày thuê:</Text>
           <Text style={styles.summaryValue}>
             {selectedDate ? new Date(selectedDate).toLocaleDateString('vi-VN') : "Chưa chọn"}
           </Text>
         </View>
 
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>⏰ Thời gian:</Text>
+          <Text style={styles.summaryLabel}>Thời gian:</Text>
           <Text style={styles.summaryValue}>
             {selectedStartTime && selectedDuration > 0
               ? `${selectedStartTime} - ${calculateEndTime(selectedStartTime, selectedDuration)} (${selectedDuration}h)`
@@ -121,7 +126,7 @@ export default function Step4({
         </View>
 
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>📍 Địa điểm:</Text>
+          <Text style={styles.summaryLabel}>Địa điểm:</Text>
           <Text style={styles.summaryValue} numberOfLines={1}>
             {pickupLocation || "Chưa chọn địa điểm"}
           </Text>
@@ -129,54 +134,6 @@ export default function Step4({
 
         <View style={styles.summaryDivider} />
 
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>💰 Chi phí:</Text>
-          <Text style={styles.summaryPrice}>{bookingCost.toLocaleString("vi-VN")} vnd</Text>
-        </View>
-      </View>
-
-      {/* Payment Section */}
-      <View style={styles.paymentCard}>
-        <View style={styles.paymentHeader}>
-          <CreditCard size={24} color="#667eea" strokeWidth={2} />
-          <Text style={styles.paymentTitle}>Thanh toán</Text>
-        </View>
-
-        <View style={styles.walletInfo}>
-          <View style={styles.walletRow}>
-            <Text style={styles.walletLabel}>Số dư hiện tại:</Text>
-            <Text style={styles.walletAmount}>{userCoins} xu</Text>
-          </View>
-          <View style={styles.walletRow}>
-            <Text style={styles.walletLabel}>Chi phí đặt lịch:</Text>
-            <Text style={styles.walletCost}>-{bookingCost} xu</Text>
-          </View>
-          <View style={styles.walletDivider} />
-          <View style={styles.walletRow}>
-            <Text style={styles.walletLabelBold}>
-              Số dư sau thanh toán:
-            </Text>
-            <Text
-              style={[
-                styles.walletRemaining,
-                userCoins >= bookingCost
-                  ? styles.walletRemainingSuccess
-                  : styles.walletRemainingError,
-              ]}
-            >
-              {userCoins - bookingCost} xu
-            </Text>
-          </View>
-        </View>
-
-        {userCoins < bookingCost && (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>
-              ❌ Số dư không đủ! Vui lòng nạp thêm{" "}
-              {(bookingCost - userCoins).toLocaleString("vi-VN")} vnd
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* Policy Confirmation */}
@@ -218,6 +175,10 @@ export default function Step4({
             onPress={() => {
               const allPolicyIds = policies.map(p => p.id);
               setAcceptedPolicies(new Set(allPolicyIds));
+              // Force update parent immediately
+              if (onPoliciesAcceptedChange) {
+                onPoliciesAcceptedChange(true);
+              }
             }}
           >
             <CheckCircle size={18} color="#ffffff" strokeWidth={2} />
@@ -250,20 +211,6 @@ export default function Step4({
         </View>
       </View>
 
-      {/* Payment Block Warning */}
-      {(!allPoliciesAccepted || userCoins < bookingCost) && (
-        <View style={styles.blockWarning}>
-          <AlertTriangle size={20} color="#ef4444" strokeWidth={2} />
-          <Text style={styles.blockWarningText}>
-            {!allPoliciesAccepted && userCoins >= bookingCost
-              ? "Vui lòng chấp nhận tất cả chính sách để tiếp tục"
-              : userCoins < bookingCost
-                ? "Số dư không đủ để thanh toán"
-                : "Vui lòng chấp nhận chính sách và đảm bảo đủ số dư"
-            }
-          </Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -324,8 +271,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#e2e8f0",
     marginVertical: 8,
   },
+  costBreakdown: {
+    gap: 8,
+  },
+  costDivider: {
+    height: 1,
+    backgroundColor: "#e2e8f0",
+    marginVertical: 8,
+  },
   summaryPrice: {
-    fontSize: 20,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  summaryLabelTotal: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#1e293b",
+  },
+  summaryPriceTotal: {
+    fontSize: 18,
     fontWeight: "800",
     color: "#667eea",
   },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Alert,
   StatusBar,
   Modal,
+  Keyboard,
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -17,8 +18,7 @@ import { ArrowLeft } from "lucide-react-native";
 export default function OTPScreen() {
   const router = useRouter();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [timeLeft, setTimeLeft] = useState(120); // 2 minutes
-  const [canResend, setCanResend] = useState(false);
+  const [canResend, setCanResend] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [modalConfig, setModalConfig] = useState({
     title: "",
@@ -27,16 +27,6 @@ export default function OTPScreen() {
     confirmText: "OK",
   });
   const inputRefs = useRef<TextInput[]>([]);
-
-  // Countdown timer
-  useEffect(() => {
-    if (timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else {
-      setCanResend(true);
-    }
-  }, [timeLeft]);
 
   const handleOtpChange = (value: string, index: number) => {
     if (value.length > 1) return; // Only allow single digit
@@ -48,6 +38,11 @@ export default function OTPScreen() {
     // Auto focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
+    }
+    
+    // Hide keyboard when all 6 digits are filled
+    if (newOtp.every(digit => digit !== "")) {
+      Keyboard.dismiss();
     }
   };
 
@@ -116,8 +111,6 @@ export default function OTPScreen() {
 
   const handleResendOTP = () => {
     if (canResend) {
-      setTimeLeft(120);
-      setCanResend(false);
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
       showCustomAlert("Thành công", "Mã OTP mới đã được gửi", () =>
@@ -128,12 +121,6 @@ export default function OTPScreen() {
 
   const handleBack = () => {
     router.back();
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   return (
@@ -182,14 +169,10 @@ export default function OTPScreen() {
         {/* Resend Code */}
         <View style={styles.resendContainer}>
           <Text style={styles.resendText}>Bạn không nhận được mã ?</Text>
-          {canResend ? (
+          {canResend && (
             <TouchableOpacity onPress={handleResendOTP}>
               <Text style={styles.resendButton}>Gửi lại mã</Text>
             </TouchableOpacity>
-          ) : (
-            <Text style={styles.timerText}>
-              Yêu cầu sau {formatTime(timeLeft)}
-            </Text>
           )}
         </View>
 
@@ -298,11 +281,6 @@ const styles = StyleSheet.create({
     color: "#70E000",
     fontWeight: "600",
     textDecorationLine: "underline",
-  },
-  timerText: {
-    fontSize: 16,
-    color: "#70E000",
-    fontWeight: "600",
   },
   buttonContainer: {
     marginTop: "auto",

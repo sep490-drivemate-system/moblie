@@ -22,7 +22,7 @@ const formatTime = (time: string) => {
   return time.replace(':', 'h');
 };
 
-// Generate available time slots (6:00 - 22:00 in 1 hour intervals)
+
 const generateTimeSlots = () => {
   const slots = [];
   for (let hour = 6; hour <= 22; hour++) {
@@ -31,7 +31,6 @@ const generateTimeSlots = () => {
   return slots;
 };
 
-// Check if time slot is available (not in busy times)
 const isTimeSlotAvailable = (time: string, busySlots: BusyTime[]): boolean => {
   if (!busySlots || busySlots.length === 0) return true;
 
@@ -292,11 +291,8 @@ export default function Step1({
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <CalendarIcon size={24} color={AppColors.primary} strokeWidth={2} />
-        <Text style={styles.sectionTitle}>Chọn ngày học</Text>
+        <Text style={styles.sectionTitle}>Chọn ngày thuê</Text>
       </View>
-      <Text style={styles.sectionDesc}>
-        Chọn ngày và thời gian phù hợp với bạn
-      </Text>
 
       {/* Calendar */}
       {renderCalendar()}
@@ -467,12 +463,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#1e293b",
   },
-  sectionDesc: {
-    fontSize: 14,
-    color: "#64748b",
-    marginBottom: 20,
-    lineHeight: 20,
-  },
+
   calendarContainer: {
     marginBottom: 16,
   },
@@ -670,14 +661,14 @@ const styles = StyleSheet.create({
   legend: {
     flexDirection: "row",
     justifyContent: "center",
-    paddingVertical: 12,
+    paddingVertical: 10,
     marginTop: 16,
     borderRadius: 8,
   },
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 16,
+    marginHorizontal: 10,
   },
   customTimeSection: {
     marginBottom: 20,

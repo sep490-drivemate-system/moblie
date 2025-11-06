@@ -19,6 +19,7 @@ export default function TransactionSuccessScreen() {
   const params = useLocalSearchParams<{
     instructorId: string;
     packageId: string;
+    vehicleId?: string;
   }>();
 
   const instructor = instructorsData.find((i) => i.id === params.instructorId);
@@ -31,28 +32,23 @@ export default function TransactionSuccessScreen() {
       params: {
         instructorId: params.instructorId,
         packageId: params.packageId,
-        vehicleId: "",
+        vehicleId: params.vehicleId || "",
       },
     });
   };
 
-  const handleBackToPackages = () => {
-    router.replace("/(main)/(no-tabs)/my-packages");
+  const handleBackToInstructor = () => {
+    router.push({
+      pathname: "/(main)/(no-tabs)/instructor-detail",
+      params: {
+        instructorId: params.instructorId,
+      },
+    });
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-
-      {/* Header Gradient */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleBackToPackages}
-        >
-          <ArrowLeft size={24} color="#ffffff" strokeWidth={2} />
-        </TouchableOpacity>
-      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -70,55 +66,10 @@ export default function TransactionSuccessScreen() {
         <View style={styles.messageContainer}>
           <Text style={styles.successTitle}>Giao dịch thành công!</Text>
           <Text style={styles.successSubtitle}>
-            Bạn đã mua gói học thành công
+            Bạn đã mua gói thuê thành công
           </Text>
         </View>
 
-        {/* Transaction Details Card */}
-        <View style={styles.detailsCard}>
-          <View style={styles.cardHeader}>
-            <Package size={24} color={AppColors.primary} strokeWidth={2} />
-            <Text style={styles.cardTitle}>Chi tiết gói học</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Giảng viên:</Text>
-            <View style={styles.instructorRow}>
-              <Image
-                source={{ uri: instructor?.avatar || "https://i.pravatar.cc/150?img=1" }}
-                style={styles.instructorAvatar}
-              />
-              <Text style={styles.detailValue}>{instructor?.name || "N/A"}</Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Gói học:</Text>
-            <Text style={styles.detailValue} numberOfLines={2}>
-              {pkg?.name || "N/A"}
-            </Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Thời lượng:</Text>
-            <Text style={styles.detailValue}>
-              {pkg?.duration || "N/A"} giờ
-            </Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Giá:</Text>
-            <Text style={styles.priceValue}>
-              {pkg?.basePrice ? pkg.basePrice.toLocaleString("vi-VN") : "N/A"} đ
-            </Text>
-          </View>
-        </View>
 
         {/* Next Steps */}
         <View style={styles.nextStepsCard}>
@@ -126,7 +77,7 @@ export default function TransactionSuccessScreen() {
           <View style={styles.stepItem}>
             <Calendar size={20} color={AppColors.primary} strokeWidth={2} />
             <Text style={styles.stepText}>
-              Đặt lịch học ngay để bắt đầu sử dụng gói học của bạn
+              Đặt lịch thuê ngay để bắt đầu sử dụng gói thuê của bạn
             </Text>
           </View>
           <View style={styles.stepItem}>
@@ -141,21 +92,21 @@ export default function TransactionSuccessScreen() {
       {/* Bottom Actions */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity
+          style={styles.backButtonBottom}
+          onPress={handleBackToInstructor}
+          activeOpacity={0.8}
+        >
+          <ArrowLeft size={18} color={AppColors.primary} strokeWidth={2} />
+          <Text style={styles.backButtonText}>Quay lại</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={styles.bookButton}
           onPress={handleBookNow}
           activeOpacity={0.9}
         >
           <Calendar size={20} color="#ffffff" strokeWidth={2} />
           <Text style={styles.bookButtonText}>Đặt lịch ngay</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.backButtonBottom}
-          onPress={handleBackToPackages}
-          activeOpacity={0.8}
-        >
-          <ArrowLeft size={18} color={AppColors.primary} strokeWidth={2} />
-          <Text style={styles.backButtonText}>Quay lại</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -339,16 +290,36 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  backButtonBottom: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: AppColors.borderLight,
+    backgroundColor: "#ffffff",
+  },
+  backButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: AppColors.primary,
   },
   bookButton: {
+    flex: 2,
     backgroundColor: AppColors.primary,
-    borderRadius: 16,
-    paddingVertical: 16,
+    borderRadius: 12,
+    paddingVertical: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    marginBottom: 12,
     shadowColor: AppColors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -359,18 +330,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: "#ffffff",
-  },
-  backButtonBottom: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-  },
-  backButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: AppColors.primary,
   },
 });
 

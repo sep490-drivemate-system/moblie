@@ -15,17 +15,12 @@ import {
   Calendar,
   Clock,
   MapPin,
-  User,
   CheckCircle,
   AlertCircle,
-  Route,
   Eye,
   X,
   Check,
   FileText,
-  MessageCircle,
-  Star,
-  XCircle,
   Navigation,
 } from 'lucide-react-native';
 import { IDrivingSession } from '@/models/package/user-package';
@@ -391,9 +386,7 @@ export default function RentalScreen() {
                     )}
                   </View>
 
-                  {/* Action Buttons */}
-                  <View style={styles.actionButtons}>
-                    {/* Xét lộ trình button - Show for requested and pending_confirmation */}
+                  <View style={styles.actionButtons}>                  
                     {(session.status === 'requested' || session.status === 'pending_confirmation') && !session.hasRoute && (
                       <TouchableOpacity
                         style={[styles.actionButton, styles.routeButton]}

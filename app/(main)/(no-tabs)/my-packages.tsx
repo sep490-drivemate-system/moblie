@@ -56,20 +56,17 @@ export default function MyPackagesScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => router.push("/(main)/(tabs)/home")}
         >
           <ArrowLeft size={24} color="#ffffff" strokeWidth={2.5} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Gói Đã Mua</Text>
-          <Text style={styles.headerSubtitle}>
-            {userPackagesData.length} gói đã mua
-          </Text>
         </View>
       </View>
 
@@ -115,28 +112,9 @@ export default function MyPackagesScreen() {
                       <Text style={styles.instructorName}>
                         {pkg.instructorName}
                       </Text>
-                      <View
-                        style={[
-                          styles.statusBadge,
-                          {
-                            backgroundColor: statusColor + "15",
-                            borderColor: statusColor,
-                          },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.statusDot,
-                            { backgroundColor: statusColor },
-                          ]}
-                        />
-                        <Text style={[styles.statusText, { color: statusColor }]}>
-                          {getStatusText(pkg.status)}
-                        </Text>
-                      </View>
+
                     </View>
                   </View>
-                  <ChevronRight size={20} color="#94a3b8" strokeWidth={2} />
                 </View>
 
                 {/* Package Name */}
@@ -166,8 +144,8 @@ export default function MyPackagesScreen() {
                               pkg.status === "completed"
                                 ? "#64748b"
                                 : pkg.status === "expired"
-                                ? "#ef4444"
-                                : AppColors.primary,
+                                  ? "#ef4444"
+                                  : AppColors.primary,
                           },
                         ]}
                       />
@@ -206,24 +184,6 @@ export default function MyPackagesScreen() {
                   </View>
                 </View>
 
-                {/* Info Row */}
-                <View style={styles.infoRow}>
-                  <View style={styles.infoItem}>
-                    <Calendar size={16} color="#64748b" strokeWidth={2} />
-                    <Text style={styles.infoText}>
-                      {pkg.sessions.length} buổi học
-                    </Text>
-                  </View>
-                  <View style={styles.infoItem}>
-                    <TrendingUp size={16} color="#64748b" strokeWidth={2} />
-                    <Text style={styles.infoText}>
-                      Mua {new Date(pkg.purchaseDate).toLocaleDateString("vi-VN", {
-                        day: "2-digit",
-                        month: "short",
-                      })}
-                    </Text>
-                  </View>
-                </View>
 
                 {/* Footer */}
                 <View style={styles.cardFooter}>
@@ -267,7 +227,11 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   headerContent: {
-    flex: 1,
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTitle: {
     fontSize: 24,

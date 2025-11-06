@@ -49,11 +49,7 @@ export default function Step3({
 }: Step3Props) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>📍 Chọn địa điểm đón</Text>
-      <Text style={styles.sectionDesc}>
-        Địa điểm đón và trả sẽ là cùng một vị trí. Vui lòng chọn một địa điểm từ
-        danh sách bên dưới.
-      </Text>
+      <Text style={styles.sectionTitle}>Chọn địa điểm đón</Text>
 
       <View style={styles.locationNote}>
         <Text style={styles.locationNoteText}>
@@ -76,7 +72,7 @@ export default function Step3({
               style={[
                 styles.locationItemText,
                 selectedLocationId === location.id &&
-                  styles.locationItemTextSelected,
+                styles.locationItemTextSelected,
               ]}
             >
               {location.name}

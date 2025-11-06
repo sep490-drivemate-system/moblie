@@ -10,10 +10,6 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
     async (config) => {
-        console.log("🚀 REQUEST CONFIG baseURL:", config.baseURL);
-        console.log("🚀 REQUEST CONFIG url:", config.url);
-        console.log("🚀 REQUEST CONFIG method:", config.method);
-        console.log("🚀 REQUEST CONFIG headers:", config.headers);
         const token = await AsyncStorage.getItem(
             process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token'
         );

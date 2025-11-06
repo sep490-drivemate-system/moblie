@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Location from 'expo-location';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapViewDirections from 'react-native-maps-directions';
 import {
   ArrowLeft,
   Plus,
@@ -25,12 +26,9 @@ import {
   Clock,
   Route as RouteIcon,
   Loader,
-  RefreshCw,
-  Info,
   Maximize2,
   Minimize2,
-  List,
-  ChevronRight,
+  Info,
 } from 'lucide-react-native';
 import { AppColors } from '@/constants/Colors';
 
@@ -59,18 +57,6 @@ export default function RoutePlanningScreen() {
 
   const mapRef = useRef<MapView>(null);
 
-  // Log API key for debugging (only first 10 chars for security)
-  useEffect(() => {
-    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_KEY || '';
-    console.log('🔑 Google API Key Status:', {
-      hasKey: !!apiKey && apiKey !== '',
-      keyLength: apiKey.length,
-      keyPreview: apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT SET',
-      fullKey: apiKey // Log full key for debugging (remove in production)
-    });
-  }, []);
-
-  // Initial pickup location (Ho Chi Minh City center)
   const [pickupLocation, setPickupLocation] = useState<Waypoint>({
     id: 'pickup',
     name: params.pickupLocation || 'Điểm đón',
@@ -79,20 +65,16 @@ export default function RoutePlanningScreen() {
   });
 
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
-  const [routeCoordinates, setRouteCoordinates] = useState<Array<{ latitude: number; longitude: number }>>([]);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [isSelectingLocation, setIsSelectingLocation] = useState<'pickup' | 'waypoint' | null>(null);
   const [newWaypointName, setNewWaypointName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showDirections, setShowDirections] = useState(false);
-  const [routeSteps, setRouteSteps] = useState<string[]>([]);
-  const [outboundRoute, setOutboundRoute] = useState<Array<{ latitude: number; longitude: number }>>([]);
-  const [returnRoute, setReturnRoute] = useState<Array<{ latitude: number; longitude: number }>>([]);
   const [outboundDistance, setOutboundDistance] = useState(0);
   const [returnDistance, setReturnDistance] = useState(0);
 
-  // Get current location
+  const GOOGLE_MAPS_APIKEY = process.env.EXPO_PUBLIC_GOOGLE_KEY || '';
+
   const getCurrentLocation = async () => {
     try {
       setIsLoading(true);
@@ -155,34 +137,7 @@ export default function RoutePlanningScreen() {
   };
 
 
-  // Generate route steps/directions - separated into outbound and return
-  const generateRouteSteps = (): string[] => {
-    const steps: string[] = [];
-
-    // Outbound route (Đi)
-    steps.push(`🚀 BẮT ĐẦU - ${pickupLocation.name}`);
-
-    let totalOutbound = 0;
-    waypoints.forEach((wp, index) => {
-      const distance = index === 0
-        ? calculatePointDistance(pickupLocation, wp)
-        : calculatePointDistance(waypoints[index - 1], wp);
-      totalOutbound += distance;
-      steps.push(`  → Điểm ${index + 1}: ${wp.name} (${formatDistance(distance)})`);
-    });
-
-    // Return route (Về)
-    const lastWaypoint = waypoints[waypoints.length - 1];
-    const returnDist = lastWaypoint
-      ? calculatePointDistance(lastWaypoint, pickupLocation)
-      : 0;
-
-    steps.push(`\n🔄 QUAY VỀ - ${pickupLocation.name}`);
-    steps.push(`  → Trở về điểm đón (${formatDistance(returnDist)})`);
-
-    return steps;
-  };
-
+  // Helper: Calculate distance between two points (Haversine formula)
   const calculatePointDistance = (point1: Waypoint, point2: Waypoint): number => {
     const R = 6371e3;
     const φ1 = (point1.latitude * Math.PI) / 180;
@@ -198,371 +153,6 @@ export default function RoutePlanningScreen() {
     return R * c;
   };
 
-  // Decode polyline from Google Directions API
-  const decodePolyline = (encoded: string): Array<{ latitude: number; longitude: number }> => {
-    const poly = [];
-    let index = 0;
-    const len = encoded.length;
-    let lat = 0;
-    let lng = 0;
-
-    while (index < len) {
-      let b;
-      let shift = 0;
-      let result = 0;
-      do {
-        b = encoded.charCodeAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      const dlat = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
-      lat += dlat;
-
-      shift = 0;
-      result = 0;
-      do {
-        b = encoded.charCodeAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      const dlng = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
-      lng += dlng;
-
-      poly.push({
-        latitude: lat * 1e-5,
-        longitude: lng * 1e-5,
-      });
-    }
-
-    return poly;
-  };
-
-  // Generate smooth curved route between two points with more segments for smoother curve
-  const generateSmoothRoute = (
-    start: Waypoint,
-    end: Waypoint,
-    segments: number = 50 // More segments for smoother curve
-  ): Array<{ latitude: number; longitude: number }> => {
-    const route: Array<{ latitude: number; longitude: number }> = [];
-
-    const distance = calculatePointDistance(start, end);
-    const numSegments = Math.max(20, Math.min(segments, Math.floor(distance / 50))); // Adaptive segments based on distance
-
-    // Calculate bearing (direction) for more realistic curve
-    const lat1 = (start.latitude * Math.PI) / 180;
-    const lat2 = (end.latitude * Math.PI) / 180;
-    const dLon = ((end.longitude - start.longitude) * Math.PI) / 180;
-
-    const y = Math.sin(dLon) * Math.cos(lat2);
-    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-    const bearing = Math.atan2(y, x);
-
-    // Generate intermediate points with smooth curve
-    for (let i = 0; i <= numSegments; i++) {
-      const t = i / numSegments;
-
-      // Linear interpolation
-      const latDiff = end.latitude - start.latitude;
-      const lngDiff = end.longitude - start.longitude;
-
-      // Add curve using sine wave for natural road appearance
-      // Curve intensity based on distance
-      const curveIntensity = Math.min(distance * 0.00015, 0.005); // Max 0.005 degrees offset
-      const curvePhase = t * Math.PI;
-
-      // Perpendicular offset to create curve
-      const perpLat = Math.sin(bearing + Math.PI / 2) * Math.sin(curvePhase) * curveIntensity;
-      const perpLng = Math.cos(bearing + Math.PI / 2) * Math.sin(curvePhase) * curveIntensity;
-
-      const latitude = start.latitude + latDiff * t + perpLat;
-      const longitude = start.longitude + lngDiff * t + perpLng;
-
-      route.push({ latitude, longitude });
-    }
-
-    return route;
-  };
-
-  // Fetch route from Google Directions API or use smooth mock route
-  const fetchRouteWithDirections = async (
-    origin: Waypoint,
-    destination: Waypoint,
-    waypointsList: Waypoint[] = []
-  ): Promise<Array<{ latitude: number; longitude: number }>> => {
-    try {
-      // Option 1: Try Google Directions API (if API key is available)
-      // Note: Set EXPO_PUBLIC_GOOGLE_KEY in your .env file for real routes
-      const apiKey = process.env.EXPO_PUBLIC_GOOGLE_KEY || '';
-      console.log('🔑 API Key in fetchRouteWithDirections:', {
-        hasKey: !!apiKey && apiKey !== '',
-        keyLength: apiKey.length,
-        keyPreview: apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT SET',
-        fullKey: apiKey // Log full key for debugging
-      });
-
-      if (apiKey && apiKey !== '' && apiKey !== 'YOUR_GOOGLE_KEY') {
-        // Build waypoints string for Google Directions API
-        const waypointsStr = waypointsList
-          .map(wp => `${wp.latitude},${wp.longitude}`)
-          .join('|');
-
-        // Construct URL with proper encoding
-        const originStr = `${origin.latitude},${origin.longitude}`;
-        const destStr = `${destination.latitude},${destination.longitude}`;
-        const waypointsParam = waypointsList.length > 0
-          ? `&waypoints=${encodeURIComponent(waypointsStr)}`
-          : '';
-
-        const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${originStr}&destination=${destStr}${waypointsParam}&key=${apiKey}&language=vi&units=metric`;
-
-        console.log('📍 Fetching route from Google Directions API...');
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data.status === 'OK' && data.routes && data.routes.length > 0) {
-          const route = data.routes[0];
-          const polyline = route.overview_polyline.points;
-          const decoded = decodePolyline(polyline);
-          console.log('✅ Successfully decoded route with', decoded.length, 'points');
-          return decoded;
-        } else {
-          console.warn('⚠️ Google Directions API response:', data.status, data.error_message || '');
-          throw new Error(data.error_message || `API returned status: ${data.status}`);
-        }
-      } else {
-        console.log('ℹ️ Google API key not found, using mock route');
-      }
-
-      // Option 2: Generate smooth curved route through waypoints (mock for demo)
-      // This creates a curved path that looks more like a real road
-      const allPoints = [origin, ...waypointsList, destination];
-      const smoothRoute: Array<{ latitude: number; longitude: number }> = [];
-
-      for (let i = 0; i < allPoints.length - 1; i++) {
-        const segment = generateSmoothRoute(allPoints[i], allPoints[i + 1], 50);
-        if (i === 0) {
-          smoothRoute.push(...segment);
-        } else {
-          // Skip first point to avoid duplicates
-          smoothRoute.push(...segment.slice(1));
-        }
-      }
-
-      return smoothRoute.length > 0 ? smoothRoute : [origin, destination].map(p => ({
-        latitude: p.latitude,
-        longitude: p.longitude
-      }));
-    } catch (error) {
-      console.error('Error fetching route:', error);
-      // Fallback: return smooth route
-      const allPoints = [origin, ...waypointsList, destination];
-      const fallbackRoute: Array<{ latitude: number; longitude: number }> = [];
-
-      for (let i = 0; i < allPoints.length - 1; i++) {
-        const segment = generateSmoothRoute(allPoints[i], allPoints[i + 1]);
-        if (i === 0) {
-          fallbackRoute.push(...segment);
-        } else {
-          fallbackRoute.push(...segment.slice(1));
-        }
-      }
-
-      return fallbackRoute.length > 0 ? fallbackRoute : allPoints.map(p => ({
-        latitude: p.latitude,
-        longitude: p.longitude
-      }));
-    }
-  };
-
-  // Fetch route from Google Directions API
-  const fetchRoute = async () => {
-    if (waypoints.length === 0) {
-      setRouteCoordinates([]);
-      setOutboundRoute([]);
-      setReturnRoute([]);
-      setRouteInfo(null);
-      setRouteSteps([]);
-      setOutboundDistance(0);
-      setReturnDistance(0);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Try to fetch route info from Google Directions API
-      const apiKey = process.env.EXPO_PUBLIC_GOOGLE_KEY || '';
-      console.log('🔑 API Key in fetchRoute:', {
-        hasKey: !!apiKey && apiKey !== '',
-        keyLength: apiKey.length,
-        keyPreview: apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT SET',
-        fullKey: apiKey // Log full key for debugging
-      });
-
-      let totalDistance = 0;
-      let totalDuration = 0;
-      let outDist = 0;
-      let retDist = 0;
-
-      if (apiKey && apiKey !== '' && apiKey !== 'YOUR_GOOGLE_KEY' && waypoints.length > 0) {
-        try {
-          // Fetch outbound route info
-          const waypointsStr = waypoints
-            .slice(0, -1)
-            .map(wp => `${wp.latitude},${wp.longitude}`)
-            .join('|');
-
-          const originStr = `${pickupLocation.latitude},${pickupLocation.longitude}`;
-          const destStr = `${waypoints[waypoints.length - 1].latitude},${waypoints[waypoints.length - 1].longitude}`;
-          const waypointsParam = waypoints.length > 1
-            ? `&waypoints=${encodeURIComponent(waypointsStr)}`
-            : '';
-
-          const outboundUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${originStr}&destination=${destStr}${waypointsParam}&key=${apiKey}&language=vi&units=metric`;
-
-          const outboundResponse = await fetch(outboundUrl);
-          const outboundData = await outboundResponse.json();
-
-          if (outboundData.status === 'OK' && outboundData.routes && outboundData.routes.length > 0) {
-            const route = outboundData.routes[0];
-            const leg = route.legs[0];
-            outDist = leg.distance.value; // in meters
-            totalDistance += outDist;
-            totalDuration += leg.duration.value; // in seconds
-          }
-
-          // Fetch return route info
-          const returnUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${destStr}&destination=${originStr}&key=${apiKey}&language=vi&units=metric`;
-
-          const returnResponse = await fetch(returnUrl);
-          const returnData = await returnResponse.json();
-
-          if (returnData.status === 'OK' && returnData.routes && returnData.routes.length > 0) {
-            const route = returnData.routes[0];
-            const leg = route.legs[0];
-            retDist = leg.distance.value; // in meters
-            totalDistance += retDist;
-            totalDuration += leg.duration.value; // in seconds
-          }
-        } catch (error) {
-          console.warn('⚠️ Failed to fetch route info from API, using calculated values:', error);
-          // Fallback to calculated values
-          totalDistance = calculateDistance(pickupLocation, waypoints);
-          totalDuration = Math.round(totalDistance / 1000 * 120); // Estimate: 2 min per km
-
-          let prevPoint = pickupLocation;
-          for (const waypoint of waypoints) {
-            outDist += calculatePointDistance(prevPoint, waypoint);
-            prevPoint = waypoint;
-          }
-          retDist = calculatePointDistance(waypoints[waypoints.length - 1], pickupLocation);
-        }
-      } else {
-        // Use calculated values if no API key
-        totalDistance = calculateDistance(pickupLocation, waypoints);
-        totalDuration = Math.round(totalDistance / 1000 * 120); // Estimate: 2 min per km
-
-        let prevPoint = pickupLocation;
-        for (const waypoint of waypoints) {
-          outDist += calculatePointDistance(prevPoint, waypoint);
-          prevPoint = waypoint;
-        }
-        retDist = calculatePointDistance(waypoints[waypoints.length - 1], pickupLocation);
-      }
-
-      setRouteInfo({
-        distance: formatDistance(totalDistance),
-        duration: formatDuration(totalDuration),
-        distanceValue: totalDistance,
-        durationValue: totalDuration,
-      });
-
-      setOutboundDistance(outDist);
-      setReturnDistance(retDist);
-
-      // Generate route steps
-      const steps = generateRouteSteps();
-      setRouteSteps(steps);
-
-      // Fetch actual route coordinates with waypoints
-      const outboundCoords = await fetchRouteWithDirections(
-        pickupLocation,
-        waypoints[waypoints.length - 1],
-        waypoints.slice(0, -1) // All waypoints except the last one
-      );
-
-      // Fetch return route coordinates
-      const returnCoords = waypoints.length > 0
-        ? await fetchRouteWithDirections(
-          waypoints[waypoints.length - 1],
-          pickupLocation,
-          []
-        )
-        : [];
-
-      setOutboundRoute(outboundCoords);
-      setReturnRoute(returnCoords);
-
-      // Keep total route for backward compatibility
-      setRouteCoordinates([
-        ...outboundCoords,
-        ...returnCoords,
-      ]);
-
-      // Fit map to show all markers
-      if (mapRef.current) {
-        const allPoints = [pickupLocation, ...waypoints];
-        mapRef.current.fitToCoordinates(
-          allPoints.map(p => ({ latitude: p.latitude, longitude: p.longitude })),
-          {
-            edgePadding: { top: 150, right: 50, bottom: isFullscreen ? 100 : 300, left: 50 },
-            animated: true,
-          }
-        );
-      }
-    } catch (error) {
-      console.error('Error fetching route:', error);
-      Alert.alert('Lỗi', 'Không thể tải lộ trình. Vui lòng thử lại.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Calculate distance between points (Haversine formula)
-  const calculateDistance = (start: Waypoint, waypoints: Waypoint[]): number => {
-    const R = 6371e3; // Earth radius in meters
-    let totalDistance = 0;
-    let previousPoint = start;
-
-    for (const waypoint of waypoints) {
-      const φ1 = (previousPoint.latitude * Math.PI) / 180;
-      const φ2 = (waypoint.latitude * Math.PI) / 180;
-      const Δφ = ((waypoint.latitude - previousPoint.latitude) * Math.PI) / 180;
-      const Δλ = ((waypoint.longitude - previousPoint.longitude) * Math.PI) / 180;
-
-      const a =
-        Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-      totalDistance += R * c;
-      previousPoint = waypoint;
-    }
-
-    // Distance back to start
-    const φ1 = (previousPoint.latitude * Math.PI) / 180;
-    const φ2 = (start.latitude * Math.PI) / 180;
-    const Δφ = ((start.latitude - previousPoint.latitude) * Math.PI) / 180;
-    const Δλ = ((start.longitude - previousPoint.longitude) * Math.PI) / 180;
-
-    const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    totalDistance += R * c;
-
-    return totalDistance;
-  };
 
   const formatDistance = (meters: number): string => {
     if (meters < 1000) return `${Math.round(meters)}m`;
@@ -577,14 +167,6 @@ export default function RoutePlanningScreen() {
     return `${minutes} phút`;
   };
 
-  useEffect(() => {
-    if (waypoints.length > 0) {
-      fetchRoute();
-    } else {
-      setRouteCoordinates([]);
-      setRouteInfo(null);
-    }
-  }, [waypoints, pickupLocation]);
 
   const handleMapPress = async (event: any) => {
     console.log('🗺️ Map pressed, isSelectingLocation:', isSelectingLocation);
@@ -748,33 +330,99 @@ export default function RoutePlanningScreen() {
                 ));
               }}
             />
-          ))}
-
-          {/* Outbound Route Polyline (Đi) */}
-          {outboundRoute.length > 1 && (
-            <Polyline
-              coordinates={outboundRoute}
-              strokeColor={AppColors.primary}
+          ))}    
+          {waypoints.length > 0 && GOOGLE_MAPS_APIKEY && (
+            <MapViewDirections
+              origin={{
+                latitude: pickupLocation.latitude,
+                longitude: pickupLocation.longitude,
+              }}
+              destination={{
+                latitude: waypoints[waypoints.length - 1].latitude,
+                longitude: waypoints[waypoints.length - 1].longitude,
+              }}
+              waypoints={waypoints.slice(0, -1).map(wp => ({
+                latitude: wp.latitude,
+                longitude: wp.longitude,
+              }))}
+              apikey={GOOGLE_MAPS_APIKEY}
               strokeWidth={6}
-              lineDashPattern={[10, 5]}
-              geodesic={true}
+              strokeColor={AppColors.primary}
+              optimizeWaypoints={true}
+              precision="high"
+              onReady={(result) => {
+                console.log('📍 Outbound route ready:', {
+                  distance: `${result.distance.toFixed(2)} km`,
+                  duration: `${Math.round(result.duration)} phút`,
+                });
+                setOutboundDistance(result.distance * 1000);
+                
+                // Update total route info
+                const totalDist = result.distance * 1000 + returnDistance;
+                const totalDur = result.duration * 60 + (returnDistance / 1000 * 120);
+                setRouteInfo({
+                  distance: formatDistance(totalDist),
+                  duration: formatDuration(totalDur),
+                  distanceValue: totalDist,
+                  durationValue: totalDur,
+                });
+
+                // Fit map to route
+                if (mapRef.current) {
+                  mapRef.current.fitToCoordinates(result.coordinates, {
+                    edgePadding: { top: 150, right: 50, bottom: isFullscreen ? 100 : 300, left: 50 },
+                    animated: true,
+                  });
+                }
+              }}
+              onError={(errorMessage) => {
+                console.error('❌ Outbound route error:', errorMessage);
+              }}
             />
           )}
 
-          {/* Return Route Polyline (Về) */}
-          {returnRoute.length > 1 && (
-            <Polyline
-              coordinates={returnRoute}
-              strokeColor="#f59e0b"
+          {/* Return Route with MapViewDirections (Về) */}
+          {waypoints.length > 0 && GOOGLE_MAPS_APIKEY && (
+            <MapViewDirections
+              origin={{
+                latitude: waypoints[waypoints.length - 1].latitude,
+                longitude: waypoints[waypoints.length - 1].longitude,
+              }}
+              destination={{
+                latitude: pickupLocation.latitude,
+                longitude: pickupLocation.longitude,
+              }}
+              apikey={GOOGLE_MAPS_APIKEY}
               strokeWidth={6}
+              strokeColor="#f59e0b"
               lineDashPattern={[5, 10]}
-              geodesic={true}
+              precision="high"
+              onReady={(result) => {
+                console.log('📍 Return route ready:', {
+                  distance: `${result.distance.toFixed(2)} km`,
+                  duration: `${Math.round(result.duration)} phút`,
+                });
+                setReturnDistance(result.distance * 1000);
+                
+                // Update total route info
+                const totalDist = outboundDistance + result.distance * 1000;
+                const totalDur = (outboundDistance / 1000 * 120) + result.duration * 60;
+                setRouteInfo({
+                  distance: formatDistance(totalDist),
+                  duration: formatDuration(totalDur),
+                  distanceValue: totalDist,
+                  durationValue: totalDur,
+                });
+              }}
+              onError={(errorMessage) => {
+                console.error('❌ Return route error:', errorMessage);
+              }}
             />
           )}
         </MapView>
 
         {/* Route Legend */}
-        {(outboundRoute.length > 1 || returnRoute.length > 1) && (
+        {waypoints.length > 0 && (
           <View style={styles.routeLegend}>
             <View style={styles.legendItem}>
               <View style={[styles.legendLine, styles.legendLineOutbound]} />
@@ -802,12 +450,6 @@ export default function RoutePlanningScreen() {
               <MapPin size={18} color={AppColors.primary} strokeWidth={2} />
               <Text style={styles.routeInfoText}>{waypoints.length} điểm</Text>
             </View>
-            <TouchableOpacity
-              style={styles.directionsButton}
-              onPress={() => setShowDirections(!showDirections)}
-            >
-              <List size={16} color={AppColors.primary} strokeWidth={2} />
-            </TouchableOpacity>
           </View>
         )}
 
@@ -822,74 +464,6 @@ export default function RoutePlanningScreen() {
             <Maximize2 size={20} color="#ffffff" strokeWidth={2} />
           )}
         </TouchableOpacity>
-
-        {/* Route Directions Panel */}
-        {showDirections && routeSteps.length > 0 && (
-          <View style={styles.directionsPanel}>
-            <View style={styles.directionsHeader}>
-              <Text style={styles.directionsTitle}>Lộ trình khứ hồi</Text>
-              <TouchableOpacity
-                onPress={() => setShowDirections(false)}
-                style={styles.directionsCloseButton}
-              >
-                <X size={20} color="#64748b" strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Route Summary */}
-            <View style={styles.routeSummaryInPanel}>
-              <View style={styles.routeSummaryItem}>
-                <View style={styles.routeSummaryIconOutbound}>
-                  <RouteIcon size={14} color="#ffffff" strokeWidth={2} />
-                </View>
-                <View style={styles.routeSummaryDetails}>
-                  <Text style={styles.routeSummaryLabel}>Lộ trình đi</Text>
-                  <Text style={styles.routeSummaryValue}>{formatDistance(outboundDistance)}</Text>
-                </View>
-              </View>
-              <View style={styles.routeSummaryItem}>
-                <View style={styles.routeSummaryIconReturn}>
-                  <RouteIcon size={14} color="#ffffff" strokeWidth={2} />
-                </View>
-                <View style={styles.routeSummaryDetails}>
-                  <Text style={styles.routeSummaryLabel}>Lộ trình về</Text>
-                  <Text style={styles.routeSummaryValue}>{formatDistance(returnDistance)}</Text>
-                </View>
-              </View>
-            </View>
-
-            <ScrollView style={styles.directionsList} showsVerticalScrollIndicator={false}>
-              {routeSteps.map((step, index) => {
-                const isSectionHeader = step.startsWith('🚀') || step.startsWith('🔄');
-                const isWaypoint = step.trim().startsWith('→');
-
-                return (
-                  <View key={index} style={[
-                    styles.directionStep,
-                    isSectionHeader && styles.directionStepHeader,
-                    isWaypoint && styles.directionStepWaypoint,
-                  ]}>
-                    {!isSectionHeader && (
-                      <View style={[
-                        styles.stepNumber,
-                        isWaypoint && styles.stepNumberWaypoint,
-                      ]}>
-                        <Text style={styles.stepNumberText}>{index + 1}</Text>
-                      </View>
-                    )}
-                    <Text style={[
-                      styles.stepText,
-                      isSectionHeader && styles.stepTextHeader,
-                      isWaypoint && styles.stepTextWaypoint,
-                    ]}>
-                      {step}
-                    </Text>
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
 
       </View>
 

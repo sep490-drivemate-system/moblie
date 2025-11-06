@@ -17,6 +17,14 @@ import {
   Coins,
   ArrowLeft,
   CreditCard,
+  ChevronDown,
+  ChevronUp,
+  Users,
+  Package,
+  Calendar,
+  MapPin,
+  Clock,
+  Car,
 } from "lucide-react-native";
 // Booking models (if needed later)
 // import { BookingMode, Shift, ShiftType } from "@/models/booking/booking";
@@ -49,20 +57,19 @@ export default function BookingScreen() {
 
   // Step 3: Location
   const [pickupLocation, setPickupLocation] = useState("");
-  const [showLocationModal, setShowLocationModal] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     null
   );
 
-  // Vehicle selection for packages with vehicle
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
 
   // User wallet
   const [userCoins, setUserCoins] = useState(500);
-  const bookingCost = 200;
 
   // Policy acceptance state
   const [allPoliciesAccepted, setAllPoliciesAccepted] = useState(false);
+
+  // Tracking card expand/collapse state
+  const [isTrackingExpanded, setIsTrackingExpanded] = useState(false);
 
   const steps = [
     { number: 1, label: "Ngày & giờ" },
@@ -80,6 +87,18 @@ export default function BookingScreen() {
   const selectedVehicle = vehicleId && vehicleId !== "" ?
     instructorVehicles.find(v => v.id === vehicleId)
     : null;
+
+  // Calculate booking cost: base package price + vehicle cost (if selected)
+  const bookingCost = (() => {
+    const baseCost = selectedPackage?.basePrice || 0;
+    let vehicleCost = 0;
+
+    if (selectedVehicle && selectedVehicle.price && selectedDuration > 0) {
+      vehicleCost = selectedVehicle.price * selectedDuration;
+    }
+
+    return baseCost + vehicleCost;
+  })();
 
   // Update selectedStartTime when time is selected in Step1
   useEffect(() => {
@@ -121,7 +140,8 @@ export default function BookingScreen() {
         setAllPoliciesAccepted(false);
       }
     } else {
-      router.back();
+      // Step 1: Navigate to home
+      router.push("/(main)/(no-tabs)/my-packages");
     }
   };
 
@@ -162,20 +182,11 @@ export default function BookingScreen() {
       <StatusBar barStyle="dark-content" />
 
       {/* Modern Header with Integrated Progress */}
-      <LinearGradient
-        colors={["#10b981", "#059669", "#047857"]}
-        style={styles.modernHeader}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <View
+        style={[styles.modernHeader, { backgroundColor: "#1AD562" }]}
       >
         {/* Header Section */}
         <View style={styles.headerSection}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <ArrowLeft size={24} color="#fff" strokeWidth={2.5} />
-          </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.modernHeaderTitle}>Đặt lịch thuê</Text>
           </View>
@@ -184,7 +195,7 @@ export default function BookingScreen() {
 
         {/* Steps Navigation */}
         <View style={styles.modernStepsContainer}>
-          <View style={styles.stepsRow}>
+          <View style={styles.stepsRowCentered}>
             {steps.map((step, index) => (
               <View key={step.number} style={styles.modernStepWrapper}>
                 <View style={styles.modernStepItem}>
@@ -245,90 +256,179 @@ export default function BookingScreen() {
 
         {/* Curved Bottom */}
         <View style={styles.curvedHeaderBottom} />
-      </LinearGradient>
+      </View>
 
       {/* Tracking Card */}
       <View style={styles.trackingCard}>
-        <View style={styles.trackingHeader}>
+        <TouchableOpacity
+          style={styles.trackingHeader}
+          onPress={() => setIsTrackingExpanded(!isTrackingExpanded)}
+          activeOpacity={0.7}
+        >
           <View style={styles.trackingTitleContainer}>
             <Text style={styles.trackingTitle}>Thông tin đặt lịch</Text>
           </View>
-        </View>
-
-        <View style={styles.trackingContent}>
-          {instructor && (
-            <View style={styles.trackingRow}>
-              <Text style={styles.trackingLabel}>Người hướng dẫn:</Text>
-              <Text style={styles.trackingValue} numberOfLines={1}>
-                {instructor.name}
-              </Text>
-            </View>
+          {isTrackingExpanded ? (
+            <ChevronUp size={20} color="#4338ca" />
+          ) : (
+            <ChevronDown size={20} color="#4338ca" />
           )}
+        </TouchableOpacity>
 
-          {selectedPackage && (
-            <View style={styles.trackingRow}>
-              <Text style={styles.trackingLabel}>Gói thuê:</Text>
-              <Text style={styles.trackingValue} numberOfLines={1}>
-                {selectedPackage.name}
-              </Text>
+        {isTrackingExpanded && (
+          <ScrollView
+            style={styles.trackingContent}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+          >
+            {/* Instructor & Package Info */}
+            <View style={styles.trackingGroup}>
+              {instructor && (
+                <View style={styles.trackingRow}>
+                  <View style={styles.trackingIconContainer}>
+                    <Users size={16} color="#667eea" />
+                  </View>
+                  <View style={styles.trackingInfoContainer}>
+                    <Text style={styles.trackingLabel}>Người hướng dẫn</Text>
+                    <Text style={styles.trackingValue} numberOfLines={1}>
+                      {instructor.name}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {selectedPackage && (
+                <View style={styles.trackingRow}>
+                  <View style={styles.trackingIconContainer}>
+                    <Package size={16} color="#667eea" />
+                  </View>
+                  <View style={styles.trackingInfoContainer}>
+                    <Text style={styles.trackingLabel}>Gói thuê</Text>
+                    <Text style={styles.trackingValue} numberOfLines={1}>
+                      {selectedPackage.name}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {selectedPackage && (
+                <View style={styles.trackingRow}>
+                  <View style={styles.trackingIconContainer}>
+                    <Clock size={16} color="#667eea" />
+                  </View>
+                  <View style={styles.trackingInfoContainer}>
+                    <Text style={styles.trackingLabel}>Thời lượng</Text>
+                    <Text style={styles.trackingValue}>
+                      {selectedPackage.duration} giờ
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {selectedVehicle && (
+                <View style={styles.trackingRow}>
+                  <View style={styles.trackingIconContainer}>
+                    <Car size={16} color="#667eea" />
+                  </View>
+                  <View style={styles.trackingInfoContainer}>
+                    <Text style={styles.trackingLabel}>Xe</Text>
+                    <Text style={styles.trackingValue} numberOfLines={1}>
+                      {selectedVehicle.name}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {!selectedVehicle && vehicleId === "" && (
+                <View style={styles.trackingRow}>
+                  <View style={styles.trackingIconContainer}>
+                    <Car size={16} color="#667eea" />
+                  </View>
+                  <View style={styles.trackingInfoContainer}>
+                    <Text style={styles.trackingLabel}>Xe</Text>
+                    <Text style={styles.trackingValue}>
+                      🚙 Xe riêng
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
-          )}
 
-          {selectedPackage && (
-            <View style={styles.trackingRow}>
-              <Text style={styles.trackingLabel}>Thời lượng:</Text>
-              <Text style={styles.trackingValue}>
-                {selectedPackage.duration} giờ
-              </Text>
+            {/* Schedule Info */}
+            <View style={styles.trackingGroup}>
+              {selectedDate && (
+                <View style={styles.trackingRow}>
+                  <View style={styles.trackingIconContainer}>
+                    <Calendar size={16} color="#667eea" />
+                  </View>
+                  <View style={styles.trackingInfoContainer}>
+                    <Text style={styles.trackingLabel}>Ngày</Text>
+                    <Text style={styles.trackingValue}>
+                      {new Date(selectedDate).toLocaleDateString('vi-VN')}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {selectedTime && selectedDuration > 0 ? (
+                <View style={styles.trackingRow}>
+                  <View style={styles.trackingIconContainer}>
+                    <Clock size={16} color="#667eea" />
+                  </View>
+                  <View style={styles.trackingInfoContainer}>
+                    <Text style={styles.trackingLabel}>Thời gian</Text>
+                    <Text style={styles.trackingValue}>
+                      {selectedTime} - {calculateEndTime(selectedTime, selectedDuration)} ({selectedDuration}h)
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              {pickupLocation && (
+                <View style={styles.trackingRow}>
+                  <View style={styles.trackingIconContainer}>
+                    <MapPin size={16} color="#667eea" />
+                  </View>
+                  <View style={styles.trackingInfoContainer}>
+                    <Text style={styles.trackingLabel}>Địa điểm</Text>
+                    <Text style={styles.trackingValue} numberOfLines={2}>
+                      {pickupLocation}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
-          )}
+          </ScrollView>
+        )}
 
-          {selectedVehicle && (
-            <View style={styles.trackingRow}>
-              <Text style={styles.trackingLabel}>Xe:</Text>
-              <Text style={styles.trackingValue} numberOfLines={1}>
-                {selectedVehicle.name}
-              </Text>
-            </View>
-          )}
-
-          {!selectedVehicle && vehicleId === "" && (
-            <View style={styles.trackingRow}>
-              <Text style={styles.trackingLabel}>Xe:</Text>
-              <Text style={styles.trackingValue}>
-                🚙 Xe riêng
-              </Text>
-            </View>
-          )}
-
-          {selectedDate && (
-            <View style={styles.trackingRow}>
-              <Text style={styles.trackingLabel}>Ngày:</Text>
-              <Text style={styles.trackingValue}>
-                {new Date(selectedDate).toLocaleDateString('vi-VN')}
-              </Text>
-            </View>
-          )}
-
-          {selectedTime && selectedDuration > 0 ? (
-            <View style={styles.trackingRow}>
-              <Text style={styles.trackingLabel}>Thời gian:</Text>
-              <Text style={styles.trackingValue}>
-                {selectedTime} - {calculateEndTime(selectedTime, selectedDuration)} ({selectedDuration}h)
-              </Text>
-            </View>
-          ) : null}
-
-          {pickupLocation && (
-            <View style={styles.trackingRow}>
-              <Text style={styles.trackingLabel}>Địa điểm:</Text>
-              <Text style={styles.trackingValue} numberOfLines={1}>
-                {pickupLocation}
-              </Text>
-            </View>
-          )}
-
-        </View>
+        {!isTrackingExpanded && (
+          <View style={styles.trackingContentCollapsed}>
+            {instructor && (
+              <View style={styles.trackingRow}>
+                <Text style={styles.trackingLabel}>Người hướng dẫn:</Text>
+                <Text style={styles.trackingValue} numberOfLines={1}>
+                  {instructor.name}
+                </Text>
+              </View>
+            )}
+            {selectedPackage && (
+              <View style={styles.trackingRow}>
+                <Text style={styles.trackingLabel}>Gói thuê:</Text>
+                <Text style={styles.trackingValue} numberOfLines={1}>
+                  {selectedPackage.name}
+                </Text>
+              </View>
+            )}
+            {selectedDate && (
+              <View style={styles.trackingRow}>
+                <Text style={styles.trackingLabel}>Ngày:</Text>
+                <Text style={styles.trackingValue}>
+                  {new Date(selectedDate).toLocaleDateString('vi-VN')}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -379,6 +479,9 @@ export default function BookingScreen() {
             userCoins={userCoins}
             instructorName={instructor?.name}
             packageName={selectedPackage?.name}
+            selectedVehicle={selectedVehicle}
+            vehicleId={vehicleId}
+            packageBasePrice={selectedPackage?.basePrice || 0}
             onConfirmBooking={handleConfirmBooking}
             onPoliciesAcceptedChange={setAllPoliciesAccepted}
           />
@@ -429,19 +532,20 @@ export default function BookingScreen() {
             onPress={handleConfirmBooking}
             disabled={!allPoliciesAccepted || userCoins < bookingCost}
           >
-            <LinearGradient
-              colors={
-                allPoliciesAccepted && userCoins >= bookingCost
-                  ? [AppColors.primary, "#667eea"]
-                  : ["#cbd5e1", "#cbd5e1"]
-              }
-              style={styles.paymentButtonGradient}
+            <View
+              style={[
+                styles.paymentButtonGradient,
+                {
+                  backgroundColor: (!allPoliciesAccepted || userCoins < bookingCost)
+                    ? "#cbd5e1"
+                    : "#1AD562"
+                }
+              ]}
             >
-              <CreditCard size={20} color="#ffffff" strokeWidth={2} />
               <Text style={styles.paymentButtonText}>
-                Thanh toán & Đặt lịch ({bookingCost.toLocaleString("vi-VN")} vnd)
+                Thanh toán & Đặt lịch
               </Text>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         )}
       </View>
@@ -473,6 +577,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     marginBottom: 20,
+    position: "relative",
+  },
+  backButton: {
+    position: "absolute",
+    top: 0,
+    left: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
   },
   modernBackButton: {
     width: 44,
@@ -493,8 +610,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   headerTitleContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
     alignItems: "center",
-    flex: 1,
+    justifyContent: "center",
   },
   modernHeaderTitle: {
     fontSize: 22,
@@ -508,7 +628,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   headerRight: {
-    width: 44,
+    width: 40,
   },
 
   // Modern Steps Styles
@@ -521,25 +641,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
+  stepsRowCentered: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "flex-start",
+    gap: 2,
+  },
   modernStepWrapper: {
     flexDirection: "row",
     alignItems: "flex-start",
-    flex: 1,
   },
   modernStepItem: {
     alignItems: "center",
     justifyContent: "flex-start",
-    flex: 1,
-    maxWidth: 70,
+    minWidth: 60,
+    maxWidth: 75,
   },
   modernStepCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "rgba(255, 255, 255, 0.3)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 8,
     borderWidth: 2,
     borderColor: "rgba(255, 255, 255, 0.5)",
     shadowColor: "#000",
@@ -576,12 +701,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   modernStepLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "600",
     color: "rgba(255, 255, 255, 0.8)",
     textAlign: "center",
-    lineHeight: 14,
+    lineHeight: 12,
     flexWrap: "wrap",
+    marginTop: 2,
   },
   modernStepLabelActive: {
     color: "#ffffff",
@@ -592,12 +718,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   modernStepLineContainer: {
-    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingTop: 21,
-    paddingHorizontal: 4,
-    maxWidth: 40,
+    paddingTop: 20,
+    paddingHorizontal: 2,
+    width: 30,
   },
   modernStepLine: {
     width: "100%",
@@ -650,7 +775,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  backButton: {
+  trackingBackButton: {
     backgroundColor: '#667eea',
     paddingHorizontal: 24,
     paddingVertical: 12,
@@ -679,24 +804,46 @@ const styles = StyleSheet.create({
     color: "#92400e",
   },
   trackingContent: {
+    maxHeight: 200,
+  },
+  trackingContentCollapsed: {
     gap: 8,
+  },
+  trackingGroup: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
   },
   trackingRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 12,
+    gap: 12,
+  },
+  trackingIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#f0f9ff",
+    justifyContent: "center",
     alignItems: "center",
+    marginTop: 2,
+  },
+  trackingInfoContainer: {
+    flex: 1,
   },
   trackingLabel: {
-    fontSize: 13,
-    color: "#6366f1",
-    fontWeight: "600",
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "500",
+    marginBottom: 4,
   },
   trackingValue: {
-    fontSize: 13,
-    color: "#4338ca",
-    fontWeight: "700",
-    flex: 1,
-    textAlign: "right",
+    fontSize: 14,
+    color: "#1e293b",
+    fontWeight: "600",
+    lineHeight: 20,
   },
   content: {
     flex: 1,

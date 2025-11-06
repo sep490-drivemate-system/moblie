@@ -4,6 +4,7 @@ import { signIn } from "./authThunk";
 import { BaseState } from "@/models/generic/baseState";
 import { ISignInRequest } from "@/models/auth/signin";
 import { ISignUpRequest } from "@/models/auth/signup";
+import { IForgotPasswordRequest } from "@/models/auth/forgotPassword";
 
 interface AuthState extends BaseState {
   isAuthenticated: boolean;
@@ -12,6 +13,7 @@ interface AuthState extends BaseState {
   } | null;
   formData: ISignInRequest;
   registerFormData: ISignUpRequest;
+  forgotPasswordFormData: IForgotPasswordRequest;
 }
 
 const initialState: AuthState = {
@@ -30,6 +32,10 @@ const initialState: AuthState = {
     confirmPassword: "",
   },
 
+  forgotPasswordFormData: {
+    emailOrPhone: "",
+  },
+
   isLoading: false,
   errorMessage: null,
   isSuccess: false,
@@ -39,7 +45,6 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    // MVVM Actions
     updateFormData: (
       state,
       action: PayloadAction<{ field: keyof ISignInRequest; value: string }>
@@ -71,6 +76,19 @@ const authSlice = createSlice({
       };
     },
 
+    updateForgotPasswordFormData: (
+      state,
+      action: PayloadAction<{ field: keyof IForgotPasswordRequest; value: string }>
+    ) => {
+      const { field, value } = action.payload;
+      state.forgotPasswordFormData[field] = value;
+    },
+
+    resetForgotPasswordForm: (state) => {
+      state.forgotPasswordFormData = {
+        emailOrPhone: "",
+      };
+    },
 
     setAuthenticated: (state, action: PayloadAction<boolean>) => {
       state.isAuthenticated = action.payload;
@@ -121,6 +139,8 @@ export const {
   resetForm,
   updateRegisterFormData, // Export new register actions
   resetRegisterForm,
+  updateForgotPasswordFormData,
+  resetForgotPasswordForm,
   setAuthenticated,
   clearError,
   logout,

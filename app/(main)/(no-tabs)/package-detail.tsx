@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,15 +9,17 @@ import {
   Image,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, Clock, MapPin, Calendar, Car, CheckCircle, XCircle, Package as PackageIcon } from "lucide-react-native";
+import { ArrowLeft, Clock, MapPin, Calendar, Car, CheckCircle, XCircle, Package as PackageIcon, Route, AlertCircle, RefreshCw, PlayCircle } from "lucide-react-native";
 import { userPackagesData } from "@/data/user_packages_data";
 import { AppColors } from "@/constants/Colors";
-import { LinearGradient } from "expo-linear-gradient";
+
+type StatusFilter = "all" | "route_planning" | "upcoming" | "cancelled" | "rescheduled" | "in_progress" | "completed";
 
 export default function PackageDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const packageId = params.packageId as string;
+  const [selectedStatus, setSelectedStatus] = useState<StatusFilter>("all");
 
   const packageData = userPackagesData.find((pkg) => pkg.id === packageId);
 
@@ -31,42 +33,110 @@ export default function PackageDetailScreen() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case "route_planning":
+      case "planning":
+        return <Route size={16} color="#6366f1" strokeWidth={2} />;
+      case "upcoming":
       case "scheduled":
         return <Calendar size={16} color="#3b82f6" strokeWidth={2} />;
-      case "completed":
-        return <CheckCircle size={16} color={AppColors.primary} strokeWidth={2} />;
       case "cancelled":
         return <XCircle size={16} color="#ef4444" strokeWidth={2} />;
+      case "rescheduled":
+      case "changed":
+        return <RefreshCw size={16} color="#f59e0b" strokeWidth={2} />;
+      case "in_progress":
+      case "active":
+        return <PlayCircle size={16} color="#10b981" strokeWidth={2} />;
+      case "completed":
+        return <CheckCircle size={16} color={AppColors.primary} strokeWidth={2} />;
       default:
-        return null;
+        return <AlertCircle size={16} color="#64748b" strokeWidth={2} />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "route_planning":
+      case "planning":
+        return "#6366f1"; // Indigo
+      case "upcoming":
       case "scheduled":
-        return "#3b82f6";
-      case "completed":
-        return AppColors.primary;
+        return "#3b82f6"; // Blue
       case "cancelled":
-        return "#ef4444";
+        return "#ef4444"; // Red
+      case "rescheduled":
+      case "changed":
+        return "#f59e0b"; // Amber
+      case "in_progress":
+      case "active":
+        return "#10b981"; // Green
+      case "completed":
+        return AppColors.primary; // Primary green
       default:
-        return "#64748b";
+        return "#64748b"; // Gray
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
+      case "route_planning":
+      case "planning":
+        return "Lên lộ trình";
+      case "upcoming":
       case "scheduled":
-        return "Đã đặt lịch";
-      case "completed":
-        return "Đã hoàn thành";
+        return "Sắp tới";
       case "cancelled":
-        return "Đã hủy";
+        return "Hủy lịch";
+      case "rescheduled":
+      case "changed":
+        return "Đổi lịch";
+      case "in_progress":
+      case "active":
+        return "Đang thực hiện";
+      case "completed":
+        return "Hoàn thành";
       default:
         return status;
     }
   };
+
+  // Filter sessions based on selected status
+  const filteredSessions = useMemo(() => {
+    if (!packageData) return [];
+    if (selectedStatus === "all") return packageData.sessions;
+
+    return packageData.sessions.filter((session) => {
+      const sessionStatus = (session as any).status as string;
+      if (!sessionStatus) return false;
+
+      switch (selectedStatus) {
+        case "route_planning":
+          return sessionStatus === "route_planning" || sessionStatus === "planning";
+        case "upcoming":
+          return sessionStatus === "upcoming" || sessionStatus === "scheduled";
+        case "cancelled":
+          return sessionStatus === "cancelled";
+        case "rescheduled":
+          return sessionStatus === "rescheduled" || sessionStatus === "changed";
+        case "in_progress":
+          return sessionStatus === "in_progress" || sessionStatus === "active";
+        case "completed":
+          return sessionStatus === "completed";
+        default:
+          return true;
+      }
+    });
+  }, [packageData, selectedStatus]);
+
+  const statusFilters: { key: StatusFilter; label: string; icon: React.ReactNode }[] = [
+    { key: "all", label: "Tất cả", icon: <Calendar size={16} color="#64748b" strokeWidth={2} /> },
+    { key: "route_planning", label: "Lên lộ trình", icon: <Route size={16} color="#6366f1" strokeWidth={2} /> },
+    { key: "upcoming", label: "Sắp tới", icon: <Calendar size={16} color="#3b82f6" strokeWidth={2} /> },
+    { key: "cancelled", label: "Hủy lịch", icon: <XCircle size={16} color="#ef4444" strokeWidth={2} /> },
+    { key: "rescheduled", label: "Đổi lịch", icon: <RefreshCw size={16} color="#f59e0b" strokeWidth={2} /> },
+    { key: "in_progress", label: "Đang thực hiện", icon: <PlayCircle size={16} color="#10b981" strokeWidth={2} /> },
+    { key: "completed", label: "Hoàn thành", icon: <CheckCircle size={16} color={AppColors.primary} strokeWidth={2} /> },
+  ];
 
   const handleBookNewSession = () => {
     router.push({
@@ -85,10 +155,7 @@ export default function PackageDetailScreen() {
       <StatusBar barStyle="light-content" />
 
       {/* Header */}
-      <LinearGradient
-        colors={[AppColors.primary, "#059669"]}
-        style={styles.header}
-      >
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
@@ -97,7 +164,7 @@ export default function PackageDetailScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chi tiết gói</Text>
         <View style={styles.headerRight} />
-      </LinearGradient>
+      </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Package Info Card */}
@@ -169,34 +236,59 @@ export default function PackageDetailScreen() {
             </View>
           </View>
 
-          {/* Package Dates */}
-          <View style={styles.datesRow}>
-            <View>
-              <Text style={styles.dateLabel}>Ngày mua</Text>
-              <Text style={styles.dateValue}>
-                {new Date(packageData.purchaseDate).toLocaleDateString("vi-VN")}
-              </Text>
-            </View>
-            {packageData.expiryDate && (
-              <View>
-                <Text style={styles.dateLabel}>Hạn sử dụng</Text>
-                <Text style={styles.dateValue}>
-                  {new Date(packageData.expiryDate).toLocaleDateString("vi-VN")}
-                </Text>
-              </View>
-            )}
-          </View>
         </View>
 
         {/* Sessions Section */}
         <View style={styles.sessionsSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              Lịch học đã đặt ({packageData.sessions.length})
+              Lịch thuê đã đặt ({filteredSessions.length})
             </Text>
           </View>
 
-          {packageData.sessions.length === 0 ? (
+          {/* Status Filter Bar */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterContainer}
+            contentContainerStyle={styles.filterContent}
+          >
+            {statusFilters.map((filter) => {
+              const isSelected = selectedStatus === filter.key;
+              const filterColor = getStatusColor(filter.key === "all" ? "scheduled" : filter.key);
+              return (
+                <TouchableOpacity
+                  key={filter.key}
+                  style={[
+                    styles.filterButton,
+                    isSelected && [
+                      styles.filterButtonSelected,
+                      { borderColor: filterColor, backgroundColor: filterColor + "15" },
+                    ],
+                  ]}
+                  onPress={() => setSelectedStatus(filter.key)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[
+                    styles.filterIcon,
+                    isSelected && { backgroundColor: filterColor + "20" }
+                  ]}>
+                    {filter.icon}
+                  </View>
+                  <Text
+                    style={[
+                      styles.filterText,
+                      isSelected && { color: filterColor, fontWeight: "700" },
+                    ]}
+                  >
+                    {filter.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {filteredSessions.length === 0 ? (
             <View style={styles.emptyState}>
               <Calendar size={48} color="#cbd5e1" strokeWidth={1.5} />
               <Text style={styles.emptyText}>Chưa có buổi học nào</Text>
@@ -206,13 +298,13 @@ export default function PackageDetailScreen() {
             </View>
           ) : (
             <View style={styles.sessionsList}>
-              {packageData.sessions.map((session) => (
+              {filteredSessions.map((session) => (
                 <View key={session.id} style={styles.sessionCard}>
                   {/* Status Badge */}
                   <View
                     style={[
                       styles.statusBadge,
-                      { 
+                      {
                         backgroundColor: getStatusColor(session.status) + "20",
                         borderColor: getStatusColor(session.status)
                       },
@@ -275,13 +367,9 @@ export default function PackageDetailScreen() {
             style={styles.bookButton}
             onPress={handleBookNewSession}
           >
-            <LinearGradient
-              colors={[AppColors.primary, "#059669"]}
-              style={styles.bookButtonGradient}
-            >
-              <PackageIcon size={20} color={AppColors.white} strokeWidth={2} />
-              <Text style={styles.bookButtonText}>Đặt buổi học mới</Text>
-            </LinearGradient>
+            <View style={styles.bookButtonGradient}>
+              <Text style={styles.bookButtonText}>Đặt buổi thuê mới</Text>
+            </View>
           </TouchableOpacity>
         </View>
       )}
@@ -301,6 +389,7 @@ const styles = StyleSheet.create({
     paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 16 : 50,
     paddingBottom: 16,
     paddingHorizontal: 20,
+    backgroundColor: "#1AD562",
   },
   backButton: {
     width: 40,
@@ -433,6 +522,41 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#1e293b",
   },
+  filterContainer: {
+    marginBottom: 16,
+  },
+  filterContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#f1f5f9",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    marginRight: 8,
+  },
+  filterButtonSelected: {
+    borderWidth: 1.5,
+  },
+  filterIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748b",
+  },
   sessionsList: {
     gap: 12,
   },
@@ -514,6 +638,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     paddingVertical: 16,
+    backgroundColor: "#1AD562",
   },
   bookButtonText: {
     fontSize: 16,

@@ -30,6 +30,21 @@ const sessions: IDrivingSession[] = [
     status: "scheduled",
     createdAt: "2025-10-28T14:00:00Z",
   },
+  {
+    id: "session-3",
+    packageId: "user-pkg-1",
+    instructorId: "1",
+    instructorName: "Nguyễn Văn An",
+    date: "2025-11-10",
+    startTime: "09:00",
+    endTime: "12:00",
+    duration: 3,
+    location: "789 Điện Biên Phủ, Q.Bình Thạnh, TP.HCM",
+    vehicleId: "vehicle-2",
+    vehicleName: "Honda City 2024",
+    status: "route_planning" as any,
+    createdAt: "2025-11-01T09:00:00Z",
+  },
 ];
 
 // Mock user packages

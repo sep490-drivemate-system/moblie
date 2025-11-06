@@ -57,17 +57,15 @@ export default function PaymentSuccessScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#10b981" />
-      
+
       <LinearGradient
         colors={['#10b981', '#059669', '#047857']}
         style={styles.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        {/* City Skyline Background */}
         <View style={styles.skylineContainer}>
           <View style={styles.skyline}>
-            {/* Building shapes */}
             <View style={[styles.building, { height: 80, width: 30, left: 20 }]} />
             <View style={[styles.building, { height: 120, width: 25, left: 55 }]} />
             <View style={[styles.building, { height: 90, width: 35, left: 85 }]} />
@@ -79,7 +77,7 @@ export default function PaymentSuccessScreen() {
             <View style={[styles.building, { height: 115, width: 28, left: 301 }]} />
             <View style={[styles.building, { height: 88, width: 33, left: 334 }]} />
           </View>
-          
+
           {/* Car */}
           <View style={styles.carContainer}>
             <View style={styles.car}>
@@ -94,7 +92,7 @@ export default function PaymentSuccessScreen() {
         {/* Success Content */}
         <View style={styles.content}>
           {/* Success Icon */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.iconContainer,
               { transform: [{ scale: scaleAnim }] }
@@ -106,10 +104,10 @@ export default function PaymentSuccessScreen() {
           </Animated.View>
 
           {/* Success Text */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.textContainer,
-              { 
+              {
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }]
               }
@@ -122,10 +120,10 @@ export default function PaymentSuccessScreen() {
           </Animated.View>
 
           {/* Action Buttons */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.buttonContainer,
-              { 
+              {
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }]
               }
