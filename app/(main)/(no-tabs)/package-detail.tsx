@@ -22,9 +22,11 @@ import {
   XCircle,
   Package as PackageIcon,
   ChevronRight,
+  AlertCircle,
 } from "lucide-react-native";
 import { userPackagesData } from "@/data/user_packages_data";
 import { AppColors } from "@/constants/Colors";
+import { LinearGradient } from "expo-linear-gradient";
 
 type StatusFilter =
   | "all"

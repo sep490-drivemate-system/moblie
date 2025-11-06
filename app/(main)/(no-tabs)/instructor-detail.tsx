@@ -58,8 +58,7 @@ export default function InstructorDetailScreen() {
         friction: 7,
         tension: 40,
         useNativeDriver: true,
-      }).start(() => {
-      });
+      }).start(() => {});
     } else {
       scaleAnim.setValue(0.95);
     }
@@ -249,8 +248,6 @@ export default function InstructorDetailScreen() {
           ))}
         </View>
 
-
-
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
@@ -333,7 +330,7 @@ export default function InstructorDetailScreen() {
       <View style={styles.bottomContainer}>
         <TouchableOpacity
           style={styles.bookButton}
-          onPress={() => setShowBookingModal(true)}
+          onPress={() => setShowConfirmModal(true)}
           activeOpacity={0.9}
         >
           <Text style={styles.bookButtonText}>Mua gói ngay</Text>
@@ -358,7 +355,7 @@ export default function InstructorDetailScreen() {
               styles.confirmModalContent,
               {
                 transform: [{ scale: scaleAnim }],
-              }
+              },
             ]}
           >
             {/* Modal Header */}
@@ -380,86 +377,98 @@ export default function InstructorDetailScreen() {
             >
               {/* Package Options */}
               <View style={styles.packageOptions}>
-                {instructor.packages && instructor.packages.length > 0 ? (
-                  instructor.packages.map((pkg) => (
-                    <TouchableOpacity
-                      key={pkg.id}
-                      style={[
-                        styles.packageOption,
-                        selectedPackage === pkg.id &&
-                          styles.packageOptionSelected,
-                      ]}
-                      onPress={() => {
-                        setSelectedPackage(pkg.id);
-                        // Reset vehicle selection to null (default: own car)
-                        setSelectedVehicle(null);
-                      }}
-                    >
-                      <View style={styles.radioButton}>
-                        {selectedPackage === pkg.id && (
-                          <View style={styles.radioButtonInner} />
-                        )}
-                      </View>
-                      <View style={styles.packageInfo}>
-                        <Text style={styles.packageTitle}>{pkg.name}</Text>
+                {instructor.packages && instructor.packages.length > 0
+                  ? instructor.packages.map((pkg) => (
+                      <TouchableOpacity
+                        key={pkg.id}
+                        style={[
+                          styles.packageOption,
+                          selectedPackage === pkg.id &&
+                            styles.packageOptionSelected,
+                        ]}
+                        onPress={() => {
+                          setSelectedPackage(pkg.id);
+                          setSelectedVehicle(null);
+                        }}
+                      >
+                        <View style={styles.radioButton}>
+                          {selectedPackage === pkg.id && (
+                            <View style={styles.radioButtonInner} />
+                          )}
+                        </View>
+                        <View style={styles.packageInfo}>
+                          <Text style={styles.packageTitle}>{pkg.name}</Text>
 
-                        {/* Badge: Has Vehicle or Not */}
-                        <View style={styles.packageBadgeContainer}>
-                          {pkg.hasVehicle || pkg.vehicle ? (
-                            <View style={styles.packageBadgeWithVehicle}>
-                              <Text style={styles.packageBadgeIcon}>
-                                <Car />
+                          {/* Badge: Has Vehicle or Not */}
+                          <View style={styles.packageBadgeContainer}>
+                            {pkg.hasVehicle || pkg.vehicle ? (
+                              <View style={styles.packageBadgeWithVehicle}>
+                                <Text style={styles.packageBadgeIcon}>
+                                  <Car />
+                                </Text>
+                                <Text style={styles.packageBadgeText}>
+                                  Có xe
+                                </Text>
+                              </View>
+                            ) : (
+                              <View style={styles.packageBadgeInstructor}>
+                                <Text style={styles.packageBadgeIcon}>
+                                  <User />
+                                </Text>
+                                <Text style={styles.packageBadgeText}>
+                                  Chỉ có người hướng dẫn
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+
+                          {/* Duration */}
+                          <View style={styles.packageDetailRow}>
+                            <Clock size={14} color="#64748b" strokeWidth={2} />
+                            <Text style={styles.packageDetailText}>
+                              {pkg.duration} giờ
+                            </Text>
+                          </View>
+
+                          {/* Price */}
+                          <Text style={styles.packagePrice}>
+                            {pkg.basePrice.toLocaleString("vi-VN")} vnd
+                          </Text>
+
+                          <View style={styles.confirmDetailRow}>
+                            <MapPin size={16} color="#64748b" />
+                            <Text style={styles.confirmDetailText}>
+                              {pkg.roadTypes.join(", ")}
+                            </Text>
+                          </View>
+
+                          {/* Skills */}
+                          {pkg.skills && pkg.skills.length > 0 && (
+                            <View style={styles.confirmSkillsContainer}>
+                              <Text style={styles.confirmSkillsLabel}>
+                                Kỹ năng học được:
                               </Text>
-                              <Text style={styles.packageBadgeText}>Có xe</Text>
-                            </View>
-                          ) : (
-                            <View style={styles.packageBadgeInstructor}>
-                              <Text style={styles.packageBadgeIcon}>
-                                <User />
-                              </Text>
-                              <Text style={styles.packageBadgeText}>
-                                Chỉ có người hướng dẫn
-                              </Text>
+                              <View style={styles.confirmSkillsList}>
+                                {pkg.skills.map(
+                                  (skill: string, index: number) => (
+                                    <View
+                                      key={index}
+                                      style={styles.confirmSkillChip}
+                                    >
+                                      <Text style={styles.confirmSkillText}>
+                                        {skill}
+                                      </Text>
+                                    </View>
+                                  )
+                                )}
+                              </View>
                             </View>
                           )}
                         </View>
-
-                        {/* Duration */}
-                        <View style={styles.packageDetailRow}>
-                          <Clock size={14} color="#64748b" strokeWidth={2} />
-                          <Text style={styles.packageDetailText}>
-                            {pkg.duration} giờ
-                          </Text>
-                        </View>
-
-                        {/* Price */}
-                        <Text style={styles.packagePrice}>
-                          {pkg.basePrice.toLocaleString("vi-VN")} vnd
-                        </Text>
-                      </View>
-                      <View style={styles.confirmDetailRow}>
-                        <MapPin size={16} color="#64748b" />
-                        <Text style={styles.confirmDetailText}>
-                          {selectedPackage.roadTypes.join(", ")}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Skills */}
-                    {selectedPackage.skills && selectedPackage.skills.length > 0 && (
-                      <View style={styles.confirmSkillsContainer}>
-                        <Text style={styles.confirmSkillsLabel}>Kỹ năng học được:</Text>
-                        <View style={styles.confirmSkillsList}>
-                          {selectedPackage.skills.map((skill: string, index: number) => (
-                            <View key={index} style={styles.confirmSkillChip}>
-                              <Text style={styles.confirmSkillText}>{skill}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                </View>
+                      </TouchableOpacity>
+                    ))
+                  : null}
+              </View>
 
               {/* Vehicle Selection (only show if selected package has vehicle) */}
               {selectedPackage &&
@@ -509,7 +518,7 @@ export default function InstructorDetailScreen() {
                           selectedVehicle === vehicle.id &&
                             styles.vehicleOptionSelected,
                         ]}
-                        onPress={() => setSelectedVehicle(vehicle.id)}
+                        onPress={() => setSelectedVehicle(String(vehicle.id))}
                       >
                         <Image
                           source={{ uri: vehicle.imageUrl }}
@@ -533,7 +542,8 @@ export default function InstructorDetailScreen() {
                             </Text>
                           </View>
                           <Text style={styles.vehicleOptionPrice}>
-                            +{vehicle.price.toLocaleString("vi-VN")} vnd/giờ
+                            +{(vehicle.price ?? 0).toLocaleString("vi-VN")}{" "}
+                            vnd/giờ
                           </Text>
                         </View>
                         <View style={styles.vehicleRadioButton}>
@@ -560,7 +570,7 @@ export default function InstructorDetailScreen() {
               <TouchableOpacity
                 style={[
                   styles.confirmPurchaseButton,
-                  isProcessing && styles.confirmPurchaseButtonDisabled
+                  isProcessing && styles.confirmPurchaseButtonDisabled,
                 ]}
                 onPress={() => {
                   if (!selectedPackage) return;
@@ -582,7 +592,7 @@ export default function InstructorDetailScreen() {
                         onPress: () => {
                           // Simulate payment process
                           setTimeout(() => {
-                            setShowBookingModal(false);
+                            setShowConfirmModal(false);
                             router.push({
                               pathname: "/(main)/(no-tabs)/transaction-success",
                               params: {
@@ -604,7 +614,6 @@ export default function InstructorDetailScreen() {
           </Animated.View>
         </View>
       </Modal>
-
     </View>
   );
 }
@@ -613,6 +622,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f9fa",
+  },
+  bottomContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 16,
+    backgroundColor: AppColors.white,
+    borderTopWidth: 1,
+    borderTopColor: AppColors.borderLight,
+  },
+  bookButton: {
+    backgroundColor: AppColors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bookButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
   },
   loadingContainer: {
     flex: 1,
@@ -1209,6 +1241,9 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     position: "relative",
   },
+  modalScroll: {
+    maxHeight: "100%",
+  },
   confirmModalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1326,6 +1361,192 @@ const styles = StyleSheet.create({
   },
   confirmPackageDetails: {
     gap: 8,
+  },
+  packageOptions: {
+    gap: 12,
+  },
+  packageOption: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: AppColors.borderLight,
+    backgroundColor: AppColors.white,
+    marginBottom: 12,
+  },
+  packageOptionSelected: {
+    borderColor: AppColors.primary,
+    backgroundColor: "#dbeafe",
+    borderWidth: 2.5,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: AppColors.borderLight,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+    marginTop: 4,
+  },
+  radioButtonInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: AppColors.primary,
+  },
+  packageInfo: {
+    flex: 1,
+  },
+  packageTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: AppColors.textPrimary,
+    marginBottom: 8,
+  },
+  packageBadgeContainer: {
+    marginBottom: 8,
+  },
+  packageBadgeWithVehicle: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0fdf4",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#86efac",
+  },
+  packageBadgeInstructor: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fef3c7",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#fcd34d",
+  },
+  packageBadgeIcon: {
+    fontSize: 14,
+  },
+  packageBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1f2937",
+  },
+  packagePrice: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: AppColors.textPrimary,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  vehicleSelection: {
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  vehicleSelectionTitleModal: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: AppColors.textPrimary,
+    marginBottom: 4,
+  },
+  vehicleSelectionSubtitle: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    fontWeight: "500",
+    marginBottom: 16,
+  },
+  vehicleOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: AppColors.borderLight,
+    backgroundColor: AppColors.white,
+    marginBottom: 12,
+  },
+  vehicleOptionSelected: {
+    borderColor: AppColors.primary,
+    backgroundColor: "#dbeafe",
+    borderWidth: 2.5,
+  },
+  noVehicleIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: "#f0fdf4",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#86efac",
+  },
+  noVehicleIconText: {
+    fontSize: 32,
+  },
+  vehicleOptionInfo: {
+    flex: 1,
+  },
+  vehicleOptionName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: AppColors.textPrimary,
+    marginBottom: 4,
+  },
+  vehicleOptionSpecs: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  vehicleOptionSpec: {
+    fontSize: 12,
+    color: AppColors.textSecondary,
+    fontWeight: "500",
+  },
+  vehicleOptionDot: {
+    fontSize: 12,
+    color: AppColors.textSecondary,
+  },
+  vehicleOptionPrice: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: AppColors.primary,
+    marginTop: 6,
+  },
+  vehicleRadioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: AppColors.borderLight,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  vehicleRadioButtonInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: AppColors.primary,
+  },
+  vehicleOptionImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  continueButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#ffffff",
+    letterSpacing: 0.5,
   },
   confirmDetailRow: {
     flexDirection: "row",
