@@ -61,7 +61,6 @@ export default function BookingScreen() {
     null
   );
 
-
   // User wallet
   const [userCoins, setUserCoins] = useState(500);
 
@@ -79,14 +78,15 @@ export default function BookingScreen() {
   ];
 
   // Get instructor and package info
-  const instructor = instructorsData.find(i => i.id === instructorId);
-  const selectedPackage = instructor?.packages?.find(p => p.id === packageId);
+  const instructor = instructorsData.find((i) => i.id === instructorId);
+  const selectedPackage = instructor?.packages?.find((p) => p.id === packageId);
   const maxDuration = selectedPackage?.duration || 40;
 
   // Get vehicle info if vehicleId is provided (from instructorVehicles)
-  const selectedVehicle = vehicleId && vehicleId !== "" ?
-    instructorVehicles.find(v => v.id === vehicleId)
-    : null;
+  const selectedVehicle =
+    vehicleId && vehicleId !== ""
+      ? instructorVehicles.find((v) => v.id === vehicleId)
+      : null;
 
   // Calculate booking cost: base package price + vehicle cost (if selected)
   const bookingCost = (() => {
@@ -147,9 +147,11 @@ export default function BookingScreen() {
 
   const calculateEndTime = (startTime: string, duration: number): string => {
     if (!startTime) return "00:00";
-    const [hours, minutes] = startTime.split(':').map(Number);
+    const [hours, minutes] = startTime.split(":").map(Number);
     const endHours = hours + duration;
-    return `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    return `${endHours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   const handleConfirmBooking = () => {
@@ -172,7 +174,7 @@ export default function BookingScreen() {
       });
       // Navigate to my-packages screen after successful payment
       setTimeout(() => {
-        router.replace('/(main)/(no-tabs)/my-packages');
+        router.replace("/(main)/(no-tabs)/my-packages");
       }, 500);
     }
   };
@@ -182,9 +184,7 @@ export default function BookingScreen() {
       <StatusBar barStyle="dark-content" />
 
       {/* Modern Header with Integrated Progress */}
-      <View
-        style={[styles.modernHeader, { backgroundColor: "#1AD562" }]}
-      >
+      <View style={[styles.modernHeader, { backgroundColor: "#1AD562" }]}>
         {/* Header Section */}
         <View style={styles.headerSection}>
           <View style={styles.headerTitleContainer}>
@@ -203,9 +203,9 @@ export default function BookingScreen() {
                     style={[
                       styles.modernStepCircle,
                       step.number < currentStep &&
-                      styles.modernStepCircleCompleted,
+                        styles.modernStepCircleCompleted,
                       step.number === currentStep &&
-                      styles.modernStepCircleActive,
+                        styles.modernStepCircleActive,
                     ]}
                   >
                     {step.number < currentStep ? (
@@ -219,7 +219,7 @@ export default function BookingScreen() {
                         style={[
                           styles.modernStepNumber,
                           step.number <= currentStep &&
-                          styles.modernStepNumberActive,
+                            styles.modernStepNumberActive,
                         ]}
                       >
                         {step.number}
@@ -230,9 +230,9 @@ export default function BookingScreen() {
                     style={[
                       styles.modernStepLabel,
                       step.number === currentStep &&
-                      styles.modernStepLabelActive,
+                        styles.modernStepLabelActive,
                       step.number < currentStep &&
-                      styles.modernStepLabelCompleted,
+                        styles.modernStepLabelCompleted,
                     ]}
                   >
                     {step.label}
@@ -244,7 +244,7 @@ export default function BookingScreen() {
                       style={[
                         styles.modernStepLine,
                         step.number < currentStep &&
-                        styles.modernStepLineCompleted,
+                          styles.modernStepLineCompleted,
                       ]}
                     />
                   </View>
@@ -346,9 +346,7 @@ export default function BookingScreen() {
                   </View>
                   <View style={styles.trackingInfoContainer}>
                     <Text style={styles.trackingLabel}>Xe</Text>
-                    <Text style={styles.trackingValue}>
-                      🚙 Xe riêng
-                    </Text>
+                    <Text style={styles.trackingValue}>🚙 Xe riêng</Text>
                   </View>
                 </View>
               )}
@@ -364,7 +362,7 @@ export default function BookingScreen() {
                   <View style={styles.trackingInfoContainer}>
                     <Text style={styles.trackingLabel}>Ngày</Text>
                     <Text style={styles.trackingValue}>
-                      {new Date(selectedDate).toLocaleDateString('vi-VN')}
+                      {new Date(selectedDate).toLocaleDateString("vi-VN")}
                     </Text>
                   </View>
                 </View>
@@ -378,7 +376,9 @@ export default function BookingScreen() {
                   <View style={styles.trackingInfoContainer}>
                     <Text style={styles.trackingLabel}>Thời gian</Text>
                     <Text style={styles.trackingValue}>
-                      {selectedTime} - {calculateEndTime(selectedTime, selectedDuration)} ({selectedDuration}h)
+                      {selectedTime} -{" "}
+                      {calculateEndTime(selectedTime, selectedDuration)} (
+                      {selectedDuration}h)
                     </Text>
                   </View>
                 </View>
@@ -423,7 +423,7 @@ export default function BookingScreen() {
               <View style={styles.trackingRow}>
                 <Text style={styles.trackingLabel}>Ngày:</Text>
                 <Text style={styles.trackingValue}>
-                  {new Date(selectedDate).toLocaleDateString('vi-VN')}
+                  {new Date(selectedDate).toLocaleDateString("vi-VN")}
                 </Text>
               </View>
             )}
@@ -439,7 +439,9 @@ export default function BookingScreen() {
             selectedTime={selectedTime}
             onDateSelect={setSelectedDate}
             onTimeSelect={setSelectedTime}
-            instructorBusyTimes={instructorBusyTimes.filter(bt => bt.instructorId === instructorId)}
+            instructorBusyTimes={instructorBusyTimes.filter(
+              (bt) => bt.instructorId === instructorId
+            )}
           />
         )}
 
@@ -451,7 +453,12 @@ export default function BookingScreen() {
             onStartTimeSelect={setSelectedStartTime}
             onDurationChange={setSelectedDuration}
             maxDuration={maxDuration}
-            busyTimes={instructorBusyTimes.find(bt => bt.instructorId === instructorId && bt.date === selectedDate)?.busySlots || []}
+            busyTimes={
+              instructorBusyTimes.find(
+                (bt) =>
+                  bt.instructorId === instructorId && bt.date === selectedDate
+              )?.busySlots || []
+            }
           />
         )}
 
@@ -490,7 +497,6 @@ export default function BookingScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-
       {/* Bottom Actions */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity style={styles.backBottomButton} onPress={handleBack}>
@@ -527,7 +533,8 @@ export default function BookingScreen() {
           <TouchableOpacity
             style={[
               styles.paymentButton,
-              (!allPoliciesAccepted || userCoins < bookingCost) && styles.paymentButtonDisabled,
+              (!allPoliciesAccepted || userCoins < bookingCost) &&
+                styles.paymentButtonDisabled,
             ]}
             onPress={handleConfirmBooking}
             disabled={!allPoliciesAccepted || userCoins < bookingCost}
@@ -536,10 +543,11 @@ export default function BookingScreen() {
               style={[
                 styles.paymentButtonGradient,
                 {
-                  backgroundColor: (!allPoliciesAccepted || userCoins < bookingCost)
-                    ? "#cbd5e1"
-                    : "#1AD562"
-                }
+                  backgroundColor:
+                    !allPoliciesAccepted || userCoins < bookingCost
+                      ? "#cbd5e1"
+                      : "#1AD562",
+                },
               ]}
             >
               <Text style={styles.paymentButtonText}>
@@ -617,7 +625,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modernHeaderTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800",
     color: "#ffffff",
     marginBottom: 2,
@@ -635,10 +643,11 @@ const styles = StyleSheet.create({
   modernStepsContainer: {
     paddingHorizontal: 16,
     marginBottom: 24,
+    alignItems: "center",
   },
   stepsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "flex-start",
   },
   stepsRowCentered: {
@@ -776,7 +785,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   trackingBackButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: "#667eea",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,

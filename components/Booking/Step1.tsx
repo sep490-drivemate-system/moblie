@@ -1,6 +1,21 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput } from "react-native";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle, Check } from "lucide-react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Dimensions,
+  TextInput,
+} from "react-native";
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  AlertCircle,
+  Check,
+} from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 
 const { width } = Dimensions.get("window");
@@ -10,7 +25,11 @@ interface Step1Props {
   selectedTime: string | null;
   onDateSelect: (date: string) => void;
   onTimeSelect?: (time: string) => void;
-  instructorBusyTimes?: { instructorId: string; date: string; busySlots: { startTime: string; endTime: string }[] }[];
+  instructorBusyTimes?: {
+    instructorId: string;
+    date: string;
+    busySlots: { startTime: string; endTime: string }[];
+  }[];
 }
 
 interface BusyTime {
@@ -19,14 +38,13 @@ interface BusyTime {
 }
 
 const formatTime = (time: string) => {
-  return time.replace(':', 'h');
+  return time.replace(":", "h");
 };
-
 
 const generateTimeSlots = () => {
   const slots = [];
   for (let hour = 6; hour <= 22; hour++) {
-    slots.push(`${hour.toString().padStart(2, '0')}:00`);
+    slots.push(`${hour.toString().padStart(2, "0")}:00`);
   }
   return slots;
 };
@@ -34,12 +52,14 @@ const generateTimeSlots = () => {
 const isTimeSlotAvailable = (time: string, busySlots: BusyTime[]): boolean => {
   if (!busySlots || busySlots.length === 0) return true;
 
-  const [hour, minute] = time.split(':').map(Number);
+  const [hour, minute] = time.split(":").map(Number);
   const timeMinutes = hour * 60 + minute;
 
   for (const busySlot of busySlots) {
-    const [busyStartHour, busyStartMin] = busySlot.startTime.split(':').map(Number);
-    const [busyEndHour, busyEndMin] = busySlot.endTime.split(':').map(Number);
+    const [busyStartHour, busyStartMin] = busySlot.startTime
+      .split(":")
+      .map(Number);
+    const [busyEndHour, busyEndMin] = busySlot.endTime.split(":").map(Number);
     const busyStartMinutes = busyStartHour * 60 + busyStartMin;
     const busyEndMinutes = busyEndHour * 60 + busyEndMin;
 
@@ -56,7 +76,7 @@ export default function Step1({
   selectedTime,
   onDateSelect,
   onTimeSelect,
-  instructorBusyTimes = []
+  instructorBusyTimes = [],
 }: Step1Props) {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
@@ -67,7 +87,7 @@ export default function Step1({
   const timeSlots = generateTimeSlots();
 
   const formatDate = (date: Date) => {
-    return date.toISOString().split('T')[0]; // YYYY-MM-DD
+    return date.toISOString().split("T")[0]; // YYYY-MM-DD
   };
 
   const isToday = (date: Date) => {
@@ -79,53 +99,61 @@ export default function Step1({
   };
 
   const isPastDate = (date: Date) => {
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const dateStart = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
     return dateStart < todayStart;
   };
 
   const getBusyTimesForDate = (date: Date): BusyTime[] => {
     const dateStr = formatDate(date);
-    const busyTime = instructorBusyTimes.find(bt => bt.date === dateStr);
+    const busyTime = instructorBusyTimes.find((bt) => bt.date === dateStr);
     return busyTime?.busySlots || [];
   };
 
-  const getDateStatus = (date: Date): 'free' | 'partial' | 'busy' => {
+  const getDateStatus = (date: Date): "free" | "partial" | "busy" => {
     const busyTimes = getBusyTimesForDate(date);
-    if (busyTimes.length === 0) return 'free';
+    if (busyTimes.length === 0) return "free";
 
     // Calculate total busy hours
     const totalBusyHours = busyTimes.reduce((total, slot) => {
-      const [startHour, startMin] = slot.startTime.split(':').map(Number);
-      const [endHour, endMin] = slot.endTime.split(':').map(Number);
+      const [startHour, startMin] = slot.startTime.split(":").map(Number);
+      const [endHour, endMin] = slot.endTime.split(":").map(Number);
       const startMinutes = startHour * 60 + startMin;
       const endMinutes = endHour * 60 + endMin;
       return total + (endMinutes - startMinutes) / 60;
     }, 0);
 
     // Consider fully busy if more than 14 hours (out of 16 hours 6:00-22:00)
-    if (totalBusyHours >= 14) return 'busy';
+    if (totalBusyHours >= 14) return "busy";
 
     // Partial busy if has any bookings but not fully busy
-    return 'partial';
+    return "partial";
   };
 
   const isDateFullyBusy = (date: Date) => {
-    return getDateStatus(date) === 'busy';
+    return getDateStatus(date) === "busy";
   };
 
   const isDateFree = (date: Date) => {
-    return getDateStatus(date) === 'free';
+    return getDateStatus(date) === "free";
   };
 
   const isDatePartial = (date: Date) => {
-    return getDateStatus(date) === 'partial';
+    return getDateStatus(date) === "partial";
   };
 
   const current = new Date(currentYear, currentMonth);
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    if (direction === 'prev') {
+  const navigateMonth = (direction: "prev" | "next") => {
+    if (direction === "prev") {
       if (currentMonth === 0) {
         setCurrentMonth(11);
         setCurrentYear(currentYear - 1);
@@ -220,31 +248,38 @@ export default function Step1({
         const dayNumber = currentDate.getDate();
         const dateStatus = !isPast ? getDateStatus(currentDate) : null;
 
+        // Compose styles with explicit override order so selected state always wins
+        const dayContainerStyle = {
+          ...styles.dayButton,
+          ...(!isCurrent && !isSelected ? styles.dayButtonOtherMonth : {}),
+          ...(!isSelected && isDisabled ? styles.dayButtonDisabled : {}),
+          ...(!isSelected && !isDisabled && dateStatus === "free"
+            ? styles.dayButtonFree
+            : {}),
+          ...(!isSelected && !isDisabled && dateStatus === "partial"
+            ? styles.dayButtonPartial
+            : {}),
+          ...(!isSelected && !isDisabled && dateStatus === "busy"
+            ? styles.dayButtonBusy
+            : {}),
+          ...(isSelected ? styles.dayButtonSelected : {}),
+        } as const;
+
+        const dayNumberTextStyle = {
+          ...styles.dayText,
+          ...(!isCurrent && !isSelected ? styles.dayTextOtherMonth : {}),
+          ...(!isSelected && isDisabled ? styles.dayTextDisabled : {}),
+          ...(isSelected ? styles.dayTextSelected : {}),
+        } as const;
+
         weekDays.push(
           <TouchableOpacity
             key={dateStr}
-            style={[
-              styles.dayButton,
-              !isCurrent && styles.dayButtonOtherMonth,
-              isSelected && styles.dayButtonSelected,
-              isDisabled && styles.dayButtonDisabled,
-              dateStatus === 'free' && !isSelected && !isDisabled && styles.dayButtonFree,
-              dateStatus === 'partial' && !isSelected && !isDisabled && styles.dayButtonPartial,
-              dateStatus === 'busy' && !isSelected && !isDisabled && styles.dayButtonBusy,
-            ]}
+            style={dayContainerStyle}
             onPress={() => handleDatePress(currentDate)}
             disabled={isDisabled}
           >
-            <Text
-              style={[
-                styles.dayText,
-                !isCurrent && styles.dayTextOtherMonth,
-                isSelected && styles.dayTextSelected,
-                isDisabled && styles.dayTextDisabled,
-              ]}
-            >
-              {dayNumber}
-            </Text>
+            <Text style={dayNumberTextStyle}>{dayNumber}</Text>
           </TouchableOpacity>
         );
       }
@@ -260,7 +295,7 @@ export default function Step1({
         <View style={styles.calendarHeader}>
           <TouchableOpacity
             style={styles.monthButton}
-            onPress={() => navigateMonth('prev')}
+            onPress={() => navigateMonth("prev")}
           >
             <ChevronLeft size={20} color={AppColors.primary} strokeWidth={2} />
           </TouchableOpacity>
@@ -274,7 +309,7 @@ export default function Step1({
 
           <TouchableOpacity
             style={styles.monthButton}
-            onPress={() => navigateMonth('next')}
+            onPress={() => navigateMonth("next")}
           >
             <ChevronRight size={20} color={AppColors.primary} strokeWidth={2} />
           </TouchableOpacity>
@@ -301,7 +336,7 @@ export default function Step1({
       {expandedDate && (
         <View style={styles.expandedTimeSlotsWrapper}>
           {(() => {
-            const expandedDateObj = new Date(expandedDate + 'T00:00:00');
+            const expandedDateObj = new Date(expandedDate + "T00:00:00");
             const busySlots = getBusyTimesForDate(expandedDateObj);
             const isFullyBusy = isDateFullyBusy(expandedDateObj);
 
@@ -319,12 +354,15 @@ export default function Step1({
             return (
               <View style={styles.timeSlotsContainer}>
                 <Text style={styles.timeSlotsTitle}>
-                  Chọn giờ bắt đầu cho ngày {expandedDateObj.toLocaleDateString('vi-VN')}:
+                  Chọn giờ bắt đầu cho ngày{" "}
+                  {expandedDateObj.toLocaleDateString("vi-VN")}:
                 </Text>
 
                 {/* Custom Time Input */}
                 <View style={styles.customTimeSection}>
-                  <Text style={styles.customTimeLabel}>Nhập giờ bắt đầu (HH:MM):</Text>
+                  <Text style={styles.customTimeLabel}>
+                    Nhập giờ bắt đầu (HH:MM):
+                  </Text>
                   <View style={styles.customTimeInputContainer}>
                     <TextInput
                       style={styles.customTimeInput}
@@ -336,18 +374,20 @@ export default function Step1({
                       maxLength={5}
                     />
                     <TouchableOpacity
-                      style={[
-                        styles.customTimeButton,
-                        customTime && styles.customTimeButtonActive,
-                      ]}
+                      style={{
+                        ...styles.customTimeButton,
+                        ...(customTime ? styles.customTimeButtonActive : {}),
+                      }}
                       onPress={() => handleCustomTimeSubmit(busySlots)}
                       disabled={!customTime}
                     >
                       <Text
-                        style={[
-                          styles.customTimeButtonText,
-                          customTime && styles.customTimeButtonTextActive,
-                        ]}
+                        style={{
+                          ...styles.customTimeButtonText,
+                          ...(customTime
+                            ? styles.customTimeButtonTextActive
+                            : {}),
+                        }}
                       >
                         OK
                       </Text>
@@ -355,7 +395,11 @@ export default function Step1({
                   </View>
                   {selectedTime && (
                     <View style={styles.selectedTimeDisplay}>
-                      <Check size={16} color={AppColors.primary} strokeWidth={3} />
+                      <Check
+                        size={16}
+                        color={AppColors.primary}
+                        strokeWidth={3}
+                      />
                       <Text style={styles.selectedTimeText}>
                         Đã chọn: {formatTime(selectedTime)}
                       </Text>
@@ -375,7 +419,9 @@ export default function Step1({
                         key={time}
                         style={[
                           styles.timeSlot,
-                          isAvailable ? styles.timeSlotAvailable : styles.timeSlotBusy,
+                          isAvailable
+                            ? styles.timeSlotAvailable
+                            : styles.timeSlotBusy,
                           isTimeSelected && styles.timeSlotSelected,
                         ]}
                         onPress={() => handleTimeSlotPress(time, busySlots)}
@@ -387,7 +433,9 @@ export default function Step1({
                         <Text
                           style={[
                             styles.timeSlotText,
-                            isAvailable ? styles.timeSlotTextAvailable : styles.timeSlotTextBusy,
+                            isAvailable
+                              ? styles.timeSlotTextAvailable
+                              : styles.timeSlotTextBusy,
                             isTimeSelected && styles.timeSlotTextSelected,
                           ]}
                         >
@@ -407,7 +455,8 @@ export default function Step1({
                         <View key={slotIndex} style={styles.busyTimeItem}>
                           <Clock size={12} color="#ef4444" strokeWidth={2} />
                           <Text style={styles.busyTimeText}>
-                            {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                            {formatTime(slot.startTime)} -{" "}
+                            {formatTime(slot.endTime)}
                           </Text>
                         </View>
                       ))}
@@ -430,6 +479,8 @@ export default function Step1({
           <View style={styles.legendYellowBox} />
           <Text style={styles.legendText}>Có người đặt</Text>
         </View>
+      </View>
+      <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={styles.legendRedBox} />
           <Text style={styles.legendText}>Bận cả ngày</Text>
@@ -520,6 +571,8 @@ const styles = StyleSheet.create({
   },
   dayButtonSelected: {
     backgroundColor: AppColors.primary,
+    borderWidth: 0,
+    borderColor: "transparent",
   },
   dayButtonDisabled: {
     opacity: 0.4,
@@ -661,9 +714,9 @@ const styles = StyleSheet.create({
   legend: {
     flexDirection: "row",
     justifyContent: "center",
-    paddingVertical: 10,
     marginTop: 16,
     borderRadius: 8,
+    paddingLeft: 16,
   },
   legendItem: {
     flexDirection: "row",

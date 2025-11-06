@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -9,34 +9,84 @@ import {
   Image,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Package, Clock, User, ChevronRight, Calendar, TrendingUp } from "lucide-react-native";
+import {
+  ArrowLeft,
+  Package,
+  Clock,
+  User,
+  ChevronRight,
+  Calendar,
+  TrendingUp,
+} from "lucide-react-native";
 import { userPackagesData } from "@/data/user_packages_data";
 import { AppColors } from "@/constants/Colors";
 
 export default function MyPackagesScreen() {
   const router = useRouter();
 
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+
+  const statusOptions = useMemo(
+    () => [
+      { key: "all", label: "Tất cả" },
+      { key: "paid", label: "Đã mua" },
+      { key: "in_progress", label: "Đang sử dụng" },
+      { key: "completed", label: "Đã sử dụng" },
+      { key: "refunded", label: "Hủy có hoàn trả" },
+      { key: "not_refund", label: "Hủy không hoàn trả" },
+    ],
+    []
+  );
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: userPackagesData.length,
+      paid: 0,
+      in_progress: 0,
+      completed: 0,
+      refunded: 0,
+      not_refund: 0,
+    };
+    userPackagesData.forEach((p) => {
+      if (counts[p.status] !== undefined) counts[p.status] += 1;
+    });
+    return counts;
+  }, []);
+
+  const filteredPackages = useMemo(() => {
+    if (selectedStatus === "all") return userPackagesData;
+    return userPackagesData.filter((p) => p.status === selectedStatus);
+  }, [selectedStatus]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active":
-        return "#10b981"; // Green
+      case "paid":
+        return AppColors.yellow;
+      case "in_progress":
+        return AppColors.primary;
       case "completed":
-        return "#64748b"; // Gray
-      case "expired":
-        return "#ef4444"; // Red
+        return AppColors.gray;
+      case "refunded":
+        return AppColors.blue;
+      case "not_refund":
+        return AppColors.red;
       default:
-        return "#64748b";
+        return AppColors.gray;
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "active":
-        return "Đang hoạt động";
+      case "paid":
+        return "Đã mua";
+      case "in_progress":
+        return "Đang sử dụng";
       case "completed":
-        return "Đã hoàn thành";
-      case "expired":
-        return "Đã hết hạn";
+        return "Đã sử dụng";
+      case "refunded":
+        return "Hủy có hoàn trả";
+      case "not_refund":
+        return "Hủy không hoàn trả";
       default:
         return status;
     }
@@ -67,7 +117,60 @@ export default function MyPackagesScreen() {
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Gói Đã Mua</Text>
+          <Text style={styles.headerSubtitle}>
+            {filteredPackages.length} gói phù hợp
+          </Text>
         </View>
+      </View>
+
+      {/* Filter Bar */}
+      <View style={styles.filterBarContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterBarScroll}
+        >
+          {statusOptions.map((opt) => {
+            const isActive = selectedStatus === opt.key;
+            const color =
+              opt.key === "all"
+                ? AppColors.gray
+                : getStatusColor(opt.key as string);
+            return (
+              <TouchableOpacity
+                key={opt.key}
+                onPress={() => setSelectedStatus(opt.key)}
+                activeOpacity={0.8}
+                style={[
+                  styles.filterChip,
+                  isActive && {
+                    backgroundColor: color + "15",
+                    borderColor: color,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    { color: isActive ? color : "#475569" },
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+                <View
+                  style={[
+                    styles.filterCount,
+                    { backgroundColor: isActive ? color : "#e2e8f0" },
+                  ]}
+                >
+                  <Text style={styles.filterCountText}>
+                    {statusCounts[opt.key] ?? 0}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       <ScrollView
@@ -75,7 +178,7 @@ export default function MyPackagesScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {userPackagesData.length === 0 ? (
+        {filteredPackages.length === 0 ? (
           <View style={styles.emptyState}>
             <Package size={80} color="#cbd5e1" strokeWidth={1.5} />
             <Text style={styles.emptyTitle}>Bạn chưa có gói nào</Text>
@@ -90,8 +193,11 @@ export default function MyPackagesScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          userPackagesData.map((pkg) => {
-            const progressPercentage = getProgressPercentage(pkg.usedHours, pkg.totalHours);
+          filteredPackages.map((pkg) => {
+            const progressPercentage = getProgressPercentage(
+              pkg.usedHours,
+              pkg.totalHours
+            );
             const statusColor = getStatusColor(pkg.status);
 
             return (
@@ -112,7 +218,27 @@ export default function MyPackagesScreen() {
                       <Text style={styles.instructorName}>
                         {pkg.instructorName}
                       </Text>
-
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          {
+                            backgroundColor: statusColor + "15",
+                            borderColor: statusColor,
+                          },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.statusDot,
+                            { backgroundColor: statusColor },
+                          ]}
+                        />
+                        <Text
+                          style={[styles.statusText, { color: statusColor }]}
+                        >
+                          {getStatusText(pkg.status)}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -124,7 +250,11 @@ export default function MyPackagesScreen() {
                 <View style={styles.progressSection}>
                   <View style={styles.progressHeader}>
                     <View style={styles.progressHeaderLeft}>
-                      <Clock size={18} color={AppColors.primary} strokeWidth={2} />
+                      <Clock
+                        size={18}
+                        color={AppColors.primary}
+                        strokeWidth={2}
+                      />
                       <Text style={styles.progressTitle}>Tiến độ sử dụng</Text>
                     </View>
                     <Text style={styles.progressPercentage}>
@@ -140,12 +270,7 @@ export default function MyPackagesScreen() {
                           styles.progressFill,
                           {
                             width: `${progressPercentage}%`,
-                            backgroundColor:
-                              pkg.status === "completed"
-                                ? "#64748b"
-                                : pkg.status === "expired"
-                                  ? "#ef4444"
-                                  : AppColors.primary,
+                            backgroundColor: AppColors.primary,
                           },
                         ]}
                       />
@@ -156,12 +281,16 @@ export default function MyPackagesScreen() {
                   <View style={styles.hoursStats}>
                     <View style={styles.hoursStatItem}>
                       <Text style={styles.hoursStatLabel}>Tổng</Text>
-                      <Text style={styles.hoursStatValue}>{pkg.totalHours}h</Text>
+                      <Text style={styles.hoursStatValue}>
+                        {pkg.totalHours}h
+                      </Text>
                     </View>
                     <View style={styles.statDivider} />
                     <View style={styles.hoursStatItem}>
                       <Text style={styles.hoursStatLabel}>Đã dùng</Text>
-                      <Text style={styles.hoursStatValueUsed}>{pkg.usedHours}h</Text>
+                      <Text style={styles.hoursStatValueUsed}>
+                        {pkg.usedHours}h
+                      </Text>
                     </View>
                     <View style={styles.statDivider} />
                     <View style={styles.hoursStatItem}>
@@ -184,11 +313,34 @@ export default function MyPackagesScreen() {
                   </View>
                 </View>
 
+                {/* Info Row */}
+                <View style={styles.infoRow}>
+                  <View style={styles.infoItem}>
+                    <Calendar size={16} color="#64748b" strokeWidth={2} />
+                    <Text style={styles.infoText}>
+                      {pkg.sessions.length} buổi học
+                    </Text>
+                  </View>
+                  <View style={styles.infoItem}>
+                    <TrendingUp size={16} color="#64748b" strokeWidth={2} />
+                    <Text style={styles.infoText}>
+                      Mua{" "}
+                      {new Date(pkg.purchaseDate).toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "short",
+                      })}
+                    </Text>
+                  </View>
+                </View>
 
                 {/* Footer */}
                 <View style={styles.cardFooter}>
                   <Text style={styles.viewDetailText}>Xem chi tiết</Text>
-                  <ChevronRight size={18} color={AppColors.primary} strokeWidth={2} />
+                  <ChevronRight
+                    size={18}
+                    color={AppColors.primary}
+                    strokeWidth={2}
+                  />
                 </View>
               </TouchableOpacity>
             );
@@ -247,6 +399,46 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  filterBarContainer: {
+    backgroundColor: "#ffffff",
+    borderBottomColor: "#e2e8f0",
+    borderBottomWidth: 1,
+  },
+  filterBarScroll: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  filterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    marginRight: 8,
+    gap: 8,
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  filterCount: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 6,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterCountText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#ffffff",
   },
   scrollContent: {
     paddingHorizontal: 16,

@@ -12,9 +12,17 @@ export const AppColors = {
   brandBlue: '#036AA5',
   active: '#036AA5', // For active states
 
-  // Secondary Colors
-  secondary: '#764ba2',
-  accent: '#f093fb',
+  // Gray Colors
+  gray: '#64748b',
+
+  //yellow Colors
+  yellow: '#f59e0b',
+
+  //blue Colors
+  blue: '#31B2BD',
+
+  //red Colors
+  red: '#E57373',
 
   // Gradient Colors
   gradientStart: '#43cea2',

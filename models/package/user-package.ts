@@ -12,7 +12,7 @@ export interface IDrivingSession {
     location: string;
     vehicleId?: string;
     vehicleName?: string;
-    status: "scheduled" | "completed" | "cancelled";
+    status: "planing" | "upcoming" | "in_progress" | "completed" | "reschedule" | "cancelled";
     createdAt: string;
 }
 
@@ -20,6 +20,7 @@ export interface IUserPackage {
     id: string;
     packageId: string;
     packageName: string;
+    price?: number; // total price in VND
     instructorId: string;
     instructorName: string;
     instructorAvatar: string;
@@ -28,7 +29,7 @@ export interface IUserPackage {
     remainingHours: number;
     purchaseDate: string;
     expiryDate?: string;
-    status: "active" | "expired" | "completed";
+    status: "paid" | "in_progress" | "completed" | "refunded" | "not_refund";
     sessions: IDrivingSession[];
 }
 

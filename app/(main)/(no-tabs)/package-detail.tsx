@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -7,13 +7,33 @@ import {
   TouchableOpacity,
   StatusBar,
   Image,
+  Modal,
+  Pressable,
+  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, Clock, MapPin, Calendar, Car, CheckCircle, XCircle, Package as PackageIcon, Route, AlertCircle, RefreshCw, PlayCircle } from "lucide-react-native";
+import {
+  ArrowLeft,
+  Clock,
+  MapPin,
+  Calendar,
+  Car,
+  CheckCircle,
+  XCircle,
+  Package as PackageIcon,
+  ChevronRight,
+} from "lucide-react-native";
 import { userPackagesData } from "@/data/user_packages_data";
 import { AppColors } from "@/constants/Colors";
 
-type StatusFilter = "all" | "route_planning" | "upcoming" | "cancelled" | "rescheduled" | "in_progress" | "completed";
+type StatusFilter =
+  | "all"
+  | "route_planning"
+  | "upcoming"
+  | "cancelled"
+  | "rescheduled"
+  | "in_progress"
+  | "completed";
 
 export default function PackageDetailScreen() {
   const router = useRouter();
@@ -33,22 +53,18 @@ export default function PackageDetailScreen() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "route_planning":
-      case "planning":
-        return <Route size={16} color="#6366f1" strokeWidth={2} />;
+      case "planing":
+        return <Calendar size={16} color={AppColors.yellow} strokeWidth={2} />;
       case "upcoming":
-      case "scheduled":
-        return <Calendar size={16} color="#3b82f6" strokeWidth={2} />;
-      case "cancelled":
-        return <XCircle size={16} color="#ef4444" strokeWidth={2} />;
-      case "rescheduled":
-      case "changed":
-        return <RefreshCw size={16} color="#f59e0b" strokeWidth={2} />;
+        return <Clock size={16} color={AppColors.yellow} strokeWidth={2} />;
       case "in_progress":
-      case "active":
-        return <PlayCircle size={16} color="#10b981" strokeWidth={2} />;
+        return <Clock size={16} color={AppColors.primary} strokeWidth={2} />;
       case "completed":
-        return <CheckCircle size={16} color={AppColors.primary} strokeWidth={2} />;
+        return <CheckCircle size={16} color={AppColors.gray} strokeWidth={2} />;
+      case "reschedule":
+        return <Clock size={16} color={AppColors.blue} strokeWidth={2} />;
+      case "cancelled":
+        return <XCircle size={16} color={AppColors.red} strokeWidth={2} />;
       default:
         return <AlertCircle size={16} color="#64748b" strokeWidth={2} />;
     }
@@ -56,87 +72,87 @@ export default function PackageDetailScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "route_planning":
-      case "planning":
-        return "#6366f1"; // Indigo
+      case "planing":
+        return AppColors.yellow;
       case "upcoming":
-      case "scheduled":
-        return "#3b82f6"; // Blue
-      case "cancelled":
-        return "#ef4444"; // Red
-      case "rescheduled":
-      case "changed":
-        return "#f59e0b"; // Amber
+        return AppColors.yellow;
       case "in_progress":
-      case "active":
-        return "#10b981"; // Green
+        return AppColors.primary;
       case "completed":
-        return AppColors.primary; // Primary green
+        return AppColors.gray;
+      case "reschedule":
+        return AppColors.blue;
+      case "cancelled":
+        return AppColors.red;
       default:
-        return "#64748b"; // Gray
+        return AppColors.gray;
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "route_planning":
-      case "planning":
+      case "planing":
         return "Lên lộ trình";
       case "upcoming":
-      case "scheduled":
-        return "Sắp tới";
-      case "cancelled":
-        return "Hủy lịch";
-      case "rescheduled":
-      case "changed":
-        return "Đổi lịch";
+        return "Sắp diễn ra";
       case "in_progress":
-      case "active":
-        return "Đang thực hiện";
+        return "Đang diễn ra";
       case "completed":
-        return "Hoàn thành";
+        return "Đã hoàn thành";
+      case "reschedule":
+        return "Đổi lịch";
+      case "cancelled":
+        return "Đã hủy";
       default:
         return status;
     }
   };
 
-  // Filter sessions based on selected status
+  const [selectedSessionStatus, setSelectedSessionStatus] =
+    useState<string>("all");
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isProcessingCancel, setIsProcessingCancel] = useState(false);
+  const [localStatus, setLocalStatus] = useState<string>(packageData.status);
+  const [cancelDateStr, setCancelDateStr] = useState<string | null>(null);
+
+  const sessionStatusOptions = useMemo(
+    () => [
+      { key: "all", label: "Tất cả" },
+      { key: "planing", label: "Lên lộ trình" },
+      { key: "upcoming", label: "Sắp diễn ra" },
+      { key: "in_progress", label: "Đang diễn ra" },
+      { key: "completed", label: "Đã hoàn thành" },
+      { key: "reschedule", label: "Đổi lịch" },
+      { key: "cancelled", label: "Đã hủy" },
+    ],
+    []
+  );
+
+  const sessionStatusCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: packageData ? packageData.sessions.length : 0,
+      planing: 0,
+      upcoming: 0,
+      in_progress: 0,
+      completed: 0,
+      reschedule: 0,
+      cancelled: 0,
+    };
+    if (packageData) {
+      packageData.sessions.forEach((s) => {
+        if (counts[s.status] !== undefined) counts[s.status] += 1;
+      });
+    }
+    return counts;
+  }, [packageData]);
+
   const filteredSessions = useMemo(() => {
     if (!packageData) return [];
-    if (selectedStatus === "all") return packageData.sessions;
-
-    return packageData.sessions.filter((session) => {
-      const sessionStatus = (session as any).status as string;
-      if (!sessionStatus) return false;
-
-      switch (selectedStatus) {
-        case "route_planning":
-          return sessionStatus === "route_planning" || sessionStatus === "planning";
-        case "upcoming":
-          return sessionStatus === "upcoming" || sessionStatus === "scheduled";
-        case "cancelled":
-          return sessionStatus === "cancelled";
-        case "rescheduled":
-          return sessionStatus === "rescheduled" || sessionStatus === "changed";
-        case "in_progress":
-          return sessionStatus === "in_progress" || sessionStatus === "active";
-        case "completed":
-          return sessionStatus === "completed";
-        default:
-          return true;
-      }
-    });
-  }, [packageData, selectedStatus]);
-
-  const statusFilters: { key: StatusFilter; label: string; icon: React.ReactNode }[] = [
-    { key: "all", label: "Tất cả", icon: <Calendar size={16} color="#64748b" strokeWidth={2} /> },
-    { key: "route_planning", label: "Lên lộ trình", icon: <Route size={16} color="#6366f1" strokeWidth={2} /> },
-    { key: "upcoming", label: "Sắp tới", icon: <Calendar size={16} color="#3b82f6" strokeWidth={2} /> },
-    { key: "cancelled", label: "Hủy lịch", icon: <XCircle size={16} color="#ef4444" strokeWidth={2} /> },
-    { key: "rescheduled", label: "Đổi lịch", icon: <RefreshCw size={16} color="#f59e0b" strokeWidth={2} /> },
-    { key: "in_progress", label: "Đang thực hiện", icon: <PlayCircle size={16} color="#10b981" strokeWidth={2} /> },
-    { key: "completed", label: "Hoàn thành", icon: <CheckCircle size={16} color={AppColors.primary} strokeWidth={2} /> },
-  ];
+    if (selectedSessionStatus === "all") return packageData.sessions;
+    return packageData.sessions.filter(
+      (s) => s.status === selectedSessionStatus
+    );
+  }, [packageData, selectedSessionStatus]);
 
   const handleBookNewSession = () => {
     router.push({
@@ -148,6 +164,82 @@ export default function PackageDetailScreen() {
         userPackageId: packageData.id,
       },
     });
+  };
+
+  const handleViewSessionDetail = (sessionId: string) => {
+    router.push({
+      pathname: "/(main)/(no-tabs)/my-driving-session-detail",
+      params: { sessionId },
+    });
+  };
+
+  const handleConfirmCancel = () => {
+    if (!packageData) return;
+    setIsProcessingCancel(true);
+    const info = computeRefund({
+      status: localStatus,
+      purchaseDate: packageData.purchaseDate,
+      price: packageData.price,
+      totalHours: packageData.totalHours,
+      usedHours: packageData.usedHours,
+    });
+    const days = daysSince(packageData.purchaseDate);
+    const canRefundPaidUnder30 = localStatus === "paid" && days < 30;
+    const canRefundInProgressUnder30 =
+      localStatus === "in_progress" &&
+      days < 30 &&
+      packageData.usedHours < packageData.totalHours;
+    const cancelNoRefundPaidOver30 = localStatus === "paid" && days >= 30;
+    setTimeout(() => {
+      setIsProcessingCancel(false);
+      setShowCancelModal(false);
+      if (canRefundPaidUnder30 || canRefundInProgressUnder30) {
+        const refundAmount = Math.max(info.amount, 0);
+        setLocalStatus("refunded");
+        Alert.alert(
+          "Hủy gói thành công",
+          `Số tiền hoàn: ${refundAmount.toLocaleString("vi-VN")}₫`,
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                const idx = userPackagesData.findIndex(
+                  (p) => p.id === packageData.id
+                );
+                if (idx >= 0) userPackagesData.splice(idx, 1);
+                router.replace("/(main)/(no-tabs)/my-packages");
+              },
+            },
+          ]
+        );
+        return;
+      }
+      if (cancelNoRefundPaidOver30) {
+        setLocalStatus("not_refund");
+        Alert.alert(
+          "Hủy gói thành công",
+          "Không có hoàn tiền theo chính sách.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                const idx = userPackagesData.findIndex(
+                  (p) => p.id === packageData.id
+                );
+                if (idx >= 0) userPackagesData.splice(idx, 1);
+                router.replace("/(main)/(no-tabs)/my-packages");
+              },
+            },
+          ]
+        );
+        return;
+      }
+      setLocalStatus("not_refund");
+      Alert.alert(
+        "Hủy gói không thành công",
+        "Không đủ điều kiện hoàn tiền theo chính sách."
+      );
+    }, 1000);
   };
 
   return (
@@ -179,6 +271,11 @@ export default function PackageDetailScreen() {
                 {packageData.instructorName}
               </Text>
               <Text style={styles.packageName}>{packageData.packageName}</Text>
+              {typeof packageData.price === "number" && (
+                <Text style={styles.priceText}>
+                  Giá gói: {packageData.price.toLocaleString("vi-VN")}₫
+                </Text>
+              )}
             </View>
           </View>
 
@@ -222,7 +319,9 @@ export default function PackageDetailScreen() {
                   style={[
                     styles.progressFill,
                     {
-                      width: `${(packageData.usedHours / packageData.totalHours) * 100}%`,
+                      width: `${
+                        (packageData.usedHours / packageData.totalHours) * 100
+                      }%`,
                     },
                   ]}
                 />
@@ -236,57 +335,74 @@ export default function PackageDetailScreen() {
             </View>
           </View>
 
+          {/* Package Dates */}
+          <View style={styles.datesRow}>
+            <View>
+              <Text style={styles.dateLabel}>Ngày mua</Text>
+              <Text style={styles.dateValue}>
+                {new Date(packageData.purchaseDate).toLocaleDateString("vi-VN")}
+              </Text>
+            </View>
+          </View>
         </View>
 
         {/* Sessions Section */}
         <View style={styles.sessionsSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              Lịch thuê đã đặt ({filteredSessions.length})
+              Lịch học đã đặt ({filteredSessions.length})
             </Text>
           </View>
 
-          {/* Status Filter Bar */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterContainer}
-            contentContainerStyle={styles.filterContent}
-          >
-            {statusFilters.map((filter) => {
-              const isSelected = selectedStatus === filter.key;
-              const filterColor = getStatusColor(filter.key === "all" ? "scheduled" : filter.key);
-              return (
-                <TouchableOpacity
-                  key={filter.key}
-                  style={[
-                    styles.filterButton,
-                    isSelected && [
-                      styles.filterButtonSelected,
-                      { borderColor: filterColor, backgroundColor: filterColor + "15" },
-                    ],
-                  ]}
-                  onPress={() => setSelectedStatus(filter.key)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[
-                    styles.filterIcon,
-                    isSelected && { backgroundColor: filterColor + "20" }
-                  ]}>
-                    {filter.icon}
-                  </View>
-                  <Text
+          {/* Filter Bar for Sessions */}
+          <View style={styles.filterBarContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterBarScroll}
+            >
+              {sessionStatusOptions.map((opt) => {
+                const isActive = selectedSessionStatus === opt.key;
+                const color =
+                  opt.key === "all"
+                    ? AppColors.gray
+                    : getStatusColor(opt.key as string);
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    onPress={() => setSelectedSessionStatus(opt.key)}
+                    activeOpacity={0.8}
                     style={[
-                      styles.filterText,
-                      isSelected && { color: filterColor, fontWeight: "700" },
+                      styles.filterChip,
+                      isActive && {
+                        backgroundColor: color + "15",
+                        borderColor: color,
+                      },
                     ]}
                   >
-                    {filter.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        { color: isActive ? color : "#475569" },
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                    <View
+                      style={[
+                        styles.filterCount,
+                        { backgroundColor: isActive ? color : "#e2e8f0" },
+                      ]}
+                    >
+                      <Text style={styles.filterCountText}>
+                        {sessionStatusCounts[opt.key] ?? 0}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
 
           {filteredSessions.length === 0 ? (
             <View style={styles.emptyState}>
@@ -306,7 +422,7 @@ export default function PackageDetailScreen() {
                       styles.statusBadge,
                       {
                         backgroundColor: getStatusColor(session.status) + "20",
-                        borderColor: getStatusColor(session.status)
+                        borderColor: getStatusColor(session.status),
                       },
                     ]}
                   >
@@ -332,7 +448,8 @@ export default function PackageDetailScreen() {
                   <View style={styles.sessionRow}>
                     <Clock size={18} color="#64748b" strokeWidth={2} />
                     <Text style={styles.sessionText}>
-                      {session.startTime} - {session.endTime} ({session.duration}h)
+                      {session.startTime} - {session.endTime} (
+                      {session.duration}h)
                     </Text>
                   </View>
 
@@ -348,9 +465,27 @@ export default function PackageDetailScreen() {
                   {session.vehicleName && (
                     <View style={styles.sessionRow}>
                       <Car size={18} color="#64748b" strokeWidth={2} />
-                      <Text style={styles.sessionText}>{session.vehicleName}</Text>
+                      <Text style={styles.sessionText}>
+                        {session.vehicleName}
+                      </Text>
                     </View>
                   )}
+
+                  {/* Footer Actions */}
+                  <View style={styles.sessionFooter}>
+                    <TouchableOpacity
+                      onPress={() => handleViewSessionDetail(session.id)}
+                      style={styles.viewDetailButton}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.viewDetailText}>Xem chi tiết</Text>
+                      <ChevronRight
+                        size={18}
+                        color={AppColors.primary}
+                        strokeWidth={2}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))}
             </View>
@@ -360,22 +495,190 @@ export default function PackageDetailScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Book New Session Button */}
-      {packageData.remainingHours > 0 && packageData.status === "active" && (
+      {/* Bottom Actions */}
+      {(localStatus === "paid" || localStatus === "in_progress") && (
         <View style={styles.bottomContainer}>
-          <TouchableOpacity
-            style={styles.bookButton}
-            onPress={handleBookNewSession}
-          >
-            <View style={styles.bookButtonGradient}>
-              <Text style={styles.bookButtonText}>Đặt buổi thuê mới</Text>
-            </View>
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            {packageData.usedHours < packageData.totalHours && (
+              <TouchableOpacity
+                style={[styles.bookButton, { flex: 1 }]}
+                onPress={handleBookNewSession}
+              >
+                <LinearGradient
+                  colors={[AppColors.primary, "#059669"]}
+                  style={styles.bookButtonGradient}
+                >
+                  <Text style={styles.bookButtonText}>Đặt buổi thuê mới</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.cancelButton, { flex: 1 }]}
+              onPress={() => {
+                setCancelDateStr(new Date().toISOString());
+                setShowCancelModal(true);
+              }}
+            >
+              <Text style={styles.cancelButtonText}>Hủy gói</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
+
+      {/* Cancel Modal */}
+      <Modal
+        visible={showCancelModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !isProcessingCancel && setShowCancelModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Xác nhận hủy gói</Text>
+            <View style={{ gap: 8 }}>
+              <Text style={styles.modalText}>
+                Gói: {packageData.packageName}
+              </Text>
+              {typeof packageData.price === "number" && (
+                <Text style={styles.modalText}>
+                  Giá gói: {packageData.price.toLocaleString("vi-VN")}₫
+                </Text>
+              )}
+              <Text style={styles.modalText}>
+                Trạng thái: {getStatusText(localStatus)}
+              </Text>
+              <Text style={styles.modalText}>
+                Ngày mua:{" "}
+                {new Date(packageData.purchaseDate).toLocaleDateString(
+                  "vi-VN",
+                  { day: "2-digit", month: "2-digit", year: "numeric" }
+                )}
+              </Text>
+              {cancelDateStr && (
+                <Text style={styles.modalText}>
+                  Ngày hủy:{" "}
+                  {new Date(cancelDateStr).toLocaleDateString("vi-VN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })}
+                </Text>
+              )}
+              {renderRefundInfo({ ...packageData, status: localStatus })}
+              <View style={styles.modalNoteBox}>
+                <Text style={styles.modalNoteTitle}>
+                  Lưu ý chính sách hoàn tiền
+                </Text>
+                <Text style={styles.modalSubText}>
+                  - Nếu gói ở trạng thái đã thanh toán hoặc đang sử dụng và được
+                  mua dưới 30 ngày: hoàn 100% nếu chưa dùng giờ nào.
+                </Text>
+                <Text style={styles.modalSubText}>
+                  - Nếu gói ở trạng thái đã thanh toán hoặc đang sử dụng và được
+                  mua dưới 30 ngày, đã dùng một phần: số tiền hoàn = (giá gói /
+                  tổng giờ) × (tổng giờ - giờ đã dùng).
+                </Text>
+                <Text style={styles.modalSubText}>
+                  - Nếu đã từ 30 ngày trở lên kể từ ngày mua: không hoàn tiền.
+                </Text>
+              </View>
+            </View>
+            <View style={styles.modalActions}>
+              <Pressable
+                disabled={isProcessingCancel}
+                style={[styles.modalButton, styles.modalCancel]}
+                onPress={() => setShowCancelModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Đóng</Text>
+              </Pressable>
+              <Pressable
+                disabled={isProcessingCancel}
+                style={[styles.modalButton, styles.modalConfirm]}
+                onPress={() => handleConfirmCancel()}
+              >
+                <Text style={styles.modalConfirmText}>
+                  {isProcessingCancel ? "Đang xử lý..." : "Xác nhận hủy"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+
+function daysSince(dateStr: string): number {
+  const start = new Date(dateStr).getTime();
+  const now = Date.now();
+  return Math.floor((now - start) / (1000 * 60 * 60 * 24));
+}
+
+function computeRefund(pkg: {
+  status: string;
+  purchaseDate: string;
+  price?: number;
+  totalHours: number;
+  usedHours: number;
+}): { eligible: boolean; amount: number; reason: string } {
+  if (pkg.status !== "paid" && pkg.status !== "in_progress") {
+    return {
+      eligible: false,
+      amount: 0,
+      reason: "Gói không ở trạng thái đã thanh toán",
+    };
+  }
+  const days = daysSince(pkg.purchaseDate);
+  const price = typeof pkg.price === "number" ? pkg.price : 0;
+  if (days >= 30) {
+    return {
+      eligible: false,
+      amount: 0,
+      reason: "Đã quá 30 ngày kể từ ngày mua",
+    };
+  }
+  if (pkg.usedHours === 0) {
+    return {
+      eligible: true,
+      amount: price,
+      reason: "Hoàn 100% vì chưa sử dụng giờ nào",
+    };
+  }
+  const unusedHours = Math.max(pkg.totalHours - pkg.usedHours, 0);
+  const perHour = pkg.totalHours > 0 ? price / pkg.totalHours : 0;
+  const refund = Math.max(Math.floor(perHour * unusedHours), 0);
+  return {
+    eligible: refund > 0,
+    amount: refund,
+    reason: "Hoàn theo số giờ chưa sử dụng (< 30 ngày)",
+  };
+}
+
+function renderRefundInfo(pkg: any) {
+  const info = computeRefund(pkg);
+  if (!info.eligible) {
+    return (
+      <Text style={[styles.modalText, { fontWeight: "700", color: "#ef4444" }]}>
+        Không đủ điều kiện hoàn tiền ({info.reason})
+      </Text>
+    );
+  }
+  return (
+    <View style={{ gap: 4 }}>
+      <Text
+        style={[
+          styles.modalText,
+          { fontWeight: "800", color: AppColors.primary },
+        ]}
+      >
+        Số tiền dự kiến hoàn: {info.amount.toLocaleString("vi-VN")}₫
+      </Text>
+      <Text style={styles.modalSubText}>{info.reason}</Text>
+    </View>
+  );
+}
+
+//
 
 const styles = StyleSheet.create({
   container: {
@@ -448,6 +751,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#1e293b",
   },
+  priceText: {
+    marginTop: 6,
+    fontSize: 14,
+    fontWeight: "700",
+    color: AppColors.primary,
+  },
   hoursCard: {
     backgroundColor: "#f8fafc",
     borderRadius: 12,
@@ -513,6 +822,48 @@ const styles = StyleSheet.create({
   sessionsSection: {
     marginTop: 16,
     marginHorizontal: 16,
+  },
+  filterBarContainer: {
+    backgroundColor: AppColors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 12,
+  },
+  filterBarScroll: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  filterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: AppColors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    marginRight: 8,
+    gap: 8,
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  filterCount: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 6,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterCountText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: AppColors.white,
   },
   sectionHeader: {
     marginBottom: 12,
@@ -597,6 +948,22 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     flex: 1,
   },
+  sessionFooter: {
+    marginTop: 8,
+    alignItems: "flex-end",
+  },
+  viewDetailButton: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  viewDetailText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: AppColors.primary,
+  },
   emptyState: {
     backgroundColor: AppColors.white,
     borderRadius: 12,
@@ -645,5 +1012,83 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: AppColors.white,
   },
+  cancelButton: {
+    borderRadius: 12,
+    backgroundColor: "#ef4444",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: AppColors.white,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: AppColors.white,
+    borderRadius: 12,
+    padding: 20,
+    width: "100%",
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  modalText: {
+    fontSize: 14,
+    color: "#374151",
+    fontWeight: "600",
+  },
+  modalSubText: {
+    fontSize: 12,
+    color: "#6b7280",
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+    marginTop: 8,
+  },
+  modalButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  modalCancel: {
+    backgroundColor: "#e5e7eb",
+  },
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  modalConfirm: {
+    backgroundColor: AppColors.primary,
+  },
+  modalConfirmText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: AppColors.white,
+  },
+  modalNoteBox: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+    gap: 4,
+  },
+  modalNoteTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#111827",
+  },
 });
-
