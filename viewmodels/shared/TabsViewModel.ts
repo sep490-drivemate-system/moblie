@@ -83,15 +83,6 @@ export class TabsViewModel {
         }
         return '/(main)/(tabs)/home';
     }
-    // getRole(role: UserRole | null): string {
-    //     const effectiveRole = role ?? UserRole.NoviceDriver;
-    //     if (effectiveRole === UserRole.Instructor) {
-    //         return '/(main)/(tabs)/overview';
-    //     }
-    //     return '/(main)/(tabs)/home';
-    // } 
-
-
 }
 
 export default TabsViewModel;

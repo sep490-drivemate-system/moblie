@@ -21,6 +21,7 @@ import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { RootState } from "@/lib/redux/store";
 import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { ISignInRequest } from "@/models/auth/signin";
+import { UserRole } from "@/models/enum/UserRole.enum";
 
 const { width, height } = Dimensions.get("window");
 
@@ -39,11 +40,17 @@ export default function SignInScreen() {
     }
   ));
 
-  // useEffect(() => {
-  //   if (isAuthenticated && user) {
-  //     router.replace("/(main)/(tabs)/home");
-  //   }
-  // }, [isAuthenticated, user, router]);
+  useEffect(() => {
+    if (isAuthenticated && user?.role) {
+      if (user.role === UserRole.NoviceDriver) {
+        router.replace("/(main)/(tabs)/home");
+      } else if (user.role === UserRole.Instructor) {
+        router.replace("/(main)/(tabs)/overview");
+      } else {
+        router.replace("/(main)/(tabs)/home");
+      }
+    }
+  }, [isAuthenticated, user?.role, router]);
 
   const handleInputChange = (field: keyof ISignInRequest, value: string) => {
     authViewModel.updateFormData(field, value);

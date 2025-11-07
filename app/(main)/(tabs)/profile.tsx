@@ -31,13 +31,16 @@ import {
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { mockPerformance, mockUserProfile } from "@/data/profile-screen";
-import { useAppSelector } from "@/lib/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { UserRole } from "@/models/enum/UserRole.enum";
+import { logout } from "@/features/auth/authSlice";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Mock data matching the UI design
 
 function ProfileScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const role = UserRole.Instructor;
 
   const handleManageExams = () => {
@@ -58,11 +61,22 @@ function ProfileScreen() {
       {
         text: "Đăng xuất",
         style: "destructive",
-        onPress: () => {
-          // Handle logout logic here
-          console.log("Logout");
-          // Navigate to intro screen
-          router.replace("/(onboarding)/intro");
+        onPress: async () => {
+          try {
+            // Xóa token từ AsyncStorage
+            await AsyncStorage.removeItem(process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token');
+            
+            // Reset Redux state
+            dispatch(logout());
+            
+            console.log("Logout successful - Token removed");
+            
+            // Navigate to intro screen
+            router.replace("/(onboarding)/intro");
+          } catch (error) {
+            console.error("Error during logout:", error);
+            Alert.alert("Lỗi", "Có lỗi xảy ra khi đăng xuất");
+          }
         },
       },
     ]);
@@ -308,7 +322,7 @@ const styles = StyleSheet.create({
 
   // Wallet styles
   walletSection: {
-    backgroundColor: "#70E000", // blue-500 to purple-600 gradient effect
+    backgroundColor: "#1AD562", // blue-500 to purple-600 gradient effect
     borderRadius: 16,
     padding: 16,
   },

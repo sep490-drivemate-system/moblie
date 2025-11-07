@@ -15,7 +15,11 @@ import {
   setError,
   setSuccess,
   setAuthenticated,
+  setUserRole,
+  logout,
 } from "@/features/auth/authSlice";
+import { getRoleFromToken } from "@/lib/jwt/tokenUtils";
+import { UserRole } from "@/models/enum/UserRole.enum";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootState } from "@/lib/redux/store";
 import axios from "axios";
@@ -36,6 +40,14 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       async () => {
         const token = await AsyncStorage.getItem(process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token');
         if (token) {
+          // Decode token và lấy role
+          const roleFromToken = getRoleFromToken(token);
+          
+          if (roleFromToken) {
+            // Lưu role vào Redux state
+            this.dispatch(setUserRole(roleFromToken));
+          }
+          
           this.dispatch(
             setAuthenticated(true)
           );
@@ -52,37 +64,38 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   }
   handleGoogleLogin = async () => {
   };
-  async handleLogin(): Promise<void> {
+  async handleLogin(): Promise<{ success: boolean; userRole?: UserRole }> {
+    let userRole: UserRole | undefined;
+    
     await this.executeAsync(
       async () => {
-
-
-        const resulttt = await axios.get(`${process.env.EXPO_PUBLIC_API_URL}/skills`, {
-
-        });
-        console.log("resulttt", resulttt.data);
-
-
         const currentState = this.getCurrentState();
+
 
         const result = await this.dispatch(
           signIn(currentState.formData)
         ).unwrap();
+        
         if (result?.value?.token) {
-          this.dispatch(
-            setAuthenticated(true)
-          );
+          const roleFromToken = getRoleFromToken(result.value.token);          
+          if (roleFromToken) {
+            userRole = roleFromToken;
+            this.dispatch(setUserRole(roleFromToken));
+          }
+          
+          this.dispatch(setAuthenticated(true));
+          
           await AsyncStorage.setItem(
             process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token',
             result.value.token
           );
-
         }
-
       },
       () => {
+        console.log('Login successful, role:', userRole);
       },
       () => {
+        console.error('Login failed');
       },
       {
         setLoading,
@@ -90,6 +103,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         setSuccess,
       }
     );
+    
+    return { success: !!userRole, userRole };
   }
 
   handleResetForm(): void {
@@ -262,6 +277,21 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     const currentState = this.getCurrentState();
     if (currentState.errorMessage) {
       this.clearError();
+    }
+  }
+
+  async handleLogout(): Promise<void> {
+    try {
+      // Xóa token từ AsyncStorage
+      await AsyncStorage.removeItem(process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token');
+      
+      // Reset Redux state
+      this.dispatch(logout());
+      
+      console.log("Logout successful - Token removed");
+    } catch (error) {
+      console.error("Error during logout:", error);
+      throw error;
     }
   }
 }

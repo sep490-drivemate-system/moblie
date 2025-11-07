@@ -10,7 +10,6 @@ import {
   Modal,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import {
   CheckCircle,
   X,
@@ -496,16 +495,18 @@ export default function BookingScreen() {
             onPress={handleNext}
             disabled={!canProceedToNextStep()}
           >
-            <LinearGradient
-              colors={
-                canProceedToNextStep()
-                  ? ["#10b981", "#059669"]
-                  : ["#cbd5e1", "#cbd5e1"]
-              }
-              style={styles.continueButtonGradient}
+            <View
+              style={[
+                styles.continueButtonGradient,
+                {
+                  backgroundColor: canProceedToNextStep()
+                    ? "#1AD562"
+                    : "#cbd5e1",
+                },
+              ]}
             >
               <Text style={styles.continueButtonText}>Tiếp tục</Text>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         )}
 
@@ -919,7 +920,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   paymentButtonDisabled: {
-    opacity: 0.5,
   },
   paymentButtonGradient: {
     paddingVertical: 16,

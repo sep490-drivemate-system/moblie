@@ -105,7 +105,7 @@ export default function TransactionSuccessScreen() {
           onPress={handleBookNow}
           activeOpacity={0.9}
         >
-          <Calendar size={20} color="#ffffff" strokeWidth={2} />
+         
           <Text style={styles.bookButtonText}>Đặt lịch ngay</Text>
         </TouchableOpacity>
       </View>

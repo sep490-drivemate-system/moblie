@@ -17,7 +17,7 @@ interface AuthState extends BaseState {
 }
 
 const initialState: AuthState = {
-  isAuthenticated: true,
+  isAuthenticated: false,
   user: null,
 
   formData: {
@@ -113,6 +113,12 @@ const authSlice = createSlice({
     setSuccess: (state, action: PayloadAction<boolean>) => {
       state.isSuccess = action.payload;
     },
+    setUserRole: (state, action: PayloadAction<UserRole>) => {
+      if (!state.user) {
+        state.user = {};
+      }
+      state.user.role = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -147,6 +153,7 @@ export const {
   setLoading,
   setError,
   setSuccess,
+  setUserRole,
 } = authSlice.actions;
 
 export default authSlice.reducer;

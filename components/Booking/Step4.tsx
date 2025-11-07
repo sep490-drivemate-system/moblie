@@ -105,31 +105,23 @@ export default function Step4({
         <Text style={styles.summaryTitle}>Thông tin đặt lịch</Text>
 
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}> Gói học:</Text>
-          <Text style={styles.summaryValue}>{packageName || "Chưa chọn gói"}</Text>
+          <Text style={styles.summaryValue}>Gói thuê: {packageName || "Chưa chọn gói"}</Text>
         </View>
 
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Ngày thuê:</Text>
           <Text style={styles.summaryValue}>
-            {selectedDate ? new Date(selectedDate).toLocaleDateString('vi-VN') : "Chưa chọn"}
+           Ngày: {selectedDate ? new Date(selectedDate).toLocaleDateString('vi-VN') : "Chưa chọn"}
           </Text>
         </View>
 
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Thời gian:</Text>
-          <Text style={styles.summaryValue}>
-            {selectedStartTime && selectedDuration > 0
+          <Text style={styles.summaryValue}>Thời gian: {selectedStartTime && selectedDuration > 0
               ? `${selectedStartTime} - ${calculateEndTime(selectedStartTime, selectedDuration)} (${selectedDuration}h)`
-              : "Chưa chọn thời gian"}
-          </Text>
+              : "Chưa chọn thời gian"}</Text>
         </View>
 
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Địa điểm:</Text>
-          <Text style={styles.summaryValue} numberOfLines={1}>
-            {pickupLocation || "Chưa chọn địa điểm"}
-          </Text>
+          <Text style={styles.summaryValue}>Địa điểm đón: {pickupLocation || "Chưa chọn địa điểm"}</Text>
         </View>
 
         <View style={styles.summaryDivider} />
@@ -150,11 +142,15 @@ export default function Step4({
           {policies.map((policy) => (
             <View key={policy.id} style={styles.policyItem}>
               <TouchableOpacity
-                style={styles.policyCheckbox}
+                style={[
+                  styles.policyCheckbox,
+                  acceptedPolicies.has(policy.id) && styles.policyCheckboxActive
+                ]}
                 onPress={() => togglePolicyAcceptance(policy.id)}
+                activeOpacity={0.7}
               >
                 {acceptedPolicies.has(policy.id) ? (
-                  <CheckCircle size={20} color={AppColors.primary} fill={AppColors.primary} strokeWidth={2} />
+                  <CheckCircle size={20} color="#ffffff" strokeWidth={2.5} />
                 ) : (
                   <Circle size={20} color="#cbd5e1" strokeWidth={2} />
                 )}
@@ -415,7 +411,18 @@ const styles = StyleSheet.create({
     borderBottomColor: "#f1f5f9",
   },
   policyCheckbox: {
-    paddingTop: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "#cbd5e1",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+  },
+  policyCheckboxActive: {
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
   },
   policyContent: {
     flex: 1,
