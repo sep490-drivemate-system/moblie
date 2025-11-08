@@ -10,7 +10,15 @@ import {
   Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Calendar, Clock, MapPin, Car, ArrowLeft } from "lucide-react-native";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Car,
+  ArrowLeft,
+  Route,
+  User,
+} from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { userPackagesData } from "@/data/user_packages_data";
 import MapView, { Marker, Polyline } from "react-native-maps";
@@ -29,6 +37,9 @@ export default function MyDrivingSessionDetailScreen() {
     coordinates: { latitude: number; longitude: number };
     isStart?: boolean;
     isEnd?: boolean;
+    description?: string;
+    estimatedTime?: string;
+    skills?: string[];
   };
 
   type Route = {
@@ -38,6 +49,9 @@ export default function MyDrivingSessionDetailScreen() {
     status: "draft" | "sent" | "accepted" | "rejected";
     notes?: string;
     createdAt: string;
+    title?: string;
+    description?: string;
+    totalDuration?: string;
   };
 
   const proposedRoute: Route | null = useMemo(() => {
@@ -48,22 +62,34 @@ export default function MyDrivingSessionDetailScreen() {
       address: session.location || "123 Nguyễn Huệ, Quận 1, TP.HCM",
       coordinates: { latitude: 10.776889, longitude: 106.700806 },
       isStart: true,
+      description: "Điểm đón - Kiểm tra xe và hướng dẫn cơ bản",
+      estimatedTime: "15 phút",
+      skills: ["Điều khiển cơ bản"],
     };
     const mid1: RoutePoint = {
       id: "p2",
       address: "30 Cống Quỳnh, Quận 1, TP.HCM",
       coordinates: { latitude: 10.769722, longitude: 106.685 },
+      description: "Luyện tập lái xe trong khu dân cư vắng",
+      estimatedTime: "45 phút",
+      skills: ["Điều khiển cơ bản", "Chuyển làn"],
     };
     const mid2: RoutePoint = {
       id: "p3",
       address: "11 Sư Vạn Hạnh, Quận 10, TP.HCM",
       coordinates: { latitude: 10.772, longitude: 106.6662 },
+      description: "Luyện tập lái xe trên đường có lưu lượng xe trung bình",
+      estimatedTime: "60 phút",
+      skills: ["Chuyển làn", "Vượt xe", "Qua ngã tư"],
     };
     const end: RoutePoint = {
       id: "p4",
       address: start.address,
       coordinates: start.coordinates,
       isEnd: true,
+      description: "Điểm trả - Tổng kết buổi học",
+      estimatedTime: "20 phút",
+      skills: [],
     };
     return {
       id: `route_${session.id}`,
@@ -72,6 +98,10 @@ export default function MyDrivingSessionDetailScreen() {
       status: "sent",
       notes: "Lộ trình luyện tập kỹ năng cơ bản trong nội thành",
       createdAt: new Date().toISOString(),
+      title: "Lộ trình buổi tập lái",
+      description:
+        "Lộ trình được thiết kế để học viên làm quen với các kỹ năng lái xe cơ bản trong môi trường thành phố.",
+      totalDuration: `${session.duration || 3} giờ`,
     };
   }, [session]);
 
@@ -237,8 +267,14 @@ export default function MyDrivingSessionDetailScreen() {
           <View style={styles.iconRow}>
             <Clock size={18} color="#64748b" strokeWidth={2} />
             <Text style={styles.iconText}>
-              {displaySession.startTime} - {displaySession.endTime} (
-              {displaySession.duration}h)
+              {displaySession.startTime} - {displaySession.endTime}
+            </Text>
+          </View>
+
+          <View style={styles.iconRow}>
+            <Clock size={18} color="#64748b" strokeWidth={2} />
+            <Text style={styles.iconText}>
+              Tổng thời gian: {displaySession.duration}h
             </Text>
           </View>
 
@@ -300,7 +336,11 @@ export default function MyDrivingSessionDetailScreen() {
 
         {proposedRoute && (
           <View style={styles.routeCard}>
-            <Text style={styles.sectionTitle}>Lộ trình đề xuất</Text>
+            {proposedRoute.title && (
+              <Text style={styles.sectionTitle}>
+                {proposedRoute.title} ({proposedRoute.points.length} điểm)
+              </Text>
+            )}
 
             {/* Route status / decision */}
             {routeDecision && (
@@ -329,22 +369,52 @@ export default function MyDrivingSessionDetailScreen() {
               </View>
             )}
 
-            {/* Points list */}
-            <View style={styles.pointsList}>
-              {proposedRoute.points.map((pt, index) => (
-                <View key={pt.id} style={styles.pointRow}>
-                  <MapPin
-                    size={20}
-                    color={
-                      pt.isStart || pt.isEnd
-                        ? AppColors.primary
-                        : AppColors.blue
-                    }
-                    strokeWidth={2}
-                  />
-                  <Text style={styles.pointAddress} numberOfLines={2}>
-                    {pt.address}
-                  </Text>
+            {/* Route Points Section */}
+            <View style={styles.routePointsSection}>
+              {proposedRoute.points.map((point, index) => (
+                <View key={point.id} style={styles.routePoint}>
+                  <View style={styles.pointHeader}>
+                    <View
+                      style={[
+                        styles.pointNumber,
+                        (point.isStart || point.isEnd) &&
+                          styles.pointNumberPrimary,
+                      ]}
+                    >
+                      <Text style={styles.pointNumberText}>{index + 1}</Text>
+                    </View>
+                    <View style={styles.pointInfo}>
+                      <Text style={styles.pointAddress}>{point.address}</Text>
+                      {point.estimatedTime && (
+                        <Text style={styles.pointTime}>
+                          ⏱️ {point.estimatedTime}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+
+                  {point.description && (
+                    <Text style={styles.pointDescription}>
+                      {point.description}
+                    </Text>
+                  )}
+
+                  {point.skills && point.skills.length > 0 && (
+                    <View style={styles.skillsContainer}>
+                      <Text style={styles.skillsLabel}>Kỹ năng luyện tập:</Text>
+                      <View style={styles.skillsTags}>
+                        {point.skills.map((skill, skillIndex) => (
+                          <View key={skillIndex} style={styles.skillTag}>
+                            <Text style={styles.skillTagText}>{skill}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {index < proposedRoute.points.length - 1 && (
+                    <View style={styles.routeLine} />
+                  )}
                 </View>
               ))}
             </View>
@@ -767,6 +837,131 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 8,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1e293b",
+  },
+  routeTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 8,
+  },
+  routeDescription: {
+    fontSize: 14,
+    color: "#6b7280",
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  routeInfoGrid: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  infoItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: "#6b7280",
+    minWidth: 100,
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1e293b",
+    flex: 1,
+  },
+  routePointsSection: {
+    marginTop: 24,
+  },
+  routePoint: {
+    marginBottom: 16,
+    position: "relative",
+  },
+  pointHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 8,
+  },
+  pointNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#10b981",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pointNumberPrimary: {
+    backgroundColor: AppColors.primary,
+  },
+  pointNumberText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#ffffff",
+  },
+  pointInfo: {
+    flex: 1,
+  },
+  pointAddress: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1e293b",
+    marginBottom: 2,
+  },
+  pointTime: {
+    fontSize: 12,
+    color: "#10b981",
+    fontWeight: "500",
+  },
+  pointDescription: {
+    fontSize: 13,
+    color: "#6b7280",
+    marginLeft: 40,
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  skillsContainer: {
+    marginLeft: 40,
+  },
+  skillsLabel: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginBottom: 6,
+  },
+  skillsTags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  skillTag: {
+    backgroundColor: "#fef3c7",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  skillTagText: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#d97706",
+  },
+  routeLine: {
+    position: "absolute",
+    left: 13,
+    top: 28,
+    bottom: -16,
+    width: 2,
+    backgroundColor: "#e5e7eb",
+  },
   pointsList: {
     gap: 10,
     marginBottom: 12,
@@ -794,11 +989,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     color: "#ffffff",
-  },
-  pointAddress: {
-    flex: 1,
-    fontSize: 14,
-    color: "#4b5563",
   },
   mapContainer: {
     marginTop: 8,
