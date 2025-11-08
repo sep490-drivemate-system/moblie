@@ -38,7 +38,7 @@ export class TabsViewModel {
     };
 
     private normalizeRole(role?: UserRole | null): UserRole {
-        return role ?? UserRole.NoviceDriver;
+        return role ?? UserRole.Instructor;
     }
 
     getTabsForRole(role?: UserRole | null): TabConfigItem[] {
@@ -49,6 +49,7 @@ export class TabsViewModel {
                 this.allTabs.packages,
                 this.allTabs.instructors,
                 this.allTabs.cars,
+                this.allTabs.notifications,
                 this.allTabs.profile,
             ];
         }
@@ -59,6 +60,7 @@ export class TabsViewModel {
                 this.allTabs.schedule,
                 this.allTabs.mycar,
                 this.allTabs.rental,
+                this.allTabs.notifications,
                 this.allTabs.profile,
             ];
         }
