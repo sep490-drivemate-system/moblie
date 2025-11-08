@@ -1,6 +1,30 @@
 import { gender } from "@/constants/enums";
 import { Car } from "../car/car";
+import { Gender } from "../user/gender.enum";
 
+// API Response types
+export interface InstructorPackageAPI {
+  id: string;
+  name: string;
+  description: string;
+  duration: string; // "30", "45" from API
+  price: number;
+  instructorId: string;
+  drivingSkills: string[];
+  roadTypes: string[];
+  isRentalCar: boolean;
+}
+
+export interface InstructorCarAPI {
+  id: string;
+  thumbnailUrl: string;
+  modelName: string;
+  unitPrice: number;
+  seatCounts: number;
+  vehicleType: string | null;
+}
+
+// Legacy UI type (keep for compatibility)
 export interface InstructorPackage {
   id: string;
   name: string;
@@ -15,27 +39,29 @@ export interface InstructorPackage {
 
 export interface IInstructors {
   id: string;
-  name: string;
+  fullName: string;
+  bio: string;
   avatar: string;
-  experience: string;
+  gender: Gender;
+  experienceYear: string;
   averageRating: number;
-  totalBookings: number;
-  totalPackages: number;
+  bookingCount: number;
+  packageCount: number;
 }
 
 export interface IInstructor {
   id: string;
   name: string;
   avatar: string;
-  experience: string;
+
   experienceYears: number;
   rating: number;
-  description: string;
+  bio: string;
   totalBookings: number;
   gender: gender;
-  vehicels?: Car[];
-  packages?: InstructorPackage[];
-  price?: number; // Base price for display purposes
+  packages?: InstructorPackage[]; // Optional packages array
+  price?: number; // Optional price for some instructors
+  vehicels?: any[]; // Optional vehicles (typo in data, keeping for compatibility)
 }
 
 // Type for InstructorItem component (with price for display)

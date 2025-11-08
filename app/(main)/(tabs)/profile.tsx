@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   ScrollView,
   View,
@@ -7,80 +7,40 @@ import {
   Image,
   Alert,
   StyleSheet,
+  Modal,
+  ActivityIndicator,
 } from "react-native";
-import { router } from "expo-router";
 import {
-  Check,
-  MessageCircle,
   Wallet,
-  Plus,
   LogOut,
   User,
   Shield,
-  Heart,
-  Settings,
-  Globe,
   Star,
   FileText,
   Info,
-  ArrowRight,
-  StepBack,
   IdCard,
-  Package,
   Package2,
 } from "lucide-react-native";
+import { ROUTES } from '@/constants/routes';
 import { useRouter } from "expo-router";
-import { mockPerformance, mockUserProfile } from "@/data/profile-screen";
+import { mockUserProfile } from "@/data/profile-screen";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { UserRole } from "@/models/enum/UserRole.enum";
-import { logout } from "@/features/auth/authSlice";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { useMemo } from "react";
 
-// Mock data matching the UI design
 
 function ProfileScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const role = UserRole.Instructor;
-
-  const handleManageExams = () => {
-    Alert.alert("Manage Exams", "Exam management coming soon!");
-  };
-
-  const handleViewDetails = () => {
-    Alert.alert("View Details", "Performance details coming soon!");
-  };
-
-  const handleTopup = () => {
-    router.push("/(main)/(no-tabs)/deposit");
-  };
-
-  const handleLogout = () => {
-    Alert.alert("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
-      { text: "Hủy", style: "cancel" },
-      {
-        text: "Đăng xuất",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            // Xóa token từ AsyncStorage
-            await AsyncStorage.removeItem(process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token');
-            
-            // Reset Redux state
-            dispatch(logout());
-            
-            console.log("Logout successful - Token removed");
-            
-            // Navigate to intro screen
-            router.replace("/(onboarding)/intro");
-          } catch (error) {
-            console.error("Error during logout:", error);
-            Alert.alert("Lỗi", "Có lỗi xảy ra khi đăng xuất");
-          }
-        },
-      },
-    ]);
-  };
+  const authState = useAppSelector((state) => state.auth);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const role = useAppSelector((s) => s.auth.user?.role ?? null);
+  const authViewModel = useMemo(
+    () => new AuthViewModel(dispatch, () => authState),
+    [dispatch, authState]
+  );
 
   return (
     <View style={styles.container}>
@@ -88,10 +48,8 @@ function ProfileScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Header Card */}
         <View style={styles.profileCard}>
           <View style={styles.profileHeader}>
-            {/* Avatar */}
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
                 <Image
@@ -102,7 +60,6 @@ function ProfileScreen() {
               </View>
             </View>
 
-            {/* User Info */}
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{mockUserProfile.name}</Text>
               <Text style={styles.userEmail}>{mockUserProfile.email}</Text>
@@ -110,7 +67,6 @@ function ProfileScreen() {
             </View>
           </View>
 
-          {/* Wallet Section */}
           <View style={styles.walletSection}>
             <View style={styles.walletContent}>
               <View style={styles.walletInfo}>
@@ -124,7 +80,7 @@ function ProfileScreen() {
               </View>
               <TouchableOpacity
                 style={styles.topupButton}
-                onPress={handleTopup}
+                onPress={() => router.push(ROUTES.MAIN_NO_TABS_DEPOSIT)}
               >
                 <Text style={styles.topupButtonText}>Nạp tiền</Text>
               </TouchableOpacity>
@@ -132,7 +88,6 @@ function ProfileScreen() {
           </View>
         </View>
 
-        {/* Account Section */}
         <View style={styles.menuCard}>
           <View style={styles.menuHeader}>
             <Text style={styles.menuTitle}>Tài khoản</Text>
@@ -168,18 +123,17 @@ function ProfileScreen() {
           </View>
         </View>
 
-        {/* Overview Section */}
         <View style={styles.menuCard}>
           <View style={styles.menuHeader}>
             <Text style={styles.menuTitle}>Tổng quát</Text>
           </View>
           <View style={styles.menuItemsContainer}>
-            {role as UserRole === UserRole.Instructor && (
+            {role === UserRole.Instructor && (
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() =>
                   router.push(
-                    "/(main)/(no-tabs)/(service-package)/service-package-management"
+                    ROUTES.MAIN_NO_TABS_SERVICE_PACKAGE_SERVICE_PACKAGE_MANAGEMENT
                   )
                 }
               >
@@ -189,22 +143,20 @@ function ProfileScreen() {
                 </View>
               </TouchableOpacity>
             )}
-            {/* {role as UserRole === UserRole.NoviceDriver && (
-              
-            )} */}
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() =>
-                router.push(
-                  "/(main)/(no-tabs)/my-packages"
-                )
-              }
-            >
-              <View style={styles.menuItemLeft}>
-                <Package2 size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Gói đã mua</Text>
-              </View>
-            </TouchableOpacity>
+            {role === UserRole.NoviceDriver && (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() =>
+                  router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)
+                }
+              >
+                <View style={styles.menuItemLeft}>
+                  <Package2 size={20} color="#70E000" />
+                  <Text style={styles.menuItemText}>Gói đã mua</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
                 <Star size={20} color="#70E000" />
@@ -214,7 +166,6 @@ function ProfileScreen() {
           </View>
         </View>
 
-        {/* Other Section */}
         <View style={styles.menuCard}>
           <View style={styles.menuHeader}>
             <Text style={styles.menuTitle}>Thông tin khác</Text>
@@ -232,7 +183,7 @@ function ProfileScreen() {
                 <Text style={styles.menuItemText}>Thông tin về DriveMate</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => setShowLogoutModal(true)}>
               <View style={styles.menuItemLeft}>
                 <LogOut size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Đăng xuất</Text>
@@ -240,9 +191,57 @@ function ProfileScreen() {
             </TouchableOpacity>
           </View>
         </View>
-        {/* Bottom spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIconContainer}>
+              <LogOut size={48} color="#ef4444" />
+            </View>
+            <Text style={styles.modalTitle}>Đăng xuất tài khoản?</Text>
+            <Text style={styles.modalMessage}>
+              Bạn có chắc chắn muốn đăng xuất khỏi tài khoản DriveMate?
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowLogoutModal(false)}
+                disabled={isLoggingOut}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.cancelButtonText}>Hủy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.logoutButton]}
+                onPress={async () => {
+                  setIsLoggingOut(true);
+                  await authViewModel.handleSignOut()
+                  setIsLoggingOut(false);
+                  setShowLogoutModal(false);
+                  router.push(ROUTES.MAIN_NO_TABS_INTRO as any)
+                }}
+                disabled={isLoggingOut}
+                activeOpacity={0.7}
+              >
+                {isLoggingOut ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={styles.logoutButtonText}>Đăng xuất</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -314,10 +313,6 @@ const styles = StyleSheet.create({
   userPhone: {
     fontSize: 12,
     color: "#4b5563",
-  },
-  logoutButton: {
-    padding: 8,
-    borderRadius: 8,
   },
 
   // Wallet styles
@@ -515,6 +510,85 @@ const styles = StyleSheet.create({
   performanceStatLabel: {
     fontSize: 12,
     color: "#9ca3af",
+  },
+
+  // Logout Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 24,
+    padding: 32,
+    width: "100%",
+    maxWidth: 400,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#fee2e2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#111827",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: "#6b7280",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
+  },
+  cancelButton: {
+    backgroundColor: "#f3f4f6",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  logoutButton: {
+    backgroundColor: "#ef4444",
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "white",
   },
 });
 

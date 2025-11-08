@@ -22,6 +22,8 @@ import { RootState } from "@/lib/redux/store";
 import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { ISignInRequest } from "@/models/auth/signin";
 import { UserRole } from "@/models/enum/UserRole.enum";
+import { ROUTES } from "@/constants/routes";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 const { width, height } = Dimensions.get("window");
 
@@ -43,11 +45,9 @@ export default function SignInScreen() {
   useEffect(() => {
     if (isAuthenticated && user?.role) {
       if (user.role === UserRole.NoviceDriver) {
-        router.replace("/(main)/(tabs)/home");
+        router.replace(ROUTES.HOME);
       } else if (user.role === UserRole.Instructor) {
-        router.replace("/(main)/(tabs)/overview");
-      } else {
-        router.replace("/(main)/(tabs)/home");
+        router.replace(ROUTES.OVERVIEW);
       }
     }
   }, [isAuthenticated, user?.role, router]);
@@ -150,10 +150,9 @@ export default function SignInScreen() {
               </View>
             )}
 
-            {/* Login Button */}
             <TouchableOpacity
               style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-              onPress={() => authViewModel.handleLogin()}
+              onPress={() => authViewModel.handleSignIn()}
               disabled={isLoading}
             >
               {isLoading ? (
@@ -193,6 +192,13 @@ export default function SignInScreen() {
           </View>
         </ScrollView>
       </View>
+
+      {/* Full Screen Loading Overlay */}
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <LoadingSpinner message="Đang đăng nhập..." size="large" color="#70E000" />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -394,5 +400,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#70E000",
     fontWeight: "600",
+  },
+  // Loading Overlay Styles
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 9999,
   },
 });

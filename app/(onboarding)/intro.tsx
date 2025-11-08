@@ -4,8 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
-  Dimensions,
   SafeAreaView,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -14,15 +12,6 @@ import { Video, ResizeMode } from "expo-av";
 
 export default function IntroScreen() {
   const router = useRouter();
-
-  const handleSignUp = () => {
-    router.push("/(auth)/signup");
-  };
-
-  const handleSignIn = () => {
-    router.push("/(auth)/signin");
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <Video
@@ -55,11 +44,11 @@ export default function IntroScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
+          <TouchableOpacity style={styles.signUpButton} onPress={() => router.push("/(auth)/signup")}>
             <Text style={styles.signUpButtonText}>Đăng ký</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
+          <TouchableOpacity style={styles.signInButton} onPress={() => router.push("/(auth)/signin")}>
             <Text style={styles.signInButtonText}>Đăng nhập</Text>
           </TouchableOpacity>
         </View>

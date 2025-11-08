@@ -313,25 +313,6 @@ export default function MyPackagesScreen() {
                   </View>
                 </View>
 
-                {/* Info Row */}
-                <View style={styles.infoRow}>
-                  <View style={styles.infoItem}>
-                    <Calendar size={16} color="#64748b" strokeWidth={2} />
-                    <Text style={styles.infoText}>
-                      {pkg.sessions.length} buổi học
-                    </Text>
-                  </View>
-                  <View style={styles.infoItem}>
-                    <TrendingUp size={16} color="#64748b" strokeWidth={2} />
-                    <Text style={styles.infoText}>
-                      Mua{" "}
-                      {new Date(pkg.purchaseDate).toLocaleDateString("vi-VN", {
-                        day: "2-digit",
-                        month: "short",
-                      })}
-                    </Text>
-                  </View>
-                </View>
 
                 {/* Footer */}
                 <View style={styles.cardFooter}>

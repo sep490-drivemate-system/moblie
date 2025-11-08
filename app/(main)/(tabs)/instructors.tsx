@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -21,55 +21,9 @@ import {
   MinimumRating,
   SortType,
 } from "@/models/instructor/instructor-filter.type";
-
-// Mock data for instructors
-const mockInstructors: IInstructors[] = [
-  {
-    id: "1",
-    name: "Nguyễn Văn An",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-    experience: "5 năm kinh nghiệm",
-    averageRating: 4.8,
-    totalPackages: 3,
-    totalBookings: 120,
-  },
-  {
-    id: "2",
-    name: "Trần Thị Bình",
-    avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
-    experience: "8 năm kinh nghiệm",
-    averageRating: 4.9,
-    totalPackages: 3,
-    totalBookings: 200,
-  },
-  {
-    id: "3",
-    name: "Lê Minh Cường",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-    experience: "3 năm kinh nghiệm",
-    averageRating: 4.6,
-    totalPackages: 3,
-    totalBookings: 85,
-  },
-  {
-    id: "4",
-    name: "Phạm Thị Dung",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-    experience: "10 năm kinh nghiệm",
-    averageRating: 5.0,
-    totalPackages: 3,
-    totalBookings: 300,
-  },
-  {
-    id: "5",
-    name: "Hoàng Văn Em",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-    experience: "6 năm kinh nghiệm",
-    averageRating: 4.7,
-    totalPackages: 3,
-    totalBookings: 150,
-  }
-];
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import { InstructorViewModel } from "@/viewmodels/instructor/InstructorViewModel";
+import { setFilteredInstructors, setDisplayedInstructors } from "@/features/instructor/instructorSlice";
 
 const initialFilters = {
   availability: FilterType.All,
@@ -79,121 +33,122 @@ const initialFilters = {
 
 function InstructorsScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const instructorState = useAppSelector((state) => state.instructor);
   
-  // Local state to replace ViewModel
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState(initialFilters);
-  const [sortBy, setSortBy] = useState(SortType.Rating);
-  const [sortAscending, setSortAscending] = useState(false);
-  const [allInstructors] = useState(mockInstructors);
-  const [filteredInstructors, setFilteredInstructors] = useState(mockInstructors);
-  const [displayedInstructors, setDisplayedInstructors] = useState(mockInstructors);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Initialize ViewModel
+  const instructorViewModel = useMemo(
+    () => new InstructorViewModel(dispatch, () => instructorState),
+    [dispatch, instructorState]
+  );
+
+  // Get data from Redux state
+  const {
+    allInstructors,
+    filteredInstructors,
+    displayedInstructors,
+    searchQuery,
+    filters,
+    sortBy,
+    sortAscending,
+    isRefreshing,
+    isLoading,
+    errorMessage,
+  } = instructorState;
   
-  // Computed values
-  const activeFilterCount = (() => {
-    let count = 0;
-    if (filters.experience !== ExperienceLevel.All) count++;
-    if (filters.minRating !== MinimumRating.All) count++;
-    return count;
-  })();
   
   const hasMoreInstructors = displayedInstructors.length < filteredInstructors.length;
   
-  // Filter and sort logic
+  // Fetch instructors on mount
   useEffect(() => {
+    instructorViewModel.fetchInstructors();
+  }, []);
+
+  // Client-side filtering and sorting
+  useEffect(() => {
+    if (allInstructors.length === 0) return;
+
     let filtered = [...allInstructors];
-    
+
     // Apply search
     if (searchQuery.trim()) {
-      filtered = filtered.filter(instructor => 
-        instructor.name.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(instructor =>
+        instructor.fullName.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
+
     // Apply filters
     if (filters.experience !== ExperienceLevel.All) {
       const expYears = parseInt(filters.experience.split('-')[0]) || 0;
       filtered = filtered.filter(instructor => {
-        const instructorYears = parseInt(instructor.experience.split(' ')[0]) || 0;
+        const instructorYears = parseInt(instructor.experienceYear.split(' ')[0]) || 0;
         return instructorYears >= expYears;
       });
     }
-    
+
     if (filters.minRating !== MinimumRating.All) {
       const minRating = parseFloat(filters.minRating.replace('+', ''));
       filtered = filtered.filter(instructor => instructor.averageRating >= minRating);
     }
-    
+
     // Apply sorting
     filtered.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case SortType.Rating:
           comparison = a.averageRating - b.averageRating;
           break;
         case SortType.Experience:
-          const aYears = parseInt(a.experience.split(' ')[0]) || 0;
-          const bYears = parseInt(b.experience.split(' ')[0]) || 0;
+          const aYears = parseInt(a.experienceYear.split(' ')[0]) || 0;
+          const bYears = parseInt(b.experienceYear.split(' ')[0]) || 0;
           comparison = aYears - bYears;
           break;
         case SortType.Price:
-          // For IInstructors, we can sort by totalPackages as a proxy
-          comparison = a.totalPackages - b.totalPackages;
+          comparison = a.packageCount - b.packageCount;
           break;
         default:
           comparison = 0;
       }
-      
+
       return sortAscending ? comparison : -comparison;
     });
-   
-    
-    setFilteredInstructors(filtered);
-    setDisplayedInstructors(filtered);
+
+    // Update Redux state
+    instructorViewModel.updateFilters(filters);
+    dispatch(setFilteredInstructors(filtered));
+    dispatch(setDisplayedInstructors(filtered));
   }, [searchQuery, filters, sortBy, sortAscending, allInstructors]);
   
   // Action handlers
   const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
+    instructorViewModel.updateSearchQuery(query);
   };
   
-  
   const handleResetFilters = () => {
-    setFilters(initialFilters);
+    instructorViewModel.resetAllFilters();
   };
   
   const handleSortChange = (sortType: SortType) => {
-    if (sortBy === sortType) {
-      setSortAscending(!sortAscending);
-    } else {
-      setSortBy(sortType);
-      setSortAscending(false);
-    }
+    instructorViewModel.updateSort(sortType);
   };
   
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 1000);
+  const handleRefresh = async () => {
+    await instructorViewModel.refreshInstructors();
   };
   
   const loadMoreInstructors = () => {
     // Mock load more functionality
    // console.log('Load more instructors');
   };
-  
-  const setError = (error: string | null) => {
-    setErrorMessage(error);
-  };
 
   const handleInstructorPress = (instructor: IInstructors) => {
     router.push({
       pathname: "/instructor-detail",
-      params: { instructorId: instructor.id },
+      params: { 
+        instructorId: instructor.id,
+        instructorData: JSON.stringify(instructor)
+      },
     });
   };
 
@@ -204,23 +159,20 @@ function InstructorsScreen() {
       activeOpacity={0.7}
     >
       <View style={styles.cardContent}>
-        {/* Avatar bên trái */}
         <Image source={{ uri: item.avatar }} style={styles.avatar} />
-        
-        {/* Thông tin chính ở giữa */}
+      
         <View style={styles.mainInfo}>
-          <Text style={styles.instructorName}>{item.name}</Text>
-          <Text style={styles.experience}>{item.experience}</Text>
-          <Text style={styles.packages}>{item.totalPackages} gói thuê</Text>
+          <Text style={styles.instructorName}>{item.fullName}</Text>
+          <Text style={styles.experience}>{item.experienceYear} năm kinh nghiệm</Text>
+          <Text style={styles.packages}>{item.packageCount} gói thuê</Text>
         </View>
         
-        {/* Thông tin phụ bên phải */}
         <View style={styles.rightInfo}>
           <View style={styles.ratingContainer}>
             <Star size={14} color="#FFD700" fill="#FFD700" />
             <Text style={styles.rating}>{item.averageRating}</Text>
           </View>
-          <Text style={styles.bookings}>({item.totalBookings} lượt đặt)</Text>
+          <Text style={styles.bookings}>({item.bookingCount} lượt đặt)</Text>
           <TouchableOpacity
             style={styles.detailButton}
             onPress={() => handleInstructorPress(item)}
@@ -245,10 +197,7 @@ function InstructorsScreen() {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <LucideUsers size={64} color={AppColors.gray300} />
-      <Text style={styles.emptyTitle}>Không tìm thấy giảng viên</Text>
-      <Text style={styles.emptySubtitle}>
-        Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm
-      </Text>
+      <Text style={styles.emptyTitle}>Không tìm thấy người hướng dẫn</Text>
       <TouchableOpacity
         style={styles.resetButton}
         onPress={handleResetFilters}
@@ -281,7 +230,7 @@ function InstructorsScreen() {
       </View>
 
       {/* Filter Bar */}
-      <View style={styles.filterBar}>
+      {/* <View style={styles.filterBar}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -305,7 +254,7 @@ function InstructorsScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* <TouchableOpacity
+          <TouchableOpacity
             style={[
               styles.filterButton,
               sortBy === SortType.Price && styles.filterButtonActive,
@@ -318,9 +267,9 @@ function InstructorsScreen() {
                 sortBy === SortType.Price && styles.filterButtonTextActive,
               ]}
             >
-              Giá thuê {sortBy === SortType.Price && (sortAscending ? "↑" : "↓")}
+              Số gói {sortBy === SortType.Price && (sortAscending ? "↑" : "↓")}
             </Text>
-          </TouchableOpacity> */}
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[
@@ -339,16 +288,14 @@ function InstructorsScreen() {
             </Text>
           </TouchableOpacity>
 
-          {activeFilterCount > 0 && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={handleResetFilters}
-            >
-              <Text style={styles.clearButtonText}>✕ Xóa</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={handleResetFilters}
+          >
+            <Text style={styles.clearButtonText}>✕ Đặt lại</Text>
+          </TouchableOpacity>
         </ScrollView>
-      </View>
+      </View> */}
 
 
       {/* Instructor List */}
@@ -376,7 +323,7 @@ function InstructorsScreen() {
       {errorMessage && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{errorMessage}</Text>
-          <TouchableOpacity onPress={() => setError(null)}>
+          <TouchableOpacity onPress={() => instructorViewModel.clearErrorMessage()}>
             <Text style={styles.dismissError}>Đóng</Text>
           </TouchableOpacity>
         </View>

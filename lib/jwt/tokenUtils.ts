@@ -1,5 +1,6 @@
 import { jwtDecode } from 'jwt-decode';
 import { UserRole } from '@/models/enum/UserRole.enum';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface JwtPayload {
   id: string;
@@ -14,7 +15,7 @@ export interface JwtPayload {
 
 export const mapRoleStringToEnum = (roleString: string): UserRole => {
   const roleLower = roleString.toLowerCase().replace(/\s+/g, '');
-  
+
   switch (roleLower) {
     case 'admin':
       return UserRole.Admin;
@@ -46,28 +47,30 @@ export const getRoleFromToken = (token: string): UserRole | null => {
   const decoded = decodeToken(token);
   if (!decoded) return null;
   const roleString = decoded.role || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
-  
+
   if (!roleString) return null;
 
   return mapRoleStringToEnum(roleString);
 };
 
-export const getUserIdFromToken = (token: string): string | null => {
+export const getUserIdFromToken = async (): Promise<string> => {
+  const token = await AsyncStorage.getItem(process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token');
+  if (!token) return "";
   const decoded = decodeToken(token);
-  return decoded?.id || null;
+  return decoded?.id || "";
 };
 
 export const isTokenExpired = (token: string): boolean => {
   const decoded = decodeToken(token);
   if (!decoded || !decoded.exp) return true;
-  
-  const currentTime = Date.now() / 1000; 
+
+  const currentTime = Date.now() / 1000;
   return decoded.exp < currentTime;
 };
 
 export const getTokenExpiration = (token: string): Date | null => {
   const decoded = decodeToken(token);
   if (!decoded || !decoded.exp) return null;
-  
+
   return new Date(decoded.exp * 1000); // Convert seconds to milliseconds
 };

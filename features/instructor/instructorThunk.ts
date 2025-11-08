@@ -1,37 +1,43 @@
 import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/HttpMethods";
-import { IInstructors } from "@/models/instructor/instructor.type";
-import { FilterState, SortType } from "@/models/instructor/instructor-filter.type";
+import { IInstructors, InstructorPackageAPI, InstructorCarAPI } from "@/models/instructor/instructor.type";
+import { IBuyPackageRequest, IBuyPackageResponse } from "@/models/package/package";
 
 export const INSTRUCTOR_PATH = "instructors";
 
-// Interface cho request parameters
-export interface IGetInstructorsRequest {
-  filters?: FilterState;
-  sortBy?: SortType;
-  sortAscending?: boolean;
-  searchQuery?: string;
-  page?: number;
-  limit?: number;
-}
 
-// Interface cho response
-export interface IGetInstructorsResponse {
-  instructors: IInstructors[];
-  totalCount: number;
-  currentPage: number;
-  totalPages: number;
-  hasMore: boolean;
-}
-
-export const getListInstructors = createThunk<IGetInstructorsResponse, IGetInstructorsRequest>(
+export const getListInstructors = createThunk<IInstructors[], void>(
     HttpMethod.GET,
     "getListInstructors",
-    `${INSTRUCTOR_PATH}/instructors`,
+    `/${INSTRUCTOR_PATH}`,
 );
 
 export const getInstructorById = createThunk<IInstructors, { id: string }>(
     HttpMethod.GET,
     "getInstructorById",
     `${INSTRUCTOR_PATH}/:id`,
+);
+
+export const getInstructorPackages = createThunk<InstructorPackageAPI[], { id: string }>(
+    HttpMethod.GET,
+    "getInstructorPackages",
+    `package/instructor/:id`,
+    {
+        buildUrl: (payload) => `package/instructor/${payload.id}`,
+    }
+);
+
+export const getInstructorCars = createThunk<InstructorCarAPI[], { id: string }>(
+    HttpMethod.GET,
+    "getInstructorCars",
+    `car/instructor/:id/cars`,
+    {
+        buildUrl: (payload) => `car/instructor/${payload.id}/cars`,
+    }
+);
+
+export const buyPackage = createThunk<IBuyPackageResponse, IBuyPackageRequest>(
+    HttpMethod.POST,
+    "buyPackage",
+    `package/buy-package`
 );

@@ -11,8 +11,6 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { CheckCircle, Calendar, ArrowLeft, Package } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
-import { instructorsData } from "@/data/instructors_data";
-import { popularPackages } from "@/data/home_data";
 
 export default function TransactionSuccessScreen() {
   const router = useRouter();
@@ -22,24 +20,15 @@ export default function TransactionSuccessScreen() {
     vehicleId?: string;
   }>();
 
-  const instructor = instructorsData.find((i) => i.id === params.instructorId);
-  const pkg = popularPackages.find((p) => p.id === params.packageId) ||
-    instructor?.packages?.find((p) => p.id === params.packageId);
-
   const handleBookNow = () => {
     router.push({
-      pathname: "/(main)/(no-tabs)/booking",
-      params: {
-        instructorId: params.instructorId,
-        packageId: params.packageId,
-        vehicleId: params.vehicleId || "",
-      },
+      pathname: "/(main)/(no-tabs)/my-packages",
     });
   };
 
   const handleBackToInstructor = () => {
     router.push({
-      pathname: "/(main)/(no-tabs)/instructor-detail",
+      pathname: "/(main)/(tabs)/instructors",
       params: {
         instructorId: params.instructorId,
       },
@@ -105,8 +94,8 @@ export default function TransactionSuccessScreen() {
           onPress={handleBookNow}
           activeOpacity={0.9}
         >
-         
-          <Text style={styles.bookButtonText}>Đặt lịch ngay</Text>
+
+          <Text style={styles.bookButtonText}>Gói đã mua</Text>
         </TouchableOpacity>
       </View>
     </View>

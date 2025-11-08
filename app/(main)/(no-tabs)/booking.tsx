@@ -35,6 +35,7 @@ import { instructorsData } from "@/data/instructors_data";
 import { instructorVehicles } from "@/data/instructor_detail";
 import { instructorBusyTimes } from "@/data/user_packages_data";
 import { AppColors } from "@/constants/Colors";
+import { InstructorPackage } from "@/models/instructor/instructor.type";
 
 export default function BookingScreen() {
   const router = useRouter();
@@ -78,7 +79,7 @@ export default function BookingScreen() {
 
   // Get instructor and package info
   const instructor = instructorsData.find((i) => i.id === instructorId);
-  const selectedPackage = instructor?.packages?.find((p) => p.id === packageId);
+  const selectedPackage = instructor?.packages?.find((p: InstructorPackage) => p.id === packageId);
   const maxDuration = selectedPackage?.duration || 40;
 
   // Get vehicle info if vehicleId is provided (from instructorVehicles)
@@ -519,7 +520,7 @@ export default function BookingScreen() {
               styles.paymentButtonDisabled,
             ]}
             onPress={handleConfirmBooking}
-            //disabled={!allPoliciesAccepted}
+          //disabled={!allPoliciesAccepted}
           >
             <View
               style={[

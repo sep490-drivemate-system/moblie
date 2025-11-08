@@ -9,7 +9,20 @@ export interface IRentalPackage {
 
 export interface IInstructorOption {
   id: number;
-  imageUrl: any; // For require() images
+  imageUrl: any;
   title: string;
   description: string;
+}
+
+export interface IBuyPackageRequest {
+  durationWhenBought: number; 
+  priceAtBuyingTime: number;
+  carId: string | null;
+  packageId: string;
+  instructorId: string;
+  driverId: string;
+}
+
+export interface IBuyPackageResponse {
+  id:string
 }

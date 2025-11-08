@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { BaseState } from '@/models/generic/baseState';
-import { Instructor } from '@/models/instructor/instructor.type';
+import { IInstructors } from '@/models/instructor/instructor.type';
 import {
   FilterType,
   DistanceFilter,
@@ -18,9 +18,9 @@ interface PaginationState {
 
 interface InstructorState extends BaseState {
   // Data
-  allInstructors: Instructor[];
-  filteredInstructors: Instructor[];
-  displayedInstructors: Instructor[];
+  allInstructors: IInstructors[];
+  filteredInstructors: IInstructors[];
+  displayedInstructors: IInstructors[];
   
   // Search & Filter
   searchQuery: string;
@@ -84,13 +84,13 @@ const instructorSlice = createSlice({
   initialState,
   reducers: {
     // Data Actions
-    setAllInstructors: (state, action: PayloadAction<Instructor[]>) => {
+    setAllInstructors: (state, action: PayloadAction<IInstructors[]>) => {
       state.allInstructors = action.payload;
     },
-    setFilteredInstructors: (state, action: PayloadAction<Instructor[]>) => {
+    setFilteredInstructors: (state, action: PayloadAction<IInstructors[]>) => {
       state.filteredInstructors = action.payload;
     },
-    setDisplayedInstructors: (state, action: PayloadAction<Instructor[]>) => {
+    setDisplayedInstructors: (state, action: PayloadAction<IInstructors[]>) => {
       state.displayedInstructors = action.payload;
     },
     

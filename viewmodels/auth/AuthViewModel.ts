@@ -22,7 +22,6 @@ import { getRoleFromToken } from "@/lib/jwt/tokenUtils";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootState } from "@/lib/redux/store";
-import axios from "axios";
 
 
 
@@ -33,8 +32,6 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   updateFormData(field: keyof ISignInRequest, value: string): void {
     this.dispatch(updateFormData({ field, value }));
   }
-
-
   async checkAuthStatus(): Promise<void> {
     await this.executeAsync(
       async () => {
@@ -62,16 +59,16 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       }
     );
   }
-  handleGoogleLogin = async () => {
-  };
-  async handleLogin(): Promise<{ success: boolean; userRole?: UserRole }> {
-    let userRole: UserRole | undefined;
-    
+  handleGoogleLogin = async () => {};
+  async handleSignOut(): Promise<void> {
+      await AsyncStorage.removeItem(process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token');      
+      this.dispatch(logout());      
+      await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  async handleSignIn(): Promise<{ success: boolean; userRole?: UserRole }> {
     await this.executeAsync(
       async () => {
         const currentState = this.getCurrentState();
-
-
         const result = await this.dispatch(
           signIn(currentState.formData)
         ).unwrap();
@@ -79,7 +76,6 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         if (result?.value?.token) {
           const roleFromToken = getRoleFromToken(result.value.token);          
           if (roleFromToken) {
-            userRole = roleFromToken;
             this.dispatch(setUserRole(roleFromToken));
           }
           
@@ -92,10 +88,10 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         }
       },
       () => {
-        console.log('Login successful, role:', userRole);
+        
       },
       () => {
-        console.error('Login failed');
+        
       },
       {
         setLoading,
@@ -104,7 +100,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       }
     );
     
-    return { success: !!userRole, userRole };
+    return { success: true };
   }
 
   handleResetForm(): void {
@@ -135,16 +131,11 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         const result = await this.dispatch(
           signUp(currentState.registerFormData)
         ).unwrap();
-
-
-
-
       },
-      () => {
-        console.log("Registration successful");
+      () => {        
       },
       (error) => {
-        console.error("Registration failed:", error);
+        
       },
       {
         setLoading,
@@ -280,18 +271,5 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     }
   }
 
-  async handleLogout(): Promise<void> {
-    try {
-      // Xóa token từ AsyncStorage
-      await AsyncStorage.removeItem(process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token');
-      
-      // Reset Redux state
-      this.dispatch(logout());
-      
-      console.log("Logout successful - Token removed");
-    } catch (error) {
-      console.error("Error during logout:", error);
-      throw error;
-    }
-  }
+  
 }

@@ -26,29 +26,74 @@ import {
   X,
   CheckCircle,
 } from "lucide-react-native";
-import { instructorsData } from "@/data/instructors_data";
 import { AppColors } from "@/constants/Colors";
-import { IInstructor } from "@/models/instructor/instructor.type";
-import { instructorVehicles } from "@/data/instructor_detail";
-import { feedbackData } from "@/data/feedback_data";
+import { IInstructor, IInstructors, InstructorPackageAPI, InstructorCarAPI } from "@/models/instructor/instructor.type";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { getInstructorPackages, getInstructorCars, buyPackage } from "@/features/instructor/instructorThunk";
+import { Gender } from "@/models/user/gender.enum";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { IBuyPackageRequest } from "@/models/package/package";
+import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
+
+
+// Helper function to convert gender number to text
+const getGenderText = (gender: Gender): string => {
+  return gender === Gender.Male ? "Nam" : "Nữ";
+};
 
 export default function InstructorDetailScreen() {
   const router = useRouter();
-  const { instructorId } = useLocalSearchParams();
-  const [instructor, setInstructor] = useState<IInstructor | null>(null);
+  const dispatch = useAppDispatch();
+  const { instructorData } = useLocalSearchParams();
+  const [instructor, setInstructor] = useState<IInstructors | null>(null);
+  const [packages, setPackages] = useState<InstructorPackageAPI[]>([]);
+  const [cars, setCars] = useState<InstructorCarAPI[]>([]);
+  const [isLoadingPackages, setIsLoadingPackages] = useState(false);
+  const [isLoadingCars, setIsLoadingCars] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<any>(null);
+  const [selectedPackage, setSelectedPackage] = useState<InstructorPackageAPI | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null); // null = own car, string = vehicle id
   const [isProcessing, setIsProcessing] = useState(false);
   const fadeAnim = useState(new Animated.Value(1))[0]; // Start with 1 so modal is visible
   const scaleAnim = useState(new Animated.Value(1))[0]; // Start with 1 so modal is visible
 
   useEffect(() => {
-    const foundInstructor = instructorsData.find((i) => i.id === instructorId);
-    if (foundInstructor) {
-      setInstructor(foundInstructor);
+    if (instructorData && typeof instructorData === 'string') {
+      try {
+        const parsedInstructor: IInstructors = JSON.parse(instructorData);
+        setInstructor(parsedInstructor);
+        fetchInstructorData(parsedInstructor.id);
+      } catch (error) {
+        console.error('Failed to parse instructor data:', error);
+      }
     }
-  }, [instructorId]);
+  }, [instructorData]);
+
+  const fetchInstructorData = async (instructorId: string) => {
+    setIsLoadingPackages(true);
+    try {
+      const packagesResult = await dispatch(getInstructorPackages({ id: instructorId })).unwrap();
+
+      const packagesData = (packagesResult as any).value || packagesResult;
+      setPackages(packagesData);
+    } catch (error) {
+      console.error('Failed to fetch packages:', error);
+      Alert.alert('Lỗi', 'Không thể tải danh sách gói học');
+    } finally {
+      setIsLoadingPackages(false);
+    }
+
+    setIsLoadingCars(true);
+    try {
+      const carsResult = await dispatch(getInstructorCars({ id: instructorId })).unwrap();
+      const carsData = (carsResult as any).value || carsResult;
+      setCars(carsData);
+    } catch (error) {
+      console.error('Failed to fetch cars:', error);
+    } finally {
+      setIsLoadingCars(false);
+    }
+  };
 
   useEffect(() => {
     if (showConfirmModal) {
@@ -65,9 +110,9 @@ export default function InstructorDetailScreen() {
     }
   }, [showConfirmModal]);
 
-  const handleBuyPackage = (pkg: any) => {
+  const handleBuyPackage = (pkg: InstructorPackageAPI) => {
     setSelectedPackage(pkg);
-    setSelectedVehicle(null); // Reset vehicle selection
+    setSelectedVehicle(null);
     setShowConfirmModal(true);
     fadeAnim.setValue(0);
     scaleAnim.setValue(0.9);
@@ -80,24 +125,29 @@ export default function InstructorDetailScreen() {
 
     setIsProcessing(true);
 
-    // Simulate payment process
-    setTimeout(() => {
-      // Payment successful - close modal first
-      setIsProcessing(false);
-      setShowConfirmModal(false);
+    const driverId = await getUserIdFromToken();
+    const requestBody: IBuyPackageRequest = {
+      durationWhenBought: parseInt(selectedPackage.duration) || 0,
+      priceAtBuyingTime: selectedPackage.price,
+      carId: selectedVehicle ? selectedVehicle : null,
+      packageId: selectedPackage.id,
+      instructorId: instructor.id,
+      driverId: driverId,
+    };
 
-      // Navigate to success page after a brief delay
-      setTimeout(() => {
-        router.push({
-          pathname: "/(main)/(no-tabs)/transaction-success",
-          params: {
-            instructorId: instructor.id,
-            packageId: selectedPackage.id,
-            vehicleId: selectedVehicle || "",
-          },
-        });
-      }, 300);
-    }, 1500);
+    await dispatch(buyPackage(requestBody)).unwrap();
+    setIsProcessing(false);
+    setShowConfirmModal(false);
+
+    router.push({
+      pathname: "/(main)/(no-tabs)/transaction-success",
+      params: {
+        instructorId: instructor.id,
+        packageId: selectedPackage.id,
+        vehicleId: selectedVehicle || "",
+      },
+    });
+
   };
 
   if (!instructor) {
@@ -139,9 +189,9 @@ export default function InstructorDetailScreen() {
               </View>
 
               <View style={styles.heroNameContainer}>
-                <Text style={styles.heroName}>{instructor.name}</Text>
+                <Text style={styles.heroName}>{instructor.fullName}</Text>
                 <View style={styles.heroStatusRow}>
-                  <Text style={styles.heroStatus}>{instructor.gender}</Text>
+                  <Text style={styles.heroStatus}>{getGenderText(instructor.gender)}</Text>
                 </View>
               </View>
             </View>
@@ -155,20 +205,20 @@ export default function InstructorDetailScreen() {
                   fill="#fbbf24"
                   strokeWidth={0}
                 />
-                <Text style={styles.quickStatText}>{instructor.rating}</Text>
+                <Text style={styles.quickStatText}>{instructor.averageRating}</Text>
               </View>
               <View style={styles.quickStatDivider} />
               <View style={styles.quickStatItem}>
                 <Award size={18} color="#fff" strokeWidth={2} />
                 <Text style={styles.quickStatText}>
-                  {instructor.experienceYears} năm
+                  {instructor.experienceYear} năm
                 </Text>
               </View>
               <View style={styles.quickStatDivider} />
               <View style={styles.quickStatItem}>
                 <Users size={18} color="#fff" strokeWidth={2} />
                 <Text style={styles.quickStatText}>
-                  {instructor.totalBookings}+
+                  {instructor.bookingCount}+
                 </Text>
               </View>
             </View>
@@ -178,130 +228,148 @@ export default function InstructorDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Giới thiệu</Text>
           <Text style={styles.aboutText}>
-            Giảng viên {instructor.name} có {instructor.experienceYears} năm
-            kinh nghiệm trong lĩnh vực đào tạo lái xe. Với phong cách giảng dạy
-            chuyên nghiệp và tận tâm, đã giúp hơn {instructor.totalBookings} học
-            viên tự tin lái xe an toàn trên mọi địa hình.
+            {instructor.bio}
           </Text>
         </View>
         {/* Packages Section */}
         <View style={styles.pricingSection}>
-          <Text style={styles.sectionTitle}>Gói thuê({instructor.packages?.length || 0})</Text>
-          {instructor.packages?.map((pkg) => (
-            <View
-              key={pkg.id}
-              style={[
-                styles.priceCard,
-              ]}
-            >
-              <View style={styles.priceCardHeader}>
-                <View style={styles.priceCardInfo}>
-                  <Text style={styles.priceCardTitle}>{pkg.name}</Text>
-                  <View style={styles.packageTypeContainer}>
-                    {pkg.hasVehicle || pkg.vehicle ? (
-                      <View style={styles.packageTypeWithVehicle}>
-                        <Text style={styles.packageTypeIcon}><Car /></Text>
-                        <Text style={styles.packageTypeText}>
-                          Có xe và người hướng dẫn
-                        </Text>
-                      </View>
-                    ) : (
-                      <View style={styles.packageTypeInstructor}>
-                        <Text style={styles.packageTypeIcon}><User /></Text>
-                        <Text style={styles.packageTypeText}>
-                          Chỉ có người hướng dẫn
-                        </Text>
-                      </View>
-                    )}
+          <Text style={styles.sectionTitle}>Gói thuê ({packages.length})</Text>
+
+          {isLoadingPackages ? (
+            <View style={styles.loadingCard}>
+              <ActivityIndicator size="large" color={AppColors.primary} />
+              <Text style={styles.loadingText}>Đang tải gói học...</Text>
+            </View>
+          ) : packages.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>Chưa có gói học nào</Text>
+            </View>
+          ) : (
+            packages.map((pkg) => (
+              <View key={pkg.id} style={styles.priceCard}>
+                <View style={styles.priceCardHeader}>
+                  <View style={styles.priceCardInfo}>
+                    <Text style={styles.priceCardTitle}>{pkg.name}</Text>
+                    <Text style={styles.packageDescription}>{pkg.description}</Text>
+                    <View style={styles.packageTypeContainer}>
+                      {pkg.isRentalCar ? (
+                        <View style={styles.packageTypeWithVehicle}>
+                          <Car size={16} color="#16a34a" />
+                          <Text style={styles.packageTypeText}>
+                            Có xe và người hướng dẫn
+                          </Text>
+                        </View>
+                      ) : (
+                        <View style={styles.packageTypeInstructor}>
+                          <User size={16} color="#ca8a04" />
+                          <Text style={styles.packageTypeText}>
+                            Chỉ có người hướng dẫn
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </View>
+
+                <View style={styles.packageDetails}>
+                  <View style={styles.packageDetailRow}>
+                    <Clock size={16} color="#64748b" strokeWidth={2} />
+                    <Text style={styles.packageDetailText}>{pkg.duration} giờ</Text>
+                  </View>
+
+                  <View style={styles.packageDetailRow}>
+                    <MapPin size={16} color="#64748b" strokeWidth={2} />
+                    <Text style={styles.packageDetailText}>
+                      {pkg.roadTypes.join(", ")}
+                    </Text>
+                  </View>
+
+                  <View style={styles.packageSkills}>
+                    {pkg.drivingSkills.map((skill: string, idx: number) => (
+                      <View key={idx} style={styles.skillChip}>
+                        <Text style={styles.skillChipText}>{skill}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.priceCardBottom}>
+                  <View style={styles.priceInfo}>
+                    <Text style={styles.priceAmount}>
+                      {pkg.price.toLocaleString('vi-VN')} VND
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.buyButton}
+                    onPress={() => handleBuyPackage(pkg)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.buyButtonText}>Mua gói</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-
-              <View style={styles.packageDetails}>
-                <View style={styles.packageDetailRow}>
-                  <Clock size={16} color="#64748b" strokeWidth={2} />
-                  <Text style={styles.packageDetailText}>{pkg.duration} giờ</Text>
-                </View>
-
-                <View style={styles.packageDetailRow}>
-                  <MapPin size={16} color="#64748b" strokeWidth={2} />
-                  <Text style={styles.packageDetailText}>
-                    {pkg.roadTypes.join(", ")}
-                  </Text>
-                </View>
-
-                <View style={styles.packageSkills}>
-                  {pkg.skills.map((skill: string, idx: number) => (
-                    <View key={idx} style={styles.skillChip}>
-                      <Text style={styles.skillChipText}>{skill}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.priceCardBottom}>
-                <View style={styles.priceInfo}>
-                  <Text style={styles.priceAmount}>
-                    {pkg.basePrice.toLocaleString('vi-VN')} vnd
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.buyButton}
-                  onPress={() => handleBuyPackage(pkg)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.buyButtonText}>Mua gói</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-
+            ))
+          )}
         </View>
 
 
 
+        {/* Cars Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              Phương tiện ({instructorVehicles.length})
+              Phương tiện ({cars.length})
             </Text>
           </View>
 
-          {instructorVehicles.map((vehicle, index) => (
-            <View
-              key={vehicle.id}
-              style={[styles.vehicleCard, index > 0 && { marginTop: 12 }]}
-            >
-              <Image
-                source={{ uri: vehicle.imageUrl }}
-                style={styles.vehicleImage}
-              />
-              <View style={styles.vehicleOverlay}>
-                <View style={styles.vehicleInfo}>
-                  <Text style={styles.vehicleName}>{vehicle.name}</Text>
-                  <Text style={styles.vehiclePrice}>
-                    {vehicle.price} vnd / giờ
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.vehicleDetailButton}
-                  onPress={() => router.push({
-                    pathname: "/car-detail",
-                    params: { carId: vehicle.id }
-                  })}
-                >
-                  <Text style={styles.vehicleDetailButtonText}>Chi tiết</Text>
-                </TouchableOpacity>
-              </View>
+          {isLoadingCars ? (
+            <View style={styles.loadingCard}>
+              <ActivityIndicator size="large" color={AppColors.primary} />
+              <Text style={styles.loadingText}>Đang tải xe...</Text>
             </View>
-          ))}
+          ) : cars.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>Chưa có xe nào</Text>
+            </View>
+          ) : (
+            cars.map((vehicle, index) => (
+              <View
+                key={vehicle.id}
+                style={[styles.vehicleCard, index > 0 && { marginTop: 12 }]}
+              >
+                <Image
+                  source={{ uri: vehicle.thumbnailUrl }}
+                  style={styles.vehicleImage}
+                />
+                <View style={styles.vehicleOverlay}>
+                  <View style={styles.vehicleInfo}>
+                    <Text style={styles.vehicleName}>{vehicle.modelName}</Text>
+                    <Text style={styles.vehicleSpec}>
+                      {vehicle.seatCounts} chỗ {vehicle.vehicleType ? `• ${vehicle.vehicleType}` : ''}
+                    </Text>
+                    <Text style={styles.vehiclePrice}>
+                      {vehicle.unitPrice.toLocaleString('vi-VN')} VND / giờ
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.vehicleDetailButton}
+                    onPress={() => router.push({
+                      pathname: "/car-detail",
+                      params: { carId: vehicle.id }
+                    })}
+                  >
+                    <Text style={styles.vehicleDetailButtonText}>Chi tiết</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Reviews Section */}
-        <View style={styles.section}>
+        {/* <View style={styles.section}>
           <Text style={styles.sectionTitle}>Đánh giá </Text>
 
-          {/* Sample Reviews */}
           {feedbackData.reviews.map((review) => (
             <View style={styles.reviewItem} key={review.id}>
               <View style={styles.reviewHeader}>
@@ -330,7 +398,7 @@ export default function InstructorDetailScreen() {
               <Text style={styles.reviewText}>{review.comment}</Text>
             </View>
           ))}
-        </View>
+        </View> */}
 
         {/* Spacing for bottom */}
         <View style={{ height: 20 }} />
@@ -384,8 +452,12 @@ export default function InstructorDetailScreen() {
                       {selectedPackage.name}
                     </Text>
 
+                    <Text style={styles.confirmPackageDescription}>
+                      {selectedPackage.description}
+                    </Text>
+
                     <View style={styles.confirmPackageBadge}>
-                      {selectedPackage.hasVehicle || selectedPackage.vehicle ? (
+                      {selectedPackage.isRentalCar ? (
                         <View style={styles.confirmBadgeWithVehicle}>
                           <Car size={14} color="#16a34a" />
                           <Text style={styles.confirmBadgeText}>Có xe</Text>
@@ -413,12 +485,11 @@ export default function InstructorDetailScreen() {
                       </View>
                     </View>
 
-                    {/* Skills */}
-                    {selectedPackage.skills && selectedPackage.skills.length > 0 && (
+                    {selectedPackage.drivingSkills && selectedPackage.drivingSkills.length > 0 && (
                       <View style={styles.confirmSkillsContainer}>
                         <Text style={styles.confirmSkillsLabel}>Kỹ năng học được:</Text>
                         <View style={styles.confirmSkillsList}>
-                          {selectedPackage.skills.map((skill: string, index: number) => (
+                          {selectedPackage.drivingSkills.map((skill: string, index: number) => (
                             <View key={index} style={styles.confirmSkillChip}>
                               <Text style={styles.confirmSkillText}>{skill}</Text>
                             </View>
@@ -430,14 +501,13 @@ export default function InstructorDetailScreen() {
                 </View>
 
                 {/* Vehicle Selection (only show if package has vehicle) */}
-                {selectedPackage && (selectedPackage.hasVehicle || selectedPackage.vehicle) && (
+                {selectedPackage && selectedPackage.isRentalCar && (
                   <View style={styles.confirmVehicleSection}>
                     <Text style={styles.confirmSectionTitle}>Chọn xe (Tùy chọn)</Text>
                     <Text style={styles.confirmVehicleSubtitle}>
                       Bạn có thể chọn xe hoặc sử dụng xe riêng của mình
                     </Text>
 
-                    {/* Option: No vehicle - Use own car */}
                     <TouchableOpacity
                       style={[
                         styles.confirmVehicleOption,
@@ -461,8 +531,7 @@ export default function InstructorDetailScreen() {
                       </View>
                     </TouchableOpacity>
 
-                    {/* Available vehicles from instructor */}
-                    {instructorVehicles.map((vehicle) => (
+                    {cars.map((vehicle) => (
                       <TouchableOpacity
                         key={vehicle.id}
                         style={[
@@ -472,21 +541,20 @@ export default function InstructorDetailScreen() {
                         onPress={() => setSelectedVehicle(String(vehicle.id))}
                       >
                         <Image
-                          source={{ uri: vehicle.imageUrl }}
+                          source={{ uri: vehicle.thumbnailUrl }}
                           style={styles.confirmVehicleOptionImage}
                         />
                         <View style={styles.confirmVehicleOptionInfo}>
-                          <Text style={styles.confirmVehicleOptionName}>{vehicle.name}</Text>
+                          <Text style={styles.confirmVehicleOptionName}>{vehicle.modelName}</Text>
                           <View style={styles.confirmVehicleOptionSpecs}>
-                            <Text style={styles.confirmVehicleOptionSpec}>{vehicle.seats} chỗ</Text>
-                            <Text style={styles.confirmVehicleOptionDot}> • </Text>
-                            <Text style={styles.confirmVehicleOptionSpec}>{vehicle.fuel}</Text>
-                            <Text style={styles.confirmVehicleOptionDot}> • </Text>
-                            <Text style={styles.confirmVehicleOptionSpec}>{vehicle.type}</Text>
+                            <Text style={styles.confirmVehicleOptionSpec}>{vehicle.seatCounts} chỗ</Text>
+                            {vehicle.vehicleType && (
+                              <>
+                                <Text style={styles.confirmVehicleOptionDot}> • </Text>
+                                <Text style={styles.confirmVehicleOptionSpec}>{vehicle.vehicleType}</Text>
+                              </>
+                            )}
                           </View>
-                          <Text style={styles.confirmVehicleOptionPrice}>
-                            +{vehicle.price ? vehicle.price.toLocaleString('vi-VN') : '0'} vnd/giờ
-                          </Text>
                         </View>
                         <View style={styles.confirmVehicleRadioButton}>
                           {selectedVehicle === String(vehicle.id) && (
@@ -503,21 +571,22 @@ export default function InstructorDetailScreen() {
                   <View style={styles.confirmPriceRow}>
                     <Text style={styles.confirmPriceLabel}>Giá gói:</Text>
                     <Text style={styles.confirmPriceValue}>
-                      {selectedPackage.basePrice.toLocaleString('vi-VN')} vnd
+                      {selectedPackage.price.toLocaleString('vi-VN')} VND
                     </Text>
                   </View>
                   <View style={styles.confirmDivider} />
                   <View style={styles.confirmPriceRow}>
                     <Text style={styles.confirmTotalLabel}>Tổng cộng:</Text>
                     <Text style={styles.confirmTotalValue}>
-                      {selectedPackage.basePrice.toLocaleString('vi-VN')} vnd
+                      {(
+                        selectedPackage.price
+                      ).toLocaleString('vi-VN')} VND
                     </Text>
                   </View>
                 </View>
               </ScrollView>
             )}
 
-            {/* Modal Actions */}
             <View style={styles.confirmModalActions}>
               {!isProcessing && (
                 <TouchableOpacity
@@ -1541,5 +1610,49 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: AppColors.primary,
     fontWeight: "800",
+  },
+  // Loading and Empty States
+  loadingCard: {
+    backgroundColor: AppColors.white,
+    borderRadius: 16,
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  emptyCard: {
+    backgroundColor: AppColors.white,
+    borderRadius: 16,
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    fontWeight: "500",
+  },
+  // Package Description
+  packageDescription: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    marginTop: 4,
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  confirmPackageDescription: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    marginTop: 4,
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  // Vehicle Spec
+  vehicleSpec: {
+    fontSize: 13,
+    color: "#fff",
+    fontWeight: "500",
+    marginTop: 4,
   },
 });
