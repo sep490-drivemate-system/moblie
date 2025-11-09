@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  StatusBar,
 } from "react-native";
 import { PieChart, BarChart } from "react-native-chart-kit";
 import { LinearGradient } from "expo-linear-gradient";
@@ -240,7 +241,7 @@ export default function OverviewScreen() {
         />
         <KPI
           title="Doanh thu ròng"
-          value={`${(netRevenue / 1000000).toFixed(1)}M ₫`}
+          value={`${(netRevenue / 1000000).toLocaleString("vi-VN")}TR VNĐ`}
           sub={`Hoa hồng ${commissionRate * 100}%`}
           icon={<TrendingUp size={24} color={AppColors.textWhite} />}
           color={[AppColors.success, AppColors.success]}
@@ -248,7 +249,7 @@ export default function OverviewScreen() {
         />
         <KPI
           title="Tổng phí phạt"
-          value={`${(penaltyFees / 1000).toFixed(0)}K ₫`}
+          value={`${(penaltyFees / 1000).toLocaleString("vi-VN")}K VNĐ`}
           sub="Phí hủy/dời lịch"
           icon={<DollarSign size={24} color={AppColors.textWhite} />}
           color={[AppColors.error, AppColors.error]}
@@ -465,145 +466,163 @@ export default function OverviewScreen() {
       </View>
 
       {/* Novice driver Table */}
-      <View style={styles.studentTableCard}>
-        <Text style={styles.studentTableTitle}>Danh Sách Khách Hàng</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={true}
-          contentContainerStyle={styles.tableScrollContainer}
-        >
-          <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <View
-                style={[styles.tableHeaderCell, styles.tableHeaderCellStudent]}
-              >
-                <Text style={styles.tableHeaderText}>Khách hàng</Text>
-              </View>
-              <View
-                style={[styles.tableHeaderCell, styles.tableHeaderCellPackage]}
-              >
-                <Text style={styles.tableHeaderText}>Gói dịch vụ</Text>
-              </View>
-              <View
-                style={[styles.tableHeaderCell, styles.tableHeaderCellSessions]}
-              >
-                <Text
-                  style={[styles.tableHeaderText, styles.tableHeaderCenter]}
+      <View style={styles.studentTableSession}>
+        <View style={styles.studentTableCard}>
+          <Text style={styles.studentTableTitle}>Danh Sách Khách Hàng</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={true}
+            contentContainerStyle={styles.tableScrollContainer}
+          >
+            <View style={styles.table}>
+              <View style={styles.tableHeader}>
+                <View
+                  style={[
+                    styles.tableHeaderCell,
+                    styles.tableHeaderCellStudent,
+                  ]}
                 >
-                  Buổi tập lái
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.tableHeaderCell,
-                  styles.tableHeaderCellCompleted,
-                ]}
-              >
-                <Text
-                  style={[styles.tableHeaderText, styles.tableHeaderCenter]}
-                >
-                  Hoàn thành
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.tableHeaderCell,
-                  styles.tableHeaderCellRescheduled,
-                ]}
-              >
-                <Text
-                  style={[styles.tableHeaderText, styles.tableHeaderCenter]}
-                >
-                  Đã dời
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.tableHeaderCell,
-                  styles.tableHeaderCellCancelled,
-                ]}
-              >
-                <Text
-                  style={[styles.tableHeaderText, styles.tableHeaderCenter]}
-                >
-                  Đã hủy
-                </Text>
-              </View>
-            </View>
-            {students.map((s) => (
-              <View key={s.id} style={styles.tableRow}>
-                <View style={[styles.tableRowCell, styles.tableRowCellStudent]}>
-                  <View style={styles.studentInfo}>
-                    <View style={styles.studentAvatar}>
-                      <Text style={styles.studentAvatarText}>
-                        {s.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .slice(0, 2)
-                          .join("")}
-                      </Text>
-                    </View>
-                    <View>
-                      <Text style={styles.studentName}>{s.name}</Text>
-                      <Text style={styles.studentPhone}>{s.phone}</Text>
-                    </View>
-                  </View>
-                </View>
-                <View style={[styles.tableRowCell, styles.tableRowCellPackage]}>
-                  <Text style={styles.tableCell}>{s.package}</Text>
+                  <Text style={styles.tableHeaderText}>Khách hàng</Text>
                 </View>
                 <View
-                  style={[styles.tableRowCell, styles.tableRowCellSessions]}
+                  style={[
+                    styles.tableHeaderCell,
+                    styles.tableHeaderCellPackage,
+                  ]}
+                >
+                  <Text style={styles.tableHeaderText}>Gói dịch vụ</Text>
+                </View>
+                <View
+                  style={[
+                    styles.tableHeaderCell,
+                    styles.tableHeaderCellSessions,
+                  ]}
                 >
                   <Text
-                    style={[
-                      styles.tableCell,
-                      styles.tableCellCenter,
-                      styles.tableCellBold,
-                    ]}
+                    style={[styles.tableHeaderText, styles.tableHeaderCenter]}
                   >
-                    {s.sessions}
+                    Buổi tập lái
                   </Text>
                 </View>
                 <View
-                  style={[styles.tableRowCell, styles.tableRowCellCompleted]}
+                  style={[
+                    styles.tableHeaderCell,
+                    styles.tableHeaderCellCompleted,
+                  ]}
                 >
-                  <View style={styles.tableCellCenter}>
-                    <View style={styles.completedBadge}>
-                      <Text style={styles.completedBadgeText}>
-                        {s.completed}
-                      </Text>
+                  <Text
+                    style={[styles.tableHeaderText, styles.tableHeaderCenter]}
+                  >
+                    Hoàn thành
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.tableHeaderCell,
+                    styles.tableHeaderCellRescheduled,
+                  ]}
+                >
+                  <Text
+                    style={[styles.tableHeaderText, styles.tableHeaderCenter]}
+                  >
+                    Đã dời
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.tableHeaderCell,
+                    styles.tableHeaderCellCancelled,
+                  ]}
+                >
+                  <Text
+                    style={[styles.tableHeaderText, styles.tableHeaderCenter]}
+                  >
+                    Đã hủy
+                  </Text>
+                </View>
+              </View>
+              {students.map((s) => (
+                <View key={s.id} style={styles.tableRow}>
+                  <View
+                    style={[styles.tableRowCell, styles.tableRowCellStudent]}
+                  >
+                    <View style={styles.studentInfo}>
+                      <View style={styles.studentAvatar}>
+                        <Text style={styles.studentAvatarText}>
+                          {s.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .slice(0, 2)
+                            .join("")}
+                        </Text>
+                      </View>
+                      <View>
+                        <Text style={styles.studentName}>{s.name}</Text>
+                        <Text style={styles.studentPhone}>{s.phone}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View
+                    style={[styles.tableRowCell, styles.tableRowCellPackage]}
+                  >
+                    <Text style={styles.tableCell}>{s.package}</Text>
+                  </View>
+                  <View
+                    style={[styles.tableRowCell, styles.tableRowCellSessions]}
+                  >
+                    <Text
+                      style={[
+                        styles.tableCell,
+                        styles.tableCellCenter,
+                        styles.tableCellBold,
+                      ]}
+                    >
+                      {s.sessions}
+                    </Text>
+                  </View>
+                  <View
+                    style={[styles.tableRowCell, styles.tableRowCellCompleted]}
+                  >
+                    <View style={styles.tableCellCenter}>
+                      <View style={styles.completedBadge}>
+                        <Text style={styles.completedBadgeText}>
+                          {s.completed}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View
+                    style={[
+                      styles.tableRowCell,
+                      styles.tableRowCellRescheduled,
+                    ]}
+                  >
+                    <View style={styles.tableCellCenter}>
+                      {s.rescheduled > 0 ? (
+                        <Text style={styles.rescheduledText}>
+                          {s.rescheduled}
+                        </Text>
+                      ) : (
+                        <Text style={styles.tableCellEmpty}>-</Text>
+                      )}
+                    </View>
+                  </View>
+                  <View
+                    style={[styles.tableRowCell, styles.tableRowCellCancelled]}
+                  >
+                    <View style={styles.tableCellCenter}>
+                      {s.cancelled > 0 ? (
+                        <Text style={styles.cancelledText}>{s.cancelled}</Text>
+                      ) : (
+                        <Text style={styles.tableCellEmpty}>-</Text>
+                      )}
                     </View>
                   </View>
                 </View>
-                <View
-                  style={[styles.tableRowCell, styles.tableRowCellRescheduled]}
-                >
-                  <View style={styles.tableCellCenter}>
-                    {s.rescheduled > 0 ? (
-                      <Text style={styles.rescheduledText}>
-                        {s.rescheduled}
-                      </Text>
-                    ) : (
-                      <Text style={styles.tableCellEmpty}>-</Text>
-                    )}
-                  </View>
-                </View>
-                <View
-                  style={[styles.tableRowCell, styles.tableRowCellCancelled]}
-                >
-                  <View style={styles.tableCellCenter}>
-                    {s.cancelled > 0 ? (
-                      <Text style={styles.cancelledText}>{s.cancelled}</Text>
-                    ) : (
-                      <Text style={styles.tableCellEmpty}>-</Text>
-                    )}
-                  </View>
-                </View>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
       </View>
     </ScrollView>
   );
@@ -615,11 +634,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   contentContainer: {
-    padding: 16,
-    paddingTop: 10,
+    backgroundColor: "#ffffff",
   },
   header: {
-    paddingTop: 50,
+    paddingTop: StatusBar.currentHeight,
     paddingBottom: 40,
     paddingHorizontal: 20,
     position: "relative",
@@ -650,8 +668,8 @@ const styles = StyleSheet.create({
   },
   statItem: {
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    paddingHorizontal: 12,
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 12,
   },
@@ -685,41 +703,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 16,
   },
-  notificationButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  notificationText: {
-    color: AppColors.textWhite,
-    fontSize: 14,
-  },
-  instructorCodeContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  instructorCodeLabel: {
-    fontSize: 12,
-    color: AppColors.gray400,
-  },
-  instructorCode: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: AppColors.textWhite,
-  },
   kpiGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 16,
     marginBottom: 32,
+    padding: 16,
+    backgroundColor: "#ffffff",
   },
   kpiCard: {
     width: (screenWidth - 48) / 2,
@@ -746,7 +736,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   kpiValue: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "bold",
     color: AppColors.textWhite,
     marginBottom: 4,
@@ -763,6 +753,7 @@ const styles = StyleSheet.create({
   analyticsSection: {
     gap: 24,
     marginBottom: 32,
+    paddingHorizontal: 16,
   },
   chartCard: {
     backgroundColor: "#ffffff",
@@ -866,6 +857,7 @@ const styles = StyleSheet.create({
     gap: 24,
     marginBottom: 32,
     flexWrap: "wrap",
+    paddingHorizontal: 16,
   },
   revenueCard: {
     flex: 2,
@@ -960,10 +952,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: AppColors.error,
   },
+  studentTableSession: {
+    paddingHorizontal: 16,
+  },
   studentTableCard: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
-    padding: 24,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: AppColors.border,
     marginBottom: 32,
