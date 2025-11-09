@@ -170,7 +170,7 @@ export default function TermsAndConditionsScreen() {
       );
 
       // Navigate to next page
-      router.push("/(onboarding)/add-car");
+      router.push("/(onboarding)/waiting-confirm");
     } catch (error) {
       showCustomAlert("Lỗi", "Không thể lưu điều khoản", [
         {
