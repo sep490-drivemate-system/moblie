@@ -6,6 +6,14 @@ import { ISignInRequest } from "@/models/auth/signin";
 import { ISignUpRequest } from "@/models/auth/signup";
 import { IForgotPasswordRequest } from "@/models/auth/forgotPassword";
 
+interface RegisterFormErrors {
+  email?: string;
+  fullname?: string;
+  password?: string;
+  confirmPassword?: string;
+  phone?: string;
+}
+
 interface AuthState extends BaseState {
   isAuthenticated: boolean;
   user: {
@@ -13,6 +21,7 @@ interface AuthState extends BaseState {
   } | null;
   formData: ISignInRequest;
   registerFormData: ISignUpRequest;
+  registerFormErrors: RegisterFormErrors;
   forgotPasswordFormData: IForgotPasswordRequest;
 }
 
@@ -26,11 +35,14 @@ const initialState: AuthState = {
   },
 
   registerFormData: {
-    name: "",
+    fullname: "",
     email: "",
     password: "",
     confirmPassword: "",
+    phone: "",
+    acceptTerms: false,
   },
+  registerFormErrors: {},
 
   forgotPasswordFormData: {
     emailOrPhone: "",
@@ -61,24 +73,50 @@ const authSlice = createSlice({
 
     updateRegisterFormData: (
       state,
-      action: PayloadAction<{ field: keyof ISignUpRequest; value: string }>
+      action: PayloadAction<{ field: keyof ISignUpRequest; value: string | boolean }>
     ) => {
       const { field, value } = action.payload;
-      state.registerFormData[field] = value;
+      if (field === "acceptTerms") {
+        state.registerFormData.acceptTerms = value as boolean;
+      } else {
+        state.registerFormData[field] = value as string;
+      }
+    },
+
+    setRegisterFormError: (
+      state,
+      action: PayloadAction<{ field: keyof RegisterFormErrors; error: string | undefined }>
+    ) => {
+      const { field, error } = action.payload;
+      if (error) {
+        state.registerFormErrors[field] = error;
+      } else {
+        delete state.registerFormErrors[field];
+      }
+    },
+
+    clearRegisterFormErrors: (state) => {
+      state.registerFormErrors = {};
     },
 
     resetRegisterForm: (state) => {
       state.registerFormData = {
-        name: "",
+        fullname: "",
         email: "",
         password: "",
         confirmPassword: "",
+        phone: "",
+        acceptTerms: false,
       };
+      state.registerFormErrors = {};
     },
 
     updateForgotPasswordFormData: (
       state,
-      action: PayloadAction<{ field: keyof IForgotPasswordRequest; value: string }>
+      action: PayloadAction<{
+        field: keyof IForgotPasswordRequest;
+        value: string;
+      }>
     ) => {
       const { field, value } = action.payload;
       state.forgotPasswordFormData[field] = value;
@@ -144,6 +182,8 @@ export const {
   updateFormData,
   resetForm,
   updateRegisterFormData, // Export new register actions
+  setRegisterFormError,
+  clearRegisterFormErrors,
   resetRegisterForm,
   updateForgotPasswordFormData,
   resetForgotPasswordForm,
