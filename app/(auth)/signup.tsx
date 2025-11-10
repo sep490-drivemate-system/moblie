@@ -1,357 +1,311 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  SafeAreaView,
-  Alert,
-  StatusBar,
-  Image,
-  ScrollView,
-  Modal,
-} from "react-native";
+import { RootState } from "@/lib/redux/store";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { MoreVertical, Eye, EyeOff } from "lucide-react-native";
+import { Eye, EyeOff } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    retypePassword: "",
-    phone: "",
-  });
-  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [_, authViewModel] = useViewModel(
+    AuthViewModel,
+    (state: RootState) => state.auth
+  );
+
+  // Set router to ViewModel for navigation
+  useEffect(() => {
+    authViewModel.setRouter(router);
+  }, [router, authViewModel]);
+
   const [showPassword, setShowPassword] = useState(false);
-  const [showRetypePassword, setShowRetypePassword] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [modalConfig, setModalConfig] = useState({
-    title: "",
-    message: "",
-    onConfirm: () => {},
-    confirmText: "OK",
-  });
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const showCustomAlert = (
-    title: string,
-    message: string,
-    onConfirm: () => void,
-    confirmText: string = "OK"
-  ) => {
-    setModalConfig({
-      title,
-      message,
-      onConfirm,
-      confirmText,
-    });
-    setShowModal(true);
-  };
-
-  const handleSubmit = async () => {
-    // Validation
-    if (!formData.fullName.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập họ và tên", () =>
-        setShowModal(false)
-      );
-      return;
-    }
-    if (!formData.email.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập email", () => setShowModal(false));
-      return;
-    }
-    if (!formData.password.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập mật khẩu", () =>
-        setShowModal(false)
-      );
-      return;
-    }
-    if (formData.password !== formData.retypePassword) {
-      showCustomAlert("Lỗi", "Mật khẩu nhập lại không khớp", () =>
-        setShowModal(false)
-      );
-      return;
-    }
-    if (!formData.phone.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập số điện thoại", () =>
-        setShowModal(false)
-      );
-      return;
-    }
-    if (!acceptTerms) {
-      showCustomAlert("Lỗi", "Vui lòng chấp nhận điều khoản sử dụng", () =>
-        setShowModal(false)
-      );
-      return;
-    }
-
-    try {
-      // Simulate saving user info
-      // In a real app, you would call your API here
-      const userInfo = {
-        fullName: formData.fullName,
-        email: formData.email,
-        password: formData.password,
-        phone: formData.phone,
-        googleSignedIn: true,
-      };
-
-      // Save user info to AsyncStorage
-      await AsyncStorage.setItem("user_info", JSON.stringify(userInfo));
-
-      showCustomAlert(
-        "Thành công",
-        "Thông tin đã được lưu thành công! Vui lòng xác minh OTP.",
-        () => {
-          setShowModal(false);
-          router.push("/(onboarding)/otp");
-        }
-      );
-    } catch (error) {
-      showCustomAlert(
-        "Lỗi",
-        "Có lỗi xảy ra khi lưu thông tin. Vui lòng thử lại.",
-        () => setShowModal(false)
-      );
-    }
-  };
-
-  // Check if all fields are filled and terms are accepted
-  const isFormValid = () => {
-    return (
-      formData.fullName.trim() !== "" &&
-      formData.email.trim() !== "" &&
-      formData.password.trim() !== "" &&
-      formData.retypePassword.trim() !== "" &&
-      formData.phone.trim() !== "" &&
-      acceptTerms
-    );
-  };
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+    <>
+      <StatusBar barStyle="default" />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        <View style={styles.content}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Image
-              source={require("@/assets/images/logo_drivemate_green.png")}
-              style={styles.logo}
-            />
-          </View>
-
-          {/* Title */}
-          <View style={styles.titleContainer}>
-            <View style={styles.titleSectionLeft}>
-              <Text style={styles.title}>
-                Đăng ký để trở thành một phần của{" "}
-                <Text style={styles.titleHighlight}>DRIVEMATE</Text>
-              </Text>
-              <Text style={styles.titleDescription}>
-                Vui lòng cho chúng tôi biết về bạn
-              </Text>
-            </View>
-            <Image
-              style={styles.icon1}
-              source={require("@/assets/images/icon1.png")}
-            />
-          </View>
-
-          {/* Form */}
-          <View style={styles.formContainer}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Email <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.email}
-                onChangeText={(value) => handleInputChange("email", value)}
-                placeholder="Nhập email"
-                placeholderTextColor="#92929D"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.content}>
+            {/* Header */}
+            <View style={styles.header}>
+              <Image
+                source={require("@/assets/images/logo_drivemate_green.png")}
+                style={styles.logo}
               />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Họ và tên <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={[styles.input, styles.multilineInput]}
-                value={formData.fullName}
-                onChangeText={(value) => handleInputChange("fullName", value)}
-                placeholder="Nhập họ và tên"
-                placeholderTextColor="#92929D"
-                autoCorrect={false}
-                multiline={true}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Mật khẩu <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={formData.password}
-                  onChangeText={(value) => handleInputChange("password", value)}
-                  placeholder="Nhập mật khẩu"
-                  placeholderTextColor="#92929D"
-                  secureTextEntry={!showPassword}
-                  autoCorrect={false}
-                />
-                <TouchableOpacity
-                  style={styles.eyeIcon}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff size={20} color="#92929D" />
-                  ) : (
-                    <Eye size={20} color="#92929D" />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Nhập lại mật khẩu <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={formData.retypePassword}
-                  onChangeText={(value) =>
-                    handleInputChange("retypePassword", value)
-                  }
-                  placeholder="Nhập lại mật khẩu"
-                  placeholderTextColor="#92929D"
-                  secureTextEntry={!showRetypePassword}
-                  autoCorrect={false}
-                />
-                <TouchableOpacity
-                  style={styles.eyeIcon}
-                  onPress={() => setShowRetypePassword(!showRetypePassword)}
-                >
-                  {showRetypePassword ? (
-                    <EyeOff size={20} color="#92929D" />
-                  ) : (
-                    <Eye size={20} color="#92929D" />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Số điện thoại <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.phone}
-                onChangeText={(value) => handleInputChange("phone", value)}
-                placeholder="Nhập số điện thoại"
-                placeholderTextColor="#92929D"
-                keyboardType="phone-pad"
-                autoCorrect={false}
-              />
-            </View>
-          </View>
-
-          {/* Terms */}
-          <View style={styles.termsContainer}>
-            <TouchableOpacity
-              style={styles.checkboxContainer}
-              onPress={() => setAcceptTerms(!acceptTerms)}
-            >
-              <View
-                style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}
-              >
-                {acceptTerms && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-              <Text style={styles.termsText}>
-                Bằng cách tiếp tục, tôi đồng ý với việc DriveMate có thể thu
-                thập, sử dụng và tiết lộ thông tin do tôi cung cấp theo{" "}
-                <Text style={styles.termsLink}>
-                  Thông báo về quyền riêng tư
+            {/* Title */}
+            <View style={styles.titleContainer}>
+              <View style={styles.titleSectionLeft}>
+                <Text style={styles.title}>
+                  Đăng ký để trở thành một phần của{" "}
+                  <Text style={styles.titleHighlight}>DRIVEMATE</Text>
                 </Text>
-                . Tôi cũng xác nhận đã đọc, hiểu rõ và hoàn toàn tuân thủ các{" "}
-                <Text style={styles.termsLink}>Điều khoản và điều kiện</Text>.
-              </Text>
-            </TouchableOpacity>
-          </View>
+                <Text style={styles.titleDescription}>
+                  Vui lòng cho chúng tôi biết về bạn
+                </Text>
+              </View>
+              <Image
+                style={styles.icon1}
+                source={require("@/assets/images/icon1.png")}
+              />
+            </View>
 
-          {/* Buttons */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                !isFormValid() && styles.primaryButtonDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={!isFormValid()}
-            >
-              <Text
-                style={[
-                  styles.primaryButtonText,
-                  !isFormValid() && styles.primaryButtonTextDisabled,
-                ]}
+            {/* Form */}
+            <View style={styles.formContainer}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  Email <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    authViewModel.getRegisterFormErrors().email &&
+                      styles.inputError,
+                  ]}
+                  value={authViewModel.getRegisterFormData().email}
+                  onChangeText={(value) =>
+                    authViewModel.updateRegisterFormData("email", value)
+                  }
+                  placeholder="Nhập email"
+                  placeholderTextColor="#92929D"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                {authViewModel.getRegisterFormErrors().email && (
+                  <Text style={styles.errorText}>
+                    {authViewModel.getRegisterFormErrors().email}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  Họ và tên <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.multilineInput,
+                    authViewModel.getRegisterFormErrors().fullname &&
+                      styles.inputError,
+                  ]}
+                  value={authViewModel.getRegisterFormData().fullname}
+                  onChangeText={(value) =>
+                    authViewModel.updateRegisterFormData("fullname", value)
+                  }
+                  placeholder="Nhập họ và tên"
+                  placeholderTextColor="#92929D"
+                  autoCapitalize="words"
+                />
+                {authViewModel.getRegisterFormErrors().fullname && (
+                  <Text style={styles.errorText}>
+                    {authViewModel.getRegisterFormErrors().fullname}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  Mật khẩu <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      authViewModel.getRegisterFormErrors().password &&
+                        styles.inputError,
+                    ]}
+                    value={authViewModel.getRegisterFormData().password}
+                    onChangeText={(value) =>
+                      authViewModel.updateRegisterFormData("password", value)
+                    }
+                    placeholder="Nhập mật khẩu"
+                    placeholderTextColor="#92929D"
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} color="#92929D" />
+                    ) : (
+                      <Eye size={20} color="#92929D" />
+                    )}
+                  </TouchableOpacity>
+                </View>
+                {authViewModel.getRegisterFormErrors().password && (
+                  <View style={styles.errorContainer}>
+                    {authViewModel
+                      .getRegisterFormErrors()
+                      .password?.split("\n")
+                      .map((error, index) => (
+                        <Text key={index} style={styles.errorText}>
+                          {error}
+                        </Text>
+                      ))}
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  Nhập lại mật khẩu <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      authViewModel.getRegisterFormErrors().confirmPassword &&
+                        styles.inputError,
+                    ]}
+                    value={authViewModel.getRegisterFormData().confirmPassword}
+                    onChangeText={(value) =>
+                      authViewModel.updateRegisterFormData(
+                        "confirmPassword",
+                        value
+                      )
+                    }
+                    placeholder="Nhập lại mật khẩu"
+                    placeholderTextColor="#92929D"
+                    secureTextEntry={!showConfirmPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={20} color="#92929D" />
+                    ) : (
+                      <Eye size={20} color="#92929D" />
+                    )}
+                  </TouchableOpacity>
+                </View>
+                {authViewModel.getRegisterFormErrors().confirmPassword && (
+                  <Text style={styles.errorText}>
+                    {authViewModel.getRegisterFormErrors().confirmPassword}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  Số điện thoại <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    authViewModel.getRegisterFormErrors().phone &&
+                      styles.inputError,
+                  ]}
+                  value={authViewModel.getRegisterFormData().phone}
+                  onChangeText={(value) => {
+                    const numericValue = value.replace(/\D/g, "");
+                    authViewModel.updateRegisterFormData("phone", numericValue);
+                  }}
+                  placeholder="Nhập số điện thoại"
+                  placeholderTextColor="#92929D"
+                  keyboardType="phone-pad"
+                  autoCorrect={false}
+                  maxLength={10}
+                />
+                {authViewModel.getRegisterFormErrors().phone && (
+                  <Text style={styles.errorText}>
+                    {authViewModel.getRegisterFormErrors().phone}
+                  </Text>
+                )}
+              </View>
+            </View>
+
+            {/* Terms */}
+            <View style={styles.termsContainer}>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={styles.checkboxContainer}
+                onPress={() =>
+                  authViewModel.updateRegisterFormData(
+                    "acceptTerms",
+                    !authViewModel.getRegisterFormData().acceptTerms as boolean
+                  )
+                }
               >
-                Tiếp theo
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
+                <View
+                  style={[
+                    styles.checkbox,
+                    authViewModel.getRegisterFormData().acceptTerms &&
+                      styles.checkboxChecked,
+                  ]}
+                >
+                  {authViewModel.getRegisterFormData().acceptTerms && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
+                </View>
+                <Text style={styles.termsText}>
+                  Bằng cách tiếp tục, tôi đồng ý với việc DriveMate có thể thu
+                  thập, sử dụng và tiết lộ thông tin do tôi cung cấp theo{" "}
+                  <Text style={styles.termsLink}>
+                    Thông báo về quyền riêng tư
+                  </Text>
+                  . Tôi cũng xác nhận đã đọc, hiểu rõ và hoàn toàn tuân thủ các{" "}
+                  <Text style={styles.termsLink}>Điều khoản và điều kiện</Text>.
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-      {/* Custom Alert Modal */}
-      <Modal
-        visible={showModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
-            <Text style={styles.modalMessage}>{modalConfig.message}</Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={modalConfig.onConfirm}
-            >
-              <Text style={styles.modalButtonText}>
-                {modalConfig.confirmText}
-              </Text>
-            </TouchableOpacity>
+            {/* Buttons */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  !authViewModel.isRegisterFormValid() &&
+                    styles.primaryButtonDisabled,
+                ]}
+                onPress={authViewModel.handleRegister}
+                disabled={!authViewModel.isRegisterFormValid()}
+              >
+                <Text
+                  style={[
+                    styles.primaryButtonText,
+                    !authViewModel.isRegisterFormValid() &&
+                      styles.primaryButtonTextDisabled,
+                  ]}
+                >
+                  Tiếp theo
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  keyboardAvoidingView: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
     paddingTop: StatusBar.currentHeight,
   },
   scrollView: {
@@ -441,6 +395,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#92929D",
   },
+  inputError: {
+    borderColor: "#FF0000",
+  },
+  errorContainer: {
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  errorText: {
+    color: "#FF0000",
+    fontSize: 12,
+    marginTop: 2,
+  },
   passwordContainer: {
     position: "relative",
   },
@@ -512,47 +478,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContainer: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 24,
-    marginHorizontal: 20,
-    minWidth: 280,
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  modalMessage: {
-    fontSize: 16,
-    color: "#92929D",
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  modalButton: {
-    backgroundColor: "#70E000",
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    minWidth: 100,
-    alignItems: "center",
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
     color: "#FFFFFF",
   },
   primaryButtonDisabled: {

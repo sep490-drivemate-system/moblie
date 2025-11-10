@@ -8,10 +8,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-
-const green = "#70E000";
-const white = "#FFFFFF";
-const cardBg = "#fff";
+import { LinearGradient } from "expo-linear-gradient";
+import { AppColors } from "@/constants/Colors";
 
 const DUMMY_SERVICE_PACKAGES = [
   {
@@ -51,177 +49,306 @@ function ServicePackageManagementScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      {/* Modern Header with Gradient */}
+      <LinearGradient
+        colors={[
+          AppColors.primary,
+          AppColors.gradientStart,
+          AppColors.gradientEnd,
+        ]}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
         <View style={styles.headerContent}>
           <TouchableOpacity
             onPress={() => router.back()}
             activeOpacity={0.7}
             style={styles.backButton}
           >
-            <Ionicons name="arrow-back" size={24} color="#374151" />
+            <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Danh sách gói dịch vụ</Text>
-        </View>
-      </View>
-
-      {packages.length === 0 && (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>Chưa có gói nào.</Text>
-          <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
-            <View style={styles.solidButton}>
-              <Text style={styles.addButtonText}>+ Thêm gói mới</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <View style={{ gap: 16 }}>
-        {packages.map((item) => (
-          <View key={item.id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.titleSection}>
-                <View style={styles.titleDot} />
-                <Text style={styles.cardTitle}>{item.title}</Text>
-              </View>
-              <View style={styles.durationBadge}>
-                <Text style={styles.cardDuration}>{item.duration}h</Text>
-              </View>
-            </View>
-            <Text style={styles.cardPrice}>
-              Giá: {formatCurrencyVND((item as any).price)} đ
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Danh sách gói dịch vụ</Text>
+            <Text style={styles.headerSubtitle}>
+              Quản lý các gói dịch vụ của bạn
             </Text>
-            <View style={styles.cardInfoSection}>
-              <View style={styles.infoBlock}>
-                <View style={styles.infoLabelRow}>
-                  <View style={styles.infoDot} />
-                  <Text style={styles.infoLabel}>Kỹ năng</Text>
-                </View>
-                <Text style={styles.infoValue}>{item.skills.join(", ")}</Text>
-              </View>
-              <View style={styles.infoBlock}>
-                <View style={styles.infoLabelRow}>
-                  <View style={styles.infoDot} />
-                  <Text style={styles.infoLabel}>Loại đường</Text>
-                </View>
-                <Text style={styles.infoValue}>
-                  {item.roadTypes.join(", ")}
-                </Text>
-              </View>
-              <View style={styles.infoBlockFull}>
-                <View style={styles.infoLabelRow}>
-                  <View style={styles.infoDot} />
-                  <Text style={styles.infoLabel}>Xe</Text>
-                </View>
-                <Text style={styles.infoValue}>{item.carOption}</Text>
-              </View>
-            </View>
-            <View style={styles.cardActionRow}>
-              <TouchableOpacity
-                style={styles.detailButtonWrapper}
-                onPress={() => handleDetail(item)}
-              >
-                <View style={styles.detailButton}>
-                  <Text style={styles.detailButtonText}>Chi tiết</Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDelete(item.id)}
-              >
-                <Text style={styles.deleteButtonText}>Xóa</Text>
-              </TouchableOpacity>
+          </View>
+          <View style={styles.headerStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{packages.length}</Text>
+              <Text style={styles.statLabel}>Gói</Text>
             </View>
           </View>
-        ))}
-      </View>
-      {packages.length > 0 && (
-        <View style={styles.addBottomWrap}>
-          <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
-            <View style={styles.solidButton}>
-              <Text style={styles.addButtonText}>+ Thêm gói mới</Text>
-            </View>
+        </View>
+        <View style={styles.headerCurve} />
+      </LinearGradient>
+
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.scrollContentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Add Button Section */}
+        <View style={styles.addButtonSection}>
+          <TouchableOpacity
+            activeOpacity={1}
+            style={styles.addButton}
+            onPress={handleAdd}
+          >
+            <LinearGradient
+              colors={[AppColors.primary, AppColors.gradientStart]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.solidButton}
+            >
+              <Ionicons name="add" size={20} color="#ffffff" />
+              <Text style={styles.addButtonText}>Thêm gói mới</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
-      )}
-    </ScrollView>
+
+        {packages.length === 0 && (
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons
+                name="cube-outline"
+                size={64}
+                color={AppColors.primary}
+              />
+            </View>
+            <Text style={styles.emptyText}>Chưa có gói dịch vụ nào</Text>
+            <Text style={styles.emptySubtext}>
+              Bắt đầu bằng cách thêm gói dịch vụ đầu tiên của bạn
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.packagesList}>
+          {packages.map((item) => (
+            <View key={item.id} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.titleSection}>
+                  <View style={styles.titleDot} />
+                  <Text style={styles.cardTitle}>{item.title}</Text>
+                </View>
+              </View>
+              <View style={styles.priceContainer}>
+                <Text style={styles.priceLabel}>Giá</Text>
+                <Text style={styles.cardPrice}>
+                  {formatCurrencyVND((item as any).price)} VNĐ
+                </Text>
+              </View>
+              <View style={styles.cardInfoSection}>
+                <View style={styles.infoBlock}>
+                  <View style={styles.infoLabelRow}>
+                    <View style={styles.infoDot} />
+                    <Text style={styles.infoLabel}>Thời lượng</Text>
+                  </View>
+                  <Text style={styles.infoValue}>{item.duration}h</Text>
+                </View>
+                <View style={styles.infoBlock}>
+                  <View style={styles.infoLabelRow}>
+                    <View style={styles.infoDot} />
+                    <Text style={styles.infoLabel}>Kỹ năng</Text>
+                  </View>
+                  <Text style={styles.infoValue}>{item.skills.join(", ")}</Text>
+                </View>
+                <View style={styles.infoBlock}>
+                  <View style={styles.infoLabelRow}>
+                    <View style={styles.infoDot} />
+                    <Text style={styles.infoLabel}>Loại đường</Text>
+                  </View>
+                  <Text style={styles.infoValue}>
+                    {item.roadTypes.join(", ")}
+                  </Text>
+                </View>
+                <View style={styles.infoBlockFull}>
+                  <View style={styles.infoLabelRow}>
+                    <View style={styles.infoDot} />
+                    <Text style={styles.infoLabel}>Xe</Text>
+                  </View>
+                  <Text style={styles.infoValue}>{item.carOption}</Text>
+                </View>
+              </View>
+              <View style={styles.cardActionRow}>
+                <TouchableOpacity
+                  activeOpacity={1}
+                  style={styles.detailButtonWrapper}
+                  onPress={() => handleDetail(item)}
+                >
+                  <View style={styles.detailButton}>
+                    <Text style={styles.detailButtonText}>Chi tiết</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDelete(item.id)}
+                >
+                  <Text style={styles.deleteButtonText}>Xóa</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#ffffff",
   },
   header: {
-    backgroundColor: "white",
-    paddingHorizontal: 24,
-    paddingTop: 56,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingTop: 50,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+    position: "relative",
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
   },
   headerContent: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
+    justifyContent: "space-between",
   },
   backButton: {
     padding: 8,
+    marginRight: 8,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#ffffff",
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontWeight: "500",
+  },
+  headerStats: {
+    alignItems: "center",
+  },
+  statItem: {
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  statLabel: {
+    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontWeight: "600",
+  },
+  headerCurve: {
+    position: "absolute",
+    bottom: -25,
+    left: 0,
+    right: 0,
+    height: 50,
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  scrollContent: {
     flex: 1,
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#111827",
-    textAlign: "center",
+  },
+  scrollContentContainer: {
+    paddingBottom: 32,
+    backgroundColor: "#ffffff",
+  },
+  addButtonSection: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   emptyWrap: {
     alignItems: "center",
-    marginTop: 48,
+    marginTop: 60,
     marginBottom: 30,
-  },
-  emptyText: {
-    fontSize: 17,
-    color: "#999",
-    marginBottom: 16,
-  },
-  addButton: {
-    borderRadius: 10,
-    overflow: "hidden",
-    marginTop: 2,
-    alignSelf: "center",
-  },
-  solidButton: {
-    backgroundColor: green,
     paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 10,
+  },
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: `${AppColors.primary}15`,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 24,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: AppColors.textPrimary,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: AppColors.gray600,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  addButton: {
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: AppColors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  solidButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
   },
   addButtonText: {
-    color: white,
+    color: "#ffffff",
     fontWeight: "700",
     fontSize: 16,
     letterSpacing: 0.3,
   },
+  packagesList: {
+    paddingHorizontal: 16,
+    gap: 16,
+  },
   card: {
-    backgroundColor: white,
-    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
     padding: 20,
-    margin: 16,
-    gap: 14,
+    gap: 16,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: AppColors.border,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowRadius: 12,
+    elevation: 4,
     position: "relative",
+    overflow: "hidden",
   },
   cardBorderAccent: {
     position: "absolute",
@@ -229,7 +356,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: green,
+    backgroundColor: AppColors.primary,
     opacity: 0.6,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
@@ -250,31 +377,51 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: green,
+    backgroundColor: AppColors.primary,
   },
   cardTitle: {
-    color: "#2F4221",
+    color: AppColors.textPrimary,
     fontWeight: "800",
-    fontSize: 22,
+    fontSize: 20,
     letterSpacing: 0.3,
   },
+  priceContainer: {
+    backgroundColor: `${AppColors.primary}10`,
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: AppColors.primary,
+    marginVertical: 8,
+  },
+  priceLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: AppColors.gray600,
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   cardPrice: {
-    color: "#374151",
-    fontWeight: "700",
-    fontSize: 16,
-    marginTop: 2,
-    marginBottom: 6,
+    color: AppColors.primary,
+    fontWeight: "800",
+    fontSize: 24,
+    letterSpacing: 0.5,
   },
   durationBadge: {
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: green,
+    backgroundColor: AppColors.primary,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: AppColors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   cardDuration: {
-    color: white,
+    color: "#ffffff",
     fontSize: 14,
     fontWeight: "700",
     letterSpacing: 0.2,
@@ -284,20 +431,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   infoBlock: {
-    backgroundColor: "#f2f8e6",
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: `${AppColors.primary}08`,
+    borderRadius: 12,
+    padding: 14,
     borderLeftWidth: 3,
-    borderLeftColor: green,
-    marginBottom: 6,
+    borderLeftColor: AppColors.primary,
+    marginBottom: 8,
   },
   infoBlockFull: {
-    backgroundColor: "#f2f8e6",
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: `${AppColors.primary}08`,
+    borderRadius: 12,
+    padding: 14,
     borderLeftWidth: 3,
-    borderLeftColor: green,
-    marginBottom: 6,
+    borderLeftColor: AppColors.primary,
+    marginBottom: 8,
   },
   infoLabelRow: {
     flexDirection: "row",
@@ -309,20 +456,20 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: green,
+    backgroundColor: AppColors.primary,
   },
   infoLabel: {
-    color: green,
+    color: AppColors.primary,
     fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.2,
     textTransform: "uppercase",
   },
   infoValue: {
-    color: "#2D3819",
+    color: AppColors.textPrimary,
     fontSize: 14,
     fontWeight: "500",
-    lineHeight: 20,
+    lineHeight: 22,
   },
   cardActionRow: {
     flexDirection: "row",
@@ -335,38 +482,39 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   detailButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: green,
+    backgroundColor: AppColors.primary,
+    shadowColor: AppColors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   detailButtonText: {
-    color: white,
+    color: "#ffffff",
     fontWeight: "700",
     fontSize: 15,
     letterSpacing: 0.2,
   },
   deleteButton: {
-    borderWidth: 1.5,
-    borderColor: green,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    borderWidth: 2,
+    borderColor: AppColors.error,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     alignItems: "center",
     justifyContent: "center",
   },
   deleteButtonText: {
-    color: green,
+    color: AppColors.error,
     fontWeight: "700",
     fontSize: 15,
     letterSpacing: 0.2,
-  },
-  addBottomWrap: {
-    alignItems: "center",
-    marginTop: 32,
   },
 });
 

@@ -6,15 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
+  Animated,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-// Removed vector icon to avoid runtime error; using text arrow instead
-
-const green = "#70E000";
-const bgCard = "#ffffff";
-const borderDark = "#E0E0E0";
+import { LinearGradient } from "expo-linear-gradient";
+import { AppColors } from "@/constants/Colors";
 
 const DEFAULT_PACKAGE = {
   title: "Gói miền Tây",
@@ -24,6 +21,7 @@ const DEFAULT_PACKAGE = {
   carOption: "Có thể đi xe của khách hàng hoặc của tôi",
   price: "150000",
 };
+
 const EMPTY_PACKAGE = {
   title: "",
   skills: [] as string[],
@@ -32,6 +30,7 @@ const EMPTY_PACKAGE = {
   carOption: "",
   price: "",
 };
+
 const SKILL_OPTIONS = [
   "Lùi xe",
   "Đỗ xe",
@@ -40,6 +39,7 @@ const SKILL_OPTIONS = [
   "Chạy tốc độ cao",
   "Quan sát",
 ];
+
 const ROAD_OPTIONS = [
   "Đường trơn trượt",
   "Đường đông dân cư",
@@ -48,6 +48,7 @@ const ROAD_OPTIONS = [
   "Đường đang thi công",
   "Đường vắng",
 ];
+
 const CAR_OPTIONS = [
   "Chỉ đi xe của tôi",
   "Có thể đi xe của khách hàng hoặc của tôi",
@@ -63,7 +64,6 @@ const formatDuration = (value: string) => {
 const formatCurrencyVND = (value: string) => {
   const digitsOnly = value.replace(/\D/g, "");
   if (!digitsOnly) return "";
-  // Format with dot as thousand separator (e.g., 150000 -> 150.000)
   return digitsOnly.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
@@ -73,15 +73,12 @@ export default function ServicePackageDetailScreen() {
   const isCreate = params?.mode === "create";
 
   const [form, setForm] = useState(isCreate ? EMPTY_PACKAGE : DEFAULT_PACKAGE);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const handleChange = (field: string, value: any) => {
     setForm((f) => ({ ...f, [field]: value }));
-  };
-
-  const handleDurationChange = (value: string) => {
-    const formatted = formatDuration(value);
-    handleChange("duration", formatted);
   };
 
   const handleSkillToggle = (skill: string) => {
@@ -92,10 +89,7 @@ export default function ServicePackageDetailScreen() {
         : [...f.skills, skill],
     }));
   };
-  const handlePriceChange = (value: string) => {
-    const formatted = formatCurrencyVND(value);
-    handleChange("price", formatted);
-  };
+
   const handleRoadToggle = (road: string) => {
     setForm((f) => ({
       ...f,
@@ -104,358 +98,558 @@ export default function ServicePackageDetailScreen() {
         : [...f.roadTypes, road],
     }));
   };
+
   const handleSave = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
-    // Thật tế: update về API hoặc store
   };
+
   const handleReset = () => {
     setForm(isCreate ? EMPTY_PACKAGE : DEFAULT_PACKAGE);
   };
+
+  const getSkillsDisplayText = () => {
+    if (form.skills.length === 0) return "";
+    if (form.skills.length === 1) return form.skills[0];
+    return `${form.skills.length} kỹ năng đã chọn`;
+  };
+
+  const getRoadTypesDisplayText = () => {
+    if (form.roadTypes.length === 0) return "";
+    if (form.roadTypes.length === 1) return form.roadTypes[0];
+    return `${form.roadTypes.length} loại đường đã chọn`;
+  };
+
+  const toggleDropdown = (dropdownName: string) => {
+    setOpenDropdown(openDropdown === dropdownName ? null : dropdownName);
+  };
+
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[
+          AppColors.primary,
+          AppColors.gradientStart,
+          AppColors.gradientEnd,
+        ]}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
         <View style={styles.headerContent}>
           <TouchableOpacity
             onPress={() => router.back()}
-            activeOpacity={0.7}
             style={styles.backButton}
           >
-            <Ionicons name="arrow-back" size={24} color="#374151" />
+            <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {isCreate ? "Tạo gói dịch vụ" : "Chi tiết gói dịch vụ"}
-          </Text>
+          <View>
+            <Text style={styles.headerTitle}>
+              {isCreate ? "Tạo gói dịch vụ" : "Chi tiết gói dịch vụ"}
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              {isCreate
+                ? "Tạo gói dịch vụ mới cho khách hàng"
+                : "Xem và chỉnh sửa thông tin gói dịch vụ"}
+            </Text>
+          </View>
         </View>
-      </View>
-      {/* Success message */}
-      {saved && (
-        <View style={styles.savedMsgWrap}>
-          <View style={styles.savedDot} />
-          <Text style={styles.savedMsgText}>Đã lưu chỉnh sửa thành công!</Text>
-        </View>
-      )}
-      {/* Form card */}
-      <View style={styles.card}>
-        {/* Tên gói thuê */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>
-            Tên gói thuê <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={styles.input}
-            value={form.title}
-            placeholder="Nhập tên gói dịch vụ"
-            onChangeText={(v) => handleChange("title", v)}
-            placeholderTextColor="#AAB391"
-          />
-        </View>
-        {/* Giá tiền */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>
-            Giá tiền (đồng) <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={[styles.input, styles.inputMono]}
-            value={form.price}
-            onChangeText={handlePriceChange}
-            placeholder="VD: 150.000"
-            placeholderTextColor="#AAB391"
-            keyboardType="number-pad"
-            maxLength={15}
-          />
-        </View>
-        {/* Thời lượng */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>
-            Thời lượng <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={[styles.input, styles.inputMono]}
-            value={form.duration}
-            maxLength={5}
-            onChangeText={handleDurationChange}
-            placeholder="hh:mm"
-            placeholderTextColor="#AAB391"
-            keyboardType="numbers-and-punctuation"
-          />
-        </View>
-        {/* Kỹ năng học được */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>
-            Kỹ năng học được <Text style={styles.required}>*</Text>
-          </Text>
-          <View style={styles.checkGrid}>
-            {SKILL_OPTIONS.map((skill) => (
+      </LinearGradient>
+
+      {/* Form */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={{ paddingBottom: 50 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {saved && (
+          <View style={styles.savedMsg}>
+            <Ionicons
+              name="checkmark-circle"
+              color={AppColors.primary}
+              size={20}
+            />
+            <Text style={styles.savedMsgText}>
+              Đã lưu chỉnh sửa thành công!
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.card}>
+          {/* Tên gói */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>
+              Tên gói dịch vụ <Text style={styles.required}>*</Text>
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                focusedField === "title" && styles.inputFocus,
+              ]}
+              placeholder="Nhập tên gói dịch vụ"
+              placeholderTextColor="#A0A0A0"
+              value={form.title}
+              onFocus={() => setFocusedField("title")}
+              onBlur={() => setFocusedField(null)}
+              onChangeText={(v) => handleChange("title", v)}
+            />
+          </View>
+
+          {/* Giá tiền */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>
+              Giá tiền (VNĐ) <Text style={styles.required}>*</Text>
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                focusedField === "price" && styles.inputFocus,
+              ]}
+              keyboardType="numeric"
+              placeholder="VD: 150.000"
+              placeholderTextColor="#A0A0A0"
+              value={form.price}
+              onFocus={() => setFocusedField("price")}
+              onBlur={() => setFocusedField(null)}
+              onChangeText={(v) => handleChange("price", formatCurrencyVND(v))}
+            />
+          </View>
+
+          {/* Thời lượng */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>
+              Thời lượng <Text style={styles.required}>*</Text>
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                focusedField === "duration" && styles.inputFocus,
+              ]}
+              keyboardType="numbers-and-punctuation"
+              maxLength={5}
+              placeholder="hh:mm"
+              placeholderTextColor="#A0A0A0"
+              value={form.duration}
+              onFocus={() => setFocusedField("duration")}
+              onBlur={() => setFocusedField(null)}
+              onChangeText={(v) => handleChange("duration", formatDuration(v))}
+            />
+          </View>
+
+          {/* Kỹ năng */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>
+              Kỹ năng học được <Text style={styles.required}>*</Text>
+            </Text>
+            <View>
               <TouchableOpacity
-                key={skill}
                 style={[
-                  styles.checkItem,
-                  form.skills.includes(skill) && styles.checkItemActive,
+                  styles.dropdownInput,
+                  focusedField === "skills" && styles.inputFocus,
+                  openDropdown === "skills" && styles.inputFocus,
                 ]}
-                onPress={() => handleSkillToggle(skill)}
-                activeOpacity={0.7}
+                onPress={() => {
+                  toggleDropdown("skills");
+                  setFocusedField("skills");
+                }}
+                activeOpacity={0.8}
               >
-                <View
+                <Text
                   style={[
-                    styles.checkbox,
-                    form.skills.includes(skill) && styles.checkboxActive,
+                    styles.dropdownText,
+                    !getSkillsDisplayText() && styles.dropdownPlaceholder,
                   ]}
                 >
-                  {form.skills.includes(skill) && (
-                    <View style={styles.checkboxCheckedMark} />
-                  )}
-                </View>
-                <Text style={styles.checkLabel}>{skill}</Text>
+                  {getSkillsDisplayText() || "Chọn kỹ năng học được"}
+                </Text>
+                <Ionicons
+                  name={
+                    openDropdown === "skills" ? "chevron-up" : "chevron-down"
+                  }
+                  size={20}
+                  color={AppColors.primary}
+                />
               </TouchableOpacity>
-            ))}
+              {openDropdown === "skills" && (
+                <View style={styles.dropdownList}>
+                  <ScrollView
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator={true}
+                    style={{ maxHeight: 200 }}
+                  >
+                    {SKILL_OPTIONS.map((skill) => {
+                      const selected = form.skills.includes(skill);
+                      return (
+                        <TouchableOpacity
+                          key={skill}
+                          style={styles.dropdownItem}
+                          onPress={() => handleSkillToggle(skill)}
+                          activeOpacity={0.7}
+                        >
+                          <View
+                            style={[
+                              styles.checkbox,
+                              selected && styles.checkboxActive,
+                            ]}
+                          >
+                            {selected && (
+                              <Ionicons
+                                name="checkmark"
+                                size={14}
+                                color="#fff"
+                              />
+                            )}
+                          </View>
+                          <Text style={styles.dropdownItemText}>{skill}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
-        {/* Loại đường */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>
-            Loại đường <Text style={styles.required}>*</Text>
-          </Text>
-          <View style={styles.checkGrid}>
-            {ROAD_OPTIONS.map((road) => (
+
+          {/* Loại đường */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>
+              Loại đường <Text style={styles.required}>*</Text>
+            </Text>
+            <View>
               <TouchableOpacity
-                key={road}
                 style={[
-                  styles.checkItem,
-                  form.roadTypes.includes(road) && styles.checkItemActive,
+                  styles.dropdownInput,
+                  focusedField === "roadTypes" && styles.inputFocus,
+                  openDropdown === "roadTypes" && styles.inputFocus,
                 ]}
-                onPress={() => handleRoadToggle(road)}
-                activeOpacity={0.7}
+                onPress={() => {
+                  toggleDropdown("roadTypes");
+                  setFocusedField("roadTypes");
+                }}
+                activeOpacity={0.8}
               >
-                <View
+                <Text
                   style={[
-                    styles.checkbox,
-                    form.roadTypes.includes(road) && styles.checkboxActive,
+                    styles.dropdownText,
+                    !getRoadTypesDisplayText() && styles.dropdownPlaceholder,
                   ]}
                 >
-                  {form.roadTypes.includes(road) && (
-                    <View style={styles.checkboxCheckedMark} />
-                  )}
-                </View>
-                <Text style={styles.checkLabel}>{road}</Text>
+                  {getRoadTypesDisplayText() || "Chọn loại đường"}
+                </Text>
+                <Ionicons
+                  name={
+                    openDropdown === "roadTypes" ? "chevron-up" : "chevron-down"
+                  }
+                  size={20}
+                  color={AppColors.primary}
+                />
               </TouchableOpacity>
-            ))}
+              {openDropdown === "roadTypes" && (
+                <View style={styles.dropdownList}>
+                  <ScrollView
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator={true}
+                    style={{ maxHeight: 200 }}
+                  >
+                    {ROAD_OPTIONS.map((road) => {
+                      const selected = form.roadTypes.includes(road);
+                      return (
+                        <TouchableOpacity
+                          key={road}
+                          style={styles.dropdownItem}
+                          onPress={() => handleRoadToggle(road)}
+                          activeOpacity={0.7}
+                        >
+                          <View
+                            style={[
+                              styles.checkbox,
+                              selected && styles.checkboxActive,
+                            ]}
+                          >
+                            {selected && (
+                              <Ionicons
+                                name="checkmark"
+                                size={14}
+                                color="#fff"
+                              />
+                            )}
+                          </View>
+                          <Text style={styles.dropdownItemText}>{road}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
-        {/* Tùy chọn xe */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>
-            Tùy chọn xe <Text style={styles.required}>*</Text>
-          </Text>
-          <View style={styles.radioCol}>
-            {CAR_OPTIONS.map((option) => (
+
+          {/* Tùy chọn xe */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>
+              Tùy chọn xe <Text style={styles.required}>*</Text>
+            </Text>
+            <View>
               <TouchableOpacity
-                key={option}
-                style={styles.radioRow}
-                onPress={() => handleChange("carOption", option)}
-                activeOpacity={0.7}
+                style={[
+                  styles.dropdownInput,
+                  focusedField === "carOption" && styles.inputFocus,
+                  openDropdown === "carOption" && styles.inputFocus,
+                ]}
+                onPress={() => {
+                  toggleDropdown("carOption");
+                  setFocusedField("carOption");
+                }}
+                activeOpacity={0.8}
               >
-                <View
+                <Text
                   style={[
-                    styles.radio,
-                    form.carOption === option && styles.radioActive,
+                    styles.dropdownText,
+                    !form.carOption && styles.dropdownPlaceholder,
                   ]}
                 >
-                  {form.carOption === option && (
-                    <View style={styles.radioDot} />
-                  )}
-                </View>
-                <Text style={styles.radioLabel}>{option}</Text>
+                  {form.carOption || "Chọn tùy chọn xe"}
+                </Text>
+                <Ionicons
+                  name={
+                    openDropdown === "carOption" ? "chevron-up" : "chevron-down"
+                  }
+                  size={20}
+                  color={AppColors.primary}
+                />
               </TouchableOpacity>
-            ))}
+              {openDropdown === "carOption" && (
+                <View style={styles.dropdownList}>
+                  {CAR_OPTIONS.map((option) => {
+                    const selected = form.carOption === option;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          handleChange("carOption", option);
+                          setOpenDropdown(null);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View
+                          style={[styles.radio, selected && styles.radioActive]}
+                        >
+                          {selected && <View style={styles.radioDot} />}
+                        </View>
+                        <Text style={styles.dropdownItemText}>{option}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
           </View>
         </View>
-      </View>
-      {/* Buttons */}
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
-          <Text style={styles.resetButtonText}>Đặt lại</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>{isCreate ? "Tạo" : "Lưu"}</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+
+        {/* Buttons */}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
+            <Text style={styles.resetButtonText}>Đặt lại</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+            <Text style={styles.saveButtonText}>
+              {isCreate ? "Tạo" : "Lưu"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
+// 🌿 Styles
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F9FAFB",
-  },
+  container: { flex: 1, backgroundColor: "#F8FAF5" },
   header: {
-    backgroundColor: "white",
-    paddingHorizontal: 24,
-    paddingTop: 56,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingTop: 50,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
   },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  backButton: { paddingVertical: 8, paddingLeft: 8 },
+  headerContent: { flexDirection: "row", alignItems: "center" },
+  backButton: { padding: 8, marginRight: 10 },
   headerTitle: {
-    flex: 1,
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#111827",
-    textAlign: "center",
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#fff",
+    marginBottom: 4,
   },
-  savedMsgWrap: {
+  headerSubtitle: { fontSize: 13, color: "rgba(255,255,255,0.8)" },
+
+  scroll: { flex: 1 },
+  savedMsg: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#eaffdb",
-    borderColor: green,
-    borderWidth: 1,
+    backgroundColor: "#E6F4EA",
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 16,
+    padding: 10,
     marginHorizontal: 16,
-  },
-  savedDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: green,
-    marginRight: 6,
-  },
-  savedMsgText: { color: green, fontWeight: "700", fontSize: 15 },
-  card: {
-    backgroundColor: bgCard,
-    borderRadius: 18,
-    padding: 20,
+    marginTop: 20,
+    borderColor: AppColors.primary,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
+  },
+  savedMsgText: { color: "#1B4332", fontWeight: "600" },
+
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 22,
     marginHorizontal: 16,
-    marginVertical: 28,
+    marginTop: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 3,
   },
-  formGroup: { marginBottom: 18 },
-  label: {
-    fontWeight: "700",
-    fontSize: 16,
-    color: "#264a13",
-    marginBottom: 8,
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  formGroup: { marginBottom: 20 },
+  label: { fontWeight: "700", fontSize: 16, color: "#1B4332", marginBottom: 8 },
   required: { color: "#FF0000" },
   input: {
-    borderWidth: 1,
-    borderColor: green,
-    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: "#DDE5B6",
+    borderRadius: 12,
     fontSize: 16,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: "#fff",
+    paddingVertical: 12,
+    backgroundColor: "#F8FAF5",
     color: "#111",
-    minHeight: 44,
-    fontWeight: "500",
   },
-  inputMono: { fontFamily: "monospace", letterSpacing: 1.4, fontSize: 17 },
-  subText: { color: "#666", fontSize: 13, marginTop: 2 },
-  checkGrid: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
-  checkItem: {
+  inputFocus: {
+    borderColor: AppColors.primary,
+    shadowColor: AppColors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  dropdownInput: {
+    borderWidth: 1.5,
+    borderColor: "#DDE5B6",
+    borderRadius: 12,
+    fontSize: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#F8FAF5",
+    color: "#111",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: borderDark,
-    marginBottom: 8,
-    minWidth: 118,
-    minHeight: 41,
+    justifyContent: "space-between",
+    minHeight: 48,
   },
-  checkItemActive: { backgroundColor: "#eafacf", borderColor: green },
-  checkLabel: {
-    color: "#264a13",
-    fontWeight: "600",
+  dropdownText: {
+    fontSize: 16,
+    color: "#111",
+    flex: 1,
+  },
+  dropdownPlaceholder: {
+    color: "#A0A0A0",
+  },
+  dropdownList: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#DDE5B6",
+    marginTop: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  dropdownItemText: {
     fontSize: 15,
-    marginLeft: 7,
+    color: "#1B4332",
+    fontWeight: "500",
+    marginLeft: 8,
+    flex: 1,
   },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: borderDark,
-    backgroundColor: "#fff",
-    marginRight: 7,
+    borderColor: "#C8D6A3",
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 8,
   },
-  checkboxActive: { backgroundColor: green, borderColor: green },
-  checkboxCheckedMark: {
-    width: 10,
-    height: 10,
-    backgroundColor: "#fff",
-    borderRadius: 2.5,
-  },
-  radioCol: { flexDirection: "column", gap: 7 },
-  radioRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 2,
-    gap: 5,
+  checkboxActive: {
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
   },
   radio: {
     width: 22,
     height: 22,
-    borderRadius: 13,
+    borderRadius: 12,
     borderWidth: 2,
-    borderColor: borderDark,
-    backgroundColor: "#fff",
-    marginRight: 10,
+    borderColor: "#C8D6A3",
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 10,
   },
-  radioActive: { borderColor: green },
-  radioDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: green },
-  radioLabel: { fontSize: 15, color: "#142903", fontWeight: "500", flex: 1 },
+  radioActive: {
+    borderColor: AppColors.primary,
+    backgroundColor: "#E6F4EA",
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 6,
+    backgroundColor: AppColors.primary,
+  },
   buttonRow: {
     flexDirection: "row",
     gap: 10,
-    marginBottom: 28,
+    marginVertical: 20,
     paddingHorizontal: 16,
   },
-  saveButton: {
-    backgroundColor: green,
-    borderRadius: 8,
-    paddingVertical: 13,
-    paddingHorizontal: 20,
-    flex: 1,
-    alignItems: "center",
-  },
-  saveButtonText: { color: "#fff", fontWeight: "700", fontSize: 17 },
   resetButton: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    paddingVertical: 13,
-    paddingHorizontal: 20,
     flex: 1,
+    borderWidth: 2,
+    borderColor: AppColors.primary,
+    borderRadius: 12,
+    paddingVertical: 13,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#70E000",
+    backgroundColor: "#fff",
   },
-  resetButtonText: { color: "#70E000", fontWeight: "700", fontSize: 17 },
+  resetButtonText: {
+    color: AppColors.primary,
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  saveButton: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: "center",
+    backgroundColor: AppColors.primary,
+    shadowColor: AppColors.primary,
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
 });

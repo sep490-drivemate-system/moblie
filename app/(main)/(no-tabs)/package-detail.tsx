@@ -273,6 +273,24 @@ export default function PackageDetailScreen() {
                 {packageData.instructorName}
               </Text>
               <Text style={styles.packageName}>{packageData.packageName}</Text>
+
+              {/* Skills List */}
+              <View style={styles.skillsContainer}>
+                <View style={styles.skillsTags}>
+                  {[
+                    "Điều khiển cơ bản",
+                    "Chuyển làn",
+                    "Qua ngã tư",
+                    "Đỗ xe",
+                    "Vượt xe",
+                  ].map((skill, index) => (
+                    <View key={index} style={styles.skillTag}>
+                      <Text style={styles.skillTagText}>{skill}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
               {typeof packageData.price === "number" && (
                 <Text style={styles.priceText}>
                   Giá gói: {packageData.price.toLocaleString("vi-VN")}₫
@@ -543,7 +561,7 @@ export default function PackageDetailScreen() {
               </Text>
               {typeof packageData.price === "number" && (
                 <Text style={styles.modalText}>
-                  Giá gói: {packageData.price.toLocaleString("vi-VN")}₫
+                  Giá gói: {packageData.price.toLocaleString("vi-VN")}VNĐ
                 </Text>
               )}
               <Text style={styles.modalText}>
@@ -705,7 +723,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "800",
     color: AppColors.white,
   },
@@ -752,10 +770,30 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     color: "#1e293b",
+    marginBottom: 12,
+  },
+  skillsContainer: {
+    marginBottom: 12,
+  },
+  skillsTags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  skillTag: {
+    backgroundColor: "#fef3c7",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  skillTagText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#d97706",
   },
   priceText: {
     marginTop: 6,
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: "700",
     color: AppColors.primary,
   },

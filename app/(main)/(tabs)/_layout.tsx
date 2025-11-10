@@ -4,6 +4,7 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useAppSelector } from "@/lib/redux/hooks";
 import TabsViewModel from "@/viewmodels/shared/TabsViewModel";
 import ModernBottomBar from "@/components/ui/bottom-bar";
+import { AppColors } from "@/constants/Colors";
 
 export default function TabLayout() {
   const role = useAppSelector((s) => s.auth.user?.role ?? null);
@@ -31,7 +32,7 @@ export default function TabLayout() {
               props.navigation.navigate(target.routeName as never);
             }
           }}
-          primaryColor="#70E000"
+          primaryColor={AppColors.primary}
           inactiveColor="#c1c7cd"
           containerBg="#ffffff"
           activeBg="rgba(46,125,50,0.12)"

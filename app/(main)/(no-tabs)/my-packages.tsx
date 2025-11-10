@@ -117,9 +117,6 @@ export default function MyPackagesScreen() {
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Gói Đã Mua</Text>
-          <Text style={styles.headerSubtitle}>
-            {filteredPackages.length} gói phù hợp
-          </Text>
         </View>
       </View>
 
@@ -313,7 +310,6 @@ export default function MyPackagesScreen() {
                   </View>
                 </View>
 
-
                 {/* Footer */}
                 <View style={styles.cardFooter}>
                   <Text style={styles.viewDetailText}>Xem chi tiết</Text>
@@ -370,7 +366,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     color: "#ffffff",
-    marginBottom: 4,
+    marginTop: 35,
   },
   headerSubtitle: {
     fontSize: 14,
