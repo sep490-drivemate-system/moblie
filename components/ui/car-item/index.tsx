@@ -47,7 +47,7 @@ const CarItem: React.FC<Props> = ({ car, variant = "compact" }) => {
           <Text style={styles.locationText}>{car.location}</Text>
         </View>
         <Text style={styles.price}>
-          {car.price.toLocaleString("vi-VN")} GF /{" "}
+          {car.price.toLocaleString("vi-VN")} đ /{" "}
           <Text style={{ fontWeight: "400" }}>giờ</Text>
         </Text>
       </View>

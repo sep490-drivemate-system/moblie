@@ -1,16 +1,11 @@
 import CarItem from "@/components/ui/car-item";
 import InstructorItem from "@/components/ui/instructor-item";
 import PackageItem from "@/components/ui/package-item";
-import { drivingLicenses, listCar, popularPackages } from "@/data/home_data";
-import { instructorData, instructorsData } from "@/data/instructors_data";
+import { drivingLicenses, headerItems, listCar, popularPackages } from "@/data/home_data";
+import { instructorsData } from "@/data/instructors_data";
 import { LicenseType } from "@/models/license/license";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import {
-  Bell,
-  ChevronRight,
-  MessageSquareMore,
-  Wallet,
-} from "lucide-react-native";
+import { ChevronRight } from "lucide-react-native";
 import {
   FlatList,
   ListRenderItemInfo,
@@ -21,27 +16,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const headerItems = [
-  {
-    id: "1",
-    label: "Ví DriveMate",
-    value: 100000,
-    icon: Wallet,
-  },
-  {
-    id: "2",
-    label: "Thông báo",
-    value: 100,
-    icon: Bell,
-  },
-  {
-    id: "3",
-    label: "Tin nhắn",
-    value: 100,
-    icon: MessageSquareMore,
-  },
-];
 
 export default function HomeScreen() {
   const tabBarHeight = useBottomTabBarHeight();
@@ -77,7 +51,7 @@ export default function HomeScreen() {
               <View>
                 <Text style={styles.headerItemLabel}>{item.label}</Text>
                 <Text style={styles.headerItemValue}>
-                  {item.value} {item.label === "Ví DriveMate" && "GF"}
+                  {item.value} {item.label === "Ví DriveMate" && "đ"}
                 </Text>
               </View>
               <View style={{ justifyContent: "flex-end" }}>
@@ -112,6 +86,17 @@ export default function HomeScreen() {
             renderItem={({ item }) => <PackageItem package={item} key={item.id} />}
           />
         </View>
+                <View style={styles.listItemContainer}>
+          <Text style={styles.listLabel}>Người hướng dẫn nổi bật</Text>
+          <FlatList
+            data={instructorsData}
+            keyExtractor={(item) => item.id}
+            horizontal
+            contentContainerStyle={styles.listItem}
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => <InstructorItem instructor={item} />}
+          />
+        </View>
         <View style={styles.listItemContainer}>
           <Text style={styles.listLabel}>Xe được thuê thường xuyên</Text>
           <FlatList
@@ -124,17 +109,7 @@ export default function HomeScreen() {
           />
         </View>
 
-        <View style={styles.listItemContainer}>
-          <Text style={styles.listLabel}>Người hướng dẫn nổi bật</Text>
-          <FlatList
-            data={instructorsData}
-            keyExtractor={(item) => item.id}
-            horizontal
-            contentContainerStyle={styles.listItem}
-            showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => <InstructorItem instructor={item} />}
-          />
-        </View>
+
       </View>
     </ScrollView>
   );

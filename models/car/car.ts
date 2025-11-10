@@ -4,13 +4,13 @@ export interface Car {
   brand: string;
   imageUrl: string;
   images?: string[];
-  price?: number;
+  price: number;
   pricing?: {
     halfDay: { price: number; duration: number };
     fullDay: { price: number; duration: number };
   };
   location: string;
-  rating: number | { score: number; totalStudents: number };
+  rating: number 
   seats: number;
   type: string;
   fuel: string;

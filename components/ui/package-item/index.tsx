@@ -16,7 +16,6 @@ interface Package {
   roadTypes: string[];
   skills: string[];
   hasVehicle: boolean;
-  rating?: number;
   bookingCount?: number;
 }
 
@@ -46,12 +45,6 @@ export default function PackageItem({ package: pkg }: PackageItemProps) {
           <View style={styles.badgeInstructor}>
             <User size={12} color="#92400e" strokeWidth={2} />
             <Text style={styles.badgeText}>Người hướng dẫn</Text>
-          </View>
-        )}
-        {pkg.rating && (
-          <View style={styles.rating}>
-            <Star size={12} color="#fbbf24" fill="#fbbf24" strokeWidth={2} />
-            <Text style={styles.ratingText}>{pkg.rating}</Text>
           </View>
         )}
       </View>
@@ -90,7 +83,6 @@ export default function PackageItem({ package: pkg }: PackageItemProps) {
       {/* Footer */}
       <View style={styles.footer}>
         <View>
-          <Text style={styles.priceLabel}>Giá từ</Text>
           <Text style={styles.price}>
             {pkg.basePrice.toLocaleString("vi-VN")} đ
           </Text>

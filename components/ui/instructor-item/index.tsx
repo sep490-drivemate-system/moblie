@@ -39,12 +39,8 @@ const InstructorItem: React.FC<Props> = ({
           <Text style={styles.intructorName}>{instructor.name}</Text>
           <View style={styles.experienceContainer}>
             <ShieldCheck size={20} color={"#70E000"} />
-            <Text style={styles.experienceText}>{instructor.experience}</Text>
-          </View>
-          <Text style={styles.price}>
-            {instructor.price ? instructor.price.toLocaleString("vi-VN") : "Liên hệ"} GF /{" "}
-            <Text style={{ fontWeight: "400" }}>giờ</Text>
-          </Text>
+            <Text style={styles.experienceText}>{instructor.experienceYears} năm kinh nghiệm</Text>
+          </View>       
         </View>
       </View>
     </TouchableOpacity>
@@ -82,7 +78,7 @@ const styles = StyleSheet.create({
     color: "#edb435",
   },
   bookingContainer: {
-    backgroundColor: "#026AA7",
+    backgroundColor: "#70E000",
     padding: 5,
     alignItems: "center",
   },
