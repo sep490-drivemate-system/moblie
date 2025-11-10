@@ -6,9 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   SafeAreaView,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   Dimensions,
   Image,
@@ -25,7 +22,7 @@ import { UserRole } from "@/models/enum/UserRole.enum";
 import { ROUTES } from "@/constants/routes";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 
-const { width, height } = Dimensions.get("window");
+const {  height } = Dimensions.get("window");
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -42,26 +39,9 @@ export default function SignInScreen() {
     }
   ));
 
-  useEffect(() => {
-    if (isAuthenticated && user?.role) {
-      if (user.role === UserRole.NoviceDriver) {
-        router.replace(ROUTES.HOME);
-      } else if (user.role === UserRole.Instructor) {
-        router.replace(ROUTES.OVERVIEW);
-      }
-    }
-  }, [isAuthenticated, user?.role, router]);
-
-  const handleInputChange = (field: keyof ISignInRequest, value: string) => {
-    authViewModel.updateFormData(field, value);
-    if (errorMessage) {
-      authViewModel.clearError();
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Video Background */}
       <View style={styles.videoContainer}>
         <Video
           source={require("@/assets/videos/background_intro.mp4")}
@@ -89,7 +69,6 @@ export default function SignInScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Title */}
           <View style={styles.titleContainer}>
             <Text style={styles.title}>Đăng nhập</Text>
             <Text style={styles.subtitle}>
@@ -98,30 +77,27 @@ export default function SignInScreen() {
             </Text>
           </View>
 
-          {/* Form */}
           <View style={styles.form}>
-            {/* Email Input */}
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
                 placeholder="Nhập email hoặc số điện thoại"
                 placeholderTextColor="#9ca3af"
                 value={formData.emailOrPhone}
-                onChangeText={(value) => handleInputChange('emailOrPhone', value)}
+                onChangeText={(value) => authViewModel.handleEmailOrPhoneChange(value)}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
               />
             </View>
 
-            {/* Password Input */}
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
                 placeholder="Nhập mật khẩu"
                 placeholderTextColor="#9ca3af"
                 value={formData.password}
-                onChangeText={(value) => handleInputChange('password', value)}
+                onChangeText={(value) => authViewModel.handlePasswordChange(value)}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -138,12 +114,10 @@ export default function SignInScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Forgot Password */}
             <TouchableOpacity style={styles.forgotPasswordContainer}>
               <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
             </TouchableOpacity>
 
-            {/* Error Message */}
             {errorMessage && (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{errorMessage}</Text>
@@ -152,7 +126,17 @@ export default function SignInScreen() {
 
             <TouchableOpacity
               style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-              onPress={() => authViewModel.handleSignIn()}
+              onPress={async () => {
+                const result = await authViewModel.handleSignIn();
+                if (result.success && result.userRole) {
+                  // Navigate ngay dựa trên role
+                  if (result.userRole === UserRole.NoviceDriver) {
+                    router.replace(ROUTES.HOME);
+                  } else if (result.userRole === UserRole.Instructor) {
+                    router.replace(ROUTES.OVERVIEW);
+                  }
+                }
+              }}
               disabled={isLoading}
             >
               {isLoading ? (
@@ -318,8 +302,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   errorContainer: {
-    backgroundColor: "#fef2f2",
-    borderRadius: 8,
     padding: 12,
     marginBottom: 16,
     borderWidth: 1,

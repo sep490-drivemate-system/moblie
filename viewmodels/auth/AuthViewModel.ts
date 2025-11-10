@@ -3,8 +3,11 @@ import { ISignInRequest } from "@/models/auth/signin";
 import { ISignUpRequest } from "@/models/auth/signup";
 import { IForgotPasswordRequest } from "@/models/auth/forgotPassword";
 import { signIn, signUp } from "@/features/auth/authThunk";
+import { signInSchema, signUpSchema } from "@/validations/authValidation";
+import { ValidationError } from "yup";
 import {
-  updateFormData,
+  updateEmailOrPhone,
+  updatePassword,
   resetForm,
   updateRegisterFormData,
   setRegisterFormError,
@@ -33,9 +36,67 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     return this.getCurrentState().registerFormData;
   }
 
-  updateFormData(field: keyof ISignInRequest, value: string): void {
-    this.dispatch(updateFormData({ field, value }));
+  updateEmailOrPhoneField(value: string): void {
+    this.dispatch(updateEmailOrPhone(value));
   }
+
+  updatePasswordField(value: string): void {
+    this.dispatch(updatePassword(value));
+  }
+
+  handleEmailOrPhoneChange(value: string): void {
+    this.updateEmailOrPhoneField(value);
+    if (this.getCurrentState().errorMessage) {
+      this.clearError();
+    }
+  }
+
+  handlePasswordChange(value: string): void {
+    this.updatePasswordField(value);
+    if (this.getCurrentState().errorMessage) {
+      this.clearError();
+    }
+  }
+
+  async validateSignInForm(): Promise<{ isValid: boolean; error?: string }> {
+    try {
+      const currentState = this.getCurrentState();
+      await signInSchema.validate(currentState.formData, { abortEarly: false });
+      return { isValid: true };
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        const firstError = err.errors[0];
+        this.dispatch(setError(firstError));
+        return { isValid: false, error: firstError };
+      }
+      return { isValid: false, error: "Validation failed" };
+    }
+  }
+
+  async validateSignUpForm(): Promise<{ isValid: boolean; errors?: Record<string, string> }> {
+    try {
+      const currentState = this.getCurrentState();
+      await signUpSchema.validate(currentState.registerFormData, { abortEarly: false });
+      this.dispatch(clearRegisterFormErrors());
+      return { isValid: true };
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        const errors: Record<string, string> = {};
+        err.inner.forEach((error) => {
+          if (error.path) {
+            errors[error.path] = error.message;
+            this.dispatch(setRegisterFormError({ 
+              field: error.path as any, 
+              error: error.message 
+            }));
+          }
+        });
+        return { isValid: false, errors };
+      }
+      return { isValid: false };
+    }
+  }
+
   async checkAuthStatus(): Promise<void> {
     await this.executeAsync(
       async () => {
@@ -43,14 +104,10 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
           process.env.EXPO_PUBLIC_STORAGE_TOKEN || "@token"
         );
         if (token) {
-          // Decode token và lấy role
           const roleFromToken = getRoleFromToken(token);
-
-          if (roleFromToken) {
-            // Lưu role vào Redux state
+ if (roleFromToken) {
             this.dispatch(setUserRole(roleFromToken));
           }
-
           this.dispatch(setAuthenticated(true));
         }
       },
@@ -74,6 +131,13 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   async handleSignIn(): Promise<{ success: boolean; userRole?: UserRole }> {
+    const validation = await this.validateSignInForm();
+    if (!validation.isValid) {
+      return { success: false };
+    }
+
+    let userRole: UserRole | undefined;
+
     await this.executeAsync(
       async () => {
         const currentState = this.getCurrentState();
@@ -84,11 +148,10 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         if (result?.value?.token) {
           const roleFromToken = getRoleFromToken(result.value.token);
           if (roleFromToken) {
+            userRole = roleFromToken;
             this.dispatch(setUserRole(roleFromToken));
           }
-
           this.dispatch(setAuthenticated(true));
-
           await AsyncStorage.setItem(
             process.env.EXPO_PUBLIC_STORAGE_TOKEN || "@token",
             result.value.token
@@ -104,7 +167,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       }
     );
 
-    return { success: true };
+    return { success: true, userRole };
   }
 
   handleResetForm(): void {
@@ -119,7 +182,6 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   resetForm(): void {
     this.dispatch(resetForm());
   }
-  // Validation functions
   private validateEmail(email: string): string | undefined {
     if (!email.trim()) {
       return "Email không được để trống";
@@ -255,15 +317,16 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     console.log("Current Form Data:", JSON.stringify(updatedFormData, null, 2));
   }
 
-  async signup(): Promise<void> {
+  async signup(): Promise<{ success: boolean }> {
+    // Validate form với Yup trước khi submit
+    const validation = await this.validateSignUpForm();
+    if (!validation.isValid) {
+      return { success: false };
+    }
+
     await this.executeAsync(
       async () => {
         const currentState = this.getCurrentState();
-
-        if (!this.validateRegisterForm(currentState.registerFormData)) {
-          throw new Error("Please fill in all required fields correctly");
-        }
-
         const result = await this.dispatch(
           signUp(currentState.registerFormData)
         ).unwrap();
@@ -276,6 +339,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         setSuccess,
       }
     );
+
+    return { success: true };
   }
 
   private validateRegisterForm(formData: ISignUpRequest): boolean {

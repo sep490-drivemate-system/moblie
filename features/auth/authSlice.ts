@@ -26,7 +26,7 @@ interface AuthState extends BaseState {
 }
 
 const initialState: AuthState = {
-  isAuthenticated: true,
+  isAuthenticated: false,
   user: null,
 
   formData: {
@@ -57,13 +57,14 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    updateFormData: (
-      state,
-      action: PayloadAction<{ field: keyof ISignInRequest; value: string }>
-    ) => {
-      const { field, value } = action.payload;
-      state.formData[field] = value;
+    updateEmailOrPhone: (state, action: PayloadAction<string>) => {
+      state.formData.emailOrPhone = action.payload;
     },
+
+    updatePassword: (state, action: PayloadAction<string>) => {
+      state.formData.password = action.payload;
+    },
+
     resetForm: (state) => {
       state.formData = {
         emailOrPhone: "",
@@ -127,7 +128,6 @@ const authSlice = createSlice({
         emailOrPhone: "",
       };
     },
-
     setAuthenticated: (state, action: PayloadAction<boolean>) => {
       state.isAuthenticated = action.payload;
     },
@@ -172,16 +172,17 @@ const authSlice = createSlice({
       })
       .addCase(signIn.rejected, (state, action) => {
         state.isLoading = false;
-        state.errorMessage =
-          action.payload || action.error?.message || "Đăng nhập thất bại";
+        state.isSuccess = false;
+        state.errorMessage = action.payload || null;
       });
   },
 });
 
 export const {
-  updateFormData,
+  updateEmailOrPhone,
+  updatePassword,
   resetForm,
-  updateRegisterFormData, // Export new register actions
+  updateRegisterFormData,
   setRegisterFormError,
   clearRegisterFormErrors,
   resetRegisterForm,

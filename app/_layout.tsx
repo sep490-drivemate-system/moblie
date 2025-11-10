@@ -80,32 +80,19 @@ function RootLayoutNav() {
 
 
   useEffect(() => {
-    if (
-      isMounted &&
-      !authState.isLoading &&
-      !authState.isAuthenticated
-    ) {
+    if (isMounted) {
       authViewModel.checkAuthStatus();
     }
   }, [isMounted]);
 
- 
-
-  if (authState.isLoading || !isMounted) {
+  if (!isMounted) {
     return <LoadingSpinner message="DriveMate..." />;
   }
 
-  if (authState.isAuthenticated) {
-    return (
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(main)" />
-      </Stack>
-    );
-  } else {
-    return (
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(onboarding)" />
-      </Stack>
-    );
-  }
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(onboarding)" />
+      <Stack.Screen name="(main)" />
+    </Stack>
+  );
 }

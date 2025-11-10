@@ -67,11 +67,13 @@ export function createThunk<ResponseType = void, RequestType = void>(
       const error = err as unknown as {
         response?: { data?: { message?: string } };
       };
-      const message =
-        error.response?.data?.message ||
-        `${method.toUpperCase()} request failed`;
-      console.log(`[Thunk] Request URL: ${url}`);
-      console.error(`[Thunk] Error:`, error);
+      
+      // Log error ra console để debug
+      console.log(`[Thunk Error] ${method.toUpperCase()} ${url}:`, error);
+      
+      // Chỉ lấy message từ backend, không dùng fallback generic message
+      const message = error.response?.data?.message || "";
+      
       options?.onError?.(error, payload);
       return rejectWithValue(message);
     } finally {

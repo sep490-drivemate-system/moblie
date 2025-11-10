@@ -54,14 +54,9 @@ export abstract class BaseViewModel<T extends BaseState> {
                 this.dispatch(actions.setSuccess(true));
             }
             onSuccess?.(result);
-
             return result;
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-            if (actions) {
-                this.dispatch(actions.setError(errorMessage));
-            }
-            onError?.(errorMessage);
+            console.log("error",error);
             return null;
         } finally {
             if (actions) {
