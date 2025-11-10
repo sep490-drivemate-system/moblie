@@ -49,6 +49,21 @@ export interface IInstructors {
   packageCount: number;
 }
 
+// Paginated response từ backend
+export interface PaginatedInstructorsResponse {
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  pageContent: IInstructors[];
+}
+
+// Request params cho API
+export interface GetInstructorsParams {
+  searchKey?: string;
+  pageNumber?: number;
+  pageSize?: number;
+}
+
 export interface IInstructor {
   id: string;
   name: string;

@@ -54,44 +54,67 @@ function InstructorsScreen() {
     isRefreshing,
     isLoading,
     errorMessage,
+    pagination,
   } = instructorState;
   
+  // Local search state để debounce
+  const [localSearchQuery, setLocalSearchQuery] = useState("");
   
-  const hasMoreInstructors = displayedInstructors.length < filteredInstructors.length;
+  // Pagination helpers
+  const totalPages = Math.ceil(pagination.totalItems / pagination.itemsPerPage);
+  const hasMorePages = pagination.currentPage < totalPages;
   
   // Fetch instructors on mount
   useEffect(() => {
     instructorViewModel.fetchInstructors();
   }, []);
 
-  // Client-side filtering and sorting
+  // ============================================
+  // SEARCH: Backend API call với debounce
+  // ============================================
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearchQuery !== searchQuery) {
+        // Gọi API backend với SearchKey parameter
+        instructorViewModel.searchInstructors(localSearchQuery);
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [localSearchQuery]);
+
+  // ============================================
+  // FILTERS & SORT: Client-side processing
+  // ============================================
+  // Filters: Đánh giá, Kinh nghiệm, Số gói
+  // Sort: Rating, Experience, Package Count
   useEffect(() => {
     if (allInstructors.length === 0) return;
 
+    console.log('[Filter] Applying filters on', allInstructors.length, 'instructors');
+    console.log('[Filter] Current filters:', filters);
+
     let filtered = [...allInstructors];
 
-    // Apply search
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(instructor =>
-        instructor.fullName.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Apply filters
+    // Apply filters (client-side)
+    // Filter by Experience
     if (filters.experience !== ExperienceLevel.All) {
       const expYears = parseInt(filters.experience.split('-')[0]) || 0;
       filtered = filtered.filter(instructor => {
-        const instructorYears = parseInt(instructor.experienceYear.split(' ')[0]) || 0;
+        const instructorYears = parseInt(instructor.experienceYear) || 0;
         return instructorYears >= expYears;
       });
+      console.log('[Filter] After experience filter:', filtered.length);
     }
 
+    // Filter by Rating
     if (filters.minRating !== MinimumRating.All) {
       const minRating = parseFloat(filters.minRating.replace('+', ''));
       filtered = filtered.filter(instructor => instructor.averageRating >= minRating);
+      console.log('[Filter] After rating filter:', filtered.length);
     }
 
-    // Apply sorting
+    // Apply sorting (client-side)
     filtered.sort((a, b) => {
       let comparison = 0;
 
@@ -100,11 +123,12 @@ function InstructorsScreen() {
           comparison = a.averageRating - b.averageRating;
           break;
         case SortType.Experience:
-          const aYears = parseInt(a.experienceYear.split(' ')[0]) || 0;
-          const bYears = parseInt(b.experienceYear.split(' ')[0]) || 0;
+          const aYears = parseInt(a.experienceYear) || 0;
+          const bYears = parseInt(b.experienceYear) || 0;
           comparison = aYears - bYears;
           break;
         case SortType.Price:
+          // Sort by package count
           comparison = a.packageCount - b.packageCount;
           break;
         default:
@@ -114,11 +138,12 @@ function InstructorsScreen() {
       return sortAscending ? comparison : -comparison;
     });
 
-    // Update Redux state
-    instructorViewModel.updateFilters(filters);
+    console.log('[Filter] Final result after sort:', filtered.length, 'instructors');
+
+    // Update filtered data
     dispatch(setFilteredInstructors(filtered));
     dispatch(setDisplayedInstructors(filtered));
-  }, [searchQuery, filters, sortBy, sortAscending, allInstructors]);
+  }, [filters, sortBy, sortAscending, allInstructors]);
   
   // Action handlers
   const handleSearchChange = (query: string) => {
@@ -137,9 +162,11 @@ function InstructorsScreen() {
     await instructorViewModel.refreshInstructors();
   };
   
+  // Infinite scroll - load more và append data
   const loadMoreInstructors = () => {
-    // Mock load more functionality
-   // console.log('Load more instructors');
+    if (hasMorePages && !isLoading) {
+      instructorViewModel.loadMoreInstructors();
+    }
   };
 
   const handleInstructorPress = (instructor: IInstructors) => {
@@ -185,7 +212,7 @@ function InstructorsScreen() {
   );
 
   const renderLoadingFooter = () => {
-    if (!hasMoreInstructors) return null;
+    if (!hasMorePages) return null;
     return (
       <View style={styles.loadingFooter}>
         <ActivityIndicator size="small" color="#70E000" />
@@ -217,9 +244,9 @@ function InstructorsScreen() {
           <TextInput
             style={styles.searchInput}
             placeholder="Tìm kiếm giảng viên..."
-            placeholderTextColor={AppColors.gray500}
-            value={searchQuery}
-            onChangeText={handleSearchChange}
+            placeholderTextColor={AppColors.gray400}
+            value={localSearchQuery}
+            onChangeText={setLocalSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => handleSearchChange("")}>
@@ -229,8 +256,7 @@ function InstructorsScreen() {
         </View>
       </View>
 
-      {/* Filter Bar */}
-      {/* <View style={styles.filterBar}>
+      <View style={styles.filterBar}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -295,10 +321,10 @@ function InstructorsScreen() {
             <Text style={styles.clearButtonText}>✕ Đặt lại</Text>
           </TouchableOpacity>
         </ScrollView>
-      </View> */}
+      </View>
 
 
-      {/* Instructor List */}
+      {/* Instructor List với Infinite Scroll */}
       <FlatList
         data={displayedInstructors}
         renderItem={renderInstructorCard}
@@ -313,11 +339,14 @@ function InstructorsScreen() {
             tintColor="#70E000"
           />
         }
+        // Infinite scroll pagination
         onEndReached={loadMoreInstructors}
         onEndReachedThreshold={0.3}
         ListFooterComponent={renderLoadingFooter}
         ListEmptyComponent={renderEmptyState}
       />
+
+
 
       {/* Error Message */}
       {errorMessage && (

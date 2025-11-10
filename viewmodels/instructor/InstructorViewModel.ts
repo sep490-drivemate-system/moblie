@@ -12,32 +12,51 @@ import {
   setSortAscending,
   toggleSortOrder,
   setIsRefreshing,
+  setPagination,
   setLoading,
   setError,
   setSuccess,
   clearError,
 } from "@/features/instructor/instructorSlice";
-import { IInstructors } from "@/models/instructor/instructor.type";
+import { IInstructors, GetInstructorsParams } from "@/models/instructor/instructor.type";
 import { FilterState, SortType } from "@/models/instructor/instructor-filter.type";
 
 type InstructorState = RootState["instructor"];
 
 export class InstructorViewModel extends BaseViewModel<InstructorState> {
 
-  // Fetch instructors from API
-  async fetchInstructors(): Promise<void> {
+  // Fetch instructors from API với pagination và search
+  async fetchInstructors(params?: GetInstructorsParams): Promise<void> {
     await this.executeAsync(
       async () => {
-        const result = await this.dispatch(getListInstructors()).unwrap();
+        const currentState = this.getCurrentState();
         
-        const instructors = (result as any).data?.value || (result as any).value || result;
+        // Build params từ state hoặc override bằng params truyền vào
+        const requestParams: GetInstructorsParams = {
+          searchKey: params?.searchKey ?? currentState.searchQuery,
+          pageNumber: params?.pageNumber ?? currentState.pagination.currentPage,
+          pageSize: params?.pageSize ?? currentState.pagination.itemsPerPage,
+        };
         
-        this.dispatch(setAllInstructors(instructors));
-        this.dispatch(setFilteredInstructors(instructors));
-        this.dispatch(setDisplayedInstructors(instructors));
+        const result = await this.dispatch(getListInstructors(requestParams)).unwrap();
+        
+        // Extract data từ GenericResponse
+        const paginatedData = (result as any).value || result;
+        
+        // Update instructors
+        this.dispatch(setAllInstructors(paginatedData.pageContent));
+        this.dispatch(setFilteredInstructors(paginatedData.pageContent));
+        this.dispatch(setDisplayedInstructors(paginatedData.pageContent));
+        
+        // Update pagination info
+        this.dispatch(setPagination({
+          currentPage: paginatedData.currentPage,
+          itemsPerPage: paginatedData.pageSize,
+          totalItems: paginatedData.totalCount,
+        }));
       },
       () => {
-
+        console.log('Instructors loaded successfully');
       },
       (error) => {
         console.error('Failed to load instructors:', error);
@@ -48,6 +67,71 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
         setSuccess,
       }
     );
+  }
+
+  // Load page cụ thể (replace data)
+  async loadPage(pageNumber: number): Promise<void> {
+    await this.fetchInstructors({ pageNumber });
+  }
+
+  // Load more instructors cho infinite scroll (append data)
+  async loadMoreInstructors(): Promise<void> {
+    const currentState = this.getCurrentState();
+    const nextPage = currentState.pagination.currentPage + 1;
+    const totalPages = Math.ceil(
+      currentState.pagination.totalItems / currentState.pagination.itemsPerPage
+    );
+
+    // Nếu đã hết trang, không load thêm
+    if (nextPage > totalPages) return;
+
+    await this.executeAsync(
+      async () => {
+        const requestParams: GetInstructorsParams = {
+          searchKey: currentState.searchQuery,
+          pageNumber: nextPage,
+          pageSize: currentState.pagination.itemsPerPage,
+        };
+
+        const result = await this.dispatch(getListInstructors(requestParams)).unwrap();
+        const paginatedData = (result as any).value || result;
+
+        // APPEND data thay vì replace
+        const updatedInstructors = [
+          ...currentState.allInstructors,
+          ...paginatedData.pageContent,
+        ];
+
+        this.dispatch(setAllInstructors(updatedInstructors));
+        this.dispatch(setFilteredInstructors(updatedInstructors));
+        this.dispatch(setDisplayedInstructors(updatedInstructors));
+
+        // Update pagination info
+        this.dispatch(setPagination({
+          currentPage: paginatedData.currentPage,
+          itemsPerPage: paginatedData.pageSize,
+          totalItems: paginatedData.totalCount,
+        }));
+      },
+      () => {
+        console.log('More instructors loaded');
+      },
+      (error) => {
+        console.error('Failed to load more instructors:', error);
+      },
+      {
+        setLoading,
+        setError,
+        setSuccess,
+      }
+    );
+  }
+
+  // Search với debounce (reset về page 1)
+  async searchInstructors(searchKey: string): Promise<void> {
+    this.dispatch(setSearchQuery(searchKey));
+    // Reset về page 1 khi search
+    await this.fetchInstructors({ searchKey, pageNumber: 1 });
   }
 
   // Search instructors
@@ -76,10 +160,15 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
     }
   }
 
-  // Refresh data
+  // Refresh data (giữ lại search query, reset về page 1)
   async refreshInstructors(): Promise<void> {
     this.dispatch(setIsRefreshing(true));
-    await this.fetchInstructors();
+    const currentState = this.getCurrentState();
+    // Giữ lại search query hiện tại, reset về page 1
+    await this.fetchInstructors({ 
+      searchKey: currentState.searchQuery,
+      pageNumber: 1 
+    });
     this.dispatch(setIsRefreshing(false));
   }
 
