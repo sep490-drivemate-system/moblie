@@ -125,29 +125,40 @@ export default function InstructorDetailScreen() {
 
     setIsProcessing(true);
 
-    const driverId = await getUserIdFromToken();
-    const requestBody: IBuyPackageRequest = {
-      durationWhenBought: parseInt(selectedPackage.duration) || 0,
-      priceAtBuyingTime: selectedPackage.price,
-      carId: selectedVehicle ? selectedVehicle : null,
-      packageId: selectedPackage.id,
-      instructorId: instructor.id,
-      driverId: driverId,
-    };
-
-    await dispatch(buyPackage(requestBody)).unwrap();
-    setIsProcessing(false);
-    setShowConfirmModal(false);
-
-    router.push({
-      pathname: "/(main)/(no-tabs)/transaction-success",
-      params: {
-        instructorId: instructor.id,
+    try {
+      const driverId = await getUserIdFromToken();
+      const requestBody: IBuyPackageRequest = {
+        durationWhenBought: parseInt(selectedPackage.duration) || 0,
+        priceAtBuyingTime: selectedPackage.price,
+        carId: selectedVehicle ? selectedVehicle : null,
         packageId: selectedPackage.id,
-        vehicleId: selectedVehicle || "",
-      },
-    });
+        instructorId: instructor.id,
+        driverId: driverId,
+      };
 
+      await dispatch(buyPackage(requestBody)).unwrap();
+      
+      // Success - close modal và navigate
+      setShowConfirmModal(false);
+      router.push({
+        pathname: "/(main)/(no-tabs)/transaction-success",
+        params: {
+          instructorId: instructor.id,
+          packageId: selectedPackage.id,
+          vehicleId: selectedVehicle || "",
+        },
+      });
+    } catch (error: any) {
+      // Error handling
+      console.error('Purchase failed:', error);
+      
+      // Hiển thị error message cho user
+      const errorMessage = error?.message || 'Không thể mua gói. Vui lòng thử lại.';
+      Alert.alert('Lỗi mua gói', errorMessage);
+    } finally {
+      // Luôn reset loading state
+      setIsProcessing(false);
+    }
   };
 
   if (!instructor) {

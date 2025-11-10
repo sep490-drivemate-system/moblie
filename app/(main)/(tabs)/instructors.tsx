@@ -83,11 +83,6 @@ function InstructorsScreen() {
     return () => clearTimeout(timer);
   }, [localSearchQuery]);
 
-  // ============================================
-  // FILTERS & SORT: Client-side processing
-  // ============================================
-  // Filters: Đánh giá, Kinh nghiệm, Số gói
-  // Sort: Rating, Experience, Package Count
   useEffect(() => {
     if (allInstructors.length === 0) return;
 

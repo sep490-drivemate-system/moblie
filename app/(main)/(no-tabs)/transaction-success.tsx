@@ -27,12 +27,8 @@ export default function TransactionSuccessScreen() {
   };
 
   const handleBackToInstructor = () => {
-    router.push({
-      pathname: "/(main)/(tabs)/instructors",
-      params: {
-        instructorId: params.instructorId,
-      },
-    });
+    // Quay lại màn hình trước đó (instructor-detail)
+    router.back();
   };
 
   return (
@@ -84,8 +80,7 @@ export default function TransactionSuccessScreen() {
           style={styles.backButtonBottom}
           onPress={handleBackToInstructor}
           activeOpacity={0.8}
-        >
-          <ArrowLeft size={18} color={AppColors.primary} strokeWidth={2} />
+        >         
           <Text style={styles.backButtonText}>Quay lại</Text>
         </TouchableOpacity>
 

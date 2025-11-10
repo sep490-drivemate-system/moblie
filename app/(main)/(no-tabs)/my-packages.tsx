@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   StatusBar,
   Image,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -18,77 +20,123 @@ import {
   Calendar,
   TrendingUp,
 } from "lucide-react-native";
-import { userPackagesData } from "@/data/user_packages_data";
 import { AppColors } from "@/constants/Colors";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { getUserPackages } from "@/features/booking/bookingThunk";
+import { IUserPackageAPI, BookingStatus } from "@/models/package/user-package";
 
 export default function MyPackagesScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
 
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<BookingStatus>(BookingStatus.All);
+  const [allPackages, setAllPackages] = useState<IUserPackageAPI[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const statusOptions = useMemo(
     () => [
-      { key: "all", label: "Tất cả" },
-      { key: "paid", label: "Đã mua" },
-      { key: "in_progress", label: "Đang sử dụng" },
-      { key: "completed", label: "Đã sử dụng" },
-      { key: "refunded", label: "Hủy có hoàn trả" },
-      { key: "not_refund", label: "Hủy không hoàn trả" },
+      { key: BookingStatus.All, label: "Tất cả" },
+      { key: BookingStatus.Purchased, label: "Đã mua" },
+      { key: BookingStatus.InUse, label: "Đang sử dụng" },
+      { key: BookingStatus.Used, label: "Đã sử dụng" },
+      { key: BookingStatus.CancellationWithRefund, label: "Hủy có hoàn trả" },
+      { key: BookingStatus.CancellationWithoutRefund, label: "Hủy không hoàn trả" },
     ],
     []
   );
 
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      all: userPackagesData.length,
-      paid: 0,
-      in_progress: 0,
-      completed: 0,
-      refunded: 0,
-      not_refund: 0,
-    };
-    userPackagesData.forEach((p) => {
-      if (counts[p.status] !== undefined) counts[p.status] += 1;
-    });
-    return counts;
+  // Fetch ALL packages once on mount để tính counts
+  useEffect(() => {
+    fetchAllPackages();
   }, []);
 
-  const filteredPackages = useMemo(() => {
-    if (selectedStatus === "all") return userPackagesData;
-    return userPackagesData.filter((p) => p.status === selectedStatus);
-  }, [selectedStatus]);
+  const fetchAllPackages = async (isRefresh = false) => {
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+    
+    try {
+      // Fetch tất cả packages (không truyền bookingStatus hoặc truyền 0)
+      const result = await dispatch(getUserPackages(undefined)).unwrap();
+      
+      const packagesData = (result as any).value || result;
+      setAllPackages(packagesData);
+    } catch (error) {
+      console.error('Failed to fetch packages:', error);
+      setAllPackages([]);
+    } finally {
+      if (isRefresh) {
+        setIsRefreshing(false);
+      } else {
+        setIsLoading(false);
+      }
+    }
+  };
 
-  const getStatusColor = (status: string) => {
+  const handleRefresh = async () => {
+    await fetchAllPackages(true);
+  };
+
+  // Filter packages theo selected status (client-side)
+  const displayedPackages = useMemo(() => {
+    if (selectedStatus === BookingStatus.All) {
+      return allPackages;
+    }
+    return allPackages.filter(p => p.bookingStatus === selectedStatus);
+  }, [allPackages, selectedStatus]);
+
+  // Tính counts từ ALL packages
+  const statusCounts = useMemo(() => {
+    const counts: Record<number, number> = {
+      [BookingStatus.All]: allPackages.length,
+      [BookingStatus.Purchased]: 0,
+      [BookingStatus.InUse]: 0,
+      [BookingStatus.Used]: 0,
+      [BookingStatus.CancellationWithRefund]: 0,
+      [BookingStatus.CancellationWithoutRefund]: 0,
+    };
+    allPackages.forEach((p) => {
+      if (counts[p.bookingStatus] !== undefined) {
+        counts[p.bookingStatus] += 1;
+      }
+    });
+    return counts;
+  }, [allPackages]);
+
+  const getStatusColor = (status: BookingStatus) => {
     switch (status) {
-      case "paid":
+      case BookingStatus.Purchased:
         return AppColors.yellow;
-      case "in_progress":
+      case BookingStatus.InUse:
         return AppColors.primary;
-      case "completed":
+      case BookingStatus.Used:
         return AppColors.gray;
-      case "refunded":
+      case BookingStatus.CancellationWithRefund:
         return AppColors.blue;
-      case "not_refund":
+      case BookingStatus.CancellationWithoutRefund:
         return AppColors.red;
       default:
         return AppColors.gray;
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: BookingStatus) => {
     switch (status) {
-      case "paid":
+      case BookingStatus.Purchased:
         return "Đã mua";
-      case "in_progress":
+      case BookingStatus.InUse:
         return "Đang sử dụng";
-      case "completed":
+      case BookingStatus.Used:
         return "Đã sử dụng";
-      case "refunded":
+      case BookingStatus.CancellationWithRefund:
         return "Hủy có hoàn trả";
-      case "not_refund":
+      case BookingStatus.CancellationWithoutRefund:
         return "Hủy không hoàn trả";
       default:
-        return status;
+        return "Không xác định";
     }
   };
 
@@ -99,15 +147,14 @@ export default function MyPackagesScreen() {
     });
   };
 
-  const getProgressPercentage = (usedHours: number, totalHours: number) => {
-    return Math.min((usedHours / totalHours) * 100, 100);
+  const getProgressPercentage = (percentInUse: number) => {
+    return Math.min(percentInUse, 100);
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -130,9 +177,9 @@ export default function MyPackagesScreen() {
           {statusOptions.map((opt) => {
             const isActive = selectedStatus === opt.key;
             const color =
-              opt.key === "all"
+              opt.key === BookingStatus.All
                 ? AppColors.gray
-                : getStatusColor(opt.key as string);
+                : getStatusColor(opt.key);
             return (
               <TouchableOpacity
                 key={opt.key}
@@ -174,8 +221,21 @@ export default function MyPackagesScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={[AppColors.primary]}
+            tintColor={AppColors.primary}
+          />
+        }
       >
-        {filteredPackages.length === 0 ? (
+        {isLoading ? (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={AppColors.primary} />
+            <Text style={styles.loadingText}>Đang tải...</Text>
+          </View>
+        ) : displayedPackages.length === 0 ? (
           <View style={styles.emptyState}>
             <Package size={80} color="#cbd5e1" strokeWidth={1.5} />
             <Text style={styles.emptyTitle}>Bạn chưa có gói nào</Text>
@@ -190,12 +250,9 @@ export default function MyPackagesScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          filteredPackages.map((pkg) => {
-            const progressPercentage = getProgressPercentage(
-              pkg.usedHours,
-              pkg.totalHours
-            );
-            const statusColor = getStatusColor(pkg.status);
+          displayedPackages.map((pkg: IUserPackageAPI) => {
+            const progressPercentage = getProgressPercentage(pkg.precentInUse);
+            const statusColor = getStatusColor(pkg.bookingStatus);
 
             return (
               <TouchableOpacity
@@ -208,12 +265,12 @@ export default function MyPackagesScreen() {
                 <View style={styles.cardHeader}>
                   <View style={styles.instructorRow}>
                     <Image
-                      source={{ uri: pkg.instructorAvatar }}
+                      source={{ uri: pkg.avatarInstructor }}
                       style={styles.instructorAvatar}
                     />
                     <View style={styles.instructorInfo}>
                       <Text style={styles.instructorName}>
-                        {pkg.instructorName}
+                        {pkg.nameInstructor}
                       </Text>
                       <View
                         style={[
@@ -233,7 +290,7 @@ export default function MyPackagesScreen() {
                         <Text
                           style={[styles.statusText, { color: statusColor }]}
                         >
-                          {getStatusText(pkg.status)}
+                          {getStatusText(pkg.bookingStatus)}
                         </Text>
                       </View>
                     </View>
@@ -241,7 +298,28 @@ export default function MyPackagesScreen() {
                 </View>
 
                 {/* Package Name */}
-                <Text style={styles.packageName}>{pkg.packageName}</Text>
+                <Text style={styles.packageName}>
+                  {pkg.namePackake || 'Gói học lái xe'}
+                </Text>
+
+                {/* Purchase Date */}
+                <View style={styles.purchaseDateRow}>
+                  <Calendar
+                    size={16}
+                    color="#64748b"
+                    strokeWidth={2}
+                  />
+                  <Text style={styles.purchaseDateText}>
+                    Mua ngày: {new Date(pkg.buyDate).toLocaleDateString('vi-VN', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })} lúc {new Date(pkg.buyDate).toLocaleTimeString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </Text>
+                </View>
 
                 {/* Progress Section */}
                 <View style={styles.progressSection}>
@@ -279,14 +357,14 @@ export default function MyPackagesScreen() {
                     <View style={styles.hoursStatItem}>
                       <Text style={styles.hoursStatLabel}>Tổng</Text>
                       <Text style={styles.hoursStatValue}>
-                        {pkg.totalHours}h
+                        {pkg.duration}h
                       </Text>
                     </View>
                     <View style={styles.statDivider} />
                     <View style={styles.hoursStatItem}>
                       <Text style={styles.hoursStatLabel}>Đã dùng</Text>
                       <Text style={styles.hoursStatValueUsed}>
-                        {pkg.usedHours}h
+                        {pkg.durationInUse}h
                       </Text>
                     </View>
                     <View style={styles.statDivider} />
@@ -297,14 +375,14 @@ export default function MyPackagesScreen() {
                           styles.hoursStatValue,
                           {
                             color:
-                              pkg.remainingHours > 0
+                              pkg.remainingTime > 0
                                 ? AppColors.primary
                                 : "#ef4444",
                             fontWeight: "800",
                           },
                         ]}
                       >
-                        {pkg.remainingHours}h
+                        {pkg.remainingTime}h
                       </Text>
                     </View>
                   </View>
@@ -487,8 +565,19 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     color: "#1e293b",
-    marginBottom: 20,
+    marginBottom: 12,
     lineHeight: 28,
+  },
+  purchaseDateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 16,
+  },
+  purchaseDateText: {
+    fontSize: 13,
+    color: "#64748b",
+    fontWeight: "500",
   },
   progressSection: {
     backgroundColor: "#f8fafc",
@@ -596,6 +685,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: AppColors.primary,
+  },
+  loadingState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 100,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#64748b",
+    fontWeight: "600",
   },
   emptyState: {
     alignItems: "center",

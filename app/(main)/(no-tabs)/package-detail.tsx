@@ -26,7 +26,6 @@ import {
 } from "lucide-react-native";
 import { userPackagesData } from "@/data/user_packages_data";
 import { AppColors } from "@/constants/Colors";
-import { LinearGradient } from "expo-linear-gradient";
 
 type StatusFilter =
   | "all"
@@ -370,7 +369,7 @@ export default function PackageDetailScreen() {
         <View style={styles.sessionsSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              Lịch học đã đặt ({filteredSessions.length})
+              Lịch thuê đã đặt ({filteredSessions.length})
             </Text>
           </View>
 
@@ -524,12 +523,9 @@ export default function PackageDetailScreen() {
                 style={[styles.bookButton, { flex: 1 }]}
                 onPress={handleBookNewSession}
               >
-                <LinearGradient
-                  colors={[AppColors.primary, "#059669"]}
-                  style={styles.bookButtonGradient}
-                >
+                <View style={styles.bookButtonGradient}>
                   <Text style={styles.bookButtonText}>Đặt buổi thuê mới</Text>
-                </LinearGradient>
+                </View>
               </TouchableOpacity>
             )}
             <TouchableOpacity

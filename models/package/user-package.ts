@@ -42,3 +42,29 @@ export interface IInstructorBusyTime {
     }[];
 }
 
+// API Response Types
+export enum BookingStatus {
+    All = 0,
+    Purchased = 1,
+    InUse = 2,
+    Used = 3,
+    CancellationWithRefund = 4,
+    CancellationWithoutRefund = 5,
+}
+
+export interface IUserPackageAPI {
+    id: string;
+    nameInstructor: string;
+    namePackake: string;
+    bookingStatus: BookingStatus;
+    avatarInstructor: string;
+    buyDate: string; // ISO format
+    duration: number; // in hours
+    durationInUse: number; // hours used
+    precentInUse: number; // percentage 0-100
+    remainingTime: number; // hours remaining
+}
+
+export interface IGetUserPackagesParams {
+    bookingStatus?: BookingStatus;
+}
