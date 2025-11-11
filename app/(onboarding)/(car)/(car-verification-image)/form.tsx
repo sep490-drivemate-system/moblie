@@ -187,8 +187,8 @@ export default function FormScreen() {
       return;
     }
 
-    // All validations passed, navigate to next page
-    router.push("/(onboarding)/waiting-confirm");
+    // All validations passed, navigate back to My Car tab
+    router.replace("/(main)/(tabs)/mycar");
   };
 
   // Auto exit delete mode after 3 seconds
