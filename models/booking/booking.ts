@@ -165,3 +165,34 @@ export interface RouteSegment {
   difficulty: "easy" | "medium" | "hard";
   coordinates: Array<{ latitude: number; longitude: number }>;
 }
+
+// Session Status Enum
+export enum SessionStatus {
+  Pending = 1,
+  Confirmed = 2,
+  Completed = 3,
+  Cancelled = 4,
+  Rescheduled = 5, // Đổi lịch
+}
+
+// API Response types for booking sessions
+export interface IBookingSessionAPI {
+  id: string;
+  packageId: string;
+  instructorId: string;
+  instructorName: string;
+  date: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  duration: number; // in hours
+  location: string; // "lat,lng" format
+  vehicleId: string | null;
+  vehicleName: string | null;
+  status: SessionStatus; // Enum: Pending=1, Confirmed=2, Completed=3, Cancelled=4
+  createdAt: string; // ISO datetime
+}
+
+export interface IGetBookingSessionsParams {
+  bookingId: string;
+  status?: number; // Optional status filter
+}

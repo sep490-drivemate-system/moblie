@@ -1,12 +1,21 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { MapPin, CheckCircle } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
+
+interface INoviceDriverAddress {
+  id: string;
+  addressString: string;
+  latitude: number;
+  longitude: number;
+}
 
 interface Step3Props {
   selectedLocationId: string | null;
   pickupLocation: string;
-  onLocationSelect: (locationId: string, locationName: string) => void;
+  onLocationSelect: (location: string, locationId: string) => void;
+  addresses?: INoviceDriverAddress[];
+  isLoading?: boolean;
 }
 
 const pickupLocations = [
@@ -46,10 +55,26 @@ export default function Step3({
   selectedLocationId,
   pickupLocation,
   onLocationSelect,
+  addresses = [],
+  isLoading = false,
 }: Step3Props) {
+  // Use API addresses if available, otherwise fallback to mock data
+  const displayLocations = addresses.length > 0 
+    ? addresses.map(addr => ({
+        id: addr.id,
+        name: addr.addressString,
+        address: addr.addressString,
+      }))
+    : pickupLocations;
+
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Chọn địa điểm đón</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Chọn địa điểm đón</Text>
+        {isLoading && (
+          <ActivityIndicator size="small" color={AppColors.primary} style={{ marginLeft: 8 }} />
+        )}
+      </View>
 
       <View style={styles.locationNote}>
         <Text style={styles.locationNoteText}>
@@ -58,31 +83,45 @@ export default function Step3({
         </Text>
       </View>
 
-      <View style={styles.locationList}>
-        {pickupLocations.map((location) => (
-          <TouchableOpacity
-            key={location.id}
-            style={[
-              styles.locationItem,
-              selectedLocationId === location.id && styles.locationItemSelected,
-            ]}
-            onPress={() => onLocationSelect(location.id, location.name)}
-          >
-            <Text
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={AppColors.primary} />
+          <Text style={styles.loadingText}>Đang tải địa chỉ...</Text>
+        </View>
+      ) : (
+        <View style={styles.locationList}>
+          {displayLocations.map((location) => (
+            <TouchableOpacity
+              key={location.id}
               style={[
-                styles.locationItemText,
-                selectedLocationId === location.id &&
-                styles.locationItemTextSelected,
+                styles.locationItem,
+                selectedLocationId === location.id && styles.locationItemSelected,
               ]}
+              onPress={() => onLocationSelect(location.name, location.id)}
             >
-              {location.name}
-            </Text>
-            {selectedLocationId === location.id && (
-              <CheckCircle size={18} color={AppColors.primary} strokeWidth={2} />
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
+              <View style={styles.locationItemContent}>
+                <MapPin 
+                  size={20} 
+                  color={selectedLocationId === location.id ? AppColors.primary : "#64748b"} 
+                  strokeWidth={2}
+                />
+                <Text
+                  style={[
+                    styles.locationItemText,
+                    selectedLocationId === location.id &&
+                    styles.locationItemTextSelected,
+                  ]}
+                >
+                  {location.name}
+                </Text>
+              </View>
+              {selectedLocationId === location.id && (
+                <CheckCircle size={18} color={AppColors.primary} strokeWidth={2} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {pickupLocation && (
         <View style={styles.locationPreview}>
@@ -109,11 +148,31 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#1e293b",
-    marginBottom: 8,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#64748b",
+  },
+  locationItemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
   },
   sectionDesc: {
     fontSize: 14,

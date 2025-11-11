@@ -1,6 +1,6 @@
 import { AppColors } from "@/constants/Colors";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronLeft, Settings, Car } from "lucide-react-native";
+import { ChevronLeft, Settings, Car, Loader, Calendar } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import DraggableFlatList, {
   RenderItemParams,
@@ -12,8 +12,13 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { getBookingSessions } from "@/features/booking/bookingThunk";
+import { IBookingSessionAPI, SessionStatus } from "@/models/booking/booking";
 
 interface BookingItem {
   id: string;
@@ -26,28 +31,79 @@ interface BookingItem {
   price: number;
 }
 
+const getStatusText = (status: SessionStatus): string => {
+  switch (status) {
+    case SessionStatus.Pending:
+      return "Chờ xác nhận";
+    case SessionStatus.Confirmed:
+      return "Đã xác nhận";
+    case SessionStatus.Completed:
+      return "Hoàn thành";
+    case SessionStatus.Cancelled:
+      return "Đã hủy";
+    case SessionStatus.Rescheduled:
+      return "Đổi lịch";
+    default:
+      return "Không xác định";
+  }
+};
+
+const getStatusColor = (status: SessionStatus): string => {
+  switch (status) {
+    case SessionStatus.Pending:
+      return "#f59e0b"; // orange - pending
+    case SessionStatus.Confirmed:
+      return "#10b981"; // green - confirmed
+    case SessionStatus.Completed:
+      return "#6b7280"; // gray - completed
+    case SessionStatus.Cancelled:
+      return "#ef4444"; // red - cancelled
+    case SessionStatus.Rescheduled:
+      return "#3b82f6"; // blue - rescheduled
+    default:
+      return "#6b7280";
+  }
+};
+
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 export default function BookingDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const dispatch = useAppDispatch();
   const mapRef = useRef<MapView | null>(null);
 
-  // Parse the booking data from params
-  const booking: BookingItem = JSON.parse(params.booking as string);
+  // Get booking ID and status from params
+  const bookingId = params.bookingId as string;
+  const sessionStatus = params.status ? parseInt(params.status as string) : undefined;
 
-  // Mock location data (you'll replace this with real coordinates from your booking)
-  const pickupLocation = {
-    latitude: 10.8491,
-    longitude: 106.7714,
-    title: "Gym house",
-  };
+  // State for sessions data
+  const [sessions, setSessions] = useState<IBookingSessionAPI[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedSession, setSelectedSession] = useState<IBookingSessionAPI | null>(null);
+  
+  // Store booking info for new session booking
+  const [bookingInfo, setBookingInfo] = useState<{
+    instructorId: string;
+    packageId: string;
+    vehicleId: string | null;
+  } | null>(null);
 
-  const dropoffLocation = {
-    latitude: 10.7717,
-    longitude: 106.7041,
-    title: "Museum",
-  };
+  // Parse location from selected session
+  const pickupLocation = selectedSession
+    ? (() => {
+        const [lat, lng] = selectedSession.location.split(",").map(parseFloat);
+        return {
+          latitude: lat || 10.8491,
+          longitude: lng || 106.7714,
+          title: "Điểm đón",
+        };
+      })()
+    : {
+        latitude: 10.8491,
+        longitude: 106.7714,
+        title: "Điểm đón",
+      };
 
   const [routeCoordinates, setRouteCoordinates] = useState<
     Array<{ latitude: number; longitude: number }>
@@ -63,6 +119,54 @@ export default function BookingDetailsScreen() {
     Array<{ latitude: number; longitude: number }>
   >([]);
   const [routeAddresses, setRouteAddresses] = useState<string[]>([]);
+
+  // Fetch sessions on mount
+  useEffect(() => {
+    const fetchSessions = async () => {
+      console.log("Fetching sessions with params:", { bookingId, sessionStatus });
+      
+      try {
+        setIsLoading(true);
+        const result = await dispatch(
+          getBookingSessions({ bookingId, status: sessionStatus })
+        ).unwrap();
+        
+        console.log("API Response:", result);
+        
+        const sessionsData = result.value || [];
+        console.log("Sessions data:", sessionsData);
+        
+        setSessions(sessionsData);
+        
+        // Auto-select first session if available
+        if (sessionsData.length > 0) {
+          setSelectedSession(sessionsData[0]);
+          console.log("Selected session:", sessionsData[0]);
+          
+          // Store booking info from first session for new booking
+          setBookingInfo({
+            instructorId: sessionsData[0].instructorId,
+            packageId: sessionsData[0].packageId,
+            vehicleId: sessionsData[0].vehicleId,
+          });
+        } else {
+          console.log("No sessions found");
+        }
+      } catch (error) {
+        console.error("Failed to fetch sessions:", error);
+        Alert.alert("Lỗi", `Không thể tải danh sách buổi học: ${error}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (bookingId) {
+      console.log("BookingId exists, fetching sessions...");
+      fetchSessions();
+    } else {
+      console.log("No bookingId provided");
+    }
+  }, [bookingId, sessionStatus]);
 
   const generateRandomDistinctPoints = (
     center: { latitude: number; longitude: number },
@@ -188,11 +292,60 @@ export default function BookingDetailsScreen() {
     });
   };
 
+  const handleBookNewSession = () => {
+    if (!bookingInfo) {
+      Alert.alert("Lỗi", "Không tìm thấy thông tin booking");
+      return;
+    }
+
+    // Navigate to booking screen with instructor, package, and vehicle info
+    router.push({
+      pathname: "/(main)/(no-tabs)/booking",
+      params: {
+        instructorId: bookingInfo.instructorId,
+        packageId: bookingInfo.packageId,
+        vehicleId: bookingInfo.vehicleId || "",
+      },
+    });
+  };
+
   // Format date from YYYY-MM-DD to DD/MM/YYYY
   const formatDate = (dateString: string) => {
     const [year, month, day] = dateString.split("-");
     return `${day}/${month}/${year}`;
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={AppColors.brandBlue} />
+        <Text style={styles.loadingText}>Đang tải thông tin...</Text>
+      </View>
+    );
+  }
+
+  // Show empty state if no sessions
+  if (sessions.length === 0) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => router.back()}
+          >
+            <ChevronLeft size={24} color="#FFFFFF" strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Không có buổi học nào</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!selectedSession) return null;
 
   return (
     <View style={styles.container}>
@@ -208,8 +361,11 @@ export default function BookingDetailsScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.headerButton}>
-            <Settings size={20} color="#FFFFFF" strokeWidth={2} />
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={handleBookNewSession}
+          >
+            <Calendar size={20} color="#FFFFFF" strokeWidth={2} />
           </TouchableOpacity>
         </View>
       </View>
@@ -218,6 +374,40 @@ export default function BookingDetailsScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
+        {/* Sessions List */}
+        {sessions.length > 1 && (
+          <View style={styles.sessionsListContainer}>
+            <Text style={styles.sessionsListTitle}>Danh sách buổi học ({sessions.length})</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {sessions.map((session) => (
+                <TouchableOpacity
+                  key={session.id}
+                  style={[
+                    styles.sessionChip,
+                    selectedSession?.id === session.id && styles.sessionChipActive,
+                  ]}
+                  onPress={() => setSelectedSession(session)}
+                >
+                  <Text
+                    style={[
+                      styles.sessionChipText,
+                      selectedSession?.id === session.id && styles.sessionChipTextActive,
+                    ]}
+                  >
+                    {formatDate(session.date)}
+                  </Text>
+                  <View
+                    style={[
+                      styles.sessionStatusDot,
+                      { backgroundColor: getStatusColor(session.status) },
+                    ]}
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Map Section */}
         <View style={styles.mapContainer}>
           <MapView
@@ -280,10 +470,29 @@ export default function BookingDetailsScreen() {
 
         {/* Booking Info / Route List Section */}
         <View style={styles.infoContainer}>
-          {/* Date and Time */}
-          <View style={styles.dateTimeRow}>
-            <Text style={styles.dateText}>{formatDate(booking.date)}</Text>
-            <Text style={styles.timeText}>{booking.time}</Text>
+          {/* Session Info Header */}
+          <View style={styles.sessionInfoHeader}>
+            <View style={styles.dateTimeRow}>
+              <Text style={styles.dateText}>{formatDate(selectedSession.date)}</Text>
+              <Text style={styles.timeText}>
+                {selectedSession.startTime} - {selectedSession.endTime}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statusBadge,
+                { backgroundColor: getStatusColor(selectedSession.status) + "20" },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusBadgeText,
+                  { color: getStatusColor(selectedSession.status) },
+                ]}
+              >
+                {getStatusText(selectedSession.status)}
+              </Text>
+            </View>
           </View>
 
           {buttonState === "inSession" ? (
@@ -361,39 +570,27 @@ export default function BookingDetailsScreen() {
             </View>
           ) : (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
+              <Text style={styles.sectionTitle}>Thông tin buổi học</Text>
 
               <View style={styles.customerCard}>
-                <View style={styles.customerInfo}>
-                  {/* Avatar placeholder */}
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                      {booking.studentName.charAt(0)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.customerDetails}>
-                    <Text style={styles.label}>Khách hàng</Text>
-                    <Text style={styles.customerName}>
-                      {booking.studentName}
-                    </Text>
-                  </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.label}>Giảng viên:</Text>
+                  <Text style={styles.infoValue}>{selectedSession.instructorName}</Text>
                 </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.label}>Thời lượng:</Text>
+                  <Text style={styles.infoValue}>{selectedSession.duration} giờ</Text>
+                </View>
+                {selectedSession.vehicleName && (
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Phương tiện:</Text>
+                    <Text style={styles.infoValue}>{selectedSession.vehicleName}</Text>
+                  </View>
+                )}
               </View>
             </View>
           )}
 
-          {/* Vehicle Info Section (only if vehicle is rented) */}
-          {booking.vehicle && booking.vehicle !== "Không có" && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Đã thuê phương tiện</Text>
-
-              <View style={styles.vehicleCard}>
-                <Text style={styles.licensePlate}>51H - 59565</Text>
-                <Text style={styles.vehicleModel}>{booking.vehicle}</Text>
-              </View>
-            </View>
-          )}
         </View>
       </ScrollView>
 
@@ -688,5 +885,100 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: AppColors.textPrimary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#666666",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 32,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#666666",
+    textAlign: "center",
+  },
+  sessionsListContainer: {
+    backgroundColor: "#ffffff",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e5e5",
+  },
+  sessionsListTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#000000",
+    marginBottom: 12,
+  },
+  sessionChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginRight: 12,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "#e5e5e5",
+  },
+  sessionChipActive: {
+    backgroundColor: AppColors.brandBlue + "15",
+    borderColor: AppColors.brandBlue,
+  },
+  sessionChipText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666666",
+    marginRight: 8,
+  },
+  sessionChipTextActive: {
+    color: AppColors.brandBlue,
+    fontWeight: "700",
+  },
+  sessionStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  sessionInfoHeader: {
+    marginBottom: 20,
+  },
+  statusBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#000000",
+    flex: 1,
+    textAlign: "right",
   },
 });

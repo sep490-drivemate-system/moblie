@@ -3,12 +3,21 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 
 import { Clock, Plus, Minus, Edit3 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 
+interface IInstructorBookedSession {
+  id: string;
+  startTime: string; // ISO format
+  endTime: string; // ISO format
+  status: number;
+}
+
 interface Step2Props {
   selectedStartTime: string;
   selectedDuration: number; // in hours
   onStartTimeSelect: (time: string) => void;
   onDurationChange: (duration: number) => void;
   maxDuration?: number;
+  selectedDate?: string | null;
+  instructorBookedSessions?: IInstructorBookedSession[];
   busyTimes?: { startTime: string; endTime: string }[];
 }
 
@@ -59,12 +68,25 @@ const isTimeSlotAvailable = (time: string, busyTimes: { startTime: string; endTi
   return true;
 };
 
+// Helper to convert ISO to time string
+const getTimeFromISO = (isoString: string): string => {
+  const date = new Date(isoString);
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+};
+
+// Helper to get date from ISO
+const getDateFromISO = (isoString: string): string => {
+  return isoString.split('T')[0];
+};
+
 export default function Step2({
   selectedStartTime,
   selectedDuration,
   onStartTimeSelect,
   onDurationChange,
   maxDuration = 40,
+  selectedDate = null,
+  instructorBookedSessions = [],
   busyTimes = [],
 }: Step2Props) {
   const [showTimeInput, setShowTimeInput] = useState(false);
@@ -77,6 +99,27 @@ export default function Step2({
       setCustomTime(selectedStartTime);
     }
   }, [selectedStartTime]);
+
+  // Merge busy times from mock data and API booked sessions
+  const allBusyTimes = React.useMemo(() => {
+    const merged = [...busyTimes];
+    
+    if (selectedDate && instructorBookedSessions.length > 0) {
+      const bookedForDate = instructorBookedSessions.filter(session => {
+        const sessionDate = getDateFromISO(session.startTime);
+        return sessionDate === selectedDate;
+      });
+      
+      bookedForDate.forEach(session => {
+        merged.push({
+          startTime: getTimeFromISO(session.startTime),
+          endTime: getTimeFromISO(session.endTime)
+        });
+      });
+    }
+    
+    return merged;
+  }, [busyTimes, instructorBookedSessions, selectedDate]);
 
   const timeOptions = generateTimeOptions();
 
@@ -98,8 +141,10 @@ export default function Step2({
     // Validate time format HH:MM
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (timeRegex.test(customTime)) {
-      onStartTimeSelect(customTime);
-      setShowTimeInput(false);
+      if (isTimeSlotAvailable(customTime, allBusyTimes)) {
+        onStartTimeSelect(customTime);
+        setShowTimeInput(false);
+      }
     }
   };
 
@@ -183,7 +228,7 @@ export default function Step2({
           <Text style={styles.timeSlotsTitle}>Thời gian phổ biến:</Text>
           <View style={styles.popularTimesGrid}>
             {popularTimeSlots.map((time) => {
-              const isAvailable = isTimeSlotAvailable(time, busyTimes);
+              const isAvailable = isTimeSlotAvailable(time, allBusyTimes);
               return (
                 <TouchableOpacity
                   key={time}
@@ -221,7 +266,7 @@ export default function Step2({
             contentContainerStyle={styles.allTimesContent}
           >
             {timeOptions.map((time) => {
-              const isAvailable = isTimeSlotAvailable(time, busyTimes);
+              const isAvailable = isTimeSlotAvailable(time, allBusyTimes);
               return (
                 <TouchableOpacity
                   key={time}

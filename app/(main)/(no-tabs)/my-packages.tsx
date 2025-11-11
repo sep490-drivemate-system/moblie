@@ -140,10 +140,18 @@ export default function MyPackagesScreen() {
     }
   };
 
-  const handlePackagePress = (packageId: string) => {
+  const handlePackagePress = (pkg: IUserPackageAPI) => {
+    console.log("Navigating to package detail with package:", pkg);
+    
     router.push({
       pathname: "/(main)/(no-tabs)/package-detail",
-      params: { packageId },
+      params: { 
+        packageId: pkg.id,
+        instructorId: pkg.instructorId,
+        carId: pkg.carId || "",
+        carPrice: pkg.carPrice?.toString() || "0",
+        packageData: JSON.stringify(pkg), // Truyền toàn bộ package data
+      },
     });
   };
 
@@ -258,7 +266,7 @@ export default function MyPackagesScreen() {
               <TouchableOpacity
                 key={pkg.id}
                 style={styles.packageCard}
-                onPress={() => handlePackagePress(pkg.id)}
+                onPress={() => handlePackagePress(pkg)}
                 activeOpacity={0.7}
               >
                 {/* Card Header */}

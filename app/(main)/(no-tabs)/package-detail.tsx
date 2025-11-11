@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,9 @@ import {
   Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { getBookingSessions } from "@/features/booking/bookingThunk";
+import { IBookingSessionAPI, SessionStatus } from "@/models/booking/booking";
 import {
   ArrowLeft,
   Clock,
@@ -39,18 +42,99 @@ type StatusFilter =
 export default function PackageDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const dispatch = useAppDispatch();
   const packageId = params.packageId as string;
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>("all");
+  const [apiSessions, setApiSessions] = useState<any[]>([]);
+  const [isLoadingApi, setIsLoadingApi] = useState(false);
 
-  const packageData = userPackagesData.find((pkg) => pkg.id === packageId);
+  // Get package data from params (API data) or fallback to mock data
+  const packageDataFromParams = params.packageData 
+    ? JSON.parse(params.packageData as string) 
+    : null;
+  
+  const packageData = packageDataFromParams || userPackagesData.find((pkg) => pkg.id === packageId);
+  
+  // Debug log
+  console.log("Package Detail Debug:", {
+    packageId,
+    hasParamsData: !!params.packageData,
+    packageDataFromParams,
+    packageData,
+    instructorIdFromParams: params.instructorId,
+    carIdFromParams: params.carId,
+  });
+  
+  // Extract params for booking
+  const instructorIdFromParams = params.instructorId as string || packageData?.instructorId;
+  const carIdFromParams = params.carId as string || "";
+  const carPriceFromParams = params.carPrice ? parseFloat(params.carPrice as string) : 0;
+  
+  // Map API SessionStatus enum to string status for UI
+  const mapApiStatusToString = (status: SessionStatus): string => {
+    switch (status) {
+      case SessionStatus.Pending:
+        return "planing";
+      case SessionStatus.Confirmed:
+        return "upcoming";
+      case SessionStatus.Completed:
+        return "completed";
+      case SessionStatus.Cancelled:
+        return "cancelled";
+      case SessionStatus.Rescheduled:
+        return "reschedule";
+      default:
+        return "planing";
+    }
+  };
+  
+  // Fetch sessions from API and merge with mock data
+  useEffect(() => {
+    const fetchApiSessions = async () => {
+      if (!packageId) return;
+      
+      try {
+        setIsLoadingApi(true);
+        const result = await dispatch(
+          getBookingSessions({ bookingId: packageId })
+        ).unwrap();
+        
+        const sessionsData = result.value || [];
+        
+        // Map API sessions to mock data format
+        const mappedSessions = sessionsData.map((apiSession: IBookingSessionAPI) => ({
+          id: apiSession.id,
+          date: apiSession.date,
+          startTime: apiSession.startTime,
+          endTime: apiSession.endTime,
+          duration: apiSession.duration,
+          location: apiSession.location,
+          vehicleName: apiSession.vehicleName,
+          status: mapApiStatusToString(apiSession.status), // Convert enum to string
+          instructorName: apiSession.instructorName,
+        }));
+        
+        setApiSessions(mappedSessions);
+        console.log("Loaded API sessions:", mappedSessions.length);
+      } catch (error) {
+        console.error("Failed to fetch API sessions:", error);
+        setApiSessions([]);
+      } finally {
+        setIsLoadingApi(false);
+      }
+    };
+    
+    fetchApiSessions();
+  }, [packageId]);
 
-  if (!packageData) {
-    return (
-      <View style={styles.container}>
-        <Text>Package not found</Text>
-      </View>
-    );
-  }
+  // Allow API-only mode - show loading or API data even without mock packageData
+  // if (!packageData) {
+  //   return (
+  //     <View style={styles.container}>
+  //       <Text>Package not found</Text>
+  //     </View>
+  //   );
+  // }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -113,7 +197,7 @@ export default function PackageDetailScreen() {
     useState<string>("all");
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isProcessingCancel, setIsProcessingCancel] = useState(false);
-  const [localStatus, setLocalStatus] = useState<string>(packageData.status);
+  const [localStatus, setLocalStatus] = useState<string>(packageData?.status || "paid");
   const [cancelDateStr, setCancelDateStr] = useState<string | null>(null);
 
   const sessionStatusOptions = useMemo(
@@ -130,8 +214,12 @@ export default function PackageDetailScreen() {
   );
 
   const sessionStatusCounts = useMemo(() => {
+    // Use API sessions if available, otherwise use mock data sessions
+    const mockSessions = (packageData as any)?.sessions || [];
+    const sessions = apiSessions.length > 0 ? apiSessions : mockSessions;
+    
     const counts: Record<string, number> = {
-      all: packageData ? packageData.sessions.length : 0,
+      all: sessions.length,
       planing: 0,
       upcoming: 0,
       in_progress: 0,
@@ -139,30 +227,54 @@ export default function PackageDetailScreen() {
       reschedule: 0,
       cancelled: 0,
     };
-    if (packageData) {
-      packageData.sessions.forEach((s) => {
-        if (counts[s.status] !== undefined) counts[s.status] += 1;
-      });
-    }
+    
+    sessions.forEach((s: any) => {
+      if (counts[s.status] !== undefined) counts[s.status] += 1;
+    });
+    
     return counts;
-  }, [packageData]);
+  }, [apiSessions, packageData]);
 
   const filteredSessions = useMemo(() => {
-    if (!packageData) return [];
-    if (selectedSessionStatus === "all") return packageData.sessions;
-    return packageData.sessions.filter(
-      (s) => s.status === selectedSessionStatus
-    );
-  }, [packageData, selectedSessionStatus]);
+    // Use API sessions if available, otherwise use mock data sessions
+    const mockSessions = (packageData as any)?.sessions || [];
+    const sessions = apiSessions.length > 0 ? apiSessions : mockSessions;
+    
+    if (selectedSessionStatus === "all") return sessions;
+    return sessions.filter((s: any) => s.status === selectedSessionStatus);
+  }, [apiSessions, packageData, selectedSessionStatus]);
 
   const handleBookNewSession = () => {
+    if (!packageData) {
+      Alert.alert("Lỗi", "Không tìm thấy thông tin gói");
+      return;
+    }
+
+    // Use carId from params if available, otherwise try to get from sessions
+    let vehicleId = carIdFromParams;
+    if (!vehicleId) {
+      const mockSessions = (packageData as any)?.sessions || [];
+      const sessions = apiSessions.length > 0 ? apiSessions : mockSessions;
+      const latestSession = sessions?.find((s: any) => s.vehicleId);
+      vehicleId = latestSession?.vehicleId || "";
+    }
+
+    console.log("Booking params:", {
+      instructorId: instructorIdFromParams,
+      packageId: packageId,
+      vehicleId: vehicleId,
+      carPrice: carPriceFromParams,
+    });
+
     router.push({
       pathname: "/(main)/(no-tabs)/booking",
       params: {
-        instructorId: packageData.instructorId,
-        packageId: packageData.packageId,
+        instructorId: instructorIdFromParams,
+        packageId: packageId,
+        vehicleId: vehicleId,
+        carPrice: carPriceFromParams.toString(),
         fromUserPackage: "true",
-        userPackageId: packageData.id,
+        userPackageId: packageData.id || packageId,
       },
     });
   };
@@ -260,7 +372,8 @@ export default function PackageDetailScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Package Info Card */}
+        {/* Package Info Card - Only show if mock data exists */}
+        {packageData && (
         <View style={styles.packageCard}>
           <View style={styles.instructorSection}>
             <Image
@@ -364,6 +477,7 @@ export default function PackageDetailScreen() {
             </View>
           </View>
         </View>
+        )}
 
         {/* Sessions Section */}
         <View style={styles.sessionsSection}>
@@ -433,7 +547,7 @@ export default function PackageDetailScreen() {
             </View>
           ) : (
             <View style={styles.sessionsList}>
-              {filteredSessions.map((session) => (
+              {filteredSessions.map((session: any) => (
                 <View key={session.id} style={styles.sessionCard}>
                   {/* Status Badge */}
                   <View
@@ -514,20 +628,17 @@ export default function PackageDetailScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Bottom Actions */}
-      {(localStatus === "paid" || localStatus === "in_progress") && (
+
         <View style={styles.bottomContainer}>
           <View style={{ flexDirection: "row", gap: 12 }}>
-            {packageData.usedHours < packageData.totalHours && (
-              <TouchableOpacity
-                style={[styles.bookButton, { flex: 1 }]}
-                onPress={handleBookNewSession}
-              >
-                <View style={styles.bookButtonGradient}>
-                  <Text style={styles.bookButtonText}>Đặt buổi thuê mới</Text>
-                </View>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={[styles.bookButton, { flex: 1 }]}
+              onPress={handleBookNewSession}
+            >
+              <View style={styles.bookButtonGradient}>
+                <Text style={styles.bookButtonText}>Đặt buổi thuê mới</Text>
+              </View>
+            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.cancelButton, { flex: 1 }]}
               onPress={() => {
@@ -539,9 +650,10 @@ export default function PackageDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      )}
+      
 
       {/* Cancel Modal */}
+      {packageData && (
       <Modal
         visible={showCancelModal}
         transparent
@@ -620,6 +732,7 @@ export default function PackageDetailScreen() {
           </View>
         </View>
       </Modal>
+      )}
     </View>
   );
 }

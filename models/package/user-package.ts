@@ -20,7 +20,7 @@ export interface IUserPackage {
     id: string;
     packageId: string;
     packageName: string;
-    price?: number; // total price in VND
+    price?: number; 
     instructorId: string;
     instructorName: string;
     instructorAvatar: string;
@@ -28,7 +28,6 @@ export interface IUserPackage {
     usedHours: number;
     remainingHours: number;
     purchaseDate: string;
-    expiryDate?: string;
     status: "paid" | "in_progress" | "completed" | "refunded" | "not_refund";
     sessions: IDrivingSession[];
 }
@@ -55,7 +54,10 @@ export enum BookingStatus {
 export interface IUserPackageAPI {
     id: string;
     nameInstructor: string;
+    instructorId:string;
     namePackake: string;
+    carId:string;
+    carPrice:number;
     bookingStatus: BookingStatus;
     avatarInstructor: string;
     buyDate: string; // ISO format

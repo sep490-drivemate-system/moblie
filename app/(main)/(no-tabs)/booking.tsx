@@ -25,8 +25,14 @@ import {
   Clock,
   Car,
 } from "lucide-react-native";
-// Booking models (if needed later)
-// import { BookingMode, Shift, ShiftType } from "@/models/booking/booking";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import {
+  getNoviceDriverAddresses,
+  getPolicies,
+  PolicyType,
+  INoviceDriverAddress,
+  IPolicy,
+} from "@/features/booking/bookingThunk";
 import Step1 from "@/components/Booking/Step1";
 import Step2 from "@/components/Booking/Step2";
 import Step3 from "@/components/Booking/Step3";
@@ -40,9 +46,21 @@ import { InstructorPackage } from "@/models/instructor/instructor.type";
 export default function BookingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const instructorId = params.instructorId;
+  const dispatch = useAppDispatch();
+  
+  const instructorId = params.instructorId as string;
   const packageId = params.packageId as string | undefined;
   const vehicleId = params.vehicleId as string | undefined;
+  const carPrice = params.carPrice ? parseFloat(params.carPrice as string) : undefined;
+  
+  console.log("Booking screen received params:", {
+    instructorId,
+    packageId,
+    vehicleId,
+    carPrice,
+    fromUserPackage: params.fromUserPackage,
+    userPackageId: params.userPackageId,
+  });
 
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
@@ -51,21 +69,23 @@ export default function BookingScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  // Step 2: Duration selection (time already selected in Step1)
+  // Step 2: Duration selection
   const [selectedStartTime, setSelectedStartTime] = useState("");
   const [selectedDuration, setSelectedDuration] = useState(2); // default 2 hours
 
   // Step 3: Location
   const [pickupLocation, setPickupLocation] = useState("");
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
-    null
-  );
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [addresses, setAddresses] = useState<INoviceDriverAddress[]>([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+
+  // Step 4: Policies
+  const [policies, setPolicies] = useState<IPolicy[]>([]);
+  const [acceptedPolicies, setAcceptedPolicies] = useState<Record<string, boolean>>({});
+  const [isLoadingPolicies, setIsLoadingPolicies] = useState(false);
 
   // User wallet
   const [userCoins, setUserCoins] = useState(500);
-
-  // Policy acceptance state
-  const [allPoliciesAccepted, setAllPoliciesAccepted] = useState(false);
 
   // Tracking card expand/collapse state
   const [isTrackingExpanded, setIsTrackingExpanded] = useState(false);
@@ -93,7 +113,10 @@ export default function BookingScreen() {
     const baseCost = selectedPackage?.basePrice || 0;
     let vehicleCost = 0;
 
-    if (selectedVehicle && selectedVehicle.price && selectedDuration > 0) {
+    // Use carPrice from params if available (from user package) - only if both carPrice and vehicleId exist
+    if (carPrice && vehicleId && selectedDuration > 0) {
+      vehicleCost = carPrice * selectedDuration;
+    } else if (selectedVehicle && selectedVehicle.price && selectedDuration > 0) {
       vehicleCost = selectedVehicle.price * selectedDuration;
     }
 
@@ -107,6 +130,56 @@ export default function BookingScreen() {
     }
   }, [selectedTime]);
 
+  // Fetch addresses when moving to step 3
+  useEffect(() => {
+    if (currentStep === 3 && addresses.length === 0) {
+      fetchAddresses();
+    }
+  }, [currentStep]);
+
+  // Fetch policies when moving to step 4
+  useEffect(() => {
+    if (currentStep === 4 && policies.length === 0) {
+      fetchPolicies();
+    }
+  }, [currentStep]);
+
+  const fetchAddresses = async () => {
+    try {
+      setIsLoadingAddresses(true);
+      const result = await dispatch(getNoviceDriverAddresses()).unwrap();
+      const addressesData = (result as any).value || result;
+      setAddresses(addressesData);
+      console.log("Addresses loaded:", addressesData);
+    } catch (error) {
+      console.error("Failed to fetch addresses:", error);
+    } finally {
+      setIsLoadingAddresses(false);
+    }
+  };
+
+  const fetchPolicies = async () => {
+    try {
+      setIsLoadingPolicies(true);
+      const result = await dispatch(getPolicies({ policyType: PolicyType.Booking })).unwrap();
+      const policiesData = (result as any).value || result;
+      setPolicies(policiesData);
+      
+      // Initialize all policies as not accepted
+      const initialAccepted: Record<string, boolean> = {};
+      policiesData.forEach((policy: IPolicy) => {
+        initialAccepted[policy.id] = false;
+      });
+      setAcceptedPolicies(initialAccepted);
+      
+      console.log("Policies loaded:", policiesData);
+    } catch (error) {
+      console.error("Failed to fetch policies:", error);
+    } finally {
+      setIsLoadingPolicies(false);
+    }
+  };
+
   const canProceedToNextStep = () => {
     switch (currentStep) {
       case 1:
@@ -116,7 +189,9 @@ export default function BookingScreen() {
       case 3:
         return selectedLocationId !== null;
       case 4:
-        return userCoins >= bookingCost;
+        // Check if all policies are accepted
+        const allAccepted = Object.values(acceptedPolicies).every((v) => v === true);
+        return allAccepted && userCoins >= bookingCost;
       default:
         return false;
     }
@@ -125,23 +200,14 @@ export default function BookingScreen() {
   const handleNext = () => {
     if (canProceedToNextStep() && currentStep < 4) {
       setCurrentStep(currentStep + 1);
-      // Reset policies acceptance when moving to step 4
-      if (currentStep === 3) {
-        setAllPoliciesAccepted(false);
-      }
     }
   };
 
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
-      // Reset policies acceptance when leaving step 4
-      if (currentStep === 4) {
-        setAllPoliciesAccepted(false);
-      }
     } else {
-      // Step 1: Navigate to home
-      router.push("/(main)/(no-tabs)/my-packages");
+      router.back();
     }
   };
 
@@ -416,6 +482,7 @@ export default function BookingScreen() {
         {/* Step 1: Date & Time Selection */}
         {currentStep === 1 && (
           <Step1
+            instructorId={instructorId}
             selectedDate={selectedDate}
             selectedTime={selectedTime}
             onDateSelect={setSelectedDate}
@@ -448,30 +515,29 @@ export default function BookingScreen() {
           <Step3
             selectedLocationId={selectedLocationId}
             pickupLocation={pickupLocation}
-            onLocationSelect={(locationId: string, locationName: string) => {
+            onLocationSelect={(location: string, locationId: string) => {
+              setPickupLocation(location);
               setSelectedLocationId(locationId);
-              setPickupLocation(locationName);
             }}
+            addresses={addresses}
+            isLoading={isLoadingAddresses}
           />
         )}
 
         {/* Step 4: Payment & Confirmation */}
         {currentStep === 4 && (
           <Step4
-            packageId={packageId}
-            selectedDate={selectedDate}
-            selectedStartTime={selectedStartTime}
-            selectedDuration={selectedDuration}
-            pickupLocation={pickupLocation}
+            policies={policies}
+            acceptedPolicies={acceptedPolicies}
+            onPolicyAccept={(policyId: string, accepted: boolean) => {
+              setAcceptedPolicies((prev) => ({
+                ...prev,
+                [policyId]: accepted,
+              }));
+            }}
             bookingCost={bookingCost}
             userCoins={userCoins}
-            instructorName={instructor?.name}
-            packageName={selectedPackage?.name}
-            selectedVehicle={selectedVehicle}
-            vehicleId={vehicleId}
-            packageBasePrice={selectedPackage?.basePrice || 0}
-            onConfirmBooking={handleConfirmBooking}
-            onPoliciesAcceptedChange={setAllPoliciesAccepted}
+            isLoading={isLoadingPolicies}
           />
         )}
 
@@ -516,26 +582,22 @@ export default function BookingScreen() {
           <TouchableOpacity
             style={[
               styles.paymentButton,
-              (!allPoliciesAccepted) &&
-              styles.paymentButtonDisabled,
+              !canProceedToNextStep() && styles.paymentButtonDisabled,
             ]}
             onPress={handleConfirmBooking}
-          //disabled={!allPoliciesAccepted}
+            disabled={!canProceedToNextStep()}
           >
             <View
               style={[
                 styles.paymentButtonGradient,
                 {
-                  backgroundColor:
-                    !allPoliciesAccepted
-                      ? "#cbd5e1"
-                      : "#1AD562",
+                  backgroundColor: canProceedToNextStep()
+                    ? "#1AD562"
+                    : "#cbd5e1",
                 },
               ]}
             >
-              <Text style={styles.paymentButtonText}>
-                Đặt lịch
-              </Text>
+              <Text style={styles.paymentButtonText}>Xác nhận đặt lịch</Text>
             </View>
           </TouchableOpacity>
         )}

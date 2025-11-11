@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Dimensions,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import {
   Calendar as CalendarIcon,
@@ -17,10 +18,18 @@ import {
   Check,
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import {
+  getInstructorSchedule,
+  getInstructorBookedSessions,
+  IInstructorSchedule,
+  IInstructorBookedSession,
+} from "@/features/booking/bookingThunk";
 
 const { width } = Dimensions.get("window");
 
 interface Step1Props {
+  instructorId: string;
   selectedDate: string | null;
   selectedTime: string | null;
   onDateSelect: (date: string) => void;
@@ -71,20 +80,101 @@ const isTimeSlotAvailable = (time: string, busySlots: BusyTime[]): boolean => {
   return true;
 };
 
+// Helper function to convert ISO datetime to date string (YYYY-MM-DD)
+const getDateFromISO = (isoString: string): string => {
+  return isoString.split('T')[0];
+};
+
+// Helper function to convert ISO datetime to time string (HH:MM)
+const getTimeFromISO = (isoString: string): string => {
+  // Extract time directly from ISO string to avoid timezone conversion
+  const timePart = isoString.split('T')[1];
+  if (timePart) {
+    const [hours, minutes] = timePart.split(':');
+    return `${hours}:${minutes}`;
+  }
+  // Fallback to Date parsing if format is different
+  const date = new Date(isoString);
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+};
+
+// Helper function to get available date ranges from instructor schedule
+const getAvailableDateRanges = (schedule: IInstructorSchedule[]): { start: Date; end: Date }[] => {
+  if (!schedule || schedule.length === 0) return [];
+  
+  return schedule.map(slot => ({
+    start: new Date(slot.startTime),
+    end: new Date(slot.endTime)
+  }));
+};
+
+// Helper function to check if a date is within available ranges
+const isDateInAvailableRange = (date: Date, availableRanges: { start: Date; end: Date }[]): boolean => {
+  if (availableRanges.length === 0) return true; // If no schedule, all dates available
+  
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  
+  return availableRanges.some(range => {
+    const rangeStart = new Date(range.start.getFullYear(), range.start.getMonth(), range.start.getDate());
+    const rangeEnd = new Date(range.end.getFullYear(), range.end.getMonth(), range.end.getDate());
+    return dateOnly >= rangeStart && dateOnly <= rangeEnd;
+  });
+};
+
 export default function Step1({
+  instructorId,
   selectedDate,
   selectedTime,
   onDateSelect,
   onTimeSelect,
   instructorBusyTimes = [],
 }: Step1Props) {
+  const dispatch = useAppDispatch();
   const today = new Date();
+  
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [customTime, setCustomTime] = useState<string>("");
+  
+  // API data state
+  const [instructorSchedule, setInstructorSchedule] = useState<IInstructorSchedule[]>([]);
+  const [instructorBookedSessions, setInstructorBookedSessions] = useState<IInstructorBookedSession[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const timeSlots = generateTimeSlots();
+
+  // Fetch instructor schedule and booked sessions on mount
+  useEffect(() => {
+    if (instructorId) {
+      fetchInstructorData();
+    }
+  }, [instructorId]);
+
+  const fetchInstructorData = async () => {
+    try {
+      setIsLoading(true);
+      const scheduleResult = await dispatch(
+        getInstructorSchedule({ instructorId })
+      ).unwrap();
+      const scheduleData = (scheduleResult as any).value || scheduleResult;
+      setInstructorSchedule(scheduleData);
+      console.log("Step1 - Instructor schedule loaded:", scheduleData);
+      
+      // Fetch booked sessions
+      const sessionsResult = await dispatch(
+        getInstructorBookedSessions({ instructorId })
+      ).unwrap();
+      const sessionsData = (sessionsResult as any).value || sessionsResult;
+      setInstructorBookedSessions(sessionsData);
+      console.log("Step1 - Instructor booked sessions loaded:", sessionsData);
+      
+    } catch (error) {
+      console.error("Step1 - Failed to fetch instructor data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const formatDate = (date: Date) => {
     return date.toISOString().split("T")[0]; // YYYY-MM-DD
@@ -112,10 +202,43 @@ export default function Step1({
     return dateStart < todayStart;
   };
 
+  const availableDateRanges = getAvailableDateRanges(instructorSchedule);
+
   const getBusyTimesForDate = (date: Date): BusyTime[] => {
     const dateStr = formatDate(date);
-    const busyTime = instructorBusyTimes.find((bt) => bt.date === dateStr);
-    return busyTime?.busySlots || [];
+    const busySlots: BusyTime[] = [];
+    
+    // Get busy times from mock data (instructorBusyTimes)
+    const mockBusyTime = instructorBusyTimes.find((bt) => bt.date === dateStr);
+    if (mockBusyTime) {
+      busySlots.push(...mockBusyTime.busySlots);
+    }
+    
+    // Get booked sessions from API for this date
+    const bookedForDate = instructorBookedSessions.filter(session => {
+      const sessionDate = getDateFromISO(session.startTime);
+      return sessionDate === dateStr;
+    });
+    
+    console.log("Step1 - getBusyTimesForDate:", {
+      dateStr,
+      bookedForDate,
+      instructorBookedSessions,
+    });
+    
+    // Convert booked sessions to busy time format
+    bookedForDate.forEach(session => {
+      const startTime = getTimeFromISO(session.startTime);
+      const endTime = getTimeFromISO(session.endTime);
+      console.log("Step1 - Adding busy slot:", { startTime, endTime });
+      busySlots.push({
+        startTime,
+        endTime
+      });
+    });
+    
+    console.log("Step1 - Final busySlots:", busySlots);
+    return busySlots;
   };
 
   const getDateStatus = (date: Date): "free" | "partial" | "busy" => {
@@ -176,8 +299,10 @@ export default function Step1({
     const dateStr = formatDate(date);
     const isFullyBusy = isDateFullyBusy(date);
     const isPast = isPastDate(date);
+    const isInRange = isDateInAvailableRange(date, availableDateRanges);
 
-    if (isFullyBusy || isPast) return;
+    // Disable if: past, fully busy, or not in available range
+    if (isFullyBusy || isPast || !isInRange) return;
 
     if (expandedDate === dateStr) {
       setExpandedDate(null);
@@ -243,10 +368,11 @@ export default function Step1({
         const isTodayDate = isToday(currentDate);
         const isFullyBusy = isDateFullyBusy(currentDate);
         const isPast = isPastDate(currentDate);
+        const isInRange = isDateInAvailableRange(currentDate, availableDateRanges);
         const busySlots = getBusyTimesForDate(currentDate);
-        const isDisabled = isFullyBusy || isPast;
+        const isDisabled = isFullyBusy || isPast || !isInRange;
         const dayNumber = currentDate.getDate();
-        const dateStatus = !isPast ? getDateStatus(currentDate) : null;
+        const dateStatus = !isPast && isInRange ? getDateStatus(currentDate) : null;
 
         // Compose styles with explicit override order so selected state always wins
         const dayContainerStyle = {
@@ -327,6 +453,9 @@ export default function Step1({
       <View style={styles.sectionHeader}>
         <CalendarIcon size={24} color={AppColors.primary} strokeWidth={2} />
         <Text style={styles.sectionTitle}>Chọn ngày thuê</Text>
+        {isLoading && (
+          <ActivityIndicator size="small" color={AppColors.primary} style={{ marginLeft: 8 }} />
+        )}
       </View>
 
       {/* Calendar */}
