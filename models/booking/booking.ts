@@ -179,20 +179,31 @@ export enum SessionStatus {
 export interface IBookingSessionAPI {
   id: string;
   packageId: string;
-  instructorId: string;
-  instructorName: string;
+  packageName: string;
+  noviceDriverName: string;
+  displayName: string | null; // Tên hiển thị của địa điểm
+  noviceAvatar: string;
   date: string; // YYYY-MM-DD
   startTime: string; // HH:mm
   endTime: string; // HH:mm
   duration: number; // in hours
-  location: string; // "lat,lng" format
+  location: string; // Address text
   vehicleId: string | null;
+  startingLatitude: number; // Latitude của điểm đón
+  startingLongtitude: number; // Longitude của điểm đón (lưu ý: API dùng "Longtitude" không phải "Longitude")
   vehicleName: string | null;
-  status: SessionStatus; // Enum: Pending=1, Confirmed=2, Completed=3, Cancelled=4
+  status: SessionStatus; // Enum: Pending=1, Confirmed=2, Completed=3, Cancelled=4, Rescheduled=5
+  statusDisplayString: string; // "planning", "upcoming", "completed", "cancelled"
   createdAt: string; // ISO datetime
+  hasRoute: boolean;
+  priceForCar: number | null;
 }
 
 export interface IGetBookingSessionsParams {
-  bookingId: string;
+  bookingId?: string; // Optional for getting all sessions
   status?: number; // Optional status filter
+}
+
+export interface IGetAllSessionsParams {
+  status?: SessionStatus; // Optional status filter
 }

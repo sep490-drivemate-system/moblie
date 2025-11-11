@@ -5,12 +5,15 @@ export interface IDrivingSession {
     packageId: string;
     instructorId: string;
     instructorName: string;
+    displayName?: string | null; // Tên hiển thị của địa điểm
     date: string; // Format: "YYYY-MM-DD"
     startTime: string; // Format: "HH:MM"
     endTime: string; // Format: "HH:MM"
     duration: number; // in hours
     location: string;
     vehicleId?: string;
+    startingLatitude?: number; // Latitude của điểm đón
+    startingLongtitude?: number; // Longitude của điểm đón
     vehicleName?: string;
     status: "planing" | "upcoming" | "in_progress" | "completed" | "reschedule" | "cancelled";
     createdAt: string;

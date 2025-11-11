@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, TextInput } from "react-native";
 import { CheckCircle, Circle, Shield, AlertTriangle, Coins } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 
@@ -16,6 +16,11 @@ interface Step4Props {
   bookingCost: number;
   userCoins: number;
   isLoading?: boolean;
+  vehicleId?: string | null; // Car ID - if null, no payment section
+  carPrice?: number; // Price per hour for the car
+  selectedDuration?: number; // Duration in hours
+  sessionNote?: string; // Note for the session
+  onSessionNoteChange?: (note: string) => void; // Callback when note changes
 }
 
 // Mock policies for fallback
@@ -49,6 +54,11 @@ export default function Step4({
   bookingCost,
   userCoins,
   isLoading = false,
+  vehicleId = null,
+  carPrice = 0,
+  selectedDuration = 0,
+  sessionNote = "",
+  onSessionNoteChange,
 }: Step4Props) {
   // Use API policies if available, otherwise fallback to mock data
   const displayPolicies = apiPolicies.length > 0 ? apiPolicies : mockPolicies;
@@ -63,6 +73,22 @@ export default function Step4({
   const allPoliciesAccepted = displayPolicies.every(
     (policy) => acceptedPolicies[policy.id] === true
   );
+
+  // Handle "Select All" toggle
+  const handleSelectAll = () => {
+    if (!onPolicyAccept) return;
+    
+    // If all are already accepted, uncheck all. Otherwise, check all.
+    const shouldAcceptAll = !allPoliciesAccepted;
+    displayPolicies.forEach((policy) => {
+      onPolicyAccept(policy.id, shouldAcceptAll);
+    });
+  };
+
+  // Calculate vehicle cost if vehicle is selected
+  const vehicleCost = vehicleId && carPrice && selectedDuration > 0 
+    ? carPrice * selectedDuration 
+    : 0;
 
   const hasEnoughCoins = userCoins >= bookingCost;
 
@@ -88,6 +114,37 @@ export default function Step4({
             <Text style={styles.sectionSubtitle}>
               Vui lòng đọc và chấp nhận các chính sách sau:
             </Text>
+
+            {/* Select All Button */}
+            <TouchableOpacity
+              style={[
+                styles.selectAllButton,
+                allPoliciesAccepted && styles.selectAllButtonActive,
+              ]}
+              onPress={handleSelectAll}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.selectAllCheckbox,
+                  allPoliciesAccepted && styles.selectAllCheckboxActive,
+                ]}
+              >
+                {allPoliciesAccepted ? (
+                  <CheckCircle size={20} color="#ffffff" strokeWidth={2.5} />
+                ) : (
+                  <Circle size={20} color="#cbd5e1" strokeWidth={2} />
+                )}
+              </View>
+              <Text
+                style={[
+                  styles.selectAllText,
+                  allPoliciesAccepted && styles.selectAllTextActive,
+                ]}
+              >
+                {allPoliciesAccepted ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+              </Text>
+            </TouchableOpacity>
 
             <ScrollView style={styles.policiesScroll} showsVerticalScrollIndicator={false}>
               {displayPolicies.map((policy) => (
@@ -145,7 +202,8 @@ export default function Step4({
         )}
       </View>
 
-      {/* Payment Section */}
+      {/* Payment Section - Only show if vehicle is selected */}
+      {vehicleId && vehicleCost > 0 && (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Coins size={24} color={AppColors.primary} strokeWidth={2} />
@@ -161,11 +219,14 @@ export default function Step4({
           <View style={styles.paymentDivider} />
 
           <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>Chi phí đặt lịch:</Text>
+            <Text style={styles.paymentLabel}>Chi phí thuê xe:</Text>
             <Text style={[styles.paymentValue, styles.paymentCost]}>
-              {bookingCost.toLocaleString()} xu
+              {vehicleCost.toLocaleString()} xu
             </Text>
           </View>
+          <Text style={styles.paymentNote}>
+            ({carPrice?.toLocaleString()} xu/giờ × {selectedDuration} giờ)
+          </Text>
 
           <View style={styles.paymentDivider} />
 
@@ -177,20 +238,44 @@ export default function Step4({
                 !hasEnoughCoins && styles.paymentValueError,
               ]}
             >
-              {(userCoins - bookingCost).toLocaleString()} xu
+              {(userCoins - vehicleCost).toLocaleString()} xu
             </Text>
           </View>
         </View>
 
         {/* Balance Warning */}
-        {!hasEnoughCoins && (
+        {userCoins < vehicleCost && (
           <View style={styles.warningBanner}>
             <AlertTriangle size={16} color="#dc2626" strokeWidth={2} />
             <Text style={styles.warningText}>
-              Số dư không đủ. Vui lòng nạp thêm {(bookingCost - userCoins).toLocaleString()} xu
+              Số dư không đủ. Vui lòng nạp thêm {(vehicleCost - userCoins).toLocaleString()} xu
             </Text>
           </View>
         )}
+      </View>
+      )}
+
+      {/* Session Note Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Ghi chú buổi học</Text>
+        </View>
+        <Text style={styles.sectionSubtitle}>
+          Thêm ghi chú cho buổi học (không bắt buộc)
+        </Text>
+        <TextInput
+          style={styles.noteInput}
+          value={sessionNote}
+          onChangeText={onSessionNoteChange}
+          placeholder="VD: Muốn tập lái trên đường cao tốc, cần luyện kỹ năng đỗ xe..."
+          placeholderTextColor="#94a3b8"
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+        />
+        <Text style={styles.noteHint}>
+          {sessionNote.length}/500 ký tự
+        </Text>
       </View>
     </View>
   );
@@ -228,6 +313,44 @@ const styles = StyleSheet.create({
     color: "#64748b",
     marginBottom: 16,
     lineHeight: 20,
+  },
+  selectAllButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+    marginBottom: 16,
+  },
+  selectAllButtonActive: {
+    backgroundColor: AppColors.primary + "10",
+    borderColor: AppColors.primary,
+  },
+  selectAllCheckbox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+  },
+  selectAllCheckboxActive: {
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
+  },
+  selectAllText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#64748b",
+    flex: 1,
+  },
+  selectAllTextActive: {
+    color: AppColors.primary,
   },
   loadingContainer: {
     alignItems: "center",
@@ -345,6 +468,13 @@ const styles = StyleSheet.create({
   paymentCost: {
     color: "#ef4444",
   },
+  paymentNote: {
+    fontSize: 12,
+    color: "#94a3b8",
+    fontStyle: "italic",
+    marginTop: 4,
+    marginLeft: 16,
+  },
   paymentValueError: {
     color: "#dc2626",
   },
@@ -369,5 +499,22 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#dc2626",
     flex: 1,
+  },
+  noteInput: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 14,
+    color: "#1e293b",
+    minHeight: 100,
+    marginTop: 12,
+  },
+  noteHint: {
+    fontSize: 12,
+    color: "#94a3b8",
+    marginTop: 8,
+    textAlign: "right",
   },
 });

@@ -15,8 +15,7 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Location from "expo-location";
-import MapView, { Marker, PROVIDER_GOOGLE, Polyline } from "react-native-maps";
-import MapViewDirections from "react-native-maps-directions";
+import MapView, { Marker, Polyline, UrlTile } from "react-native-maps";
 import {
   ArrowLeft,
   Plus,
@@ -40,6 +39,9 @@ import {
 import { AppColors } from "@/constants/Colors";
 import { userPackagesData } from "@/data/user_packages_data";
 import { mockUserProfile } from "@/data/profile-screen";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { saveSessionRoutes } from "@/features/booking/bookingThunk";
+import { ISessionRouteItem } from "@/models/route/route";
 
 interface Waypoint {
   id: string;
@@ -76,6 +78,7 @@ const SKILL_OPTIONS = [
 
 export default function RoutePlanningScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const params = useLocalSearchParams<{
     sessionId: string;
     pickupLocation: string;
@@ -91,9 +94,9 @@ export default function RoutePlanningScreen() {
 
   const [pickupLocation, setPickupLocation] = useState<Waypoint>({
     id: "pickup",
-    name: params.pickupLocation || session?.location || "Điểm đón",
-    latitude: 10.8231,
-    longitude: 106.6297,
+    name: session?.displayName || session?.location || params.pickupLocation || "Điểm đón",
+    latitude: session?.startingLatitude || 10.8231,
+    longitude: session?.startingLongtitude || 106.6297,
     isStart: true,
     isEnd: true,
   });
@@ -105,6 +108,7 @@ export default function RoutePlanningScreen() {
   >(null);
   const [newWaypointName, setNewWaypointName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [outboundDistance, setOutboundDistance] = useState(0);
   const [returnDistance, setReturnDistance] = useState(0);
@@ -121,7 +125,19 @@ export default function RoutePlanningScreen() {
     "customer"
   );
 
-  const GOOGLE_MAPS_APIKEY = process.env.EXPO_PUBLIC_GOOGLE_KEY || "";
+  // Goong Map API Keys
+  const GOONG_API_KEY = process.env.EXPO_PUBLIC_GOONG_API_KEY || "";
+  const GOONG_MAPTILES_KEY = process.env.EXPO_PUBLIC_GOONG_MAPTILES_KEY || "";
+  
+  // State for route polylines - Lưu từng segment riêng biệt
+  const [routeSegments, setRouteSegments] = useState<Array<{
+    polyline: Array<{latitude: number; longitude: number}>;
+    color: string;
+    from: string;
+    to: string;
+  }>>([]);
+  const [outboundPolyline, setOutboundPolyline] = useState<Array<{latitude: number; longitude: number}>>([]);
+  const [returnPolyline, setReturnPolyline] = useState<Array<{latitude: number; longitude: number}>>([]);
 
   const cancellationReasons = [
     "Tôi muốn hủy lịch do bận đột xuất",
@@ -175,23 +191,119 @@ export default function RoutePlanningScreen() {
     }
   };
 
-  // Reverse geocoding - Get address from coordinates
+  // Reverse geocoding - Get address from coordinates using Goong API
   const reverseGeocode = async (
     lat: number,
     lng: number
   ): Promise<string | null> => {
     try {
-      // Using Nominatim OpenStreetMap (free alternative to Google)
+      if (!GOONG_API_KEY) {
+        console.warn("Goong API key not configured");
+        return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      }
+
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=vi`
+        `https://rsapi.goong.io/Geocode?latlng=${lat},${lng}&api_key=${GOONG_API_KEY}`
       );
 
-      if (!response.ok) return null;
+      if (!response.ok) {
+        console.error("Goong geocoding failed:", response.status);
+        return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      }
 
       const data = await response.json();
-      return data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      const address = data.results?.[0]?.formatted_address;
+      return address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     } catch (error) {
       console.error("Reverse geocoding error:", error);
+      return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+  };
+
+  // Decode polyline from Goong Directions API
+  const decodePolyline = (encoded: string): Array<{latitude: number; longitude: number}> => {
+    const poly = [];
+    let index = 0;
+    const len = encoded.length;
+    let lat = 0;
+    let lng = 0;
+
+    while (index < len) {
+      let b;
+      let shift = 0;
+      let result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlat = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlng = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+      lng += dlng;
+
+      poly.push({
+        latitude: lat / 1e5,
+        longitude: lng / 1e5,
+      });
+    }
+    return poly;
+  };
+
+  // Fetch directions from Goong API
+  const fetchGoongDirections = async (
+    origin: { lat: number; lng: number },
+    destination: { lat: number; lng: number },
+    waypoints?: Array<{ lat: number; lng: number }>
+  ): Promise<{
+    polyline: Array<{latitude: number; longitude: number}>;
+    distance: number;
+    duration: number;
+  } | null> => {
+    try {
+      if (!GOONG_API_KEY) {
+        console.warn("Goong API key not configured");
+        return null;
+      }
+
+      let url = `https://rsapi.goong.io/Direction?origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&vehicle=car&api_key=${GOONG_API_KEY}`;
+
+      // Add waypoints if provided
+      if (waypoints && waypoints.length > 0) {
+        const waypointsStr = waypoints.map(wp => `${wp.lat},${wp.lng}`).join('|');
+        url += `&waypoints=${waypointsStr}`;
+      }
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        console.error("Goong directions failed:", response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      const route = data.routes?.[0];
+
+      if (!route) {
+        console.error("No route found");
+        return null;
+      }
+
+      const polyline = decodePolyline(route.overview_polyline.points);
+      const distance = route.legs.reduce((sum: number, leg: any) => sum + leg.distance.value, 0);
+      const duration = route.legs.reduce((sum: number, leg: any) => sum + leg.duration.value, 0);
+
+      return { polyline, distance, duration };
+    } catch (error) {
+      console.error("Goong directions error:", error);
       return null;
     }
   };
@@ -352,22 +464,161 @@ export default function RoutePlanningScreen() {
     }
   };
 
-  const handleSaveRoute = () => {
+  // Fetch routes when waypoints change - Fetch từng segment riêng biệt
+  useEffect(() => {
+    const fetchRoutes = async () => {
+      if (waypoints.length === 0) {
+        setRouteSegments([]);
+        setOutboundPolyline([]);
+        setReturnPolyline([]);
+        setRouteInfo(null);
+        return;
+      }
+
+      try {
+        const segments: Array<{
+          polyline: Array<{latitude: number; longitude: number}>;
+          color: string;
+          from: string;
+          to: string;
+        }> = [];
+        
+        let totalDistance = 0;
+        let totalDuration = 0;
+        const allPolylinePoints: Array<{latitude: number; longitude: number}> = [];
+
+        // Tất cả segments đều màu xanh
+        const routeColor = AppColors.primary;
+
+        // Tạo danh sách tất cả các điểm theo thứ tự
+        const allPoints = [
+          { lat: pickupLocation.latitude, lng: pickupLocation.longitude, name: pickupLocation.name },
+          ...waypoints.map(wp => ({ lat: wp.latitude, lng: wp.longitude, name: wp.name }))
+        ];
+
+        // Fetch từng segment: điểm i -> điểm i+1
+        for (let i = 0; i < allPoints.length - 1; i++) {
+          const from = allPoints[i];
+          const to = allPoints[i + 1];
+          
+          console.log(`🔄 Fetching segment ${i + 1}: ${from.name} → ${to.name}`);
+          
+          const result = await fetchGoongDirections(
+            { lat: from.lat, lng: from.lng },
+            { lat: to.lat, lng: to.lng }
+          );
+
+          if (result) {
+            segments.push({
+              polyline: result.polyline,
+              color: routeColor,
+              from: from.name,
+              to: to.name,
+            });
+            
+            totalDistance += result.distance;
+            totalDuration += result.duration;
+            allPolylinePoints.push(...result.polyline);
+            
+            console.log(`✅ Segment ${i + 1} done: ${formatDistance(result.distance)}, ${formatDuration(result.duration)}`);
+          }
+        }
+
+        // Update states
+        setRouteSegments(segments);
+        setOutboundPolyline(allPolylinePoints);
+        
+        // Clear return route
+        setReturnPolyline([]);
+        setReturnDistance(0);
+
+        // Update route info
+        setRouteInfo({
+          distance: formatDistance(totalDistance),
+          duration: formatDuration(totalDuration),
+          distanceValue: totalDistance,
+          durationValue: totalDuration,
+        });
+
+        // Fit map to route
+        if (mapRef.current && allPolylinePoints.length > 0) {
+          mapRef.current.fitToCoordinates(
+            allPolylinePoints,
+            {
+              edgePadding: {
+                top: 150,
+                right: 50,
+                bottom: isFullscreen ? 100 : 300,
+                left: 50,
+              },
+              animated: true,
+            }
+          );
+        }
+
+        console.log(`🎉 Total route: ${formatDistance(totalDistance)}, ${formatDuration(totalDuration)}, ${segments.length} segments`);
+      } catch (error) {
+        console.error("Error fetching routes:", error);
+      }
+    };
+
+    fetchRoutes();
+  }, [waypoints, pickupLocation, isFullscreen]);
+
+  const handleSaveRoute = async () => {
     if (waypoints.length === 0) {
       Alert.alert("Thông báo", "Vui lòng thêm ít nhất một điểm dừng");
       return;
     }
 
-    Alert.alert(
-      "Thành công",
-      `Đã lưu lộ trình với ${waypoints.length} điểm dừng`,
-      [
-        {
-          text: "OK",
-          onPress: () => router.back(),
-        },
-      ]
-    );
+    if (!params.sessionId) {
+      Alert.alert("Lỗi", "Không tìm thấy thông tin session");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      // Tạo danh sách routes từ waypoints
+      const routes: ISessionRouteItem[] = waypoints.map((waypoint, index) => ({
+        textInstruction: waypoint.description || `Điểm dừng ${index + 1}: ${waypoint.name}`,
+        streetName: waypoint.name,
+        latitudeStart: waypoint.latitude,
+        longitudeStart: waypoint.longitude,
+      }));
+
+      console.log("🚀 Saving routes for session:", params.sessionId);
+      console.log("📍 Routes data:", routes);
+
+      // Gọi API để lưu routes
+      const result = await dispatch(
+        saveSessionRoutes({
+          sessionId: params.sessionId,
+          body: routes, // Use 'body' instead of 'routes' to match ISaveSessionRoutesPayload
+        })
+      ).unwrap();
+
+      console.log("✅ Routes saved successfully:", result);
+
+      Alert.alert(
+        "Thành công",
+        `Đã lưu lộ trình với ${waypoints.length} điểm dừng`,
+        [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error("❌ Error saving routes:", error);
+      Alert.alert(
+        "Lỗi",
+        "Không thể lưu lộ trình. Vui lòng thử lại."
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -405,7 +656,6 @@ export default function RoutePlanningScreen() {
       <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
-          provider={PROVIDER_GOOGLE}
           style={styles.map}
           initialRegion={{
             latitude: pickupLocation.latitude,
@@ -420,6 +670,14 @@ export default function RoutePlanningScreen() {
           zoomEnabled={true}
           scrollEnabled={true}
         >
+          {/* Goong Map Tiles */}
+          {GOONG_MAPTILES_KEY && (
+            <UrlTile
+              urlTemplate={`https://tiles.goong.io/assets/navigation_day/{z}/{x}/{y}.png?api_key=${GOONG_MAPTILES_KEY}`}
+              maximumZ={19}
+              flipY={false}
+            />
+          )}
           {/* Pickup/Dropoff Marker */}
           <Marker
             coordinate={{
@@ -474,114 +732,28 @@ export default function RoutePlanningScreen() {
               }}
             />
           ))}
-          {waypoints.length > 0 && GOOGLE_MAPS_APIKEY && (
-            <MapViewDirections
-              origin={{
-                latitude: pickupLocation.latitude,
-                longitude: pickupLocation.longitude,
-              }}
-              destination={{
-                latitude: waypoints[waypoints.length - 1].latitude,
-                longitude: waypoints[waypoints.length - 1].longitude,
-              }}
-              waypoints={waypoints.slice(0, -1).map((wp) => ({
-                latitude: wp.latitude,
-                longitude: wp.longitude,
-              }))}
-              apikey={GOOGLE_MAPS_APIKEY}
+          {/* Route Segments - Mỗi đoạn có màu riêng */}
+          {routeSegments.map((segment, index) => (
+            <Polyline
+              key={`segment-${index}`}
+              coordinates={segment.polyline}
               strokeWidth={6}
-              strokeColor={AppColors.primary}
-              optimizeWaypoints={true}
-              precision="high"
-              onReady={(result) => {
-                console.log("📍 Outbound route ready:", {
-                  distance: `${result.distance.toFixed(2)} km`,
-                  duration: `${Math.round(result.duration)} phút`,
-                });
-                setOutboundDistance(result.distance * 1000);
-
-                // Update total route info
-                const totalDist = result.distance * 1000 + returnDistance;
-                const totalDur =
-                  result.duration * 60 + (returnDistance / 1000) * 120;
-                setRouteInfo({
-                  distance: formatDistance(totalDist),
-                  duration: formatDuration(totalDur),
-                  distanceValue: totalDist,
-                  durationValue: totalDur,
-                });
-
-                // Fit map to route
-                if (mapRef.current) {
-                  mapRef.current.fitToCoordinates(result.coordinates, {
-                    edgePadding: {
-                      top: 150,
-                      right: 50,
-                      bottom: isFullscreen ? 100 : 300,
-                      left: 50,
-                    },
-                    animated: true,
-                  });
-                }
-              }}
-              onError={(errorMessage) => {
-                console.error("❌ Outbound route error:", errorMessage);
-              }}
+              strokeColor={segment.color}
             />
-          )}
-
-          {/* Return Route with MapViewDirections (Về) */}
-          {waypoints.length > 0 && GOOGLE_MAPS_APIKEY && (
-            <MapViewDirections
-              origin={{
-                latitude: waypoints[waypoints.length - 1].latitude,
-                longitude: waypoints[waypoints.length - 1].longitude,
-              }}
-              destination={{
-                latitude: pickupLocation.latitude,
-                longitude: pickupLocation.longitude,
-              }}
-              apikey={GOOGLE_MAPS_APIKEY}
-              strokeWidth={6}
-              strokeColor="#f59e0b"
-              lineDashPattern={[5, 10]}
-              precision="high"
-              onReady={(result) => {
-                console.log("📍 Return route ready:", {
-                  distance: `${result.distance.toFixed(2)} km`,
-                  duration: `${Math.round(result.duration)} phút`,
-                });
-                setReturnDistance(result.distance * 1000);
-
-                // Update total route info
-                const totalDist = outboundDistance + result.distance * 1000;
-                const totalDur =
-                  (outboundDistance / 1000) * 120 + result.duration * 60;
-                setRouteInfo({
-                  distance: formatDistance(totalDist),
-                  duration: formatDuration(totalDur),
-                  distanceValue: totalDist,
-                  durationValue: totalDur,
-                });
-              }}
-              onError={(errorMessage) => {
-                console.error("❌ Return route error:", errorMessage);
-              }}
-            />
-          )}
+          ))}
         </MapView>
 
-        {/* Route Legend */}
-        {waypoints.length > 0 && (
+        {/* Route Legend - Hiển thị từng segment */}
+        {routeSegments.length > 0 && (
           <View style={styles.routeLegend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendLine, styles.legendLineOutbound]} />
-              <Text style={styles.legendText}>Lộ trình đi</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendLine, styles.legendLineReturn]} />
-              <Text style={styles.legendText}>Lộ trình về</Text>
-            </View>
+            {routeSegments.map((segment, index) => (
+              <View key={`legend-${index}`} style={styles.legendItem}>
+                <View style={[styles.legendLine, { backgroundColor: segment.color }]} />
+                <Text style={styles.legendText} numberOfLines={1}>
+                  {segment.from} → {segment.to}
+                </Text>
+              </View>
+            ))}
           </View>
         )}
 
@@ -740,19 +912,7 @@ export default function RoutePlanningScreen() {
                 <Text style={styles.locationName} numberOfLines={2}>
                   {pickupLocation.name}
                 </Text>
-                <Text style={styles.locationCoordinates}>
-                  {pickupLocation.latitude.toFixed(6)},{" "}
-                  {pickupLocation.longitude.toFixed(6)}
-                </Text>
-              </View>
-              <View style={styles.locationActions}>
-                <TouchableOpacity
-                  style={styles.changeButton}
-                  onPress={() => setIsSelectingLocation("pickup")}
-                >
-                  <Text style={styles.changeButtonText}>Đổi</Text>
-                </TouchableOpacity>
-              </View>
+              </View>              
             </View>
           </View>
 
@@ -1005,13 +1165,19 @@ export default function RoutePlanningScreen() {
           <TouchableOpacity
             style={[
               styles.saveButton,
-              waypoints.length === 0 && styles.saveButtonDisabled,
+              (waypoints.length === 0 || isSaving) && styles.saveButtonDisabled,
             ]}
             onPress={handleSaveRoute}
-            disabled={waypoints.length === 0}
+            disabled={waypoints.length === 0 || isSaving}
           >
-            <Check size={20} color="#ffffff" strokeWidth={2} />
-            <Text style={styles.saveButtonText}>Lưu lộ trình</Text>
+            {isSaving ? (
+              <Loader size={20} color="#ffffff" strokeWidth={2} />
+            ) : (
+              <Check size={20} color="#ffffff" strokeWidth={2} />
+            )}
+            <Text style={styles.saveButtonText}>
+              {isSaving ? "Đang lưu..." : "Lưu lộ trình"}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

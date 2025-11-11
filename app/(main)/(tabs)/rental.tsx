@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   StatusBar,
   Dimensions,
   Image,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -26,41 +28,17 @@ import {
   PlayCircle,
   RefreshCw,
 } from "lucide-react-native";
-import { IDrivingSession } from "@/models/package/user-package";
-import { instructorsData } from "@/data/instructors_data";
+import { IBookingSessionAPI, SessionStatus } from "@/models/booking/booking";
 import { AppColors } from "@/constants/Colors";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import { getAllSessions } from "@/features/booking/bookingThunk";
 
 const { width } = Dimensions.get("window");
 
-// Extended driving session with route planning status
-interface IDrivingSessionExtended {
-  id: string;
-  packageId: string;
-  instructorId: string;
-  instructorName: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  location: string;
-  vehicleId?: string;
-  vehicleName?: string;
-  status:
-    | "planing"
-    | "pending_confirmation"
-    | "up_coming"
-    | "in_progress"
-    | "completed"
-    | "reschedule"
-    | "cancelled";
-  createdAt: string;
-  packageName?: string;
-  instructorAvatar?: string;
-  hasRoute?: boolean;
-}
-
 export default function RentalScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  
   const [selectedTab, setSelectedTab] = useState<
     | "all"
     | "planing"
@@ -71,123 +49,76 @@ export default function RentalScreen() {
     | "reschedule"
     | "cancelled"
   >("all");
+  
+  const [sessions, setSessions] = useState<IBookingSessionAPI[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock driving sessions data
-  const drivingSessions: IDrivingSessionExtended[] = [
-    {
-      id: "session-1",
-      packageId: "user-pkg-1",
-      instructorId: "1",
-      instructorName: "Nguyễn Văn An",
-      date: "2025-11-15",
-      startTime: "08:00",
-      endTime: "11:00",
-      duration: 3,
-      location: "123 Nguyễn Huệ, Q1, TP.HCM",
-      status: "planing",
-      createdAt: "2025-11-10T10:00:00Z",
-      packageName: "Gói Thành Phố Cơ Bản",
-      instructorAvatar: "https://i.pravatar.cc/150?img=1",
-      hasRoute: false,
-    },
-    {
-      id: "session-2",
-      packageId: "user-pkg-1",
-      instructorId: "1",
-      instructorName: "Nguyễn Văn An",
-      date: "2025-11-18",
-      startTime: "14:00",
-      endTime: "16:00",
-      duration: 2,
-      location: "456 Lê Lợi, Q1, TP.HCM",
-      status: "pending_confirmation",
-      createdAt: "2025-11-12T14:30:00Z",
-      packageName: "Gói Thành Phố Cơ Bản",
-      instructorAvatar: "https://i.pravatar.cc/150?img=1",
-      hasRoute: false,
-    },
-    {
-      id: "session-3",
-      packageId: "user-pkg-2",
-      instructorId: "2",
-      instructorName: "Trần Thị Bình",
-      date: "2025-11-12",
-      startTime: "09:00",
-      endTime: "12:00",
-      duration: 3,
-      location: "789 Điện Biên Phủ, Q.Bình Thạnh, TP.HCM",
-      status: "reschedule",
-      createdAt: "2025-11-08T09:15:00Z",
-      packageName: "Gói Cao Tốc + Xe",
-      instructorAvatar: "https://i.pravatar.cc/150?img=2",
-      vehicleId: "vehicle-1",
-      vehicleName: "Toyota Vios 2023",
-      hasRoute: true,
-    },
-    {
-      id: "session-4",
-      packageId: "user-pkg-1",
-      instructorId: "1",
-      instructorName: "Nguyễn Văn An",
-      date: "2025-11-05",
-      startTime: "08:00",
-      endTime: "11:00",
-      duration: 3,
-      location: "123 Nguyễn Huệ, Q1, TP.HCM",
-      status: "completed",
-      createdAt: "2025-10-25T10:00:00Z",
-      packageName: "Gói Thành Phố Cơ Bản",
-      instructorAvatar: "https://i.pravatar.cc/150?img=1",
-      vehicleId: "vehicle-1",
-      vehicleName: "Toyota Vios 2023",
-      hasRoute: true,
-    },
-    {
-      id: "session-5",
-      packageId: "user-pkg-2",
-      instructorId: "2",
-      instructorName: "Trần Thị Bình",
-      date: "2025-11-20",
-      startTime: "15:00",
-      endTime: "17:00",
-      duration: 2,
-      location: "321 Võ Văn Tần, Q3, TP.HCM",
-      status: "planing",
-      createdAt: "2025-11-15T11:20:00Z",
-      packageName: "Gói Cao Tốc + Xe",
-      instructorAvatar: "https://i.pravatar.cc/150?img=2",
-      hasRoute: false,
-    },
-  ];
+  // Fetch sessions from API
+  const fetchSessions = async (status?: SessionStatus) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const result = await dispatch(getAllSessions(status ? { status } : undefined)).unwrap();
+      
+      // Extract data from GenericResponse
+      const sessionsData = (result as any).value || result;
+      setSessions(sessionsData);
+    } catch (err: any) {
+      console.error('Failed to fetch sessions:', err);
+      setError(err.message || 'Không thể tải dữ liệu');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Refresh sessions
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchSessions();
+    setIsRefreshing(false);
+  };
+
+  // Fetch sessions on mount
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  // Map SessionStatus enum to display status string
+  const mapStatusToDisplayString = (status: SessionStatus): string => {
+    switch (status) {
+      case SessionStatus.Pending:
+        return "planing";
+      case SessionStatus.Confirmed:
+        return "up_coming";
+      case SessionStatus.Completed:
+        return "completed";
+      case SessionStatus.Cancelled:
+        return "cancelled";
+      case SessionStatus.Rescheduled:
+        return "reschedule";
+      default:
+        return "planing";
+    }
+  };
+
+  // Removed mock data - now using API data from sessions state
 
   const getFilteredSessions = () => {
     if (selectedTab === "all") {
-      return drivingSessions;
+      return sessions;
     }
-    return drivingSessions.filter((session) => {
-      switch (selectedTab) {
-        case "planing":
-          return session.status === "planing";
-        case "pending_confirmation":
-          return session.status === "pending_confirmation";
-        case "up_coming":
-          return session.status === "up_coming";
-        case "in_progress":
-          return session.status === "in_progress";
-        case "completed":
-          return session.status === "completed";
-        case "reschedule":
-          return session.status === "reschedule";
-        case "cancelled":
-          return session.status === "cancelled";
-        default:
-          return true;
-      }
+    return sessions.filter((session) => {
+      const displayStatus = mapStatusToDisplayString(session.status);
+      return displayStatus === selectedTab;
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (status: SessionStatus | string) => {
+    const displayStatus = typeof status === 'number' ? mapStatusToDisplayString(status) : status;
+    switch (displayStatus) {
       case "planing":
         return "#3b82f6";
       case "pending_confirmation":
@@ -207,8 +138,9 @@ export default function RentalScreen() {
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
+  const getStatusText = (status: SessionStatus | string) => {
+    const displayStatus = typeof status === 'number' ? mapStatusToDisplayString(status) : status;
+    switch (displayStatus) {
       case "planing":
         return "Lên lộ trình";
       case "pending_confirmation":
@@ -228,8 +160,9 @@ export default function RentalScreen() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
+  const getStatusIcon = (status: SessionStatus | string) => {
+    const displayStatus = typeof status === 'number' ? mapStatusToDisplayString(status) : status;
+    switch (displayStatus) {
       case "all":
         return List;
       case "planing":
@@ -251,6 +184,13 @@ export default function RentalScreen() {
     }
   };
 
+  // Parse location string "lat,lng" to readable address (placeholder)
+  const parseLocation = (location: string): string => {
+    // In production, you would use reverse geocoding API
+    // For now, just return coordinates
+    return location || "Chưa có địa điểm";
+  };
+
   const handlePlanRoute = (sessionId: string, location: string) => {
     router.push({
       pathname: "/(main)/(no-tabs)/route-planning" as any,
@@ -266,11 +206,6 @@ export default function RentalScreen() {
       pathname: "/(main)/(no-tabs)/route-notification",
       params: { routeId: sessionId },
     });
-  };
-
-  const getInstructorAvatar = (instructorId: string) => {
-    const instructor = instructorsData.find((i) => i.id === instructorId);
-    return instructor?.avatar || "https://i.pravatar.cc/150?img=1";
   };
 
   const formatDate = (dateString: string) => {
@@ -504,8 +439,24 @@ export default function RentalScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {filteredSessions.length === 0 ? (
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={[AppColors.primary]}
+            tintColor={AppColors.primary}
+          />
+        }
+      >
+        {isLoading && sessions.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={AppColors.primary} />
+            <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+          </View>
+        ) : filteredSessions.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconContainer}>
               <Calendar size={48} color={AppColors.primary} strokeWidth={1.5} />
@@ -543,15 +494,13 @@ export default function RentalScreen() {
                     <View style={styles.instructorInfo}>
                       <Image
                         source={{
-                          uri:
-                            session.instructorAvatar ||
-                            getInstructorAvatar(session.instructorId),
+                          uri: session.noviceAvatar || "https://i.pravatar.cc/150?img=1",
                         }}
                         style={styles.instructorAvatarImage}
                       />
                       <View style={styles.instructorDetails}>
                         <Text style={styles.instructorName}>
-                          {session.instructorName}
+                          {session.noviceDriverName}
                         </Text>
                         {session.packageName && (
                           <Text
@@ -605,7 +554,7 @@ export default function RentalScreen() {
                     <View style={styles.detailRow}>
                       <MapPin size={16} color="#6b7280" strokeWidth={2} />
                       <Text style={styles.detailText} numberOfLines={2}>
-                        {session.location}
+                        {parseLocation(session.location)}
                       </Text>
                     </View>
                     {session.vehicleName && (
@@ -781,6 +730,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     backgroundColor: "#f1f5f9",
+  },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 80,
+    paddingHorizontal: 32,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#6b7280",
+    marginTop: 16,
   },
   emptyState: {
     alignItems: "center",

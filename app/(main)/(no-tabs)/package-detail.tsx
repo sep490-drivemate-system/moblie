@@ -53,7 +53,22 @@ export default function PackageDetailScreen() {
     ? JSON.parse(params.packageData as string) 
     : null;
   
-  const packageData = packageDataFromParams || userPackagesData.find((pkg) => pkg.id === packageId);
+  // Map API data format to UI format
+  const packageData = packageDataFromParams ? {
+    id: packageDataFromParams.id,
+    instructorId: packageDataFromParams.instructorId,
+    instructorName: packageDataFromParams.nameInstructor || "N/A",
+    instructorAvatar: packageDataFromParams.avatarInstructor || "https://via.placeholder.com/60",
+    packageName: packageDataFromParams.namePackake || "Gói học lái xe",
+    totalHours: packageDataFromParams.duration || 0,
+    usedHours: packageDataFromParams.durationInUse || 0,
+    remainingHours: packageDataFromParams.remainingTime || 0,
+    purchaseDate: packageDataFromParams.buyDate || new Date().toISOString(),
+    price: packageDataFromParams.price || 0, // API may not have price
+    status: packageDataFromParams.bookingStatus === 1 ? "paid" : "in_progress",
+    carId: packageDataFromParams.carId,
+    carPrice: packageDataFromParams.carPrice,
+  } : null;
   
   // Debug log
   console.log("Package Detail Debug:", {
@@ -111,7 +126,7 @@ export default function PackageDetailScreen() {
           location: apiSession.location,
           vehicleName: apiSession.vehicleName,
           status: mapApiStatusToString(apiSession.status), // Convert enum to string
-          instructorName: apiSession.instructorName,
+         // instructorName: apiSession.instructorName,
         }));
         
         setApiSessions(mappedSessions);
@@ -264,6 +279,7 @@ export default function PackageDetailScreen() {
       packageId: packageId,
       vehicleId: vehicleId,
       carPrice: carPriceFromParams,
+      remainingHours: packageData.remainingHours,
     });
 
     router.push({
@@ -275,6 +291,7 @@ export default function PackageDetailScreen() {
         carPrice: carPriceFromParams.toString(),
         fromUserPackage: "true",
         userPackageId: packageData.id || packageId,
+        remainingHours: packageData.remainingHours.toString(), // Add remaining hours for validation
       },
     });
   };

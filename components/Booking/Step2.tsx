@@ -150,10 +150,17 @@ export default function Step2({
 
   const handleCustomDurationSubmit = () => {
     const duration = parseFloat(customDuration);
-    if (!isNaN(duration) && duration > 0 && duration <= maxDuration) {
-      onDurationChange(duration);
-      setCustomDuration(""); // Clear after submit
+    if (isNaN(duration) || duration <= 0) {
+      // Invalid number
+      return;
     }
+    if (duration > maxDuration) {
+      // Exceeds remaining hours - show alert
+      alert(`Thời lượng không được vượt quá ${maxDuration} giờ còn lại trong gói của bạn`);
+      return;
+    }
+    onDurationChange(duration);
+    setCustomDuration(""); // Clear after submit
   };
 
   const quickDurationOptions = [1, 2, 3, 4, 5, 6, 8];
@@ -302,6 +309,14 @@ export default function Step2({
           <Text style={styles.sectionDesc}>
             Tùy chỉnh thời lượng buổi học (tối đa {maxDuration} giờ)
           </Text>
+          
+          {/* Remaining Hours Info */}
+          <View style={styles.remainingHoursInfo}>
+            <Clock size={16} color="#3b82f6" strokeWidth={2} />
+            <Text style={styles.remainingHoursText}>
+              Số giờ còn lại trong gói: <Text style={styles.remainingHoursValue}>{maxDuration}h</Text>
+            </Text>
+          </View>
 
           {/* Custom Duration Input */}
           <View style={styles.customDurationSection}>
@@ -385,28 +400,36 @@ export default function Step2({
           <View style={styles.quickDurations}>
             <Text style={styles.quickDurationsTitle}>Hoặc chọn nhanh:</Text>
             <View style={styles.quickDurationsGrid}>
-              {quickDurationOptions.map((duration) => (
-                <TouchableOpacity
-                  key={duration}
-                  style={[
-                    styles.quickDurationButton,
-                    selectedDuration === duration && styles.quickDurationButtonActive,
-                  ]}
-                  onPress={() => {
-                    onDurationChange(duration);
-                    setCustomDuration(""); // Clear custom input when selecting from quick buttons
-                  }}
-                >
-                  <Text
+              {quickDurationOptions.map((duration) => {
+                const isDisabled = duration > maxDuration;
+                return (
+                  <TouchableOpacity
+                    key={duration}
                     style={[
-                      styles.quickDurationText,
-                      selectedDuration === duration && styles.quickDurationTextActive,
+                      styles.quickDurationButton,
+                      selectedDuration === duration && styles.quickDurationButtonActive,
+                      isDisabled && styles.quickDurationButtonDisabled,
                     ]}
+                    onPress={() => {
+                      if (!isDisabled) {
+                        onDurationChange(duration);
+                        setCustomDuration(""); // Clear custom input when selecting from quick buttons
+                      }
+                    }}
+                    disabled={isDisabled}
                   >
-                    {duration}h
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.quickDurationText,
+                        selectedDuration === duration && styles.quickDurationTextActive,
+                        isDisabled && styles.quickDurationTextDisabled,
+                      ]}
+                    >
+                      {duration}h
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
@@ -462,8 +485,29 @@ const styles = StyleSheet.create({
   sectionDesc: {
     fontSize: 14,
     color: "#64748b",
-    marginBottom: 20,
+    marginBottom: 16,
     lineHeight: 20,
+  },
+  remainingHoursInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#eff6ff",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    marginBottom: 20,
+  },
+  remainingHoursText: {
+    fontSize: 13,
+    color: "#1e40af",
+    fontWeight: "600",
+  },
+  remainingHoursValue: {
+    fontSize: 14,
+    color: "#1e40af",
+    fontWeight: "800",
   },
   selectedTimeInfo: {
     backgroundColor: "#f0fdf4",
@@ -765,6 +809,11 @@ const styles = StyleSheet.create({
     borderColor: AppColors.primary,
     backgroundColor: AppColors.primary + "15",
   },
+  quickDurationButtonDisabled: {
+    borderColor: "#f1f5f9",
+    backgroundColor: "#f8fafc",
+    opacity: 0.5,
+  },
   quickDurationText: {
     fontSize: 15,
     fontWeight: "700",
@@ -772,6 +821,9 @@ const styles = StyleSheet.create({
   },
   quickDurationTextActive: {
     color: AppColors.primary,
+  },
+  quickDurationTextDisabled: {
+    color: "#cbd5e1",
   },
   timeSummary: {
     backgroundColor: "#f8fafc",

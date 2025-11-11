@@ -1,7 +1,11 @@
 import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/HttpMethods";
 import { IUserPackageAPI, IGetUserPackagesParams, BookingStatus } from "@/models/package/user-package";
-import { IBookingSessionAPI, IGetBookingSessionsParams } from "@/models/booking/booking";
+import { IBookingSessionAPI, IGetBookingSessionsParams, IGetAllSessionsParams } from "@/models/booking/booking";
+import { ISaveSessionRoutesPayload, IGetSessionRoutesResponse } from "@/models/route/route";
+import axiosInstance from "@/lib/axios/axiosInstance";
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import { GenericResponse } from "@/models/generic/genericResponse";
 
 const BOOKING_PATH = "booking";
 const SESSION_PATH = "session";
@@ -11,15 +15,15 @@ const POLICY_PATH = "policy";
 
 // API Response Interfaces
 export interface IInstructorSchedule {
-  startTime: string; // ISO format
-  endTime: string; // ISO format
+  startTime: string; // Date string format: YYYY-MM-DD (e.g., "2025-11-12")
+  endTime: string; // Date string format: YYYY-MM-DD (e.g., "2025-11-19")
 }
 
 export interface IInstructorBookedSession {
-  id: string;
-  startTime: string; // ISO format
-  endTime: string; // ISO format
-  status: number;
+  id?: string; // Optional - may not be included in API response
+  startTime: string; // ISO datetime format (e.g., "2025-11-13T10:00:00")
+  endTime: string; // ISO datetime format (e.g., "2025-11-13T11:00:00")
+  status?: number; // Optional - booking status
 }
 
 export interface INoviceDriverAddress {
@@ -37,6 +41,17 @@ export interface IPolicy {
 
 export enum PolicyType {
   Booking = 1,
+}
+
+// Create Session Request Interface
+export interface ICreateSessionRequest {
+  bookingId: string;
+  startTime: string; // ISO datetime format
+  startingLatitude: number;
+  startingLongtitude: number; // Note: API has typo "Longtitude" instead of "Longitude"
+  priceForCar: number;
+  duration: number; // in hours
+  sessionNote: string;
 }
 
 // Get user packages with optional status filter
@@ -81,6 +96,30 @@ export const getBookingSessions = createThunk<
       
       const queryString = params.toString();
       return `/${SESSION_PATH}/${BOOKING_PATH}/${payload.bookingId}${queryString ? `?${queryString}` : ''}`;
+    }
+  }
+);
+
+// Get all sessions (for rental screen) with optional status filter
+// API endpoint: booking/sessions?status=1
+export const getAllSessions = createThunk<
+  IBookingSessionAPI[],
+  IGetAllSessionsParams | undefined
+>(
+  HttpMethod.GET,
+  "getAllSessions",
+  `/${BOOKING_PATH}/sessions`,
+  {
+    buildUrl: (payload) => {
+      const params = new URLSearchParams();
+      
+      // Add status filter if provided
+      if (payload?.status !== undefined) {
+        params.append('status', payload.status.toString());
+      }
+      
+      const queryString = params.toString();
+      return `/${BOOKING_PATH}/sessions${queryString ? `?${queryString}` : ''}`;
     }
   }
 );
@@ -131,5 +170,79 @@ export const getPolicies = createThunk<
   `/${POLICY_PATH}`,
   {
     buildUrl: (payload) => `/${POLICY_PATH}?policyType=${payload.policyType}`
+  }
+);
+
+// Create a new booking session
+// API returns boolean: true if success, false if failed
+export const createSession = createThunk<
+  boolean,
+  ICreateSessionRequest
+>(
+  HttpMethod.POST,
+  "createSession",
+  `/${SESSION_PATH}`
+);
+
+// Save session routes
+// API endpoint: POST session/{sessionId}/routes
+// Request body: array of route items
+// Note: Using custom approach because we need sessionId in URL but routes array in body
+export const saveSessionRoutes = createAsyncThunk<
+  GenericResponse<boolean>,
+  ISaveSessionRoutesPayload,
+  { rejectValue: string }
+>(
+  "saveSessionRoutes",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const url = `/${SESSION_PATH}/${payload.sessionId}/routes`;
+      
+      console.log("🚀 Calling API:", url);
+      console.log("📦 Request body:", payload.body);
+      
+      const response = await axiosInstance.post<GenericResponse<boolean>>(
+        url,
+        payload.body // Send only the routes array as body
+      );
+      
+      console.log("✅ API Response:", response.data);
+      return response.data;
+    } catch (err) {
+      const error = err as any;
+      console.error("❌ API Error:", error.response?.data || error.message);
+      const message = error.response?.data?.message || "Không thể lưu lộ trình";
+      return rejectWithValue(message);
+    }
+  }
+);
+
+// Get session routes
+// API endpoint: GET session/{sessionId}/routes
+// Response: { sessionStartingLat, sessionStartingLong, routes: [] }
+export const getSessionRoutes = createAsyncThunk<
+  GenericResponse<IGetSessionRoutesResponse>,
+  string, // sessionId
+  { rejectValue: string }
+>(
+  "getSessionRoutes",
+  async (sessionId, { rejectWithValue }) => {
+    try {
+      const url = `/${SESSION_PATH}/${sessionId}/routes`;
+      
+      console.log("🚀 Fetching routes from:", url);
+      
+      const response = await axiosInstance.get<GenericResponse<IGetSessionRoutesResponse>>(
+        url
+      );
+      
+      console.log("✅ Routes fetched successfully:", response.data);
+      return response.data;
+    } catch (err) {
+      const error = err as any;
+      console.error("❌ API Error:", error.response?.data || error.message);
+      const message = error.response?.data?.message || "Không thể lấy thông tin lộ trình";
+      return rejectWithValue(message);
+    }
   }
 );

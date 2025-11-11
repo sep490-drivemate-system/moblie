@@ -8,6 +8,8 @@ import {
   TextInput,
   StatusBar,
   Modal,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -32,6 +34,7 @@ import {
   PolicyType,
   INoviceDriverAddress,
   IPolicy,
+  createSession,
 } from "@/features/booking/bookingThunk";
 import Step1 from "@/components/Booking/Step1";
 import Step2 from "@/components/Booking/Step2";
@@ -52,12 +55,14 @@ export default function BookingScreen() {
   const packageId = params.packageId as string | undefined;
   const vehicleId = params.vehicleId as string | undefined;
   const carPrice = params.carPrice ? parseFloat(params.carPrice as string) : undefined;
+  const remainingHours = params.remainingHours ? parseFloat(params.remainingHours as string) : undefined;
   
   console.log("Booking screen received params:", {
     instructorId,
     packageId,
     vehicleId,
     carPrice,
+    remainingHours,
     fromUserPackage: params.fromUserPackage,
     userPackageId: params.userPackageId,
   });
@@ -79,10 +84,12 @@ export default function BookingScreen() {
   const [addresses, setAddresses] = useState<INoviceDriverAddress[]>([]);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
 
-  // Step 4: Policies
+  // Step 4: Policies and Note
   const [policies, setPolicies] = useState<IPolicy[]>([]);
   const [acceptedPolicies, setAcceptedPolicies] = useState<Record<string, boolean>>({});
   const [isLoadingPolicies, setIsLoadingPolicies] = useState(false);
+  const [sessionNote, setSessionNote] = useState("");
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
 
   // User wallet
   const [userCoins, setUserCoins] = useState(500);
@@ -100,7 +107,9 @@ export default function BookingScreen() {
   // Get instructor and package info
   const instructor = instructorsData.find((i) => i.id === instructorId);
   const selectedPackage = instructor?.packages?.find((p: InstructorPackage) => p.id === packageId);
-  const maxDuration = selectedPackage?.duration || 40;
+  
+  // Use remainingHours if booking from user package, otherwise use package duration
+  const maxDuration = remainingHours !== undefined ? remainingHours : (selectedPackage?.duration || 40);
 
   // Get vehicle info if vehicleId is provided (from instructorVehicles)
   const selectedVehicle =
@@ -220,10 +229,87 @@ export default function BookingScreen() {
       .padStart(2, "0")}`;
   };
 
-  const handleConfirmBooking = () => {
-    setTimeout(() => {
-      router.replace("/(main)/(no-tabs)/my-packages");
-    }, 500);
+  const handleConfirmBooking = async () => {
+    if (!packageId || !selectedDate || !selectedStartTime || !selectedLocationId) {
+      Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    console.log("Selected location ID:", selectedLocationId);
+    console.log("Addresses:", addresses);
+    console.log("Selected address:", addresses.find(addr => addr.id === selectedLocationId));
+    console.log("Selected address latitude:", addresses.find(addr => addr.id === selectedLocationId)?.latitude);
+    console.log("Selected address longitude:", addresses.find(addr => addr.id === selectedLocationId)?.longitude);
+
+    
+    // Get selected address for coordinates
+    const selectedAddress = addresses.find(addr => addr.id === selectedLocationId);
+    if (!selectedAddress) {
+      Alert.alert("Lỗi", "Không tìm thấy địa chỉ đón");
+      return;
+    }
+
+    try {
+      setIsCreatingSession(true);
+
+      // Combine date and time to create ISO datetime string
+      const startDateTime = new Date(`${selectedDate}T${selectedStartTime}:00`);
+      const isoStartTime = startDateTime.toISOString();
+
+      // Calculate vehicle cost
+      const vehicleCost = vehicleId && carPrice && selectedDuration > 0 
+        ? carPrice * selectedDuration 
+        : 0;
+
+      // Create session request
+      const sessionRequest = {
+        bookingId: packageId,
+        startTime: isoStartTime,
+        startingLatitude: selectedAddress.latitude,
+        startingLongtitude: selectedAddress.longitude, // Note: API typo
+        priceForCar: vehicleCost,
+        duration: selectedDuration,
+        sessionNote: sessionNote || "",
+      };
+
+      
+
+      const response = await dispatch(createSession(sessionRequest)).unwrap();
+      
+      console.log("Session created, response:", response);
+
+      // Extract boolean from GenericResponse wrapper
+      const success = (response as any)?.data?.value ?? (response as any)?.value ?? response;
+      
+      console.log("Extracted success value:", success);
+
+      // API returns boolean: true = success, false = failed
+      if (success === true) {
+        Alert.alert(
+          "Thành công",
+          "Đặt lịch thành công!",
+          [
+            {
+              text: "OK",
+              onPress: () => router.replace("/(main)/(no-tabs)/my-packages"),
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          "Lỗi",
+          "Không thể tạo lịch học. Vui lòng thử lại."
+        );
+      }
+    } catch (error: any) {
+      console.error("Failed to create session:", error);
+      Alert.alert(
+        "Lỗi",
+        error?.message || "Không thể tạo lịch học. Vui lòng thử lại."
+      );
+    } finally {
+      setIsCreatingSession(false);
+    }
   };
 
   return (
@@ -538,6 +624,11 @@ export default function BookingScreen() {
             bookingCost={bookingCost}
             userCoins={userCoins}
             isLoading={isLoadingPolicies}
+            vehicleId={vehicleId}
+            carPrice={carPrice}
+            selectedDuration={selectedDuration}
+            sessionNote={sessionNote}
+            onSessionNoteChange={setSessionNote}
           />
         )}
 
@@ -582,22 +673,29 @@ export default function BookingScreen() {
           <TouchableOpacity
             style={[
               styles.paymentButton,
-              !canProceedToNextStep() && styles.paymentButtonDisabled,
+              (!canProceedToNextStep() || isCreatingSession) && styles.paymentButtonDisabled,
             ]}
             onPress={handleConfirmBooking}
-            disabled={!canProceedToNextStep()}
+            disabled={!canProceedToNextStep() || isCreatingSession}
           >
             <View
               style={[
                 styles.paymentButtonGradient,
                 {
-                  backgroundColor: canProceedToNextStep()
+                  backgroundColor: (canProceedToNextStep() && !isCreatingSession)
                     ? "#1AD562"
                     : "#cbd5e1",
                 },
               ]}
             >
-              <Text style={styles.paymentButtonText}>Xác nhận đặt lịch</Text>
+              {isCreatingSession ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <ActivityIndicator size="small" color="#ffffff" />
+                  <Text style={styles.paymentButtonText}>Đang xử lý...</Text>
+                </View>
+              ) : (
+                <Text style={styles.paymentButtonText}>Xác nhận đặt lịch</Text>
+              )}
             </View>
           </TouchableOpacity>
         )}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -18,18 +19,38 @@ import {
   ArrowLeft,
   Route,
   User,
+  Loader,
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { userPackagesData } from "@/data/user_packages_data";
-import MapView, { Marker, Polyline } from "react-native-maps";
-import { useMemo, useState } from "react";
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE, UrlTile } from "react-native-maps";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { getSessionRoutes } from "@/features/booking/bookingThunk";
+import { IGetSessionRoutesResponse } from "@/models/route/route";
 
 export default function MyDrivingSessionDetailScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const { sessionId } = useLocalSearchParams();
 
   const allSessions = userPackagesData.flatMap((p) => p.sessions || []);
   const session = allSessions.find((s) => s.id === sessionId);
+
+  // State for routes from API
+  const [routesData, setRoutesData] = useState<IGetSessionRoutesResponse | null>(null);
+  const [isLoadingRoutes, setIsLoadingRoutes] = useState(false);
+  const [routeSegments, setRouteSegments] = useState<any[]>([]);
+
+  // Goong API Keys
+  const GOONG_API_KEY = process.env.EXPO_PUBLIC_GOONG_API_KEY;
+  const GOONG_MAPTILES_KEY = process.env.EXPO_PUBLIC_GOONG_MAPTILES_KEY;
+  
+  // Debug: Log keys on component mount
+  useEffect(() => {
+    console.log("🔑 DEBUG - Goong API Key:", GOONG_API_KEY || "❌ MISSING");
+    console.log("🗺️ DEBUG - Goong MapTiles Key:", GOONG_MAPTILES_KEY || "❌ MISSING");
+    console.log("📦 DEBUG - All env vars:", process.env);
+  }, []);
 
   type RoutePoint = {
     id: string;
@@ -54,56 +75,163 @@ export default function MyDrivingSessionDetailScreen() {
     totalDuration?: string;
   };
 
-  const proposedRoute: Route | null = useMemo(() => {
-    if (!session) return null;
-    // Mock a simple circular route in HCMC (pickup == dropoff)
-    const start: RoutePoint = {
-      id: "p1",
-      address: session.location || "123 Nguyễn Huệ, Quận 1, TP.HCM",
-      coordinates: { latitude: 10.776889, longitude: 106.700806 },
-      isStart: true,
-      description: "Điểm đón - Kiểm tra xe và hướng dẫn cơ bản",
-      estimatedTime: "15 phút",
-      skills: ["Điều khiển cơ bản"],
+  // Decode polyline from Goong API
+  const decodePolyline = (encoded: string) => {
+    const points: { latitude: number; longitude: number }[] = [];
+    let index = 0;
+    const len = encoded.length;
+    let lat = 0;
+    let lng = 0;
+
+    while (index < len) {
+      let b;
+      let shift = 0;
+      let result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlat = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlng = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+      lng += dlng;
+
+      points.push({
+        latitude: lat / 1e5,
+        longitude: lng / 1e5,
+      });
+    }
+
+    return points;
+  };
+
+  // Helper functions for formatting
+  const formatDistance = (meters: number): string => {
+    if (meters < 1000) return `${Math.round(meters)}m`;
+    return `${(meters / 1000).toFixed(1)}km`;
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (hours > 0) return `${hours}h ${minutes}phút`;
+    return `${minutes} phút`;
+  };
+
+  // Fetch directions from Goong API
+  const fetchGoongDirections = async (data: IGetSessionRoutesResponse) => {
+    try {
+      console.log("🔑 Goong API Key:", GOONG_API_KEY ? "✅ Found" : "❌ Missing");
+      console.log("🗺️ Goong MapTiles Key:", GOONG_MAPTILES_KEY ? "✅ Found" : "❌ Missing");
+      
+      // Create waypoints array: start point + all route points
+      const allPoints = [
+        { lat: data.sessionStartingLat, lng: data.sessionStartingLong },
+        ...data.routes.map(r => ({ lat: r.latitudeStart, lng: r.longitudeStart }))
+      ];
+
+      console.log("📍 Total points to connect:", allPoints.length);
+
+      const segments: any[] = [];
+
+      // Fetch directions for each segment
+      for (let i = 0; i < allPoints.length - 1; i++) {
+        const origin = allPoints[i];
+        const destination = allPoints[i + 1];
+
+        const url = `https://rsapi.goong.io/Direction?origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&vehicle=car&api_key=${GOONG_API_KEY}`;
+        
+        console.log(`🚗 Fetching segment ${i + 1}/${allPoints.length - 1}...`);
+        
+        const response = await fetch(url);
+        const json = await response.json();
+
+        console.log(`📦 Goong response for segment ${i + 1}:`, json.status || json.error || "OK");
+
+        if (json.routes && json.routes[0]) {
+          const route = json.routes[0];
+          const coordinates = decodePolyline(route.overview_polyline.points);
+          
+          console.log(`✅ Segment ${i + 1}: ${coordinates.length} coordinates`);
+          
+          segments.push({
+            coordinates,
+            distance: route.legs[0].distance.text,
+            duration: route.legs[0].duration.text,
+          });
+        } else {
+          console.warn(`⚠️ No route found for segment ${i + 1}`);
+          // Fallback: draw straight line
+          segments.push({
+            coordinates: [
+              { latitude: origin.lat, longitude: origin.lng },
+              { latitude: destination.lat, longitude: destination.lng }
+            ],
+            distance: "N/A",
+            duration: "N/A",
+          });
+        }
+      }
+
+      setRouteSegments(segments);
+      console.log("✅ Goong directions fetched:", segments.length, "segments");
+    } catch (error) {
+      console.error("❌ Error fetching Goong directions:", error);
+    }
+  };
+
+  // Fetch routes from API
+  useEffect(() => {
+    if (!sessionId || typeof sessionId !== 'string') return;
+
+    const fetchRoutes = async () => {
+      try {
+        setIsLoadingRoutes(true);
+        console.log("🗺️ Fetching routes for session:", sessionId);
+
+        const result = await dispatch(getSessionRoutes(sessionId)).unwrap();
+        
+        // API trả về isSuccess, nhưng GenericResponse type định nghĩa success
+        // Cast để access cả 2 properties
+        const apiResult = result as any;
+        if ((apiResult.isSuccess || result.success) && result.value) {
+          setRoutesData(result.value);
+          console.log("✅ Routes loaded:", result.value);
+          console.log("📊 DEBUG - Routes data structure:", {
+            startLat: result.value.sessionStartingLat,
+            startLng: result.value.sessionStartingLong,
+            routesCount: result.value.routes.length,
+            firstRoute: result.value.routes[0]
+          });
+          
+          // Fetch directions from Goong API
+          console.log("🚀 DEBUG - About to call fetchGoongDirections...");
+          await fetchGoongDirections(result.value);
+          console.log("✅ DEBUG - fetchGoongDirections completed");
+        } else {
+          console.warn("⚠️ DEBUG - API response not successful or no value:", result);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching routes:", error);
+        Alert.alert("Lỗi", "Không thể tải thông tin lộ trình");
+      } finally {
+        setIsLoadingRoutes(false);
+      }
     };
-    const mid1: RoutePoint = {
-      id: "p2",
-      address: "30 Cống Quỳnh, Quận 1, TP.HCM",
-      coordinates: { latitude: 10.769722, longitude: 106.685 },
-      description: "Luyện tập lái xe trong khu dân cư vắng",
-      estimatedTime: "45 phút",
-      skills: ["Điều khiển cơ bản", "Chuyển làn"],
-    };
-    const mid2: RoutePoint = {
-      id: "p3",
-      address: "11 Sư Vạn Hạnh, Quận 10, TP.HCM",
-      coordinates: { latitude: 10.772, longitude: 106.6662 },
-      description: "Luyện tập lái xe trên đường có lưu lượng xe trung bình",
-      estimatedTime: "60 phút",
-      skills: ["Chuyển làn", "Vượt xe", "Qua ngã tư"],
-    };
-    const end: RoutePoint = {
-      id: "p4",
-      address: start.address,
-      coordinates: start.coordinates,
-      isEnd: true,
-      description: "Điểm trả - Tổng kết buổi học",
-      estimatedTime: "20 phút",
-      skills: [],
-    };
-    return {
-      id: `route_${session.id}`,
-      bookingId: session.id,
-      points: [start, mid1, mid2, end],
-      status: "sent",
-      notes: "Lộ trình luyện tập kỹ năng cơ bản trong nội thành",
-      createdAt: new Date().toISOString(),
-      title: "Lộ trình buổi tập lái",
-      description:
-        "Lộ trình được thiết kế để học viên làm quen với các kỹ năng lái xe cơ bản trong môi trường thành phố.",
-      totalDuration: `${session.duration || 3} giờ`,
-    };
-  }, [session]);
+
+    fetchRoutes();
+  }, [sessionId]);
+
 
   const [routeDecision, setRouteDecision] = useState<
     "accepted" | "rejected" | null
@@ -211,26 +339,6 @@ export default function MyDrivingSessionDetailScreen() {
     }
   };
 
-  if (!displaySession) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <ArrowLeft size={24} color={AppColors.white} strokeWidth={2} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Chi tiết buổi tập lái</Text>
-          <View style={styles.headerRight} />
-        </View>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>Không tìm thấy buổi tập lái</Text>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -247,100 +355,110 @@ export default function MyDrivingSessionDetailScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Thông tin buổi tập lái</Text>
+        {/* Session Info Card - Only show if displaySession exists */}
+        {displaySession && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Thông tin buổi tập lái</Text>
 
-          <View style={styles.row}>
-            <Text style={styles.label}>Người hướng dẫn</Text>
-            <Text style={styles.value}>{displaySession.instructorName}</Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.iconRow}>
-            <Calendar size={18} color="#64748b" strokeWidth={2} />
-            <Text style={styles.iconText}>
-              {new Date(displaySession.date).toLocaleDateString("vi-VN")}
-            </Text>
-          </View>
-
-          <View style={styles.iconRow}>
-            <Clock size={18} color="#64748b" strokeWidth={2} />
-            <Text style={styles.iconText}>
-              {displaySession.startTime} - {displaySession.endTime}
-            </Text>
-          </View>
-
-          <View style={styles.iconRow}>
-            <Clock size={18} color="#64748b" strokeWidth={2} />
-            <Text style={styles.iconText}>
-              Tổng thời gian: {displaySession.duration}h
-            </Text>
-          </View>
-
-          {/* Status */}
-          <View style={styles.row}>
-            <Text style={styles.label}>Trạng thái</Text>
-            {(() => {
-              const meta = getSessionStatusMeta((session as any).status);
-              return (
-                <View
-                  style={[styles.statusBadge, { backgroundColor: meta.bg }]}
-                >
-                  <Text style={[styles.statusText, { color: meta.color }]}>
-                    {meta.label}
-                  </Text>
-                </View>
-              );
-            })()}
-          </View>
-
-          <View style={styles.iconRow}>
-            <MapPin size={18} color="#64748b" strokeWidth={2} />
-            <Text style={styles.iconText} numberOfLines={2}>
-              {displaySession.location}
-            </Text>
-          </View>
-
-          {displaySession.vehicleName ? (
-            <View style={styles.iconRow}>
-              <Car size={18} color="#64748b" strokeWidth={2} />
-              <Text style={styles.iconText}>{displaySession.vehicleName}</Text>
+            <View style={styles.row}>
+              <Text style={styles.label}>Người hướng dẫn</Text>
+              <Text style={styles.value}>{displaySession.instructorName}</Text>
             </View>
-          ) : null}
 
-          {/* Session actions: Cancel and Reschedule (inside info card) */}
-          <View style={styles.sessionActions}>
-            <TouchableOpacity
-              style={styles.cancelLessonButton}
-              onPress={() => setShowCancelModal(true)}
-            >
-              <Text style={styles.cancelLessonButtonText}>
-                Hủy buổi tập lái
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.divider} />
 
-            <TouchableOpacity
-              style={styles.rescheduleLessonButton}
-              onPress={() => {
-                setSelectedRescheduleReasons([]);
-                setShowRescheduleModal(true);
-              }}
-            >
-              <Text style={styles.rescheduleLessonButtonText}>
-                Dời lịch buổi tập lái
+            <View style={styles.iconRow}>
+              <Calendar size={18} color="#64748b" strokeWidth={2} />
+              <Text style={styles.iconText}>
+                {new Date(displaySession.date).toLocaleDateString("vi-VN")}
               </Text>
-            </TouchableOpacity>
+            </View>
+
+            <View style={styles.iconRow}>
+              <Clock size={18} color="#64748b" strokeWidth={2} />
+              <Text style={styles.iconText}>
+                {displaySession.startTime} - {displaySession.endTime}
+              </Text>
+            </View>
+
+            <View style={styles.iconRow}>
+              <Clock size={18} color="#64748b" strokeWidth={2} />
+              <Text style={styles.iconText}>
+                Tổng thời gian: {displaySession.duration}h
+              </Text>
+            </View>
+
+            {/* Status */}
+            <View style={styles.row}>
+              <Text style={styles.label}>Trạng thái</Text>
+              {(() => {
+                const meta = getSessionStatusMeta((session as any)?.status);
+                return (
+                  <View
+                    style={[styles.statusBadge, { backgroundColor: meta.bg }]}
+                  >
+                    <Text style={[styles.statusText, { color: meta.color }]}>
+                      {meta.label}
+                    </Text>
+                  </View>
+                );
+              })()}
+            </View>
+
+            <View style={styles.iconRow}>
+              <MapPin size={18} color="#64748b" strokeWidth={2} />
+              <Text style={styles.iconText} numberOfLines={2}>
+                {displaySession.location}
+              </Text>
+            </View>
+
+            {displaySession.vehicleName ? (
+              <View style={styles.iconRow}>
+                <Car size={18} color="#64748b" strokeWidth={2} />
+                <Text style={styles.iconText}>{displaySession.vehicleName}</Text>
+              </View>
+            ) : null}
+
+            {/* Session actions: Cancel and Reschedule (inside info card) */}
+            <View style={styles.sessionActions}>
+              <TouchableOpacity
+                style={styles.cancelLessonButton}
+                onPress={() => setShowCancelModal(true)}
+              >
+                <Text style={styles.cancelLessonButtonText}>
+                  Hủy buổi tập lái
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.rescheduleLessonButton}
+                onPress={() => {
+                  setSelectedRescheduleReasons([]);
+                  setShowRescheduleModal(true);
+                }}
+              >
+                <Text style={styles.rescheduleLessonButtonText}>
+                  Dời lịch buổi tập lái
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
 
-        {proposedRoute && (
+        {/* Loading State */}
+        {isLoadingRoutes && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={AppColors.primary} />
+            <Text style={styles.loadingText}>Đang tải lộ trình...</Text>
+          </View>
+        )}
+
+        {/* Routes from API */}
+        {!isLoadingRoutes && routesData && (
           <View style={styles.routeCard}>
-            {proposedRoute.title && (
-              <Text style={styles.sectionTitle}>
-                {proposedRoute.title} ({proposedRoute.points.length} điểm)
-              </Text>
-            )}
+            <Text style={styles.sectionTitle}>
+              Lộ trình buổi tập lái ({routesData.routes.length + 1} điểm)
+            </Text>
 
             {/* Route status / decision */}
             {routeDecision && (
@@ -371,99 +489,118 @@ export default function MyDrivingSessionDetailScreen() {
 
             {/* Route Points Section */}
             <View style={styles.routePointsSection}>
-              {proposedRoute.points.map((point, index) => (
+              {/* Starting Point */}
+              <View style={styles.routePoint}>
+                <View style={styles.pointHeader}>
+                  <View style={[styles.pointNumber, styles.pointNumberPrimary]}>
+                    <Text style={styles.pointNumberText}>1</Text>
+                  </View>
+                  <View style={styles.pointInfo}>
+                    <Text style={styles.pointAddress}>Điểm bắt đầu</Text>
+                    <Text style={styles.pointCoords}>
+                      📍 {routesData.sessionStartingLat.toFixed(6)}, {routesData.sessionStartingLong.toFixed(6)}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.routeLine} />
+              </View>
+
+              {/* Route Points */}
+              {routesData.routes.map((point, index) => (
                 <View key={point.id} style={styles.routePoint}>
                   <View style={styles.pointHeader}>
-                    <View
-                      style={[
-                        styles.pointNumber,
-                        (point.isStart || point.isEnd) &&
-                          styles.pointNumberPrimary,
-                      ]}
-                    >
-                      <Text style={styles.pointNumberText}>{index + 1}</Text>
+                    <View style={styles.pointNumber}>
+                      <Text style={styles.pointNumberText}>{index + 2}</Text>
                     </View>
                     <View style={styles.pointInfo}>
-                      <Text style={styles.pointAddress}>{point.address}</Text>
-                      {point.estimatedTime && (
-                        <Text style={styles.pointTime}>
-                          ⏱️ {point.estimatedTime}
-                        </Text>
-                      )}
+                      <Text style={styles.pointAddress}>{point.streetName}</Text>
+                      <Text style={styles.pointCoords}>
+                        📍 {point.latitudeStart.toFixed(6)}, {point.longitudeStart.toFixed(6)}
+                      </Text>
                     </View>
                   </View>
 
-                  {point.description && (
-                    <Text style={styles.pointDescription}>
-                      {point.description}
-                    </Text>
-                  )}
+                  <Text style={styles.pointDescription}>
+                    {point.textInstruction}
+                  </Text>
 
-                  {point.skills && point.skills.length > 0 && (
-                    <View style={styles.skillsContainer}>
-                      <Text style={styles.skillsLabel}>Kỹ năng luyện tập:</Text>
-                      <View style={styles.skillsTags}>
-                        {point.skills.map((skill, skillIndex) => (
-                          <View key={skillIndex} style={styles.skillTag}>
-                            <Text style={styles.skillTagText}>{skill}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  )}
-
-                  {index < proposedRoute.points.length - 1 && (
+                  {index < routesData.routes.length - 1 && (
                     <View style={styles.routeLine} />
                   )}
                 </View>
               ))}
             </View>
 
-            {/* Map */}
+            {/* Map with Goong Directions */}
             <Text style={styles.mapTitle}>Bản đồ lộ trình</Text>
             <View style={styles.mapContainer}>
               <MapView
+                provider={PROVIDER_GOOGLE}
                 style={styles.map}
                 initialRegion={{
-                  latitude: proposedRoute.points[0].coordinates.latitude,
-                  longitude: proposedRoute.points[0].coordinates.longitude,
-                  latitudeDelta: 0.06,
-                  longitudeDelta: 0.06,
+                  latitude: routesData.sessionStartingLat,
+                  longitude: routesData.sessionStartingLong,
+                  latitudeDelta: 0.05,
+                  longitudeDelta: 0.05,
                 }}
+                showsUserLocation={false}
+                showsMyLocationButton={false}
               >
-                {proposedRoute.points.map((pt, index) => (
+                {/* Goong Map Tiles */}
+                {GOONG_MAPTILES_KEY && (
+                  <UrlTile
+                    urlTemplate={`https://tiles.goong.io/assets/navigation_day/{z}/{x}/{y}.png?api_key=${GOONG_MAPTILES_KEY}`}
+                    maximumZ={19}
+                    flipY={false}
+                  />
+                )}
+                {/* Starting Point Marker */}
+                <Marker
+                  coordinate={{
+                    latitude: routesData.sessionStartingLat,
+                    longitude: routesData.sessionStartingLong,
+                  }}
+                  title="Điểm bắt đầu"
+                  pinColor="green"
+                />
+
+                {/* Route Points Markers */}
+                {routesData.routes.map((point, index) => (
                   <Marker
-                    key={pt.id}
-                    coordinate={pt.coordinates}
-                    title={
-                      pt.isStart
-                        ? "Bắt đầu"
-                        : pt.isEnd
-                        ? "Kết thúc"
-                        : `Điểm ${index}`
-                    }
-                    description={pt.address}
-                  >
-                    <MapPin
-                      size={28}
-                      color={
-                        pt.isStart || pt.isEnd
-                          ? AppColors.primary
-                          : AppColors.blue
-                      }
-                      strokeWidth={2}
-                    />
-                  </Marker>
+                    key={point.id}
+                    coordinate={{
+                      latitude: point.latitudeStart,
+                      longitude: point.longitudeStart,
+                    }}
+                    title={`Điểm ${index + 2}`}
+                    description={point.streetName}
+                    pinColor={index === routesData.routes.length - 1 ? "red" : "blue"}
+                  />
                 ))}
 
-                <Polyline
-                  coordinates={proposedRoute.points.map((p) => p.coordinates)}
-                  strokeColor="#3b82f6"
-                  strokeWidth={3}
-                  lineDashPattern={[5, 5]}
-                />
+                {/* Route Polylines from Goong */}
+                {routeSegments.map((segment, index) => (
+                  <Polyline
+                    key={`segment-${index}`}
+                    coordinates={segment.coordinates}
+                    strokeColor="#3b82f6"
+                    strokeWidth={4}
+                  />
+                ))}
               </MapView>
             </View>
+
+            {/* Route Info */}
+            {routeSegments.length > 0 && (
+              <View style={styles.routeInfoContainer}>
+                <Text style={styles.routeInfoTitle}>Thông tin lộ trình:</Text>
+                {routeSegments.map((segment, index) => (
+                  <Text key={index} style={styles.routeInfoText}>
+                    • Đoạn {index + 1}: {segment.distance} - {segment.duration}
+                  </Text>
+                ))}
+              </View>
+            )}
 
             {/* Actions */}
             <View style={styles.routeActions}>
@@ -523,13 +660,13 @@ export default function MyDrivingSessionDetailScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Xác nhận hủy buổi tập</Text>
 
-            <View style={styles.modalRow}>
+            {/* <View style={styles.modalRow}>
               <Text style={styles.modalLabel}>Ngày giờ đặt lịch</Text>
               <Text style={styles.modalValue}>
                 {new Date(displaySession.date).toLocaleDateString("vi-VN")}{" "}
                 {displaySession.startTime} - {displaySession.endTime}
               </Text>
-            </View>
+            </View> */}
 
             <View style={styles.modalRow}>
               <Text style={styles.modalLabel}>Thời điểm hủy</Text>
@@ -591,7 +728,7 @@ export default function MyDrivingSessionDetailScreen() {
               >
                 <Text style={styles.modalCancelBtnText}>Đóng</Text>
               </TouchableOpacity>
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={[
                   styles.modalConfirmBtn,
                   !canCancelNow() && { opacity: 0.5 },
@@ -617,7 +754,7 @@ export default function MyDrivingSessionDetailScreen() {
                 }}
               >
                 <Text style={styles.modalConfirmBtnText}>Xác nhận hủy</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           </View>
         </View>
@@ -633,13 +770,13 @@ export default function MyDrivingSessionDetailScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Xác nhận dời lịch</Text>
 
-            <View style={styles.modalRow}>
+            {/* <View style={styles.modalRow}>
               <Text style={styles.modalLabel}>Ngày giờ đặt lịch</Text>
               <Text style={styles.modalValue}>
                 {new Date(displaySession.date).toLocaleDateString("vi-VN")}{" "}
                 {displaySession.startTime} - {displaySession.endTime}
               </Text>
-            </View>
+            </View> */}
 
             <View style={styles.modalRow}>
               <Text style={styles.modalLabel}>Thời điểm yêu cầu dời</Text>
@@ -683,7 +820,7 @@ export default function MyDrivingSessionDetailScreen() {
               >
                 <Text style={styles.modalCancelBtnText}>Đóng</Text>
               </TouchableOpacity>
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={styles.rescheduleConfirmBtn}
                 onPress={() => {
                   setShowRescheduleModal(false);
@@ -701,7 +838,7 @@ export default function MyDrivingSessionDetailScreen() {
                 }}
               >
                 <Text style={styles.modalConfirmBtnText}>Xác nhận</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           </View>
         </View>
@@ -1220,5 +1357,42 @@ const styles = StyleSheet.create({
     color: "#1f2937",
     fontSize: 14,
     fontWeight: "800",
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: AppColors.white,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+  pointCoords: {
+    fontSize: 11,
+    color: "#9ca3af",
+    marginTop: 2,
+  },
+  routeInfoContainer: {
+    backgroundColor: "#f8fafc",
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 12,
+  },
+  routeInfoTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 8,
+  },
+  routeInfoText: {
+    fontSize: 13,
+    color: "#64748b",
+    marginBottom: 4,
   },
 });

@@ -99,13 +99,19 @@ const getTimeFromISO = (isoString: string): string => {
 };
 
 // Helper function to get available date ranges from instructor schedule
+// Schedule API returns date strings in YYYY-MM-DD format
 const getAvailableDateRanges = (schedule: IInstructorSchedule[]): { start: Date; end: Date }[] => {
   if (!schedule || schedule.length === 0) return [];
   
-  return schedule.map(slot => ({
-    start: new Date(slot.startTime),
-    end: new Date(slot.endTime)
-  }));
+  return schedule.map(slot => {  
+    const startDate = new Date(slot.startTime + 'T00:00:00');
+    const endDate = new Date(slot.endTime + 'T00:00:00');
+    
+    return {
+      start: startDate,
+      end: endDate
+    };
+  });
 };
 
 // Helper function to check if a date is within available ranges
@@ -154,20 +160,37 @@ export default function Step1({
   const fetchInstructorData = async () => {
     try {
       setIsLoading(true);
+      
+      // Fetch instructor schedule (available date ranges)
       const scheduleResult = await dispatch(
         getInstructorSchedule({ instructorId })
       ).unwrap();
       const scheduleData = (scheduleResult as any).value || scheduleResult;
       setInstructorSchedule(scheduleData);
-      console.log("Step1 - Instructor schedule loaded:", scheduleData);
+      console.log("Step1 - Instructor schedule loaded:", {
+        raw: scheduleData,
+        parsed: scheduleData.map((s: IInstructorSchedule) => ({
+          start: s.startTime,
+          end: s.endTime,
+          startDate: new Date(s.startTime + 'T00:00:00'),
+          endDate: new Date(s.endTime + 'T00:00:00')
+        }))
+      });
       
-      // Fetch booked sessions
+      // Fetch booked sessions (busy times)
       const sessionsResult = await dispatch(
         getInstructorBookedSessions({ instructorId })
       ).unwrap();
       const sessionsData = (sessionsResult as any).value || sessionsResult;
       setInstructorBookedSessions(sessionsData);
-      console.log("Step1 - Instructor booked sessions loaded:", sessionsData);
+      console.log("Step1 - Instructor booked sessions loaded:", {
+        raw: sessionsData,
+        parsed: sessionsData.map((s: IInstructorBookedSession) => ({
+          date: getDateFromISO(s.startTime),
+          startTime: getTimeFromISO(s.startTime),
+          endTime: getTimeFromISO(s.endTime)
+        }))
+      });
       
     } catch (error) {
       console.error("Step1 - Failed to fetch instructor data:", error);
@@ -177,7 +200,11 @@ export default function Step1({
   };
 
   const formatDate = (date: Date) => {
-    return date.toISOString().split("T")[0]; // YYYY-MM-DD
+    // Use local date components to avoid timezone conversion
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`; // YYYY-MM-DD
   };
 
   const isToday = (date: Date) => {
@@ -208,36 +235,41 @@ export default function Step1({
     const dateStr = formatDate(date);
     const busySlots: BusyTime[] = [];
     
-    // Get busy times from mock data (instructorBusyTimes)
+    // Get busy times from mock data (instructorBusyTimes) - for backward compatibility
     const mockBusyTime = instructorBusyTimes.find((bt) => bt.date === dateStr);
     if (mockBusyTime) {
       busySlots.push(...mockBusyTime.busySlots);
     }
     
     // Get booked sessions from API for this date
+    // API returns ISO datetime strings like "2025-11-13T10:00:00"
     const bookedForDate = instructorBookedSessions.filter(session => {
       const sessionDate = getDateFromISO(session.startTime);
-      return sessionDate === dateStr;
+      const matches = sessionDate === dateStr;
+      
+      // Debug log for date matching
+      if (instructorBookedSessions.length > 0 && date.getDate() >= 13 && date.getDate() <= 14) {
+        console.log(`Step1 - Date matching for ${dateStr}:`, {
+          calendarDate: dateStr,
+          sessionDate: sessionDate,
+          matches: matches,
+          sessionStartTime: session.startTime
+        });
+      }
+      
+      return matches;
     });
     
-    console.log("Step1 - getBusyTimesForDate:", {
-      dateStr,
-      bookedForDate,
-      instructorBookedSessions,
-    });
-    
-    // Convert booked sessions to busy time format
+    // Convert booked sessions to busy time format (HH:MM)
     bookedForDate.forEach(session => {
       const startTime = getTimeFromISO(session.startTime);
       const endTime = getTimeFromISO(session.endTime);
-      console.log("Step1 - Adding busy slot:", { startTime, endTime });
       busySlots.push({
         startTime,
         endTime
       });
     });
     
-    console.log("Step1 - Final busySlots:", busySlots);
     return busySlots;
   };
 

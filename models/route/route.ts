@@ -40,3 +40,38 @@ export interface IRouteData {
   notes?: string;
   createdAt: string;
 }
+
+// API Request/Response for session routes
+export interface ISessionRouteItem {
+  textInstruction: string;
+  streetName: string;
+  latitudeStart: number;
+  longitudeStart: number;
+}
+
+// Response from GET session routes API
+export interface ISessionRouteItemResponse {
+  id: string;
+  sessionId: string;
+  textInstruction: string;
+  streetName: string;
+  latitudeStart: number;
+  longitudeStart: number;
+}
+
+export interface IGetSessionRoutesResponse {
+  sessionStartingLat: number;
+  sessionStartingLong: number;
+  routes: ISessionRouteItemResponse[];
+}
+
+export interface ISaveSessionRoutesRequest {
+  sessionId: string;
+  routes: ISessionRouteItem[];
+}
+
+// Wrapper for API call with sessionId in URL
+export interface ISaveSessionRoutesPayload {
+  sessionId: string;
+  body: ISessionRouteItem[];
+}
