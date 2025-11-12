@@ -1,23 +1,32 @@
-import React, { useState, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  SafeAreaView,
-  Alert,
-  StatusBar,
-  Modal,
-  Keyboard,
-} from "react-native";
-import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Keyboard,
+  Modal,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
+import { RootState } from "@/lib/redux/store";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 
 export default function OTPScreen() {
   const router = useRouter();
+  const [authState, authViewModel] = useViewModel(
+    AuthViewModel,
+    (state: RootState) => state.auth
+  );
+  const email = authState.registerFormData.email;
+  const isLoading = authState.isLoading;
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [receivedOtp, setReceivedOtp] = useState<string>("");
+  const [otpError, setOtpError] = useState<string>("");
   const [canResend, setCanResend] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [modalConfig, setModalConfig] = useState({
@@ -28,12 +37,65 @@ export default function OTPScreen() {
   });
   const inputRefs = useRef<TextInput[]>([]);
 
+  // Set router to ViewModel for navigation
+  useEffect(() => {
+    authViewModel.setRouter(router);
+  }, [router, authViewModel]);
+
+  const showCustomAlert = useCallback((
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    confirmText: string = "OK"
+  ) => {
+    setModalConfig({
+      title,
+      message,
+      onConfirm,
+      confirmText,
+    });
+    setShowModal(true);
+  }, []);
+
+  // Call verify-email API when component mounts
+  useEffect(() => {
+    const callVerifyEmail = async () => {
+      if (!email) {
+        showCustomAlert("Lỗi", "Không tìm thấy email. Vui lòng thử lại.", () =>
+          setShowModal(false)
+        );
+        return;
+      }
+
+      const result = await authViewModel.handleVerifyEmail(email);
+      if (result.success && result.otp) {
+        // OTP has been sent successfully
+        // Save the OTP from the response
+        setReceivedOtp(result.otp);
+        console.log("OTP sent successfully");
+      } else {
+        showCustomAlert(
+          "Lỗi",
+          result.message || "Không thể gửi mã OTP. Vui lòng thử lại.",
+          () => setShowModal(false)
+        );
+      }
+    };
+
+    callVerifyEmail();
+  }, [email, authViewModel, showCustomAlert]);
+
   const handleOtpChange = (value: string, index: number) => {
     if (value.length > 1) return; // Only allow single digit
 
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
+
+    // Clear error when user starts typing
+    if (otpError) {
+      setOtpError("");
+    }
 
     // Auto focus next input
     if (value && index < 5) {
@@ -52,70 +114,58 @@ export default function OTPScreen() {
     }
   };
 
-  const showCustomAlert = (
-    title: string,
-    message: string,
-    onConfirm: () => void,
-    confirmText: string = "OK"
-  ) => {
-    setModalConfig({
-      title,
-      message,
-      onConfirm,
-      confirmText,
-    });
-    setShowModal(true);
-  };
-
   const handleVerifyOTP = async () => {
     const otpString = otp.join("");
 
     if (otpString.length !== 6) {
-      showCustomAlert("Lỗi", "Vui lòng nhập đầy đủ 6 chữ số", () =>
-        setShowModal(false)
-      );
+      setOtpError("Vui lòng nhập đầy đủ 6 chữ số");
       return;
     }
 
-    // Simulate OTP verification
-    // In a real app, you would call your API here
-    if (otpString === "123456") {
+    // Compare with received OTP from API
+    if (!receivedOtp) {
+      setOtpError("Mã OTP chưa được gửi. Vui lòng thử lại.");
+      return;
+    }
+
+    if (otpString === receivedOtp) {
       // Correct OTP
+      setOtpError("");
       try {
         // Save OTP verification status
         await AsyncStorage.setItem("otp_verified", "true");
-
-        showCustomAlert("Thành công", "Xác minh OTP thành công!", () => {
-          setShowModal(false);
-          router.push("/(onboarding)/role-selection");
-        });
+        // Navigate to next screen
+        router.push("/(onboarding)/role-selection");
       } catch (error) {
-        showCustomAlert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.", () =>
-          setShowModal(false)
-        );
+        setOtpError("Có lỗi xảy ra. Vui lòng thử lại.");
       }
     } else {
       // Wrong OTP
-      showCustomAlert(
-        "Lỗi",
-        "Mã OTP không đúng. Vui lòng kiểm tra lại.",
-        () => {
-          setShowModal(false);
-          setOtp(["", "", "", "", "", ""]);
-          inputRefs.current[0]?.focus();
-        },
-        "Thử lại"
-      );
+      setOtpError("Mã OTP không đúng. Vui lòng kiểm tra lại.");
+      setOtp(["", "", "", "", "", ""]);
+      inputRefs.current[0]?.focus();
     }
   };
 
-  const handleResendOTP = () => {
-    if (canResend) {
-      setOtp(["", "", "", "", "", ""]);
-      inputRefs.current[0]?.focus();
-      showCustomAlert("Thành công", "Mã OTP mới đã được gửi", () =>
-        setShowModal(false)
-      );
+  const handleResendOTP = async () => {
+    if (canResend && email) {
+      const result = await authViewModel.handleVerifyEmail(email);
+      if (result.success && result.otp) {
+        // Get the new OTP from the response
+        setReceivedOtp(result.otp);
+        setOtp(["", "", "", "", "", ""]);
+        setOtpError("");
+        inputRefs.current[0]?.focus();
+        showCustomAlert("Thành công", "Mã OTP mới đã được gửi", () =>
+          setShowModal(false)
+        );
+      } else {
+        showCustomAlert(
+          "Lỗi",
+          result.message || "Không thể gửi lại mã OTP. Vui lòng thử lại.",
+          () => setShowModal(false)
+        );
+      }
     }
   };
 
@@ -124,7 +174,7 @@ export default function OTPScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
@@ -139,8 +189,8 @@ export default function OTPScreen() {
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Xác minh tài khoản với mã OTP</Text>
           <Text style={styles.description}>
-            Chúng tôi đã gửi một mã có 6 chữ số đến số điện thoại
-            nga***@gmail.com
+            Chúng tôi đã gửi một mã có 6 chữ số đến email{" "}
+            {email ? email.replace(/(.{2})(.*)(@.*)/, "$1***$3") : ""}
           </Text>
         </View>
 
@@ -152,7 +202,10 @@ export default function OTPScreen() {
               ref={(ref) => {
                 if (ref) inputRefs.current[index] = ref;
               }}
-              style={styles.otpInput}
+              style={[
+                styles.otpInput,
+                otpError && styles.otpInputError
+              ]}
               value={digit}
               onChangeText={(value) => handleOtpChange(value, index)}
               onKeyPress={({ nativeEvent }) =>
@@ -165,6 +218,13 @@ export default function OTPScreen() {
             />
           ))}
         </View>
+        
+        {/* Error Message */}
+        {otpError ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{otpError}</Text>
+          </View>
+        ) : null}
 
         {/* Resend Code */}
         <View style={styles.resendContainer}>
@@ -179,10 +239,13 @@ export default function OTPScreen() {
         {/* Verify Button */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={styles.verifyButton}
+            style={[styles.verifyButton, isLoading && styles.verifyButtonDisabled]}
             onPress={handleVerifyOTP}
+            disabled={isLoading}
           >
-            <Text style={styles.verifyButtonText}>Xác minh</Text>
+            <Text style={styles.verifyButtonText}>
+              {isLoading ? "Đang gửi..." : "Xác minh"}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -209,7 +272,7 @@ export default function OTPScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -267,6 +330,19 @@ const styles = StyleSheet.create({
     color: "#000",
     backgroundColor: "#FFFFFF",
   },
+  otpInputError: {
+    borderColor: "#FF0000",
+  },
+  errorContainer: {
+    marginTop: -30,
+    marginBottom: 20,
+    paddingHorizontal: 10,
+  },
+  errorText: {
+    color: "#FF0000",
+    fontSize: 14,
+    textAlign: "center",
+  },
   resendContainer: {
     alignItems: "center",
     marginBottom: 40,
@@ -296,6 +372,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#FFFFFF",
+  },
+  verifyButtonDisabled: {
+    backgroundColor: "#CCCCCC",
+    opacity: 0.6,
   },
   modalOverlay: {
     flex: 1,

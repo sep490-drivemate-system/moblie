@@ -1,4 +1,4 @@
-import 'react-native-gesture-handler';
+import "react-native-gesture-handler";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -13,14 +13,11 @@ import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { RootState } from "@/lib/redux/store";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-export {
-  ErrorBoundary,
-} from "expo-router";
+export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {
-
   initialRouteName: "(tabs)",
 };
 
@@ -78,7 +75,6 @@ function RootLayoutNav() {
     });
   }, [authViewModel, router]);
 
-
   useEffect(() => {
     if (isMounted) {
       authViewModel.checkAuthStatus();
@@ -87,6 +83,14 @@ function RootLayoutNav() {
 
   if (!isMounted) {
     return <LoadingSpinner message="DriveMate..." />;
+  }
+
+  if (authState.isAuthenticated) {
+    return (
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(main)" />
+      </Stack>
+    );
   }
 
   return (

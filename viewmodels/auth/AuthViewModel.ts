@@ -2,7 +2,7 @@ import { BaseViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { ISignInRequest } from "@/models/auth/signin";
 import { ISignUpRequest } from "@/models/auth/signup";
 import { IForgotPasswordRequest } from "@/models/auth/forgotPassword";
-import { signIn, signUp } from "@/features/auth/authThunk";
+import { signIn, signUp, verifyEmail } from "@/features/auth/authThunk";
 import { signInSchema, signUpSchema } from "@/validations/authValidation";
 import { ValidationError } from "yup";
 import {
@@ -31,7 +31,6 @@ import { RootState } from "@/lib/redux/store";
 type AuthState = RootState["auth"];
 
 export class AuthViewModel extends BaseViewModel<AuthState> {
-
   getRegisterFormData(): ISignUpRequest {
     return this.getCurrentState().registerFormData;
   }
@@ -207,13 +206,13 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     if (!password) {
       return "Mật khẩu không được để trống";
     }
-    
+
     const errors: string[] = [];
-    
+
     if (password.length < 6) {
       errors.push("Mật khẩu phải có ít nhất 6 ký tự");
     }
-    
+
     const hasUpperCase = /[A-Z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
@@ -227,7 +226,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     if (!hasSpecialChar) {
       errors.push("Mật khẩu phải có ít nhất 1 ký tự đặc biệt");
     }
-    
+
     return errors.length > 0 ? errors.join("\n") : undefined;
   }
 
@@ -262,20 +261,23 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   isRegisterFormValid(): boolean {
     const errors = this.getCurrentState().registerFormErrors;
     const formData = this.getCurrentState().registerFormData;
-    
+
     // Kiểm tra xem có lỗi nào không
     const hasErrors = Object.keys(errors).length > 0;
-    
+
     // Kiểm tra acceptTerms
     const termsAccepted = formData.acceptTerms;
-    
+
     // Form valid khi không có lỗi và đã chấp nhận điều khoản
     return !hasErrors && termsAccepted;
   }
 
-  updateRegisterFormData(field: keyof ISignUpRequest, value: string | boolean): void {
+  updateRegisterFormData(
+    field: keyof ISignUpRequest,
+    value: string | boolean
+  ): void {
     this.dispatch(updateRegisterFormData({ field, value }));
-    
+
     // Real-time validation - only validate if field is not acceptTerms
     if (field !== "acceptTerms") {
       const currentFormData = this.getCurrentState().registerFormData;
@@ -296,14 +298,21 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
             currentFormData.confirmPassword,
             value as string
           );
-          this.dispatch(setRegisterFormError({ field: "confirmPassword", error: confirmError }));
+          this.dispatch(
+            setRegisterFormError({
+              field: "confirmPassword",
+              error: confirmError,
+            })
+          );
         }
       } else if (field === "confirmPassword") {
         error = this.validateConfirmPassword(
           value as string,
           currentFormData.password
         );
-        this.dispatch(setRegisterFormError({ field: "confirmPassword", error }));
+        this.dispatch(
+          setRegisterFormError({ field: "confirmPassword", error })
+        );
       } else if (field === "phone") {
         error = this.validatePhone(value as string);
         this.dispatch(setRegisterFormError({ field: "phone", error }));
@@ -401,10 +410,13 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     console.log("Email:", registerFormData.email);
     console.log("Fullname:", registerFormData.fullname);
     console.log("Password:", registerFormData.password ? "***" : "");
-    console.log("Confirm Password:", registerFormData.confirmPassword ? "***" : "");
+    console.log(
+      "Confirm Password:",
+      registerFormData.confirmPassword ? "***" : ""
+    );
     console.log("Phone:", registerFormData.phone);
     console.log("Accept Terms:", registerFormData.acceptTerms);
-    
+
     // Navigate to OTP screen
     this.navigate("/(onboarding)/otp");
     // await this.signup();
@@ -491,5 +503,51 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     if (currentState.errorMessage) {
       this.clearError();
     }
+  }
+
+  async handleVerifyEmail(
+    email: string
+  ): Promise<{ success: boolean; message?: string; otp?: string }> {
+    return await this.executeAsync(
+      async () => {
+        if (!email) {
+          throw new Error("Email không được để trống");
+        }
+
+        const result = await this.dispatch(verifyEmail({ email })).unwrap();
+
+        // GenericResponse wraps IVerifyEmailResponse in result.value
+        // Response structure: { success: boolean, value: { isSuccess: boolean, message: string, errorCode: string | null, value: string } }
+        if (result.success && result.value) {
+          const verifyResponse = result.value; // IVerifyEmailResponse
+          if (verifyResponse.isSuccess) {
+            // OTP is in verifyResponse.value
+            return {
+              success: true,
+              message: verifyResponse.message,
+              otp: verifyResponse.value, // OTP string
+            };
+          } else {
+            throw new Error(verifyResponse.message || "Không thể gửi mã OTP");
+          }
+        } else {
+          throw new Error(result.message || "Không thể gửi mã OTP");
+        }
+      },
+      (result) => {
+        console.log("OTP sent successfully:", result);
+      },
+      (error) => {
+        console.error("Failed to send OTP:", error);
+      },
+      {
+        setLoading,
+        setError,
+        setSuccess,
+      }
+    ).then(
+      (result) => result || { success: false, message: "Có lỗi xảy ra" },
+      (error) => ({ success: false, message: error || "Có lỗi xảy ra" })
+    );
   }
 }

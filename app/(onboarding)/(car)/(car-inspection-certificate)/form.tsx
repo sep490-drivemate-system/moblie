@@ -252,7 +252,7 @@ export default function FormScreen() {
       await AsyncStorage.removeItem("temp_car_inspection_certificate_back");
 
       // Navigate to next page
-      router.push("/(onboarding)/(car)/(car-verification-image)/form");
+      router.push("/(onboarding)/(car)/car-price");
     } catch (error) {
       showCustomAlert("Lỗi", "Không thể lưu thông tin giấy đăng kiểm xe", [
         {

@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { Plus, MapPin, X, Trash2, Eye } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { AppColors } from "@/constants/Colors";
@@ -490,7 +491,15 @@ export default function MyCarScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const router = useRouter();
+
+  const handleGoBack = () => {
+    router.back();
+  };
+
+  const handleNext = () => {
+    router.push("/(onboarding)/(car)/(car-registration)/form");
+  };
 
   const handleDelete = (id: number) => {
     Alert.alert("Xác nhận xóa", "Bạn có chắc chắn muốn xóa xe này?", [
@@ -503,12 +512,7 @@ export default function MyCarScreen() {
     ]);
   };
 
-  const handleAddVehicle = (newVehicle: Omit<Vehicle, "id">) => {
-    const maxId =
-      vehicles.length > 0 ? Math.max(...vehicles.map((v) => v.id)) : 0;
-    setVehicles([...vehicles, { ...newVehicle, id: maxId + 1 } as Vehicle]);
-    setShowAddModal(false);
-  };
+  // Add vehicle flow now navigates to onboarding form screen
 
   const approvedCount = vehicles.filter((v) => v.status === "approved").length;
   const pendingCount = vehicles.filter((v) => v.status === "pending").length;
@@ -545,7 +549,9 @@ export default function MyCarScreen() {
             </View>
             <TouchableOpacity
               style={styles.addButton}
-              onPress={() => setShowAddModal(true)}
+              onPress={() =>
+                router.push("/(onboarding)/(car)/(car-registration)/form")
+              }
             >
               <Plus size={20} color="#ffffff" />
               <Text style={styles.addButtonText}>Thêm Xe Mới</Text>
@@ -596,7 +602,9 @@ export default function MyCarScreen() {
             </Text>
             <TouchableOpacity
               style={styles.emptyButton}
-              onPress={() => setShowAddModal(true)}
+              onPress={() =>
+                router.push("/(onboarding)/(car)/(car-registration)/form")
+              }
             >
               <Plus size={20} color="#ffffff" />
               <Text style={styles.emptyButtonText}>Thêm Xe Đầu Tiên</Text>
@@ -627,11 +635,6 @@ export default function MyCarScreen() {
           setShowModal(false);
           setSelectedVehicle(null);
         }}
-      />
-      <AddVehicleModal
-        visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onAdd={handleAddVehicle}
       />
     </View>
   );
@@ -1069,5 +1072,41 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  bottomBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: AppColors.border,
+  },
+  backButton: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#0D8F45",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  nextButton: {
+    flex: 1,
+    backgroundColor: "#0D8F45",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0D8F45",
+  },
+  nextButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });
