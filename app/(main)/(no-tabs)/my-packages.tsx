@@ -22,15 +22,16 @@ import {
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { getUserPackages } from "@/features/booking/bookingThunk";
+import { getMyPackages } from "@/features/booking/bookingThunk";
 import { IUserPackageAPI, BookingStatus } from "@/models/package/user-package";
+import { IMyPackgesResponse } from "@/models/package/package";
 
 export default function MyPackagesScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
   const [selectedStatus, setSelectedStatus] = useState<BookingStatus>(BookingStatus.All);
-  const [allPackages, setAllPackages] = useState<IUserPackageAPI[]>([]);
+  const [allPackages, setAllPackages] = useState<IMyPackgesResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -59,10 +60,9 @@ export default function MyPackagesScreen() {
     }
     
     try {
-      // Fetch tất cả packages (không truyền bookingStatus hoặc truyền 0)
-      const result = await dispatch(getUserPackages(undefined)).unwrap();
+      const result = await dispatch(getMyPackages(undefined)).unwrap();
       
-      const packagesData = (result as any).value || result;
+      const packagesData: IMyPackgesResponse[] = (result as any).value || result;
       setAllPackages(packagesData);
     } catch (error) {
       console.error('Failed to fetch packages:', error);
@@ -80,7 +80,6 @@ export default function MyPackagesScreen() {
     await fetchAllPackages(true);
   };
 
-  // Filter packages theo selected status (client-side)
   const displayedPackages = useMemo(() => {
     if (selectedStatus === BookingStatus.All) {
       return allPackages;
@@ -88,7 +87,6 @@ export default function MyPackagesScreen() {
     return allPackages.filter(p => p.bookingStatus === selectedStatus);
   }, [allPackages, selectedStatus]);
 
-  // Tính counts từ ALL packages
   const statusCounts = useMemo(() => {
     const counts: Record<number, number> = {
       [BookingStatus.All]: allPackages.length,
@@ -140,16 +138,13 @@ export default function MyPackagesScreen() {
     }
   };
 
-  const handlePackagePress = (pkg: IUserPackageAPI) => {
+  const handlePackagePress = (pkg: IMyPackgesResponse) => {
     console.log("Navigating to package detail with package:", pkg);
     
     router.push({
       pathname: "/(main)/(no-tabs)/package-detail",
       params: { 
         packageId: pkg.id,
-        instructorId: pkg.instructorId,
-        carId: pkg.carId || "",
-        carPrice: pkg.carPrice?.toString() || "0",
         packageData: JSON.stringify(pkg), // Truyền toàn bộ package data
       },
     });
@@ -258,7 +253,7 @@ export default function MyPackagesScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          displayedPackages.map((pkg: IUserPackageAPI) => {
+          displayedPackages.map((pkg: IMyPackgesResponse) => {
             const progressPercentage = getProgressPercentage(pkg.precentInUse);
             const statusColor = getStatusColor(pkg.bookingStatus);
 
@@ -269,46 +264,34 @@ export default function MyPackagesScreen() {
                 onPress={() => handlePackagePress(pkg)}
                 activeOpacity={0.7}
               >
-                {/* Card Header */}
-                <View style={styles.cardHeader}>
-                  <View style={styles.instructorRow}>
-                    <Image
-                      source={{ uri: pkg.avatarInstructor }}
-                      style={styles.instructorAvatar}
+
+                {/* Package Name with Status */}
+                <View style={styles.packageNameRow}>
+                  <Text style={styles.packageName}>
+                    {pkg.namePackake || 'Gói học lái xe'}
+                  </Text>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor: statusColor + "15",
+                        borderColor: statusColor,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: statusColor },
+                      ]}
                     />
-                    <View style={styles.instructorInfo}>
-                      <Text style={styles.instructorName}>
-                        {pkg.nameInstructor}
-                      </Text>
-                      <View
-                        style={[
-                          styles.statusBadge,
-                          {
-                            backgroundColor: statusColor + "15",
-                            borderColor: statusColor,
-                          },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.statusDot,
-                            { backgroundColor: statusColor },
-                          ]}
-                        />
-                        <Text
-                          style={[styles.statusText, { color: statusColor }]}
-                        >
-                          {getStatusText(pkg.bookingStatus)}
-                        </Text>
-                      </View>
-                    </View>
+                    <Text
+                      style={[styles.statusText, { color: statusColor }]}
+                    >
+                      {getStatusText(pkg.bookingStatus)}
+                    </Text>
                   </View>
                 </View>
-
-                {/* Package Name */}
-                <Text style={styles.packageName}>
-                  {pkg.namePackake || 'Gói học lái xe'}
-                </Text>
 
                 {/* Purchase Date */}
                 <View style={styles.purchaseDateRow}>
@@ -569,12 +552,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  packageNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    gap: 12,
+  },
   packageName: {
     fontSize: 20,
     fontWeight: "800",
     color: "#1e293b",
-    marginBottom: 12,
     lineHeight: 28,
+    flex: 1,
   },
   purchaseDateRow: {
     flexDirection: "row",

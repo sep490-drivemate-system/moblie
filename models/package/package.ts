@@ -1,3 +1,5 @@
+import { BookingStatus } from "./user-package";
+
 export interface IRentalPackage {
   id: string;
   name: string;
@@ -25,4 +27,16 @@ export interface IBuyPackageRequest {
 
 export interface IBuyPackageResponse {
   id:string
+}
+
+
+export interface IMyPackgesResponse {
+    id: string;
+    namePackake: string;
+    buyDate: string;
+    bookingStatus: BookingStatus;
+    duration: number;
+    durationInUse: number;
+    precentInUse: number;
+    remainingTime: number;
 }

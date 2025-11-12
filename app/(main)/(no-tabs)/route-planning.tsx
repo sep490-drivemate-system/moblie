@@ -82,6 +82,8 @@ export default function RoutePlanningScreen() {
   const params = useLocalSearchParams<{
     sessionId: string;
     pickupLocation: string;
+    startingLatitude?: string;
+    startingLongtitude?: string;
   }>();
 
   const mapRef = useRef<MapView>(null);
@@ -95,8 +97,10 @@ export default function RoutePlanningScreen() {
   const [pickupLocation, setPickupLocation] = useState<Waypoint>({
     id: "pickup",
     name: session?.displayName || session?.location || params.pickupLocation || "Điểm đón",
-    latitude: session?.startingLatitude || 10.8231,
-    longitude: session?.startingLongtitude || 106.6297,
+    latitude: session?.startingLatitude || 
+              (params.startingLatitude ? parseFloat(params.startingLatitude) : 10.8231),
+    longitude: session?.startingLongtitude || 
+               (params.startingLongtitude ? parseFloat(params.startingLongtitude) : 106.6297),
     isStart: true,
     isEnd: true,
   });

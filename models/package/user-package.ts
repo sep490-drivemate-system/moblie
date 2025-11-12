@@ -35,6 +35,8 @@ export interface IUserPackage {
     sessions: IDrivingSession[];
 }
 
+
+
 export interface IInstructorBusyTime {
     instructorId: string;
     date: string; // Format: "YYYY-MM-DD"

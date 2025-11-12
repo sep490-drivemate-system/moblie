@@ -6,6 +6,7 @@ import { ISaveSessionRoutesPayload, IGetSessionRoutesResponse } from "@/models/r
 import axiosInstance from "@/lib/axios/axiosInstance";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { GenericResponse } from "@/models/generic/genericResponse";
+import { IMyPackgesResponse } from "@/models/package/package";
 
 const BOOKING_PATH = "booking";
 const SESSION_PATH = "session";
@@ -65,19 +66,16 @@ export interface ISessionLogRequest {
   speed: number;
 }
 
-// Get user packages with optional status filter
-export const getUserPackages = createThunk<
-  IUserPackageAPI[],
+export const getMyPackages = createThunk<
+  IMyPackgesResponse[],
   IGetUserPackagesParams | undefined
 >(
   HttpMethod.GET,
-  "getUserPackages",
+  "getMyPackages",
   `/${BOOKING_PATH}`,
   {
     buildUrl: (payload) => {
-      const params = new URLSearchParams();
-      
-      // Nếu có bookingStatus và khác 0 (All), thêm vào query
+      const params = new URLSearchParams();    
       if (payload?.bookingStatus !== undefined && payload.bookingStatus !== BookingStatus.All) {
         params.append('bookingStatus', payload.bookingStatus.toString());
       }

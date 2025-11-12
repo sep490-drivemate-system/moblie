@@ -191,12 +191,14 @@ export default function RentalScreen() {
     return location || "Chưa có địa điểm";
   };
 
-  const handlePlanRoute = (sessionId: string, location: string) => {
+  const handlePlanRoute = (session: IBookingSessionAPI) => {
     router.push({
       pathname: "/(main)/(no-tabs)/route-planning" as any,
       params: {
-        sessionId,
-        pickupLocation: location,
+        sessionId: session.id,
+        pickupLocation: session.location || "Điểm đón",
+        startingLatitude: session.startingLatitude?.toString() || "10.8231",
+        startingLongtitude: session.startingLongtitude?.toString() || "106.6297",
       },
     });
   };
@@ -570,9 +572,7 @@ export default function RentalScreen() {
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
                       style={[styles.actionButton, styles.routeButton]}
-                      onPress={() =>
-                        handlePlanRoute(session.id, session.location)
-                      }
+                      onPress={() => handlePlanRoute(session)}
                     >
                       <Eye size={16} color="#ffffff" strokeWidth={2} />
                       <Text style={styles.routeButtonText}>Xem chi tiết</Text>

@@ -403,28 +403,52 @@ export default function PackageDetailScreen() {
               </Text>
               <Text style={styles.packageName}>{packageData.packageName}</Text>
 
-              {/* Skills List */}
+              {/* Skills & Road Types */}
               <View style={styles.skillsContainer}>
-                <View style={styles.skillsTags}>
-                  {[
-                    "Điều khiển cơ bản",
-                    "Chuyển làn",
-                    "Qua ngã tư",
-                    "Đỗ xe",
-                    "Vượt xe",
-                  ].map((skill, index) => (
-                    <View key={index} style={styles.skillTag}>
-                      <Text style={styles.skillTagText}>{skill}</Text>
-                    </View>
-                  ))}
+                <Text style={styles.skillsTitle}>Kỹ năng & Loại đường</Text>
+                
+                {/* Basic Skills */}
+                <View style={styles.skillCategory}>
+                  <Text style={styles.categoryTitle}>🚗 Kỹ năng cơ bản</Text>
+                  <View style={styles.skillsTags}>
+                    {[
+                      "Điều khiển cơ bản",
+                      "Khởi động xe",
+                      "Phanh an toàn",
+                      "Chuyển số",
+                      "Quan sát gương",
+                    ].map((skill, index) => (
+                      <View key={index} style={[styles.skillTag, styles.basicSkillTag]}>
+                        <Text style={[styles.skillTagText, styles.basicSkillText]}>{skill}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+
+                {/* Road Types */}
+                <View style={styles.skillCategory}>
+                  <Text style={styles.categoryTitle}>🛣️ Loại đường</Text>
+                  <View style={styles.skillsTags}>
+                    {[
+                      "Đường phố",
+                      "Đường cao tốc",
+                      "Đường quốc lộ",
+                      "Đường dốc",
+                      "Đường cong",
+                      "Đường hẹp",
+                      "Đường đông xe",
+                      "Đường ban đêm",
+                    ].map((road, index) => (
+                      <View key={index} style={[styles.skillTag, styles.roadTypeTag]}>
+                        <Text style={[styles.skillTagText, styles.roadTypeText]}>{road}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
               </View>
 
-              {typeof packageData.price === "number" && (
-                <Text style={styles.priceText}>
-                  Giá gói: {packageData.price.toLocaleString("vi-VN")}₫
-                </Text>
-              )}
+
             </View>
           </View>
 
@@ -899,23 +923,65 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   skillsContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  skillsTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 16,
+  },
+  skillCategory: {
+    marginBottom: 16,
+  },
+  categoryTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#475569",
+    marginBottom: 8,
   },
   skillsTags: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 8,
   },
   skillTag: {
-    backgroundColor: "#fef3c7",
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    borderRadius: 16,
+    borderWidth: 1,
   },
   skillTagText: {
     fontSize: 12,
-    fontWeight: "500",
-    color: "#d97706",
+    fontWeight: "600",
+  },
+  basicSkillTag: {
+    backgroundColor: "#dbeafe",
+    borderColor: "#3b82f6",
+  },
+  basicSkillText: {
+    color: "#1d4ed8",
+  },
+  trafficSkillTag: {
+    backgroundColor: "#dcfce7",
+    borderColor: "#22c55e",
+  },
+  trafficSkillText: {
+    color: "#15803d",
+  },
+  parkingSkillTag: {
+    backgroundColor: "#f3e8ff",
+    borderColor: "#8b5cf6",
+  },
+  parkingSkillText: {
+    color: "#7c3aed",
+  },
+  roadTypeTag: {
+    backgroundColor: "#fed7aa",
+    borderColor: "#f97316",
+  },
+  roadTypeText: {
+    color: "#ea580c",
   },
   priceText: {
     marginTop: 6,
