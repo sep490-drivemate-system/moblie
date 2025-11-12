@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -20,12 +20,14 @@ import {
   Route,
   User,
   Loader,
+  Play,
+  Square,
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { userPackagesData } from "@/data/user_packages_data";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, UrlTile } from "react-native-maps";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { getSessionRoutes } from "@/features/booking/bookingThunk";
+import { getSessionRoutes, addSessionLog, ISessionLogRequest } from "@/features/booking/bookingThunk";
 import { IGetSessionRoutesResponse } from "@/models/route/route";
 
 export default function MyDrivingSessionDetailScreen() {
@@ -40,6 +42,20 @@ export default function MyDrivingSessionDetailScreen() {
   const [routesData, setRoutesData] = useState<IGetSessionRoutesResponse | null>(null);
   const [isLoadingRoutes, setIsLoadingRoutes] = useState(false);
   const [routeSegments, setRouteSegments] = useState<any[]>([]);
+
+  // State for vehicle simulation
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [currentPosition, setCurrentPosition] = useState<{
+    latitude: number;
+    longitude: number;
+    heading: number;
+    speed: number;
+  } | null>(null);
+  const [simulationProgress, setSimulationProgress] = useState(0);
+  const simulationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const logIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mapRef = useRef<MapView>(null);
+  const allRouteCoordinates = useRef<Array<{ latitude: number; longitude: number }>>([]);
 
   // Goong API Keys
   const GOONG_API_KEY = process.env.EXPO_PUBLIC_GOONG_API_KEY;
@@ -190,6 +206,170 @@ export default function MyDrivingSessionDetailScreen() {
     }
   };
 
+  // Calculate heading between two points
+  const calculateHeading = (
+    from: { latitude: number; longitude: number },
+    to: { latitude: number; longitude: number }
+  ): number => {
+    const lat1 = (from.latitude * Math.PI) / 180;
+    const lat2 = (to.latitude * Math.PI) / 180;
+    const dLon = ((to.longitude - from.longitude) * Math.PI) / 180;
+
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x =
+      Math.cos(lat1) * Math.sin(lat2) -
+      Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+
+    const heading = (Math.atan2(y, x) * 180) / Math.PI;
+    return (heading + 360) % 360; // Normalize to 0-360
+  };
+
+  // Get street name from coordinates (mock - in production use reverse geocoding)
+  const getStreetName = async (lat: number, lng: number): Promise<string> => {
+    // Mock street names based on route data
+    if (routesData) {
+      const nearestRoute = routesData.routes.find((r) => {
+        const distance = Math.sqrt(
+          Math.pow(r.latitudeStart - lat, 2) + Math.pow(r.longitudeStart - lng, 2)
+        );
+        return distance < 0.01; // Within ~1km
+      });
+      if (nearestRoute) return nearestRoute.streetName;
+    }
+    return "Đường không xác định";
+  };
+
+  // Send session log to API
+  const sendSessionLog = async (
+    lat: number,
+    lng: number,
+    heading: number,
+    speed: number
+  ) => {
+    if (!sessionId || typeof sessionId !== "string") return;
+
+    try {
+      const streetName = await getStreetName(lat, lng);
+      const logData: ISessionLogRequest = {
+        streetName,
+        latitude: lat,
+        longitude: lng,
+        heading: heading.toFixed(2) + "°",
+        speed: Math.round(speed),
+      };
+
+      console.log("📍 Sending session log:", logData);
+      await dispatch(addSessionLog({ sessionId, logData })).unwrap();
+    } catch (error) {
+      console.error("❌ Error sending session log:", error);
+    }
+  };
+
+  // Start vehicle simulation
+  const startSimulation = () => {
+    if (!routeSegments.length || isSimulating) return;
+
+    // Collect all coordinates from route segments
+    const coordinates: Array<{ latitude: number; longitude: number }> = [];
+    routeSegments.forEach((segment) => {
+      coordinates.push(...segment.coordinates);
+    });
+
+    if (coordinates.length === 0) {
+      Alert.alert("Lỗi", "Không có lộ trình để giả lập");
+      return;
+    }
+
+    allRouteCoordinates.current = coordinates;
+    setIsSimulating(true);
+    setSimulationProgress(0);
+
+    // Set initial position
+    const startPos = coordinates[0];
+    const nextPos = coordinates[1] || startPos;
+    const initialHeading = calculateHeading(startPos, nextPos);
+    setCurrentPosition({
+      ...startPos,
+      heading: initialHeading,
+      speed: 40, // 40 km/h
+    });
+
+    let currentIndex = 0;
+    const totalPoints = coordinates.length;
+    const simulationSpeed = 100; // Update every 100ms for smooth animation
+    const speedKmh = 40; // Average speed 40 km/h
+
+    // Simulation interval - move vehicle along route
+    simulationIntervalRef.current = setInterval(() => {
+      currentIndex++;
+      if (currentIndex >= totalPoints) {
+        stopSimulation();
+        Alert.alert("Hoàn thành", "Đã hoàn thành lộ trình giả lập!");
+        return;
+      }
+
+      const currentPos = coordinates[currentIndex];
+      const nextPos = coordinates[currentIndex + 1] || currentPos;
+      const heading = calculateHeading(currentPos, nextPos);
+
+      setCurrentPosition({
+        ...currentPos,
+        heading,
+        speed: speedKmh + Math.random() * 10 - 5, // Random speed variation ±5 km/h
+      });
+
+      setSimulationProgress((currentIndex / totalPoints) * 100);
+
+      // Animate map to follow vehicle
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(
+          {
+            latitude: currentPos.latitude,
+            longitude: currentPos.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          },
+          500
+        );
+      }
+    }, simulationSpeed);
+
+    // Log interval - send to API every 5 minutes (300000ms)
+    logIntervalRef.current = setInterval(() => {
+      if (currentPosition) {
+        sendSessionLog(
+          currentPosition.latitude,
+          currentPosition.longitude,
+          currentPosition.heading,
+          currentPosition.speed
+        );
+      }
+    }, 300000); // 5 minutes
+
+    // Also send initial log immediately
+    sendSessionLog(startPos.latitude, startPos.longitude, initialHeading, speedKmh);
+  };
+
+  // Stop vehicle simulation
+  const stopSimulation = () => {
+    if (simulationIntervalRef.current) {
+      clearInterval(simulationIntervalRef.current);
+      simulationIntervalRef.current = null;
+    }
+    if (logIntervalRef.current) {
+      clearInterval(logIntervalRef.current);
+      logIntervalRef.current = null;
+    }
+    setIsSimulating(false);
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopSimulation();
+    };
+  }, []);
+
   // Fetch routes from API
   useEffect(() => {
     if (!sessionId || typeof sessionId !== 'string') return;
@@ -307,29 +487,32 @@ export default function MyDrivingSessionDetailScreen() {
       }
     : null;
 
-  const getSessionStatusMeta = (status?: string) => {
-    switch (status) {
-      case "upcoming":
-        return { label: "Sắp diễn ra", color: AppColors.yellow, bg: "#fef9c3" };
-      case "in_progress":
-        return {
-          label: "Đang diễn ra",
-          color: AppColors.primary,
-          bg: "#dcfce7",
-        };
-      case "completed":
-        return { label: "Hoàn thành", color: AppColors.gray, bg: "#e5e7eb" };
-      case "cancelled":
-        return { label: "Đã hủy", color: AppColors.red, bg: "#fee2e2" };
-      case "reschedule":
-        return { label: "Dời lịch", color: AppColors.blue, bg: "#dbeafe" };
-      case "route_planning":
-      case "planing":
+  // SessionStatus enum from backend
+  // Planning = 1, Upcoming = 2, InProgress = 3, Completed = 4, Reschedule = 5, Cancelled = 6
+  const getSessionStatusMeta = (status?: number | string) => {
+    const statusNum = typeof status === 'string' ? parseInt(status) : status;
+    
+    switch (statusNum) {
+      case 1: // Planning
         return {
           label: "Đang lên lộ trình",
           color: AppColors.yellow,
           bg: "#fef9c3",
         };
+      case 2: // Upcoming
+        return { label: "Sắp diễn ra", color: AppColors.yellow, bg: "#fef9c3" };
+      case 3: // InProgress
+        return {
+          label: "Đang diễn ra",
+          color: AppColors.primary,
+          bg: "#dcfce7",
+        };
+      case 4: // Completed
+        return { label: "Hoàn thành", color: AppColors.gray, bg: "#e5e7eb" };
+      case 5: // Reschedule
+        return { label: "Dời lịch", color: AppColors.blue, bg: "#dbeafe" };
+      case 6: // Cancelled
+        return { label: "Đã hủy", color: AppColors.red, bg: "#fee2e2" };
       default:
         return {
           label: "Không xác định",
@@ -533,8 +716,50 @@ export default function MyDrivingSessionDetailScreen() {
 
             {/* Map with Goong Directions */}
             <Text style={styles.mapTitle}>Bản đồ lộ trình</Text>
+            
+            {/* Simulation Controls - Show if route exists */}
+            {routeSegments.length > 0 && (
+              <View style={styles.simulationControls}>
+                <TouchableOpacity
+                  style={[
+                    styles.simulationButton,
+                    isSimulating ? styles.stopButton : styles.startButton,
+                  ]}
+                  onPress={isSimulating ? stopSimulation : startSimulation}
+                >
+                  {isSimulating ? (
+                    <Square size={20} color="#fff" strokeWidth={2} />
+                  ) : (
+                    <Play size={20} color="#fff" strokeWidth={2} />
+                  )}
+                  <Text style={styles.simulationButtonText}>
+                    {isSimulating ? "Dừng giả lập" : "Bắt đầu giả lập"}
+                  </Text>
+                </TouchableOpacity>
+
+                {isSimulating && (
+                  <View style={styles.simulationInfo}>
+                    <Text style={styles.simulationInfoText}>
+                      Tiến độ: {simulationProgress.toFixed(1)}%
+                    </Text>
+                    {currentPosition && (
+                      <>
+                        <Text style={styles.simulationInfoText}>
+                          Tốc độ: {currentPosition.speed.toFixed(1)} km/h
+                        </Text>
+                        <Text style={styles.simulationInfoText}>
+                          Hướng: {currentPosition.heading.toFixed(0)}°
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+
             <View style={styles.mapContainer}>
               <MapView
+                ref={mapRef}
                 provider={PROVIDER_GOOGLE}
                 style={styles.map}
                 initialRegion={{
@@ -587,6 +812,23 @@ export default function MyDrivingSessionDetailScreen() {
                     strokeWidth={4}
                   />
                 ))}
+
+                {/* Simulated Vehicle Marker */}
+                {currentPosition && isSimulating && (
+                  <Marker
+                    coordinate={{
+                      latitude: currentPosition.latitude,
+                      longitude: currentPosition.longitude,
+                    }}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                    flat={true}
+                    rotation={currentPosition.heading}
+                  >
+                    <View style={styles.vehicleMarker}>
+                      <Car size={24} color="#fff" strokeWidth={2.5} />
+                    </View>
+                  </Marker>
+                )}
               </MapView>
             </View>
 
@@ -1394,5 +1636,59 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#64748b",
     marginBottom: 4,
+  },
+  // Simulation styles
+  simulationControls: {
+    backgroundColor: "#f8fafc",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  simulationButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
+  },
+  startButton: {
+    backgroundColor: AppColors.primary,
+  },
+  stopButton: {
+    backgroundColor: "#ef4444",
+  },
+  simulationButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  simulationInfo: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+    gap: 6,
+  },
+  simulationInfoText: {
+    fontSize: 13,
+    color: "#475569",
+    fontWeight: "600",
+  },
+  vehicleMarker: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: AppColors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 3,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });

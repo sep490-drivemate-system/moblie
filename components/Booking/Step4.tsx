@@ -272,6 +272,7 @@ export default function Step4({
           multiline
           numberOfLines={4}
           textAlignVertical="top"
+          maxLength={500}
         />
         <Text style={styles.noteHint}>
           {sessionNote.length}/500 ký tự

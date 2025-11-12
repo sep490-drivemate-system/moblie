@@ -53,6 +53,7 @@ export default function BookingScreen() {
   
   const instructorId = params.instructorId as string;
   const packageId = params.packageId as string | undefined;
+  const userPackageId = params.userPackageId as string | undefined; // This is the actual bookingId
   const vehicleId = params.vehicleId as string | undefined;
   const carPrice = params.carPrice ? parseFloat(params.carPrice as string) : undefined;
   const remainingHours = params.remainingHours ? parseFloat(params.remainingHours as string) : undefined;
@@ -60,11 +61,11 @@ export default function BookingScreen() {
   console.log("Booking screen received params:", {
     instructorId,
     packageId,
+    userPackageId,
     vehicleId,
     carPrice,
     remainingHours,
     fromUserPackage: params.fromUserPackage,
-    userPackageId: params.userPackageId,
   });
 
   // Step management
@@ -230,7 +231,16 @@ export default function BookingScreen() {
   };
 
   const handleConfirmBooking = async () => {
-    if (!packageId || !selectedDate || !selectedStartTime || !selectedLocationId) {
+
+      console.log("Selected location ID:", selectedLocationId);
+    console.log("Addresses:", addresses);
+    console.log("Selected address:", addresses.find(addr => addr.id === selectedLocationId));
+    console.log("Selected address latitude:", addresses.find(addr => addr.id === selectedLocationId)?.latitude);
+    console.log("Selected address longitude:", addresses.find(addr => addr.id === selectedLocationId)?.longitude);
+    // Use userPackageId if available (from user package), otherwise use packageId
+    const bookingId = userPackageId || packageId;
+    
+    if (!bookingId || !selectedDate || !selectedStartTime || !selectedLocationId) {
       Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin");
       return;
     }
@@ -249,6 +259,8 @@ export default function BookingScreen() {
       return;
     }
 
+    console.log("📍 Selected address full object:", JSON.stringify(selectedAddress, null, 2));
+
     try {
       setIsCreatingSession(true);
 
@@ -261,16 +273,22 @@ export default function BookingScreen() {
         ? carPrice * selectedDuration 
         : 0;
 
+      // Use displayName from address if available, otherwise use addressString as fallback
+      const displayName = selectedAddress.displayName || selectedAddress.addressString || "Địa điểm đón";
+
       // Create session request
       const sessionRequest = {
-        bookingId: packageId,
+        bookingId: bookingId, // Use userPackageId if available, otherwise packageId
         startTime: isoStartTime,
         startingLatitude: selectedAddress.latitude,
         startingLongtitude: selectedAddress.longitude, // Note: API typo
         priceForCar: vehicleCost,
         duration: selectedDuration,
         sessionNote: sessionNote || "",
+        displayName: displayName, // Display name from selected address or fallback
       };
+      
+      console.log("🚀 Creating session with request:", JSON.stringify(sessionRequest, null, 2));
 
       
 

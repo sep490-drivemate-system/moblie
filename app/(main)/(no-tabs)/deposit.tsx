@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AppColors } from '@/constants/Colors';
 import {
   ArrowLeft,
   Wallet,
@@ -21,7 +22,9 @@ import {
   Star,
   Plus,
   CheckCircle,
-  Coins
+  Coins,
+  TrendingUp,
+  Activity
 } from 'lucide-react-native';
 
 interface TopUpAmount {
@@ -137,68 +140,85 @@ export default function DepositScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#3b82f6" />
+      <StatusBar barStyle="light-content" />
 
-      {/* Modern Header with Curved Bottom */}
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={['#1e40af', '#3b82f6', '#6366f1']}
-          style={styles.header}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.headerContent}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
+      {/* Modern Header with Gradient - Notifications Style */}
+      <LinearGradient
+        colors={[
+          AppColors.primary,
+          AppColors.gradientStart,
+          AppColors.gradientEnd,
+        ]}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={24} color="#ffffff" strokeWidth={2.5} />
+          </TouchableOpacity>
+          
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Nạp xu</Text>
+            <Text style={styles.headerSubtitle}>
+              Nạp xu để thuê xe và học lái
+            </Text>
+          </View>
+          
+          <View style={styles.headerStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>
+                {Math.floor(currentBalance / 1000)}K
+              </Text>
+              <Text style={styles.statLabel}>Xu</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Balance Card - Notifications Style */}
+        <View style={styles.balanceCardContainer}>
+          <View style={styles.balanceCard}>
+            <LinearGradient
+              colors={["#ffffff", "#f8fafc"]}
+              style={styles.balanceCardGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
             >
-              <ArrowLeft size={24} color="#ffffff" strokeWidth={2.5} />
-            </TouchableOpacity>
-            <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Nạp xu</Text>
-            </View>
-            <View style={styles.headerRight} />
-          </View>
-
-          {/* Premium Balance Card */}
-          <View style={styles.balanceCardContainer}>
-            <View style={styles.balanceCard}>
-              <LinearGradient
-                colors={['#ffffff', '#f8fafc', '#f1f5f9']}
-                style={styles.balanceCardGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                {/* Balance Header with Icon and Badge */}
-                <View style={styles.balanceTopSection}>
-                  <View style={styles.balanceIconWrapper}>
-
-                    <Wallet size={18} color="#036AA5" strokeWidth={2.5} />
-                  </View>
-
-                  <TouchableOpacity style={styles.historyButton}>
-                    <Text style={styles.historyButtonText}>Lịch sử</Text>
-                    <ArrowLeft size={12} color="#3b82f6" strokeWidth={2.5} style={{ transform: [{ rotate: '180deg' }] }} />
-                  </TouchableOpacity>
-
+              <View style={styles.balanceHeader}>
+                <View style={styles.balanceIconContainer}>
+                  <Wallet size={20} color={AppColors.primary} strokeWidth={2.5} />
                 </View>
+                <TouchableOpacity style={styles.historyButton}>
+                  <Activity size={14} color={AppColors.primary} strokeWidth={2} />
+                  <Text style={styles.historyButtonText}>Lịch sử</Text>
+                </TouchableOpacity>
+              </View>
 
-                {/* Balance Amount Section */}
-                <View style={styles.balanceMainSection}>
-                  <Text style={styles.balanceLabel}>Số xu hiện tại</Text>
-                  <View style={styles.balanceAmountContainer}>
-                    <Text style={styles.balanceAmount}>{formatCurrency(currentBalance)}</Text>
-                    <Text style={styles.balanceUnit}>xu</Text>
+              <View style={styles.balanceContent}>
+                <Text style={styles.balanceLabel}>Số xu hiện tại</Text>
+                <View style={styles.balanceAmountRow}>
+                  <Text style={styles.balanceAmount}>{formatCurrency(currentBalance)}</Text>
+                  <Text style={styles.balanceUnit}>xu</Text>
+                </View>
+                
+                <View style={styles.balanceFooter}>
+                  <View style={styles.balanceStats}>
+                    <TrendingUp size={16} color="#10b981" strokeWidth={2} />
+                    <Text style={styles.balanceStatsText}>
+                      Tương đương {formatCurrency(currentBalance * 1000)} VND
+                    </Text>
                   </View>
                 </View>
-              </LinearGradient>
-            </View>
+              </View>
+            </LinearGradient>
           </View>
+        </View>
 
-          {/* Curved Bottom Shape */}
-          <View style={styles.curvedBottom} />
-        </LinearGradient>
-      </View>
+        <View style={styles.headerCurve} />
+      </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
@@ -355,25 +375,56 @@ export default function DepositScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  headerContainer: {
-    position: 'relative',
-    zIndex: 1,
+    backgroundColor: AppColors.background,
   },
   header: {
     paddingTop: 50,
     paddingBottom: 40,
     paddingHorizontal: 20,
-    position: 'relative',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    position: "relative",
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
   },
   headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 24,
+  },
+  headerTextContainer: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#ffffff",
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontWeight: "500",
+  },
+  headerStats: {
+    alignItems: "center",
+  },
+  statItem: {
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  statLabel: {
+    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontWeight: "600",
   },
   backButton: {
     width: 44,
@@ -391,59 +442,55 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  headerTitleContainer: {
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontWeight: '500',
-  },
-  headerRight: {
-    width: 44,
+  headerCurve: {
+    position: "absolute",
+    bottom: -25,
+    left: 0,
+    right: 0,
+    height: 50,
+    backgroundColor: AppColors.background,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
   balanceCardContainer: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 16,
     marginBottom: 20,
   },
   balanceCard: {
-    borderRadius: 28,
+    borderRadius: 20,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 12,
+      height: 8,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 15,
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
   balanceCardGradient: {
-    padding: 28,
+    padding: 20,
   },
-
-  // New Balance Card Layout
-  balanceTopSection: {
+  balanceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  balanceIconWrapper: {
-    shadowColor: '#3b82f6',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+  balanceIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: `${AppColors.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: `${AppColors.primary}30`,
   },
   balanceIcon: {
     width: 40,
@@ -451,6 +498,32 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  balanceContent: {
+    alignItems: 'center',
+  },
+  balanceAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    marginBottom: 12,
+  },
+  balanceFooter: {
+    alignItems: 'center',
+  },
+  balanceStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  balanceStatsText: {
+    fontSize: 12,
+    color: '#16a34a',
+    fontWeight: '600',
   },
   verifiedBadge: {
     flexDirection: 'row',
@@ -525,19 +598,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#475569',
     fontWeight: '600',
-  },
+  }, 
   historyButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f1f5f9',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 4,
   },
   historyButtonText: {
-    fontSize: 12,
-    color: '#3b82f6',
+    fontSize: 11,
+    color: AppColors.primary,
     fontWeight: '600',
   },
   curvedBottom: {
@@ -552,23 +625,24 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    marginTop: -20,
+    marginTop: -25,
     paddingTop: 30,
+    backgroundColor: AppColors.background,
   },
   section: {
-    marginHorizontal: 20,
-    marginBottom: 24,
+    marginHorizontal: 16,
+    marginBottom: 16,
     backgroundColor: '#ffffff',
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 8,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
   sectionTitle: {
     fontSize: 18,
@@ -828,22 +902,30 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#ffffff',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  paymentButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
+    borderTopColor: '#e2e8f0',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: -4,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
     elevation: 8,
+  },
+  paymentButton: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: AppColors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
   },
   paymentButtonGradient: {
     paddingVertical: 18,
@@ -851,8 +933,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   paymentButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#ffffff',
   },
 });

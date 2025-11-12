@@ -31,6 +31,7 @@ export interface INoviceDriverAddress {
   addressString: string;
   latitude: number;
   longitude: number;
+  displayName: string;
 }
 
 export interface IPolicy {
@@ -52,6 +53,16 @@ export interface ICreateSessionRequest {
   priceForCar: number;
   duration: number; // in hours
   sessionNote: string;
+  displayName: string;
+}
+
+// Session Log Request Interface
+export interface ISessionLogRequest {
+  streetName: string;
+  latitude: number;
+  longitude: number;
+  heading: string;
+  speed: number;
 }
 
 // Get user packages with optional status filter
@@ -242,6 +253,36 @@ export const getSessionRoutes = createAsyncThunk<
       const error = err as any;
       console.error("❌ API Error:", error.response?.data || error.message);
       const message = error.response?.data?.message || "Không thể lấy thông tin lộ trình";
+      return rejectWithValue(message);
+    }
+  }
+);
+
+// Add session log (tracking)
+// API endpoint: POST session/{sessionId}/session-log
+// Request body: { streetName, latitude, longitude, heading, speed }
+export const addSessionLog = createAsyncThunk<
+  GenericResponse<boolean>,
+  { sessionId: string; logData: ISessionLogRequest },
+  { rejectValue: string }
+>(
+  "addSessionLog",
+  async ({ sessionId, logData }, { rejectWithValue }) => {
+    try {
+      const url = `/${SESSION_PATH}/${sessionId}/session-log`;
+      
+      
+      const response = await axiosInstance.post<GenericResponse<boolean>>(
+        url,
+        logData
+      );
+      
+      console.log("✅ Session log added successfully:", response.data);
+      return response.data;
+    } catch (err) {
+      const error = err as any;
+      console.error("❌ API Error:", error.response?.data || error.message);
+      const message = error.response?.data?.message || "Không thể thêm log";
       return rejectWithValue(message);
     }
   }
