@@ -10,6 +10,11 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  Modal,
+  TextInput,
+  Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -31,7 +36,13 @@ import {
 import { IBookingSessionAPI, SessionStatus } from "@/models/booking/booking";
 import { AppColors } from "@/constants/Colors";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
-import { getAllSessions } from "@/features/booking/bookingThunk";
+import { 
+  getAllSessions, 
+  cancelSession, 
+  rescheduleSession,
+  ICancelSessionRequest,
+  IRescheduleSessionRequest
+} from "@/features/booking/bookingThunk";
 
 const { width } = Dimensions.get("window");
 
@@ -54,6 +65,17 @@ export default function RentalScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Modal states
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<IBookingSessionAPI | null>(null);
+  const [cancelNote, setCancelNote] = useState("");
+  const [rescheduleNote, setRescheduleNote] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
+  const [selectedRescheduleReasons, setSelectedRescheduleReasons] = useState<string[]>([]);
 
   // Fetch sessions from API
   const fetchSessions = async (status?: SessionStatus) => {
@@ -85,6 +107,116 @@ export default function RentalScreen() {
   useEffect(() => {
     fetchSessions();
   }, []);
+
+  // Cancellation reasons
+  const cancellationReasons = [
+    "Bận việc đột xuất",
+  ];
+
+  // Toggle reason selection
+  const toggleReason = (reason: string) => {
+    setSelectedReasons(prev =>
+      prev.includes(reason)
+        ? prev.filter(r => r !== reason)
+        : [...prev, reason]
+    );
+  };
+
+  const toggleRescheduleReason = (reason: string) => {
+    setSelectedRescheduleReasons(prev =>
+      prev.includes(reason)
+        ? prev.filter(r => r !== reason)
+        : [...prev, reason]
+    );
+  };
+
+  // Handle cancel session
+  const handleCancelSession = async () => {
+    if (!selectedSession?.id) {
+      Alert.alert("Lỗi", "Không tìm thấy thông tin buổi tập lái");
+      return;
+    }
+
+    if (!cancelNote.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập lý do hủy thuê xe");
+      return;
+    }
+
+    try {
+      setIsCancelling(true);
+      
+      const cancelData: ICancelSessionRequest = {
+        note: cancelNote.trim()
+      };
+
+      await dispatch(cancelSession({ sessionId: selectedSession.id, cancelData })).unwrap();
+      
+      setShowCancelModal(false);
+      setCancelNote("");
+      setSelectedReasons([]);
+      setSelectedSession(null);
+      
+      Alert.alert(
+        "Thành công", 
+        "Đã hủy thuê xe thành công",
+        [
+          {
+            text: "OK",
+            onPress: () => fetchSessions() // Refresh data
+          }
+        ]
+      );
+    } catch (error) {
+      console.error("Error cancelling session:", error);
+      Alert.alert("Lỗi", error as string || "Không thể hủy thuê xe");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  // Handle reschedule session
+  const handleRescheduleSession = async () => {
+    if (!selectedSession?.id) {
+      Alert.alert("Lỗi", "Không tìm thấy thông tin buổi tập lái");
+      return;
+    }
+
+    if (!rescheduleNote.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập lý do đổi lịch thuê xe");
+      return;
+    }
+
+    try {
+      setIsRescheduling(true);
+      
+      const rescheduleData: IRescheduleSessionRequest = {
+        note: rescheduleNote.trim()
+      };
+
+      await dispatch(rescheduleSession({ sessionId: selectedSession.id, rescheduleData })).unwrap();
+      
+      setShowRescheduleModal(false);
+      setRescheduleNote("");
+      setSelectedRescheduleReasons([]);
+      setSelectedSession(null);
+      
+      Alert.alert(
+        "Thành công", 
+        "Đã gửi yêu cầu đổi lịch thành công. Vui lòng chờ xác nhận từ giảng viên.",
+        [
+          {
+            text: "OK",
+            onPress: () => fetchSessions() // Refresh data
+          }
+        ]
+      );
+    } catch (error) {
+      console.error("Error rescheduling session:", error);
+      Alert.alert("Lỗi", error as string || "Không thể đổi lịch buổi tập lái");
+    } finally {
+      setIsRescheduling(false);
+    }
+  };
 
   // Map SessionStatus enum to display status string
   const mapStatusToDisplayString = (status: SessionStatus): string => {
@@ -577,6 +709,37 @@ export default function RentalScreen() {
                       <Eye size={16} color="#ffffff" strokeWidth={2} />
                       <Text style={styles.routeButtonText}>Xem chi tiết</Text>
                     </TouchableOpacity>
+                    
+                    {/* Show cancel/reschedule buttons for appropriate statuses */}
+                    {(session.status === SessionStatus.Pending || session.status === SessionStatus.Confirmed) && (
+                      <>
+                        <TouchableOpacity
+                          style={[styles.actionButton, styles.rescheduleButton]}
+                          onPress={() => {
+                            setSelectedSession(session);
+                            setRescheduleNote("");
+                            setSelectedRescheduleReasons([]);
+                            setShowRescheduleModal(true);
+                          }}
+                        >
+                          <Calendar size={14} color="#ffffff" strokeWidth={2} />
+                          <Text style={styles.rescheduleButtonText}>Đổi lịch</Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity
+                          style={[styles.actionButton, styles.cancelButton]}
+                          onPress={() => {
+                            setSelectedSession(session);
+                            setCancelNote("");
+                            setSelectedReasons([]);
+                            setShowCancelModal(true);
+                          }}
+                        >
+                          <X size={14} color="#ffffff" strokeWidth={2} />
+                          <Text style={styles.cancelButtonText}>Hủy</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
                   </View>
                 </LinearGradient>
               </View>
@@ -586,6 +749,225 @@ export default function RentalScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Cancel Modal */}
+      <Modal
+        visible={showCancelModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          Keyboard.dismiss();
+          setShowCancelModal(false);
+          setCancelNote("");
+          setSelectedReasons([]);
+          setSelectedSession(null);
+        }}
+      >
+        <TouchableWithoutFeedback onPress={() => {
+          Keyboard.dismiss();
+        }}>
+          <View style={styles.modalBackdrop}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.modalCard}>
+                <Text style={styles.modalTitle}>Xác nhận hủy thuê xe</Text>
+
+                {selectedSession && (
+                  <View style={styles.sessionInfo}>
+                    <Text style={styles.sessionInfoTitle}>Thông tin buổi thuê:</Text>
+                    <Text style={styles.sessionInfoText}>
+                      Học viên: {selectedSession.noviceDriverName}
+                    </Text>
+                    <Text style={styles.sessionInfoText}>
+                      Ngày: {new Date(selectedSession.date).toLocaleDateString("vi-VN")}
+                    </Text>
+                    <Text style={styles.sessionInfoText}>
+                      Thời gian: {selectedSession.startTime} - {selectedSession.endTime}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Thời điểm hủy</Text>
+                  <Text style={styles.modalValue}>
+                    {new Date().toLocaleString("vi-VN")}
+                  </Text>
+                </View>
+
+                <Text style={styles.modalSectionTitle}>Lý do hủy thuê xe</Text>
+
+                <View style={styles.reasonList}>
+                  {cancellationReasons.map((reason) => {
+                    const selected = selectedReasons.includes(reason);
+                    return (
+                      <TouchableOpacity
+                        key={reason}
+                        style={styles.reasonRow}
+                        onPress={() => toggleReason(reason)}
+                        activeOpacity={0.8}
+                      >
+                        <View
+                          style={[
+                            styles.checkbox,
+                            selected && styles.checkboxSelected,
+                          ]}
+                        >
+                          {selected ? (
+                            <Text style={styles.checkboxTick}>✓</Text>
+                          ) : null}
+                        </View>
+                        <Text style={styles.reasonText}>{reason}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={styles.modalSectionTitle}>Ghi chú chi tiết</Text>
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder="Nhập lý do chi tiết để hủy thuê xe..."
+                  placeholderTextColor="#9ca3af"
+                  value={cancelNote}
+                  onChangeText={setCancelNote}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={styles.modalCancelBtn}
+                    onPress={() => {
+                      setShowCancelModal(false);
+                      setCancelNote("");
+                      setSelectedReasons([]);
+                      setSelectedSession(null);
+                    }}
+                  >
+                    <Text style={styles.modalCancelBtnText}>Đóng</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.modalConfirmBtn,
+                      (!cancelNote.trim() || isCancelling) && { opacity: 0.5 },
+                    ]}
+                    disabled={!cancelNote.trim() || isCancelling}
+                    onPress={handleCancelSession}
+                  >
+                    {isCancelling ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.modalConfirmBtnText}>Xác nhận hủy thuê</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Reschedule Modal */}
+      <Modal
+        visible={showRescheduleModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          Keyboard.dismiss();
+          setShowRescheduleModal(false);
+          setRescheduleNote("");
+          setSelectedRescheduleReasons([]);
+          setSelectedSession(null);
+        }}
+      >
+        <TouchableWithoutFeedback onPress={() => {
+          Keyboard.dismiss();
+        }}>
+          <View style={styles.modalBackdrop}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.modalCard}>
+                <Text style={styles.modalTitle}>Xác nhận dời lịch</Text>
+
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Thời điểm yêu cầu</Text>
+                  <Text style={styles.modalValue}>
+                    {new Date().toLocaleString("vi-VN")}
+                  </Text>
+                </View>
+
+                <Text style={styles.modalSectionTitle}>Lý do dời lịch</Text>
+
+                <View style={styles.reasonList}>
+                  {cancellationReasons.map((reason) => {
+                    const selected = selectedRescheduleReasons.includes(reason);
+                    return (
+                      <TouchableOpacity
+                        key={reason}
+                        style={styles.reasonRow}
+                        onPress={() => toggleRescheduleReason(reason)}
+                        activeOpacity={0.8}
+                      >
+                        <View
+                          style={[
+                            styles.checkbox,
+                            selected && styles.checkboxSelected,
+                          ]}
+                        >
+                          {selected ? (
+                            <Text style={styles.checkboxTick}>✓</Text>
+                          ) : null}
+                        </View>
+                        <Text style={styles.reasonText}>{reason}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={styles.modalSectionTitle}>Ghi chú chi tiết</Text>
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder="Nhập lý do chi tiết để đổi lịch buổi tập lái..."
+                  placeholderTextColor="#9ca3af"
+                  value={rescheduleNote}
+                  onChangeText={setRescheduleNote}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={styles.modalCancelBtn}
+                    onPress={() => {
+                      setShowRescheduleModal(false);
+                      setRescheduleNote("");
+                      setSelectedRescheduleReasons([]);
+                      setSelectedSession(null);
+                    }}
+                  >
+                    <Text style={styles.modalCancelBtnText}>Đóng</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.rescheduleConfirmBtn,
+                      (!rescheduleNote.trim() || isRescheduling) && { opacity: 0.5 },
+                    ]}
+                    disabled={!rescheduleNote.trim() || isRescheduling}
+                    onPress={handleRescheduleSession}
+                  >
+                    {isRescheduling ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.modalConfirmBtnText}>Xác nhận đổi lịch</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 }
@@ -838,7 +1220,7 @@ const styles = StyleSheet.create({
   },
   routeButtonText: {
     color: "#ffffff",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "700",
   },
   instructorDetails: {
@@ -926,7 +1308,7 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
     marginTop: 16,
   },
   actionButton: {
@@ -934,14 +1316,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    gap: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    minHeight: 40,
   },
   acceptButton: {
     backgroundColor: "#10b981",
@@ -992,7 +1376,173 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  rescheduleButton: {
+    backgroundColor: "#3b82f6",
+    shadowColor: "#3b82f6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  rescheduleButtonText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  // Modal styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 24,
+    width: "100%",
+    maxHeight: "80%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1f2937",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  modalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6b7280",
+  },
+  modalValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1f2937",
+  },
+  modalSectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1f2937",
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  reasonList: {
+    marginBottom: 16,
+  },
+  reasonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#d1d5db",
+    marginRight: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxSelected: {
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
+  },
+  checkboxTick: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  reasonText: {
+    fontSize: 14,
+    color: "#374151",
+    flex: 1,
+  },
+  noteInput: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: "#1f2937",
+    backgroundColor: "#fff",
+    minHeight: 80,
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    backgroundColor: "#6b7280",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  modalCancelBtnText: {
+    color: "#fff",
     fontSize: 14,
     fontWeight: "700",
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    backgroundColor: "#ef4444",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  modalConfirmBtnText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  rescheduleConfirmBtn: {
+    flex: 1,
+    backgroundColor: "#3b82f6",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  // Session info styles
+  sessionInfo: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#3b82f6",
+  },
+  sessionInfoTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1f2937",
+    marginBottom: 8,
+  },
+  sessionInfoText: {
+    fontSize: 13,
+    color: "#6b7280",
+    marginBottom: 4,
   },
 });

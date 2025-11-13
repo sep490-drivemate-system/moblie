@@ -66,6 +66,18 @@ export interface ISessionLogRequest {
   speed: number;
 }
 
+// Cancel Session Request Interface
+export interface ICancelSessionRequest {
+  note: string;
+}
+
+// Reschedule Session Request Interface
+export interface IRescheduleSessionRequest {
+  note: string;
+  reschedule_start_time: string;
+  reschedule_end_time: string;
+}
+
 export const getMyPackages = createThunk<
   IMyPackgesResponse[],
   IGetUserPackagesParams | undefined
@@ -281,6 +293,70 @@ export const addSessionLog = createAsyncThunk<
       const error = err as any;
       console.error("❌ API Error:", error.response?.data || error.message);
       const message = error.response?.data?.message || "Không thể thêm log";
+      return rejectWithValue(message);
+    }
+  }
+);
+
+// Cancel session
+// API endpoint: POST session/{sessionId}/cancel
+// Request body: { note: string }
+export const cancelSession = createAsyncThunk<
+  GenericResponse<boolean>,
+  { sessionId: string; cancelData: ICancelSessionRequest },
+  { rejectValue: string }
+>(
+  "cancelSession",
+  async ({ sessionId, cancelData }, { rejectWithValue }) => {
+    try {
+      const url = `/${SESSION_PATH}/${sessionId}/cancel`;
+      
+      console.log("🚀 Cancelling session:", url);
+      console.log("📦 Cancel data:", cancelData);
+      
+      const response = await axiosInstance.post<GenericResponse<boolean>>(
+        url,
+        cancelData
+      );
+      
+      console.log("✅ Session cancelled successfully:", response.data);
+      return response.data;
+    } catch (err) {
+      const error = err as any;
+      console.error("❌ API Error:", error.response?.data || error.message);
+      const message = error.response?.data?.message || "Không thể hủy buổi tập lái";
+      return rejectWithValue(message);
+    }
+  }
+);
+
+// Reschedule session
+// API endpoint: POST session/{sessionId}/reschedule
+// Request body: { note: string }
+export const rescheduleSession = createAsyncThunk<
+  GenericResponse<boolean>,
+  { sessionId: string; rescheduleData: IRescheduleSessionRequest },
+  { rejectValue: string }
+>(
+  "rescheduleSession",
+  async ({ sessionId, rescheduleData }, { rejectWithValue }) => {
+    try {
+      const url = `/${SESSION_PATH}/${sessionId}/reschedule`;
+      
+      console.log("🚀 Rescheduling session:", url);
+      console.log("📦 Reschedule data:", rescheduleData);
+      
+      const response = await axiosInstance.post<GenericResponse<boolean>>(
+        url,
+        rescheduleData
+      );
+      
+      console.log("✅ Session rescheduled successfully:", response.data);
+      return response.data;
+    } catch (err) {
+      const error = err as any;
+      console.error("❌ API Error:", error.response?.data || error.message);
+      const message = error.response?.data?.message || "Không thể đổi lịch buổi tập lái";
       return rejectWithValue(message);
     }
   }

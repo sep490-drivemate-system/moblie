@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -21,193 +22,31 @@ import {
   Check,
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
-interface BookingItem {
-  id: string;
-  studentName: string;
-  time: string;
-  date: string;
-  status: "ongoing" | "completed" | "cancelled";
-  route: string;
-  vehicle: string;
-  price: number;
-}
-const bookings: BookingItem[] = [
-  {
-    id: "1",
-    studentName: "Nguyễn Văn B",
-    time: "8:00 - 12:00",
-    date: "2025-01-15",
-    status: "ongoing",
-    route: "Chưa cài đặt lộ trình",
-    vehicle: "KIA Carnival 2024",
-    price: 800,
-  },
-  {
-    id: "2",
-    studentName: "Trần Thị C",
-    time: "13:00 - 17:00",
-    date: "2025-01-15",
-    status: "completed",
-    route: "Quận 9 - Quận 1",
-    vehicle: "Không có",
-    price: 800,
-  },
-  {
-    id: "3",
-    studentName: "Lê Văn D",
-    time: "18:00 - 22:00",
-    date: "2025-01-15",
-    status: "cancelled",
-    route: "Tân Hòa, quận 9 - Cống Quỳnh, quận 1",
-    vehicle: "KIA Carnival 2024",
-    price: 800,
-  },
-  {
-    id: "4",
-    studentName: "Phạm Thị E",
-    time: "8:00 - 12:00",
-    date: "2025-01-16",
-    status: "ongoing",
-    route: "Quận 7 - Quận 1",
-    vehicle: "Toyota Vios",
-    price: 600,
-  },
-  {
-    id: "5",
-    studentName: "Võ Văn F",
-    time: "14:00 - 18:00",
-    date: "2025-01-16",
-    status: "completed",
-    route: "Quận 2 - Quận 3",
-    vehicle: "Honda City",
-    price: 700,
-  },
-  {
-    id: "6",
-    studentName: "Nguyễn Thị G",
-    time: "9:00 - 13:00",
-    date: "2025-01-17",
-    status: "ongoing",
-    route: "Quận 4 - Quận 5",
-    vehicle: "Mazda 3",
-    price: 750,
-  },
-  // Add some bookings for today's date (26/10/2025) with different times
-  {
-    id: "7",
-    studentName: "Hồ Văn H",
-    time: "8:00 - 12:00",
-    date: "2025-10-26",
-    status: "ongoing",
-    route: "Quận 1 - Quận 3",
-    vehicle: "Hyundai Accent",
-    price: 650,
-  },
-  {
-    id: "8",
-    studentName: "Đặng Thị I",
-    time: "14:00 - 18:00",
-    date: "2025-10-26",
-    status: "completed",
-    route: "Quận 2 - Quận 7",
-    vehicle: "Ford Focus",
-    price: 720,
-  },
-  {
-    id: "9",
-    studentName: "Lê Văn K",
-    time: "6:00 - 10:00",
-    date: "2025-10-26",
-    status: "completed",
-    route: "Quận 5 - Quận 8",
-    vehicle: "Toyota Camry",
-    price: 800,
-  },
-  {
-    id: "10",
-    studentName: "Phạm Thị L",
-    time: "19:00 - 23:00",
-    date: "2025-10-26",
-    status: "ongoing",
-    route: "Quận 10 - Quận 11",
-    vehicle: "Honda Civic",
-    price: 700,
-  },
-  // Add bookings for tomorrow (27/10/2025)
-  {
-    id: "13",
-    studentName: "Võ Văn O",
-    time: "9:00 - 13:00",
-    date: "2025-10-27",
-    status: "ongoing",
-    route: "Quận 6 - Quận 9",
-    vehicle: "Nissan Altima",
-    price: 750,
-  },
-  {
-    id: "14",
-    studentName: "Bùi Thị P",
-    time: "15:00 - 19:00",
-    date: "2025-10-27",
-    status: "completed",
-    route: "Quận 12 - Quận Thủ Đức",
-    vehicle: "KIA Sorento",
-    price: 680,
-  },
-  // Add bookings for other days in October 2025
-  {
-    id: "15",
-    studentName: "Đỗ Văn Q",
-    time: "10:00 - 14:00",
-    date: "2025-10-28",
-    status: "ongoing",
-    route: "Quận 1 - Quận 4",
-    vehicle: "Toyota Innova",
-    price: 850,
-  },
-  {
-    id: "16",
-    studentName: "Hoàng Thị R",
-    time: "16:00 - 20:00",
-    date: "2025-10-29",
-    status: "completed",
-    route: "Quận 7 - Quận 8",
-    vehicle: "Honda CR-V",
-    price: 900,
-  },
-  // Add more bookings for 2025-01-15 to test sorting
-  {
-    id: "11",
-    studentName: "Trần Văn M",
-    time: "6:00 - 10:00",
-    date: "2025-01-15",
-    status: "completed",
-    route: "Quận 1 - Quận 2",
-    vehicle: "Mazda CX-5",
-    price: 900,
-  },
-  {
-    id: "12",
-    studentName: "Nguyễn Thị N",
-    time: "20:00 - 24:00",
-    date: "2025-01-15",
-    status: "ongoing",
-    route: "Quận 3 - Quận 4",
-    vehicle: "Hyundai Tucson",
-    price: 850,
-  },
-];
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { rescheduleSession, IRescheduleSessionRequest } from "@/features/booking/bookingThunk";
 
 export default function RescheduleSessionScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const params = useLocalSearchParams();
 
   const sessionId = params.sessionId as string;
   const initialInstructor = (params.instructorName as string) || "";
   const initialDate = (params.date as string) || ""; // ISO-like string
   const initialStartTime = (params.startTime as string) || ""; // HH:mm
-  const initialDuration = Number(params.duration || 0);
+  const initialDuration = Number(params.duration || 2);
   const initialLocation = (params.location as string) || "";
+
+  // Debug log để kiểm tra params
+  console.log("🔍 Reschedule params:", {
+    sessionId,
+    instructorName: initialInstructor,
+    date: initialDate,
+    startTime: initialStartTime,
+    duration: params.duration,
+    parsedDuration: initialDuration,
+    location: initialLocation
+  });
 
   const [date, setDate] = useState<string>(initialDate);
   const [startTime, setStartTime] = useState<string>(initialStartTime);
@@ -216,6 +55,8 @@ export default function RescheduleSessionScreen() {
   const [selectedDate, setSelectedDate] = useState<string>("2025-11-06");
   const [current, setCurrent] = useState(new Date());
   const [customTime, setCustomTime] = useState<string>("");
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [rescheduleNote, setRescheduleNote] = useState("");
 
   const computedEndTime = useMemo(() => {
     if (!startTime || !duration) return "";
@@ -227,24 +68,53 @@ export default function RescheduleSessionScreen() {
     return `${pad(h)}:${pad(m)}`;
   }, [startTime, duration]);
 
-  const onSave = () => {
+  const onSave = async () => {
     if (!date || !startTime) {
       Alert.alert("Thiếu thông tin", "Vui lòng nhập ngày và giờ bắt đầu.");
       return;
     }
-    router.replace({
-      pathname: "/(main)/(no-tabs)/my-driving-session-detail",
-      params: {
-        sessionId,
-        overrideDate: String(date),
-        overrideStartTime: String(startTime),
-        overrideEndTime: String(computedEndTime),
-        overrideLocation: String(location),
-        overrideInstructor: String(initialInstructor),
-        overrideDuration: String(duration),
-      },
-    });
-    Alert.alert("Thành công", "Đã dời lịch buổi học thành công.");
+
+    if (!rescheduleNote.trim()) {
+      Alert.alert("Thiếu thông tin", "Vui lòng nhập lý do đổi lịch.");
+      return;
+    }
+
+    try {
+      setIsRescheduling(true);
+
+      // Create start datetime from selected date and time
+      const startDateTime = new Date(date);
+      const [hours, minutes] = startTime.split(':').map(Number);
+      startDateTime.setHours(hours, minutes, 0, 0);
+
+      // Calculate end datetime
+      const endDateTime = new Date(startDateTime);
+      endDateTime.setMinutes(endDateTime.getMinutes() + (duration * 60));
+
+      const rescheduleData: IRescheduleSessionRequest = {
+        note: rescheduleNote.trim(),
+        reschedule_start_time: startDateTime.toISOString(),
+        reschedule_end_time: endDateTime.toISOString()
+      };
+
+      await dispatch(rescheduleSession({ sessionId, rescheduleData })).unwrap();
+
+      Alert.alert(
+        "Thành công", 
+        "Đã gửi yêu cầu đổi lịch thành công. Vui lòng chờ xác nhận từ giảng viên.",
+        [
+          {
+            text: "OK",
+            onPress: () => router.back()
+          }
+        ]
+      );
+    } catch (error) {
+      console.error("Error rescheduling session:", error);
+      Alert.alert("Lỗi", error as string || "Không thể đổi lịch buổi tập lái");
+    } finally {
+      setIsRescheduling(false);
+    }
   };
 
   const formatTime = (time: string) => time.replace(":", "h");
@@ -259,25 +129,11 @@ export default function RescheduleSessionScreen() {
 
   const timeSlots = useMemo(() => generateTimeSlots(), []);
 
-  const toMinutes = (t: string) => {
-    const [h, m] = t.split(":").map((n) => Number(n));
-    return h * 60 + m;
-  };
-
-  const isTimeWithin = (t: string, range: string) => {
-    // range format: "8:00 - 12:00"
-    const [start, end] = range.split("-").map((s) => s.trim());
-    const startMin = toMinutes(start.replace(" ", ""));
-    const endMin = toMinutes(end.replace(" ", ""));
-    const tMin = toMinutes(t);
-    return tMin >= startMin && tMin < endMin;
-  };
 
   const isTimeSlotAvailable = (time: string): boolean => {
-    const hasConflict = bookings.some(
-      (b) => b.date === (date || selectedDate) && isTimeWithin(time, b.time)
-    );
-    return !hasConflict;
+    // For now, all time slots are available
+    // In production, you would check against real booking data
+    return true;
   };
 
   const handleTimeSlotPress = (time: string) => {
@@ -365,11 +221,9 @@ export default function RescheduleSessionScreen() {
         const isSelected = dateString === "2025-11-06";
         const dayNumber = currentDate.getDate();
 
-        // Check if this date has bookings
-        const hasBookings = bookings.some(
-          (booking) => booking.date === dateString
-        );
-        const isBusy = false; // You can add logic for busy days if needed
+        // For now, no special indicators for dates
+        const hasBookings = false;
+        const isBusy = false;
 
         weekDays.push(
           <TouchableOpacity
@@ -586,9 +440,33 @@ export default function RescheduleSessionScreen() {
             </Text>
           </View>
 
+          <View style={styles.field}>
+            <View style={styles.fieldLabelRow}>
+              <Text style={styles.fieldLabel}>Lý do đổi lịch *</Text>
+            </View>
+            <TextInput
+              style={styles.noteInput}
+              placeholder="Nhập lý do chi tiết để đổi lịch buổi tập lái..."
+              placeholderTextColor="#9ca3af"
+              value={rescheduleNote}
+              onChangeText={setRescheduleNote}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          </View>
+
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.saveBtn} onPress={onSave}>
-              <Text style={styles.saveBtnText}>Xác nhận dời lịch</Text>
+            <TouchableOpacity 
+              style={[styles.saveBtn, isRescheduling && { opacity: 0.5 }]} 
+              onPress={onSave}
+              disabled={isRescheduling}
+            >
+              {isRescheduling ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.saveBtnText}>Xác nhận dời lịch</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -959,5 +837,18 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#000000",
     marginLeft: 8,
+  },
+  // Note Input
+  noteInput: {
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#111827",
+    backgroundColor: "#fff",
+    minHeight: 80,
+    marginBottom: 12,
   },
 });
