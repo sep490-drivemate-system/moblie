@@ -27,6 +27,8 @@ import { getRoleFromToken } from "@/lib/jwt/tokenUtils";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootState } from "@/lib/redux/store";
+import { IVerifyEmailResponse } from "@/models/auth/verifyEmail";
+import { GenericResponse } from "@/models/generic/genericResponse";
 
 type AuthState = RootState["auth"];
 
@@ -72,10 +74,15 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     }
   }
 
-  async validateSignUpForm(): Promise<{ isValid: boolean; errors?: Record<string, string> }> {
+  async validateSignUpForm(): Promise<{
+    isValid: boolean;
+    errors?: Record<string, string>;
+  }> {
     try {
       const currentState = this.getCurrentState();
-      await signUpSchema.validate(currentState.registerFormData, { abortEarly: false });
+      await signUpSchema.validate(currentState.registerFormData, {
+        abortEarly: false,
+      });
       this.dispatch(clearRegisterFormErrors());
       return { isValid: true };
     } catch (err) {
@@ -84,10 +91,12 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         err.inner.forEach((error) => {
           if (error.path) {
             errors[error.path] = error.message;
-            this.dispatch(setRegisterFormError({ 
-              field: error.path as any, 
-              error: error.message 
-            }));
+            this.dispatch(
+              setRegisterFormError({
+                field: error.path as any,
+                error: error.message,
+              })
+            );
           }
         });
         return { isValid: false, errors };
@@ -104,7 +113,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         );
         if (token) {
           const roleFromToken = getRoleFromToken(token);
- if (roleFromToken) {
+          if (roleFromToken) {
             this.dispatch(setUserRole(roleFromToken));
           }
           this.dispatch(setAuthenticated(true));
@@ -416,7 +425,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     );
     console.log("Phone:", registerFormData.phone);
     console.log("Accept Terms:", registerFormData.acceptTerms);
-
+    // this.handleResetRegisterForm();
     // Navigate to OTP screen
     this.navigate("/(onboarding)/otp");
     // await this.signup();
@@ -505,49 +514,23 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     }
   }
 
-  async handleVerifyEmail(
-    email: string
-  ): Promise<{ success: boolean; message?: string; otp?: string }> {
-    return await this.executeAsync(
+  async handleVerifyEmail(email: string): Promise<IVerifyEmailResponse> {
+    const result = await this.executeAsync<IVerifyEmailResponse>(
       async () => {
-        if (!email) {
-          throw new Error("Email không được để trống");
-        }
-
-        const result = await this.dispatch(verifyEmail({ email })).unwrap();
-
-        // GenericResponse wraps IVerifyEmailResponse in result.value
-        // Response structure: { success: boolean, value: { isSuccess: boolean, message: string, errorCode: string | null, value: string } }
-        if (result.success && result.value) {
-          const verifyResponse = result.value; // IVerifyEmailResponse
-          if (verifyResponse.isSuccess) {
-            // OTP is in verifyResponse.value
-            return {
-              success: true,
-              message: verifyResponse.message,
-              otp: verifyResponse.value, // OTP string
-            };
-          } else {
-            throw new Error(verifyResponse.message || "Không thể gửi mã OTP");
-          }
-        } else {
-          throw new Error(result.message || "Không thể gửi mã OTP");
-        }
+        return (await this.dispatch(verifyEmail({ email })).unwrap()).value as IVerifyEmailResponse;
       },
-      (result) => {
-        console.log("OTP sent successfully:", result);
+      (response) => {
+        console.log("response line 521", response);
       },
       (error) => {
-        console.error("Failed to send OTP:", error);
+        console.error("handleVerifyEmail error:", error);
       },
       {
         setLoading,
         setError,
         setSuccess,
       }
-    ).then(
-      (result) => result || { success: false, message: "Có lỗi xảy ra" },
-      (error) => ({ success: false, message: error || "Có lỗi xảy ra" })
     );
+    return result as IVerifyEmailResponse;
   }
 }

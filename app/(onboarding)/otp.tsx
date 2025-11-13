@@ -1,3 +1,6 @@
+import { RootState } from "@/lib/redux/store";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
@@ -10,20 +13,17 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
-import { RootState } from "@/lib/redux/store";
-import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
-import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 
 export default function OTPScreen() {
   const router = useRouter();
-  const [authState, authViewModel] = useViewModel(
+  const [, authViewModel] = useViewModel(
     AuthViewModel,
     (state: RootState) => state.auth
   );
-  const email = authState.registerFormData.email;
-  const isLoading = authState.isLoading;
+  const email = authViewModel.getRegisterFormData().email;
+  const isLoading = false;
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [receivedOtp, setReceivedOtp] = useState<string>("");
   const [otpError, setOtpError] = useState<string>("");
@@ -36,54 +36,35 @@ export default function OTPScreen() {
     confirmText: "OK",
   });
   const inputRefs = useRef<TextInput[]>([]);
+  const lastEmailRef = useRef<string>("");
 
   // Set router to ViewModel for navigation
   useEffect(() => {
     authViewModel.setRouter(router);
   }, [router, authViewModel]);
 
-  const showCustomAlert = useCallback((
-    title: string,
-    message: string,
-    onConfirm: () => void,
-    confirmText: string = "OK"
-  ) => {
-    setModalConfig({
-      title,
-      message,
-      onConfirm,
-      confirmText,
-    });
-    setShowModal(true);
+  useEffect(() => {
+    inputRefs.current[0]?.focus();
   }, []);
 
-  // Call verify-email API when component mounts
+  // Call verify-email API when component mounts or email changes
   useEffect(() => {
-    const callVerifyEmail = async () => {
-      if (!email) {
-        showCustomAlert("Lỗi", "Không tìm thấy email. Vui lòng thử lại.", () =>
-          setShowModal(false)
-        );
-        return;
-      }
+    // Prevent multiple calls for the same email
+    if (!email || email === lastEmailRef.current) {
+      return;
+    }
 
-      const result = await authViewModel.handleVerifyEmail(email);
-      if (result.success && result.otp) {
-        // OTP has been sent successfully
-        // Save the OTP from the response
-        setReceivedOtp(result.otp);
-        console.log("OTP sent successfully");
-      } else {
-        showCustomAlert(
-          "Lỗi",
-          result.message || "Không thể gửi mã OTP. Vui lòng thử lại.",
-          () => setShowModal(false)
-        );
-      }
+    const callVerifyEmail = async () => {
+      console.log("email", email);
+      lastEmailRef.current = email; // Mark this email as processed
+      const otp = (await authViewModel.handleVerifyEmail(
+        email
+      )) as unknown as string;
+      setReceivedOtp(otp);
     };
 
     callVerifyEmail();
-  }, [email, authViewModel, showCustomAlert]);
+  }, [email]);
 
   const handleOtpChange = (value: string, index: number) => {
     if (value.length > 1) return; // Only allow single digit
@@ -97,20 +78,26 @@ export default function OTPScreen() {
       setOtpError("");
     }
 
-    // Auto focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
-    
+
+    if (!value && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+
     // Hide keyboard when all 6 digits are filled
-    if (newOtp.every(digit => digit !== "")) {
+    if (newOtp.every((digit) => digit !== "")) {
       Keyboard.dismiss();
     }
   };
 
   const handleKeyPress = (key: string, index: number) => {
     if (key === "Backspace" && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+      // Use setTimeout to ensure the ref is set before focusing
+      setTimeout(() => {
+        inputRefs.current[index - 1]?.focus();
+      }, 0);
     }
   };
 
@@ -131,10 +118,11 @@ export default function OTPScreen() {
     if (otpString === receivedOtp) {
       // Correct OTP
       setOtpError("");
+      console.log("đã nhập đúng otp");
       try {
-        // Save OTP verification status
+        // // Save OTP verification status
         await AsyncStorage.setItem("otp_verified", "true");
-        // Navigate to next screen
+        // // Navigate to next screen
         router.push("/(onboarding)/role-selection");
       } catch (error) {
         setOtpError("Có lỗi xảy ra. Vui lòng thử lại.");
@@ -143,29 +131,24 @@ export default function OTPScreen() {
       // Wrong OTP
       setOtpError("Mã OTP không đúng. Vui lòng kiểm tra lại.");
       setOtp(["", "", "", "", "", ""]);
-      inputRefs.current[0]?.focus();
+      // Use setTimeout to ensure the ref is set before focusing
+      setTimeout(() => {
+        inputRefs.current[0]?.focus();
+      }, 0);
     }
   };
 
   const handleResendOTP = async () => {
     if (canResend && email) {
-      const result = await authViewModel.handleVerifyEmail(email);
-      if (result.success && result.otp) {
-        // Get the new OTP from the response
-        setReceivedOtp(result.otp);
-        setOtp(["", "", "", "", "", ""]);
-        setOtpError("");
-        inputRefs.current[0]?.focus();
-        showCustomAlert("Thành công", "Mã OTP mới đã được gửi", () =>
-          setShowModal(false)
-        );
-      } else {
-        showCustomAlert(
-          "Lỗi",
-          result.message || "Không thể gửi lại mã OTP. Vui lòng thử lại.",
-          () => setShowModal(false)
-        );
-      }
+      lastEmailRef.current = "";
+      const otp = (await authViewModel.handleVerifyEmail(
+        email
+      )) as unknown as string;
+      setReceivedOtp(otp);
+      setOtp(["", "", "", "", "", ""]);
+      setOtpError("");
+      inputRefs.current[0]?.focus();
+      lastEmailRef.current = email;
     }
   };
 
@@ -202,10 +185,7 @@ export default function OTPScreen() {
               ref={(ref) => {
                 if (ref) inputRefs.current[index] = ref;
               }}
-              style={[
-                styles.otpInput,
-                otpError && styles.otpInputError
-              ]}
+              style={[styles.otpInput, otpError && styles.otpInputError]}
               value={digit}
               onChangeText={(value) => handleOtpChange(value, index)}
               onKeyPress={({ nativeEvent }) =>
@@ -218,7 +198,7 @@ export default function OTPScreen() {
             />
           ))}
         </View>
-        
+
         {/* Error Message */}
         {otpError ? (
           <View style={styles.errorContainer}>
@@ -239,7 +219,10 @@ export default function OTPScreen() {
         {/* Verify Button */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.verifyButton, isLoading && styles.verifyButtonDisabled]}
+            style={[
+              styles.verifyButton,
+              isLoading && styles.verifyButtonDisabled,
+            ]}
             onPress={handleVerifyOTP}
             disabled={isLoading}
           >
