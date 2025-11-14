@@ -246,6 +246,15 @@ export default function FormScreen() {
     }
   };
 
+  // BYPASS: Temporary function to skip professional license validation
+  const handleNextBypass = () => {
+    console.log("Bypassing professional license form validation");
+    // Navigate to next step in onboarding flow
+    router.push(
+      "/(onboarding)/(personal-identification)/(criminal-record)/form"
+    );
+  };
+
   const handleNext = () => {
     // Validation for image
     if (!tempImageUri && !imageUri) {
@@ -430,21 +439,7 @@ export default function FormScreen() {
           </View>
 
           {/* Form Fields */}
-          <View style={styles.formContainer}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Ngày cấp <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.issueDate}
-                onChangeText={(value) => handleInputChange("issueDate", value)}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-            </View>
+          {/* <View style={styles.formContainer}>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
@@ -495,14 +490,14 @@ export default function FormScreen() {
                 </View>
               )}
             </View>
-          </View>
+          </View> */}
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+            <TouchableOpacity style={styles.nextButton} onPress={handleNextBypass}>
               <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>

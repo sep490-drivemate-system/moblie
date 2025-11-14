@@ -99,33 +99,6 @@ export default function SignUpScreen() {
                   </Text>
                 )}
               </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>
-                  Họ và tên <Text style={styles.required}>*</Text>
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    styles.multilineInput,
-                    authViewModel.getRegisterFormErrors().fullname &&
-                      styles.inputError,
-                  ]}
-                  value={authViewModel.getRegisterFormData().fullname}
-                  onChangeText={(value) =>
-                    authViewModel.updateRegisterFormData("fullname", value)
-                  }
-                  placeholder="Nhập họ và tên"
-                  placeholderTextColor="#92929D"
-                  autoCapitalize="words"
-                />
-                {authViewModel.getRegisterFormErrors().fullname && (
-                  <Text style={styles.errorText}>
-                    {authViewModel.getRegisterFormErrors().fullname}
-                  </Text>
-                )}
-              </View>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>
                   Mật khẩu <Text style={styles.required}>*</Text>

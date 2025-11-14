@@ -145,6 +145,7 @@ export default function EmergencyContactScreen() {
   };
 
   const handleNext = async () => {
+    router.push("/(onboarding)/add-car");
     // Validation
     if (!formData.emergencyContactName.trim()) {
       showCustomAlert(
@@ -191,8 +192,8 @@ export default function EmergencyContactScreen() {
         JSON.stringify(formData)
       );
 
-      // Navigate to next page
-      router.push("/(onboarding)/commitment");
+      // Navigate to add-car page instead of commitment
+      router.push("/(onboarding)/add-car");
     } catch (error) {
       showCustomAlert("Lỗi", "Không thể lưu thông tin liên hệ khẩn cấp", [
         {
@@ -248,56 +249,6 @@ export default function EmergencyContactScreen() {
                 placeholder="Nhập tên người liên hệ"
                 placeholderTextColor="#92929D"
               />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Quan hệ <Text style={styles.required}>*</Text>
-              </Text>
-              <TouchableOpacity
-                style={styles.dropdownContainer}
-                onPress={() =>
-                  setShowRelationshipDropdown(!showRelationshipDropdown)
-                }
-              >
-                <Text
-                  style={[
-                    styles.dropdownText,
-                    !formData.relationship && styles.placeholderText,
-                  ]}
-                >
-                  {formData.relationship || "Chọn quan hệ"}
-                </Text>
-                <ChevronDown
-                  color="#92929D"
-                  size={20}
-                  style={[
-                    styles.dropdownIcon,
-                    showRelationshipDropdown && styles.dropdownIconRotated,
-                  ]}
-                />
-              </TouchableOpacity>
-              {showRelationshipDropdown && (
-                <View style={styles.dropdownList}>
-                  <ScrollView
-                    style={styles.dropdownScrollView}
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled={true}
-                  >
-                    {relationships.map((relationship) => (
-                      <TouchableOpacity
-                        key={relationship}
-                        style={styles.dropdownItem}
-                        onPress={() => handleRelationshipSelect(relationship)}
-                      >
-                        <Text style={styles.dropdownItemText}>
-                          {relationship}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
             </View>
 
             <View style={styles.inputGroup}>

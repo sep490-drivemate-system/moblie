@@ -28,7 +28,9 @@ export default function OTPScreen() {
   const [receivedOtp, setReceivedOtp] = useState<string>("");
   const [otpError, setOtpError] = useState<string>("");
   const [canResend, setCanResend] = useState(true);
+  const [isResending, setIsResending] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [hasCalledApi, setHasCalledApi] = useState(false);
   const [modalConfig, setModalConfig] = useState({
     title: "",
     message: "",
@@ -57,33 +59,17 @@ export default function OTPScreen() {
     setShowModal(true);
   }, []);
 
-  // Call verify-email API when component mounts
+  // Call verify-email API when component mounts - TEMPORARILY DISABLED
   useEffect(() => {
-    const callVerifyEmail = async () => {
-      if (!email) {
-        showCustomAlert("Lỗi", "Không tìm thấy email. Vui lòng thử lại.", () =>
-          setShowModal(false)
-        );
-        return;
-      }
-
-      const result = await authViewModel.handleVerifyEmail(email);
-      if (result.success && result.otp) {
-        // OTP has been sent successfully
-        // Save the OTP from the response
-        setReceivedOtp(result.otp);
-        console.log("OTP sent successfully");
-      } else {
-        showCustomAlert(
-          "Lỗi",
-          result.message || "Không thể gửi mã OTP. Vui lòng thử lại.",
-          () => setShowModal(false)
-        );
-      }
-    };
-
-    callVerifyEmail();
-  }, [email, authViewModel, showCustomAlert]);
+    // BYPASS: Skip API call for development
+    console.log("OTP API call bypassed for development");
+    setReceivedOtp("123456"); // Set dummy OTP for testing
+    
+    // Auto focus first input when component mounts
+    setTimeout(() => {
+      inputRefs.current[0]?.focus();
+    }, 100);
+  }, []);
 
   const handleOtpChange = (value: string, index: number) => {
     if (value.length > 1) return; // Only allow single digit
@@ -102,70 +88,61 @@ export default function OTPScreen() {
       inputRefs.current[index + 1]?.focus();
     }
     
-    // Hide keyboard when all 6 digits are filled
+    // Auto verify when all 6 digits are filled
     if (newOtp.every(digit => digit !== "")) {
       Keyboard.dismiss();
+      // Auto verify after a short delay to show completed input
+      setTimeout(() => {
+        handleVerifyOTP();
+      }, 300);
     }
   };
 
   const handleKeyPress = (key: string, index: number) => {
-    if (key === "Backspace" && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+    if (key === "Backspace") {
+      // If current input is empty, move to previous input and clear it
+      if (!otp[index] && index > 0) {
+        const newOtp = [...otp];
+        newOtp[index - 1] = "";
+        setOtp(newOtp);
+        inputRefs.current[index - 1]?.focus();
+      }
+      // If current input has value, just clear it (default behavior)
+      else if (otp[index]) {
+        const newOtp = [...otp];
+        newOtp[index] = "";
+        setOtp(newOtp);
+      }
     }
   };
 
   const handleVerifyOTP = async () => {
-    const otpString = otp.join("");
-
-    if (otpString.length !== 6) {
-      setOtpError("Vui lòng nhập đầy đủ 6 chữ số");
-      return;
-    }
-
-    // Compare with received OTP from API
-    if (!receivedOtp) {
-      setOtpError("Mã OTP chưa được gửi. Vui lòng thử lại.");
-      return;
-    }
-
-    if (otpString === receivedOtp) {
-      // Correct OTP
-      setOtpError("");
-      try {
-        // Save OTP verification status
-        await AsyncStorage.setItem("otp_verified", "true");
-        // Navigate to next screen
-        router.push("/(onboarding)/role-selection");
-      } catch (error) {
-        setOtpError("Có lỗi xảy ra. Vui lòng thử lại.");
-      }
-    } else {
-      // Wrong OTP
-      setOtpError("Mã OTP không đúng. Vui lòng kiểm tra lại.");
-      setOtp(["", "", "", "", "", ""]);
-      inputRefs.current[0]?.focus();
-    }
+router.push("/(onboarding)/role-selection");
   };
 
   const handleResendOTP = async () => {
-    if (canResend && email) {
-      const result = await authViewModel.handleVerifyEmail(email);
-      if (result.success && result.otp) {
-        // Get the new OTP from the response
-        setReceivedOtp(result.otp);
+    // BYPASS: Skip resend API call for development
+    if (canResend && !isResending) {
+      setCanResend(false);
+      setIsResending(true);
+      
+      // Simulate API delay
+      setTimeout(() => {
+        setReceivedOtp("123456"); // Set dummy OTP
         setOtp(["", "", "", "", "", ""]);
         setOtpError("");
-        inputRefs.current[0]?.focus();
-        showCustomAlert("Thành công", "Mã OTP mới đã được gửi", () =>
+        // Auto focus first input after resend
+        setTimeout(() => {
+          inputRefs.current[0]?.focus();
+        }, 100);
+        showCustomAlert("Thành công", "Mã OTP mới đã được gửi (Demo)", () =>
           setShowModal(false)
         );
-      } else {
-        showCustomAlert(
-          "Lỗi",
-          result.message || "Không thể gửi lại mã OTP. Vui lòng thử lại.",
-          () => setShowModal(false)
-        );
-      }
+        setIsResending(false);
+        
+        // Re-enable resend after 60 seconds
+        setTimeout(() => setCanResend(true), 60000);
+      }, 1000);
     }
   };
 

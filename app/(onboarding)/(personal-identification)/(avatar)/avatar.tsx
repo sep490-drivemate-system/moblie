@@ -127,20 +127,20 @@ export default function AvatarScreen() {
   };
 
   const handleNext = () => {
-    const currentAvatar = tempAvatarUri || avatarUri;
-    if (!currentAvatar) {
-      showCustomAlert(
-        "Lỗi",
-        "Vui lòng tải lên ảnh đại diện trước khi tiếp tục",
-        [
-          {
-            text: "OK",
-            onPress: () => setShowAlert(false),
-          },
-        ]
-      );
-      return;
-    }
+    // const currentAvatar = tempAvatarUri || avatarUri;
+    // if (!currentAvatar) {
+    //   showCustomAlert(
+    //     "Lỗi",
+    //     "Vui lòng tải lên ảnh đại diện trước khi tiếp tục",
+    //     [
+    //       {
+    //         text: "OK",
+    //         onPress: () => setShowAlert(false),
+    //       },
+    //     ]
+    //   );
+    //   return;
+    // }
 
     router.push("/(onboarding)/(personal-identification)/(id-card)/form");
   };

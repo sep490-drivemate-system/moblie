@@ -17,7 +17,6 @@ import {
   ChevronUp,
   MoreVertical,
 } from "lucide-react-native";
-import CustomAlert from "@/components/CustomAlert";
 
 interface Role {
   id: string;

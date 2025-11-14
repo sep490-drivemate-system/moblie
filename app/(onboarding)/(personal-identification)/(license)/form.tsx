@@ -297,6 +297,13 @@ export default function FormScreen() {
     }
   };
 
+  // BYPASS: Temporary function to skip license validation
+  const handleNextBypass = () => {
+      router.push(
+      "/(onboarding)/(personal-identification)/(professional-license)/form"
+    );
+  };
+
   const handleNext = () => {
     // Validation for images
     if (!tempFrontImageUri && !frontImageUri) {
@@ -574,7 +581,7 @@ export default function FormScreen() {
           </View>
 
           {/* Form Fields */}
-          <View style={styles.formContainer}>
+          {/* <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
                 Số giấy phép lái xe <Text style={styles.required}>*</Text>
@@ -664,14 +671,14 @@ export default function FormScreen() {
                 </View>
               )}
             </View>
-          </View>
+          </View> */}
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+            <TouchableOpacity style={styles.nextButton} onPress={handleNextBypass}>
               <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>

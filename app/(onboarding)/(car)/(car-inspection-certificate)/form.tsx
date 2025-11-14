@@ -180,6 +180,8 @@ export default function FormScreen() {
   };
 
   const handleNext = async () => {
+    router.push("/(onboarding)/(car)/car-price");
+
     // Validation
     if (!tempFrontImageUri && !frontImageUri) {
       showCustomAlert(
@@ -457,38 +459,6 @@ export default function FormScreen() {
             </View>
           </View>
 
-          {/* Form Fields */}
-          <View style={styles.formContainer}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Ngày cấp <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.issueDate}
-                onChangeText={(value) => handleInputChange("issueDate", value)}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Ngày hết hạn <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.expiryDate}
-                onChangeText={(value) => handleInputChange("expiryDate", value)}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-            </View>
-          </View>
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>

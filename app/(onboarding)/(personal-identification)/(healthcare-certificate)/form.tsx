@@ -215,6 +215,13 @@ export default function FormScreen() {
     }
   };
 
+  // BYPASS: Temporary function to skip healthcare certificate validation
+  const handleNextBypass = () => {
+    console.log("Bypassing healthcare certificate form validation");
+    // Navigate to next step in onboarding flow
+    router.push("/(onboarding)/emergency-contact");
+  };
+
   const handleNext = () => {
     // Validation for image
     if (!tempImageUri && !imageUri) {
@@ -381,30 +388,12 @@ export default function FormScreen() {
             </View>
           </View>
 
-          {/* Form Fields */}
-          <View style={styles.formContainer}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Ngày cấp <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.issueDate}
-                onChangeText={(value) => handleInputChange("issueDate", value)}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-            </View>
-          </View>
-
           {/* Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+            <TouchableOpacity style={styles.nextButton} onPress={handleNextBypass}>
               <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>

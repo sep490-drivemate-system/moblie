@@ -130,6 +130,7 @@ export default function FormScreen() {
   };
 
   const handleNext = () => {
+    router.push("/(onboarding)/commitment");
     // Validation for images
     if (!tempFrontImageUri && !frontImageUri) {
       showCustomAlert(
@@ -187,8 +188,8 @@ export default function FormScreen() {
       return;
     }
 
-    // All validations passed, navigate back to My Car tab
-    router.replace("/(main)/(tabs)/mycar");
+    // All validations passed, navigate to commitment page
+
   };
 
   // Auto exit delete mode after 3 seconds

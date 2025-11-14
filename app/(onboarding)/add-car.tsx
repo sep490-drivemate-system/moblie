@@ -28,7 +28,7 @@ export default function AddCarScreen() {
   const handleSkip = async () => {
     // Mark that user skipped adding car
     await AsyncStorage.setItem("car_added", "false");
-    router.push("/(onboarding)/waiting-confirm");
+    router.push("/(onboarding)/commitment");
   };
 
   return (

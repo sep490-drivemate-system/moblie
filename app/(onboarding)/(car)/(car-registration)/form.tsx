@@ -196,6 +196,7 @@ export default function FormScreen() {
 
   const handleNext = async () => {
     // Validation
+      router.push("/(onboarding)/(car)/(car-insurance)/form");
     if (!tempFrontImageUri && !frontImageUri) {
       showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt trước giấy đăng ký xe", [
         {

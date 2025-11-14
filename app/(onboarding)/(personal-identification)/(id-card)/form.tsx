@@ -202,6 +202,11 @@ export default function FormScreen() {
     router.back();
   };
 
+  // BYPASS: Temporary function to skip to next step
+  const handleNextBypass = () => {
+     router.push("/(onboarding)/(personal-identification)/(license)/form");
+  };
+
   const handleNext = async () => {
     // Validation
     if (!tempFrontImageUri && !frontImageUri) {
@@ -513,73 +518,14 @@ export default function FormScreen() {
           <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                Số căn cước công dân <Text style={styles.required}>*</Text>
+                Họ và tên<Text style={styles.required}>*</Text>
               </Text>
               <TextInput
                 style={styles.input}
                 value={formData.idNumber}
                 onChangeText={(value) => handleInputChange("idNumber", value)}
-                placeholder="Nhập số căn cước công dân"
+                placeholder="Nhập họ và tên"
                 placeholderTextColor="#92929D"
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Ngày cấp <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.issueDate}
-                onChangeText={(value) => handleInputChange("issueDate", value)}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Ngày hết hạn <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.expiryDate}
-                onChangeText={(value) => handleInputChange("expiryDate", value)}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Nơi cấp <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.issuePlace}
-                onChangeText={(value) => handleInputChange("issuePlace", value)}
-                placeholder="Nhập nơi cấp"
-                placeholderTextColor="#92929D"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Địa chỉ thường trú <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.address}
-                onChangeText={(value) => handleInputChange("address", value)}
-                placeholder="Nhập địa chỉ thường trú"
-                placeholderTextColor="#92929D"
-                multiline
-                numberOfLines={3}
               />
             </View>
 
@@ -647,7 +593,7 @@ export default function FormScreen() {
             <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
               <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+            <TouchableOpacity style={styles.nextButton} onPress={handleNextBypass}>
               <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>
