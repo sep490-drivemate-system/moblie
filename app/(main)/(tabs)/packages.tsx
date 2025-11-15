@@ -1,44 +1,197 @@
-import React, { useState } from "react";
+import { AppColors } from "@/constants/Colors";
+import { popularPackages } from "@/data/home_data";
+import { instructorsData } from "@/data/instructors_data";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import {
-  View,
-  Text,
-  StyleSheet,
+  Clock,
+  Filter,
+  MapPin,
+  Package,
+  Search,
+  X,
+  Zap
+} from "lucide-react-native";
+import { useState } from "react";
+import {
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
   ScrollView,
   StatusBar,
-  TouchableOpacity,
+  StyleSheet,
+  Text,
   TextInput,
-  Image,
-  Dimensions,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { Search, Filter, Package, Clock, Car, User, MapPin, Star, Zap, ChevronRight } from "lucide-react-native";
-import { popularPackages } from "@/data/home_data";
-import { AppColors } from "@/constants/Colors";
-import { instructorsData } from "@/data/instructors_data";
 
 const { width } = Dimensions.get("window");
+
+// Road types list
+const roadTypes = [
+  "Đường khu dân cư",
+  "Đường đô thị",
+  "Quốc lộ",
+  "Đường cao tốc",
+  "Đường đèo",
+  "Đường trường",
+  "Đường qua khu đông dân cư",
+  "Đường đang thi công",
+  "Đường trơn trượt",
+];
+
+// Filter options data
+const filterOptions = [
+  {
+    id: "all",
+    label: "Tất cả",
+    value: null as boolean | null,
+    type: "vehicle" as const,
+  },
+  {
+    id: "hasVehicle",
+    label: "Có xe",
+    value: true as boolean,
+    type: "vehicle" as const,
+  },
+  {
+    id: "instructorOnly",
+    label: "Chỉ hướng dẫn",
+    value: false as boolean,
+    type: "vehicle" as const,
+  },
+  {
+    id: "roadType",
+    label: "Loại đường",
+    value: null,
+    type: "roadType" as const,
+  },
+];
 
 export default function PackagesScreen() {
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilter, setShowFilter] = useState(false);
-  const [filterHasVehicle, setFilterHasVehicle] = useState<boolean | null>(null);
+  const [filterHasVehicle, setFilterHasVehicle] = useState<boolean | null>(
+    null
+  );
+  const [showRoadTypeModal, setShowRoadTypeModal] = useState(false);
+  const [selectedRoadTypes, setSelectedRoadTypes] = useState<string[]>([]);
 
   // Filter packages
   const filteredPackages = popularPackages.filter((pkg) => {
     const matchesSearch =
       pkg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       pkg.instructorName.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesVehicleFilter =
       filterHasVehicle === null || pkg.hasVehicle === filterHasVehicle;
 
-    return matchesSearch && matchesVehicleFilter;
+    const matchesRoadTypeFilter =
+      selectedRoadTypes.length === 0 ||
+      selectedRoadTypes.some((selectedType) =>
+        pkg.roadTypes.some((pkgRoadType) =>
+          pkgRoadType.toLowerCase().includes(selectedType.toLowerCase())
+        )
+      );
+
+    return matchesSearch && matchesVehicleFilter && matchesRoadTypeFilter;
   });
 
-  const handlePackagePress = (pkg: typeof popularPackages[0]) => {
+  // Toggle road type selection
+  const toggleRoadType = (roadType: string) => {
+    setSelectedRoadTypes((prev) =>
+      prev.includes(roadType)
+        ? prev.filter((type) => type !== roadType)
+        : [...prev, roadType]
+    );
+  };
+
+  // Clear all road type filters
+  const clearRoadTypeFilters = () => {
+    setSelectedRoadTypes([]);
+  };
+
+  // Render filter option item for FlatList
+  const renderFilterOptionItem = ({
+    item,
+  }: {
+    item: (typeof filterOptions)[0];
+  }) => {
+    const isActive =
+      item.id === "all"
+        ? filterHasVehicle === null && selectedRoadTypes.length === 0
+        : item.type === "vehicle"
+        ? filterHasVehicle === item.value
+        : selectedRoadTypes.length > 0;
+
+    const handlePress = () => {
+      if (item.id === "all") {
+        // Reset all filters when "Tất cả" is clicked
+        setFilterHasVehicle(null);
+        setSelectedRoadTypes([]);
+      } else if (item.type === "vehicle") {
+        setFilterHasVehicle(item.value);
+      } else if (item.type === "roadType") {
+        setShowRoadTypeModal(true);
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        activeOpacity={1}
+        style={[styles.filterOption, isActive && styles.filterOptionActive]}
+        onPress={handlePress}
+      >
+        <Text
+          style={[
+            styles.filterOptionText,
+            isActive && styles.filterOptionTextActive,
+          ]}
+        >
+          {item.label}
+          {item.type === "roadType" &&
+            selectedRoadTypes.length > 0 &&
+            ` (${selectedRoadTypes.length})`}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // Render road type item for FlatList
+  const renderRoadTypeItem = ({ item }: { item: string }) => {
+    const isSelected = selectedRoadTypes.includes(item);
+    return (
+      <TouchableOpacity
+        style={[styles.roadTypeItem, isSelected && styles.roadTypeItemSelected]}
+        onPress={() => toggleRoadType(item)}
+        activeOpacity={1}
+      >
+        <View style={styles.roadTypeContent}>
+          <View
+            style={[styles.checkbox, isSelected && styles.checkboxSelected]}
+          >
+            {isSelected && <View style={styles.checkboxInner} />}
+          </View>
+          <Text
+            style={[
+              styles.roadTypeText,
+              isSelected && styles.roadTypeTextSelected,
+            ]}
+          >
+            {item}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const handlePackagePress = (pkg: (typeof popularPackages)[0]) => {
     router.push({
       pathname: "/(main)/(no-tabs)/instructor-detail",
       params: { instructorId: pkg.instructorId },
@@ -53,16 +206,34 @@ export default function PackagesScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      
-      {/* Header */}
-      <View style={styles.header}>
+
+      {/* Modern Header with Gradient */}
+      <LinearGradient
+        colors={[
+          AppColors.primary,
+          AppColors.gradientStart,
+          AppColors.gradientEnd,
+        ]}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Danh Sách Gói</Text>
-          <Text style={styles.headerSubtitle}>
-            {filteredPackages.length} gói có sẵn
-          </Text>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Danh Sách Gói</Text>
+            <Text style={styles.headerSubtitle}>
+              Tìm kiếm gói học lái xe phù hợp với bạn
+            </Text>
+          </View>
+          <View style={styles.headerStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{filteredPackages.length}</Text>
+              <Text style={styles.statLabel}>Tổng</Text>
+            </View>
+          </View>
         </View>
-      </View>
+        <View style={styles.headerCurve} />
+      </LinearGradient>
 
       {/* Search and Filter Bar */}
       <View style={styles.searchContainer}>
@@ -77,13 +248,18 @@ export default function PackagesScreen() {
           />
         </View>
         <TouchableOpacity
+          activeOpacity={1}
           style={[
             styles.filterButton,
-            (filterHasVehicle !== null) && styles.filterButtonActive,
+            filterHasVehicle !== null && styles.filterButtonActive,
           ]}
           onPress={() => setShowFilter(!showFilter)}
         >
-          <Filter size={18} color={filterHasVehicle !== null ? "#ffffff" : AppColors.primary} strokeWidth={2} />
+          <Filter
+            size={18}
+            color={filterHasVehicle !== null ? "#ffffff" : AppColors.primary}
+            strokeWidth={2}
+          />
         </TouchableOpacity>
       </View>
 
@@ -91,58 +267,68 @@ export default function PackagesScreen() {
       {showFilter && (
         <View style={styles.filterContainer}>
           <Text style={styles.filterTitle}>Lọc theo:</Text>
-          <View style={styles.filterOptions}>
-            <TouchableOpacity
-              style={[
-                styles.filterOption,
-                filterHasVehicle === null && styles.filterOptionActive,
-              ]}
-              onPress={() => setFilterHasVehicle(null)}
-            >
-              <Text
-                style={[
-                  styles.filterOptionText,
-                  filterHasVehicle === null && styles.filterOptionTextActive,
-                ]}
-              >
-                Tất cả
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.filterOption,
-                filterHasVehicle === true && styles.filterOptionActive,
-              ]}
-              onPress={() => setFilterHasVehicle(true)}
-            >
-              <Text
-                style={[
-                  styles.filterOptionText,
-                  filterHasVehicle === true && styles.filterOptionTextActive,
-                ]}
-              >
-                Có xe
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.filterOption,
-                filterHasVehicle === false && styles.filterOptionActive,
-              ]}
-              onPress={() => setFilterHasVehicle(false)}
-            >
-              <Text
-                style={[
-                  styles.filterOptionText,
-                  filterHasVehicle === false && styles.filterOptionTextActive,
-                ]}
-              >
-                Chỉ hướng dẫn
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <FlatList
+            data={filterOptions}
+            renderItem={renderFilterOptionItem}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterOptions}
+          />
         </View>
       )}
+
+      {/* Road Type Filter Modal */}
+      <Modal
+        visible={showRoadTypeModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowRoadTypeModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowRoadTypeModal(false)}
+        >
+          <Pressable
+            style={styles.modalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chọn loại đường</Text>
+              <TouchableOpacity
+                onPress={() => setShowRoadTypeModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <X size={24} color="#64748b" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={roadTypes}
+              renderItem={renderRoadTypeItem}
+              keyExtractor={(item) => item}
+              style={styles.modalScrollView}
+              contentContainerStyle={styles.roadTypesList}
+              showsVerticalScrollIndicator={false}
+            />
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={clearRoadTypeFilters}
+              >
+                <Text style={styles.clearButtonText}>Xóa tất cả</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={() => setShowRoadTypeModal(false)}
+              >
+                <Text style={styles.applyButtonText}>Áp dụng</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <ScrollView
         style={styles.scrollView}
@@ -198,11 +384,15 @@ export default function PackagesScreen() {
                       </Text>
                       {pkg.hasVehicle ? (
                         <View style={styles.badgeWithVehicle}>
-                          <Text style={styles.badgeText}>Người hướng dẫn và xe</Text>
+                          <Text style={styles.badgeText}>
+                            Người hướng dẫn và xe
+                          </Text>
                         </View>
                       ) : (
                         <View style={styles.badgeInstructor}>
-                          <Text style={styles.badgeText}>Chỉ người hướng dẫn</Text>
+                          <Text style={styles.badgeText}>
+                            Chỉ người hướng dẫn
+                          </Text>
                         </View>
                       )}
                     </View>
@@ -236,13 +426,13 @@ export default function PackagesScreen() {
                     </Text>
                   </View>
                   <View style={styles.actionButtons}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.detailButton}
                       onPress={() => handlePackagePress(pkg)}
                     >
                       <Text style={styles.detailButtonText}>Chi tiết</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.buyButton}
                       onPress={() => handlePackagePress(pkg)}
                     >
@@ -265,39 +455,84 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   header: {
-    backgroundColor: AppColors.primary,
-    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 12 : 50,
-    paddingBottom: 20,
+    paddingTop: StatusBar.currentHeight,
+    paddingBottom: 40,
     paddingHorizontal: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    position: "relative",
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
   },
   headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerTextContainer: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "800",
     color: "#ffffff",
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: "#ffffff",
-    opacity: 0.9,
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.8)",
     fontWeight: "500",
+  },
+  headerStats: {
+    alignItems: "center",
+  },
+  statItem: {
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  statLabel: {
+    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontWeight: "600",
+  },
+  headerCurve: {
+    position: "absolute",
+    bottom: -25,
+    left: 0,
+    right: 0,
+    height: 50,
+    backgroundColor: "#f8fafc",
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
   searchContainer: {
     flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
+    marginTop: -25,
+    borderRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 12,
+    zIndex: 1,
   },
   searchBar: {
     flex: 1,
@@ -306,7 +541,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     gap: 12,
     borderWidth: 1,
     borderColor: "#e2e8f0",
@@ -343,8 +578,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   filterOptions: {
-    flexDirection: "row",
-    gap: 12,
+    gap: 5,
+    paddingRight: 16,
   },
   filterOption: {
     paddingHorizontal: 16,
@@ -353,6 +588,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
     backgroundColor: "#f8fafc",
+    marginRight: 12,
   },
   filterOptionActive: {
     backgroundColor: AppColors.primary,
@@ -583,5 +819,124 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "80%",
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalScrollView: {
+    maxHeight: 400,
+  },
+  roadTypesList: {
+    paddingHorizontal: 10,
+    paddingVertical: 16,
+  },
+  roadTypeItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
+    marginBottom: 12,
+  },
+  roadTypeItemSelected: {
+    borderColor: AppColors.primary,
+    backgroundColor: `${AppColors.primary}10`,
+  },
+  roadTypeContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#cbd5e1",
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxSelected: {
+    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary,
+  },
+  checkboxInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+    backgroundColor: "#ffffff",
+  },
+  roadTypeText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#475569",
+    flex: 1,
+  },
+  roadTypeTextSelected: {
+    color: "#1e293b",
+    fontWeight: "700",
+  },
+  modalFooter: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+  },
+  clearButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clearButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#64748b",
+  },
+  applyButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: AppColors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  applyButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
 });
-
