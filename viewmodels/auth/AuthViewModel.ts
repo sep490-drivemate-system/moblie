@@ -30,6 +30,8 @@ import { getRoleFromToken } from "@/lib/jwt/tokenUtils";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootState } from "@/lib/redux/store";
+import { IVerifyEmailResponse } from "@/models/auth/verifyEmail";
+import { GenericResponse } from "@/models/generic/genericResponse";
 
 type AuthState = RootState["auth"];
 
@@ -75,10 +77,15 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     }
   }
 
-  async validateSignUpForm(): Promise<{ isValid: boolean; errors?: Record<string, string> }> {
+  async validateSignUpForm(): Promise<{
+    isValid: boolean;
+    errors?: Record<string, string>;
+  }> {
     try {
       const currentState = this.getCurrentState();
-      await signUpSchema.validate(currentState.registerFormData, { abortEarly: false });
+      await signUpSchema.validate(currentState.registerFormData, {
+        abortEarly: false,
+      });
       this.dispatch(clearRegisterFormErrors());
       return { isValid: true };
     } catch (err) {
@@ -113,8 +120,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
           this.dispatch(setAuthenticated(true));
         }
       },
-      undefined,
-      undefined,
+      () => { },
+      () => { },
       {
         setLoading,
         setError,
@@ -506,50 +513,31 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     }
   }
 
-  async handleVerifyEmail(
-    email: string
-  ): Promise<{ success: boolean; message?: string; otp?: string }> {
-    return await this.executeAsync(
-      async () => {
-        if (!email) {
-          throw new Error("Email không được để trống");
+  async handleVerifyEmail(email: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const result = await this.executeAsync<IVerifyEmailResponse>(
+        async () => {
+          return (await this.dispatch(verifyEmail({ email })).unwrap()).value as IVerifyEmailResponse;
+        },
+        (response) => {
+          console.log("response line 521", response);
+        },
+        (error) => {
+          console.error("handleVerifyEmail error:", error);
+        },
+        {
+          setLoading,
+          setError,
+          setSuccess,
         }
-
-        const result = await this.dispatch(verifyEmail({ email })).unwrap();
-
-        // GenericResponse wraps IVerifyEmailResponse in result.value
-        // Response structure: { success: boolean, value: { isSuccess: boolean, message: string, errorCode: string | null, value: string } }
-        if (result.success && result.value) {
-          const verifyResponse = result.value; // IVerifyEmailResponse
-          if (verifyResponse.isSuccess) {
-            // OTP is in verifyResponse.value
-            return {
-              success: true,
-              message: verifyResponse.message,
-              otp: verifyResponse.value, // OTP string
-            };
-          } else {
-            throw new Error(verifyResponse.message || "Không thể gửi mã OTP");
-          }
-        } else {
-          throw new Error(result.message || "Không thể gửi mã OTP");
-        }
-      },
-      (result) => {
-        console.log("OTP sent successfully:", result);
-      },
-      (error) => {
-        console.error("Failed to send OTP:", error);
-      },
-      {
-        setLoading,
-        setError,
-        setSuccess,
+      );
+      if (result && result.value) {
+        return { success: true, message: result.value };
       }
-    ).then(
-      (result) => result || { success: false, message: "Có lỗi xảy ra" },
-      (error) => ({ success: false, message: error || "Có lỗi xảy ra" })
-    );
+      return { success: false, message: "Có lỗi xảy ra" };
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : "Có lỗi xảy ra" };
+    }
   }
 
 

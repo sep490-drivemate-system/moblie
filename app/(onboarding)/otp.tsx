@@ -1,3 +1,6 @@
+import { RootState } from "@/lib/redux/store";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
@@ -10,15 +13,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
-import { RootState } from "@/lib/redux/store";
-import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
-import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 
 export default function OTPScreen() {
   const router = useRouter();
-  const [authState, authViewModel] = useViewModel(
+  const [, authViewModel] = useViewModel(
     AuthViewModel,
     (state: RootState) => state.auth
   );
@@ -38,25 +38,15 @@ export default function OTPScreen() {
     confirmText: "OK",
   });
   const inputRefs = useRef<TextInput[]>([]);
+  const lastEmailRef = useRef<string>("");
 
   // Set router to ViewModel for navigation
   useEffect(() => {
     authViewModel.setRouter(router);
   }, [router, authViewModel]);
 
-  const showCustomAlert = useCallback((
-    title: string,
-    message: string,
-    onConfirm: () => void,
-    confirmText: string = "OK"
-  ) => {
-    setModalConfig({
-      title,
-      message,
-      onConfirm,
-      confirmText,
-    });
-    setShowModal(true);
+  useEffect(() => {
+    inputRefs.current[0]?.focus();
   }, []);
 
   // Auto focus first input when component mounts
@@ -226,10 +216,7 @@ export default function OTPScreen() {
               ref={(ref) => {
                 if (ref) inputRefs.current[index] = ref;
               }}
-              style={[
-                styles.otpInput,
-                otpError && styles.otpInputError
-              ]}
+              style={[styles.otpInput, otpError && styles.otpInputError]}
               value={digit}
               onChangeText={(value) => handleOtpChange(value, index)}
               onKeyPress={({ nativeEvent }) =>
@@ -242,7 +229,7 @@ export default function OTPScreen() {
             />
           ))}
         </View>
-        
+
         {/* Error Message */}
         {otpError ? (
           <View style={styles.errorContainer}>
@@ -263,7 +250,10 @@ export default function OTPScreen() {
         {/* Verify Button */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.verifyButton, isLoading && styles.verifyButtonDisabled]}
+            style={[
+              styles.verifyButton,
+              isLoading && styles.verifyButtonDisabled,
+            ]}
             onPress={handleVerifyOTP}
             disabled={isLoading}
           >
