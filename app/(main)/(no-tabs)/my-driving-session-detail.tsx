@@ -36,14 +36,19 @@ import {
   addSessionLog, 
   cancelSession, 
   ICancelSessionRequest,
-  ISessionLogRequest
+  ISessionLogRequest,
+  updateSessionStatus
 } from "@/features/booking/bookingThunk";
 import { IGetSessionRoutesResponse } from "@/models/route/route";
+import { SessionStatus } from "@/models/booking/booking";
 
 export default function MyDrivingSessionDetailScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { sessionId } = useLocalSearchParams();
+  const { sessionId: rawSessionId } = useLocalSearchParams();
+  
+  // Convert sessionId to string (handle both string and string[] types)
+  const sessionId = Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId;
 
   const allSessions = userPackagesData.flatMap((p) => p.sessions || []);
   const session = allSessions.find((s) => s.id === sessionId);
@@ -71,12 +76,6 @@ export default function MyDrivingSessionDetailScreen() {
   const GOONG_API_KEY = process.env.EXPO_PUBLIC_GOONG_API_KEY;
   const GOONG_MAPTILES_KEY = process.env.EXPO_PUBLIC_GOONG_MAPTILES_KEY;
   
-  // Debug: Log keys on component mount
-  useEffect(() => {
-    console.log("🔑 DEBUG - Goong API Key:", GOONG_API_KEY || "❌ MISSING");
-    console.log("🗺️ DEBUG - Goong MapTiles Key:", GOONG_MAPTILES_KEY || "❌ MISSING");
-    console.log("📦 DEBUG - All env vars:", process.env);
-  }, []);
 
   type RoutePoint = {
     id: string;
@@ -140,25 +139,10 @@ export default function MyDrivingSessionDetailScreen() {
     return points;
   };
 
-  // Helper functions for formatting
-  const formatDistance = (meters: number): string => {
-    if (meters < 1000) return `${Math.round(meters)}m`;
-    return `${(meters / 1000).toFixed(1)}km`;
-  };
-
-  const formatDuration = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-
-    if (hours > 0) return `${hours}h ${minutes}phút`;
-    return `${minutes} phút`;
-  };
 
   // Fetch directions from Goong API
   const fetchGoongDirections = async (data: IGetSessionRoutesResponse) => {
     try {
-      console.log("🔑 Goong API Key:", GOONG_API_KEY ? "✅ Found" : "❌ Missing");
-      console.log("🗺️ Goong MapTiles Key:", GOONG_MAPTILES_KEY ? "✅ Found" : "❌ Missing");
       
       // Create waypoints array: start point + all route points
       const allPoints = [
@@ -275,28 +259,49 @@ export default function MyDrivingSessionDetailScreen() {
     }
   };
 
-  // Start vehicle simulation
+  const handelUpdate = async (sessionId: string) => {
+    try {
+      const response = await dispatch(updateSessionStatus({ sessionId, status: SessionStatus.Upcoming })).unwrap();
+      console.log("✅ Session status updated successfully:", response);
+      Alert.alert("Thành công", "Lưu lại thành công");
+      router.back();
+    } catch (error) {
+      console.error("❌ Error updating session status:", error);
+      Alert.alert("Lỗi", "Không thể lưu lại");
+    }
+  };
+  // Start vehicle simulation - Round trip (khứ hồi)
   const startSimulation = () => {
     if (!routeSegments.length || isSimulating) return;
 
-    // Collect all coordinates from route segments
-    const coordinates: Array<{ latitude: number; longitude: number }> = [];
+    // Collect all coordinates from route segments for outbound trip
+    const outboundCoordinates: Array<{ latitude: number; longitude: number }> = [];
     routeSegments.forEach((segment) => {
-      coordinates.push(...segment.coordinates);
+      outboundCoordinates.push(...segment.coordinates);
     });
 
-    if (coordinates.length === 0) {
+    if (outboundCoordinates.length === 0) {
       Alert.alert("Lỗi", "Không có lộ trình để giả lập");
       return;
     }
 
-    allRouteCoordinates.current = coordinates;
+    // Create round trip: outbound + return journey
+    const returnCoordinates = [...outboundCoordinates].reverse(); // Reverse for return trip
+    const roundTripCoordinates = [...outboundCoordinates, ...returnCoordinates];
+    
+    console.log("🔄 Round trip simulation:", {
+      outboundPoints: outboundCoordinates.length,
+      returnPoints: returnCoordinates.length,
+      totalPoints: roundTripCoordinates.length
+    });
+
+    allRouteCoordinates.current = roundTripCoordinates;
     setIsSimulating(true);
     setSimulationProgress(0);
 
     // Set initial position
-    const startPos = coordinates[0];
-    const nextPos = coordinates[1] || startPos;
+    const startPos = roundTripCoordinates[0];
+    const nextPos = roundTripCoordinates[1] || startPos;
     const initialHeading = calculateHeading(startPos, nextPos);
     setCurrentPosition({
       ...startPos,
@@ -305,7 +310,8 @@ export default function MyDrivingSessionDetailScreen() {
     });
 
     let currentIndex = 0;
-    const totalPoints = coordinates.length;
+    const totalPoints = roundTripCoordinates.length;
+    const outboundLength = outboundCoordinates.length;
     const simulationSpeed = 100; // Update every 100ms for smooth animation
     const speedKmh = 40; // Average speed 40 km/h
 
@@ -314,13 +320,28 @@ export default function MyDrivingSessionDetailScreen() {
       currentIndex++;
       if (currentIndex >= totalPoints) {
         stopSimulation();
-        Alert.alert("Hoàn thành", "Đã hoàn thành lộ trình giả lập!");
+        Alert.alert(
+          "Hoàn thành chuyến khứ hồi", 
+          "Đã hoàn thành lộ trình giả lập khứ hồi!\n\n" +
+          `✅ Lượt đi: ${outboundLength} điểm\n` +
+          `✅ Lượt về: ${returnCoordinates.length} điểm\n` +
+          `🎯 Tổng cộng: ${totalPoints} điểm`
+        );
         return;
       }
 
-      const currentPos = coordinates[currentIndex];
-      const nextPos = coordinates[currentIndex + 1] || currentPos;
+      const currentPos = roundTripCoordinates[currentIndex];
+      const nextPos = roundTripCoordinates[currentIndex + 1] || currentPos;
       const heading = calculateHeading(currentPos, nextPos);
+
+      // Determine if we're on outbound or return trip
+      const isOutbound = currentIndex < outboundLength;
+      const tripPhase = isOutbound ? "Lượt đi" : "Lượt về";
+      const phaseProgress = isOutbound 
+        ? (currentIndex / outboundLength) * 100
+        : ((currentIndex - outboundLength) / returnCoordinates.length) * 100;
+
+      console.log(`🚗 ${tripPhase}: ${Math.round(phaseProgress)}% (${currentIndex}/${totalPoints})`);
 
       setCurrentPosition({
         ...currentPos,
@@ -964,7 +985,10 @@ export default function MyDrivingSessionDetailScreen() {
                       { text: "Hủy", style: "cancel" },
                       {
                         text: "Đồng ý",
-                        onPress: () => setRouteDecision("accepted"),
+                        onPress: async () => {
+                          setRouteDecision("accepted");
+                          await handelUpdate(sessionId);
+                        },
                       },
                     ]
                   );

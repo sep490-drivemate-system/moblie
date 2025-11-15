@@ -2,6 +2,7 @@ import { createThunk } from "../genericCreateThunk";
 import { ISignInRequest, ISignInResponse } from "@/models/auth/signin";
 import { ISignUpRequest, ISignUpResponse } from "@/models/auth/signup";
 import { IVerifyEmailRequest, IVerifyEmailResponse } from "@/models/auth/verifyEmail";
+import { IVerifyRequest, IVerifyResponse } from "@/models/auth/verify";
 import { HttpMethod } from "@/models/enum/HttpMethods";
 
 export const AUTH_PATH = "auth";
@@ -28,5 +29,11 @@ export const verifyEmail = createThunk<IVerifyEmailResponse, IVerifyEmailRequest
     HttpMethod.POST,
     `verify-email`,
     `/${AUTH_PATH}/verify-email`,
+);
+
+export const verify = createThunk<string, IVerifyRequest>(
+    HttpMethod.POST,
+    `verify`,
+    `/${AUTH_PATH}/verify`,
 );
 

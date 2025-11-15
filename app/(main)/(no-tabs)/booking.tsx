@@ -264,9 +264,22 @@ export default function BookingScreen() {
     try {
       setIsCreatingSession(true);
 
-      // Combine date and time to create ISO datetime string
+      // Combine date and time to create ISO datetime string (keep local timezone)
       const startDateTime = new Date(`${selectedDate}T${selectedStartTime}:00`);
-      const isoStartTime = startDateTime.toISOString();
+      
+      // Format to ISO string but keep local timezone offset instead of converting to UTC
+      const year = startDateTime.getFullYear();
+      const month = String(startDateTime.getMonth() + 1).padStart(2, '0');
+      const day = String(startDateTime.getDate()).padStart(2, '0');
+      const hours = String(startDateTime.getHours()).padStart(2, '0');
+      const minutes = String(startDateTime.getMinutes()).padStart(2, '0');
+      const seconds = String(startDateTime.getSeconds()).padStart(2, '0');
+      
+      // Create ISO string with local timezone (+07:00 for Vietnam)
+      const isoStartTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+07:00`;
+      
+      console.log("🕐 Original selected time:", `${selectedDate} ${selectedStartTime}`);
+      console.log("🕐 Formatted ISO time:", isoStartTime);
 
       // Calculate vehicle cost
       const vehicleCost = vehicleId && carPrice && selectedDuration > 0 

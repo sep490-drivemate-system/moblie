@@ -84,6 +84,7 @@ export default function RoutePlanningScreen() {
     pickupLocation: string;
     startingLatitude?: string;
     startingLongtitude?: string;
+    duration?: string;
   }>();
 
   const mapRef = useRef<MapView>(null);
@@ -413,6 +414,44 @@ export default function RoutePlanningScreen() {
     );
   };
 
+  // Get session duration for validation
+  const sessionDuration = useMemo(() => {
+    return session?.duration || (params.duration ? parseFloat(params.duration) : 2);
+  }, [session, params.duration]);
+
+  // Calculate estimated total route time for ROUND TRIP (khứ hồi)
+  const calculateTotalRouteTime = (currentWaypoints: Waypoint[]) => {
+    if (currentWaypoints.length === 0) return 0;
+    
+    // Estimate 15 minutes per waypoint + travel time between points
+    const waypointTime = currentWaypoints.length * 15; // 15 phút mỗi điểm
+    
+    // Calculate outbound trip distance
+    let outboundDistance = 0;
+    const outboundPoints = [pickupLocation, ...currentWaypoints];
+    
+    for (let i = 0; i < outboundPoints.length - 1; i++) {
+      outboundDistance += calculatePointDistance(outboundPoints[i], outboundPoints[i + 1]);
+    }
+    
+    // ROUND TRIP: Double the distance for return journey
+    const roundTripDistance = outboundDistance * 2;
+    
+    // Travel time calculation (assume 30km/h average speed in city)
+    const travelTimeMinutes = (roundTripDistance / 1000) * 2; // 2 phút/km
+    
+    console.log("⏱️ Round trip time calculation:", {
+      waypoints: currentWaypoints.length,
+      waypointTime: `${waypointTime} phút`,
+      outboundDistance: `${(outboundDistance / 1000).toFixed(1)} km`,
+      roundTripDistance: `${(roundTripDistance / 1000).toFixed(1)} km`,
+      travelTime: `${Math.round(travelTimeMinutes)} phút`,
+      totalTime: `${Math.round(waypointTime + travelTimeMinutes)} phút`
+    });
+    
+    return waypointTime + travelTimeMinutes;
+  };
+
   const handleMapPress = async (event: any) => {
     console.log("🗺️ Map pressed, isSelectingLocation:", isSelectingLocation);
 
@@ -438,14 +477,12 @@ export default function RoutePlanningScreen() {
       });
       setIsSelectingLocation(null);
     } else if (isSelectingLocation === "waypoint") {
-      console.log("✅ Adding waypoint");
-      const name =
-        newWaypointName.trim() ||
-        address ||
-        `Điểm dừng ${waypoints.length + 1}`;
-      const newWaypoint: Waypoint = {
+      console.log("✅ Adding waypoint - checking duration validation");
+      
+      // Create temporary waypoint to test duration
+      const tempWaypoint: Waypoint = {
         id: Date.now().toString(),
-        name,
+        name: newWaypointName.trim() || address || `Điểm dừng ${waypoints.length + 1}`,
         address: address || undefined,
         latitude,
         longitude,
@@ -453,11 +490,39 @@ export default function RoutePlanningScreen() {
         estimatedTime: "",
         skills: [],
       };
-      setWaypoints([...waypoints, newWaypoint]);
+      
+      // Check if adding this waypoint would exceed session duration
+      const newWaypoints = [...waypoints, tempWaypoint];
+      const estimatedTotalTime = calculateTotalRouteTime(newWaypoints);
+      const sessionDurationMinutes = sessionDuration * 60; // Convert hours to minutes
+      
+      console.log("⏱️ Duration validation:", {
+        estimatedTotalTime: `${estimatedTotalTime} phút`,
+        sessionDurationMinutes: `${sessionDurationMinutes} phút`,
+        sessionDuration: `${sessionDuration} giờ`,
+        wouldExceed: estimatedTotalTime > sessionDurationMinutes
+      });
+      
+      if (estimatedTotalTime > sessionDurationMinutes) {
+        Alert.alert(
+          "Vượt quá thời gian chuyến khứ hồi",
+          `Thêm điểm này sẽ làm lộ trình khứ hồi vượt quá thời gian buổi học (${sessionDuration} giờ).\n\n` +
+          `🔄 Thời gian ước tính (khứ hồi): ${Math.round(estimatedTotalTime)} phút\n` +
+          `⏰ Thời gian cho phép: ${sessionDurationMinutes} phút\n\n` +
+          `💡 Lưu ý: Thời gian đã bao gồm cả lượt đi và lượt về.\n` +
+          `Vui lòng chọn ít điểm hơn hoặc điểm gần hơn.`,
+          [{ text: "Đã hiểu", style: "default" }]
+        );
+        setIsSelectingLocation(null);
+        return;
+      }
+      
+      // If validation passes, add the waypoint
+      setWaypoints(newWaypoints);
       setNewWaypointName("");
       setIsSelectingLocation(null);
-      setEditingWaypointId(newWaypoint.id);
-      console.log("✅ Waypoint added, total waypoints:", waypoints.length + 1);
+      setEditingWaypointId(tempWaypoint.id);
+      console.log("✅ Waypoint added successfully, total waypoints:", newWaypoints.length);
     }
   };
 
@@ -994,61 +1059,6 @@ export default function RoutePlanningScreen() {
                   </View>
                 </View>
 
-                {/* Edit Section */}
-                {editingWaypointId === waypoint.id && (
-                  <View style={styles.waypointEditSection}>
-                    <Text style={styles.editLabel}>Mô tả:</Text>
-                    <TextInput
-                      style={styles.editInput}
-                      placeholder="Nhập mô tả điểm dừng..."
-                      placeholderTextColor="#94a3b8"
-                      value={waypoint.description || ""}
-                      onChangeText={(text) =>
-                        updateWaypoint(waypoint.id, { description: text })
-                      }
-                      multiline
-                      numberOfLines={3}
-                    />
-
-                    <Text style={styles.editLabel}>Thời gian dự kiến:</Text>
-                    <TextInput
-                      style={styles.editInput}
-                      placeholder="VD: 30 phút hoặc 1 giờ"
-                      placeholderTextColor="#94a3b8"
-                      value={waypoint.estimatedTime || ""}
-                      onChangeText={(text) =>
-                        updateWaypoint(waypoint.id, { estimatedTime: text })
-                      }
-                    />
-
-                    <Text style={styles.editLabel}>Kỹ năng luyện tập:</Text>
-                    <View style={styles.skillsContainer}>
-                      {SKILL_OPTIONS.map((skill) => {
-                        const isSelected =
-                          waypoint.skills?.includes(skill) || false;
-                        return (
-                          <TouchableOpacity
-                            key={skill}
-                            style={[
-                              styles.skillTag,
-                              isSelected && styles.skillTagSelected,
-                            ]}
-                            onPress={() => toggleSkill(waypoint.id, skill)}
-                          >
-                            <Text
-                              style={[
-                                styles.skillTagText,
-                                isSelected && styles.skillTagTextSelected,
-                              ]}
-                            >
-                              {skill}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-                )}
 
                 {/* Display Section */}
                 {editingWaypointId !== waypoint.id && (
@@ -1107,8 +1117,45 @@ export default function RoutePlanningScreen() {
                 </Text>
               </View>
 
+              {/* Time Validation Info */}
+              <View style={styles.timeValidationCard}>
+                <View style={styles.timeValidationRow}>
+                  <Clock size={16} color={AppColors.primary} strokeWidth={2} />
+                  <Text style={styles.timeValidationLabel}>Thời gian buổi học:</Text>
+                  <Text style={styles.timeValidationValue}>{sessionDuration} giờ</Text>
+                </View>
+                <View style={styles.timeValidationRow}>
+                  <RouteIcon size={16} color="#6b7280" strokeWidth={2} />
+                  <Text style={styles.timeValidationLabel}>Thời gian khứ hồi:</Text>
+                  <Text style={[
+                    styles.timeValidationValue,
+                    {
+                      color: calculateTotalRouteTime(waypoints) > sessionDuration * 60 
+                        ? AppColors.red 
+                        : AppColors.primary
+                    }
+                  ]}>
+                    {Math.round(calculateTotalRouteTime(waypoints))} phút
+                  </Text>
+                </View>
+                {waypoints.length > 0 && (
+                  <View style={styles.roundTripInfo}>
+                    <Text style={styles.roundTripText}>
+                      🔄 Bao gồm lượt đi và lượt về
+                    </Text>
+                  </View>
+                )}
+                {calculateTotalRouteTime(waypoints) > sessionDuration * 60 && (
+                  <View style={styles.timeWarning}>
+                    <Text style={styles.timeWarningText}>
+                      ⚠️ Lộ trình khứ hồi vượt quá thời gian cho phép
+                    </Text>
+                  </View>
+                )}
+              </View>
+
               {/* Outbound and Return Breakdown */}
-              <View style={styles.routeBreakdown}>
+              {/* <View style={styles.routeBreakdown}>
                 <View style={styles.routeBreakdownItem}>
                   <View style={styles.routeBreakdownHeader}>
                     <View
@@ -1146,7 +1193,7 @@ export default function RoutePlanningScreen() {
                     Về điểm đón
                   </Text>
                 </View>
-              </View>
+              </View> */}
 
               <View style={styles.routeSummaryDivider} />
 
@@ -2273,5 +2320,59 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Time Validation Styles
+  timeValidationCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  timeValidationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  timeValidationLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: "#64748b",
+    fontWeight: "600",
+  },
+  timeValidationValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: AppColors.primary,
+  },
+  timeWarning: {
+    backgroundColor: "#fef2f2",
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  timeWarningText: {
+    fontSize: 13,
+    color: "#dc2626",
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  roundTripInfo: {
+    backgroundColor: "#f0f9ff",
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+  },
+  roundTripText: {
+    fontSize: 12,
+    color: "#0369a1",
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

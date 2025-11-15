@@ -83,13 +83,13 @@ export interface Booking {
   vehicleType: string;
   pickupLocation: string;
   status:
-    | "upcoming"
-    | "in_progress"
-    | "completed"
-    | "cancelled"
-    | "requested"
-    | "pending_confirmation"
-    | "rejected";
+  | "upcoming"
+  | "in_progress"
+  | "completed"
+  | "cancelled"
+  | "requested"
+  | "pending_confirmation"
+  | "rejected";
   price: number;
   packageType: "basic" | "standard" | "premium" | "instructor" | "full";
   learningRoute?: LearningRoute;
@@ -169,7 +169,7 @@ export interface RouteSegment {
 // Session Status Enum
 export enum SessionStatus {
   Pending = 1,
-  Confirmed = 2,
+  Upcoming = 2,
   Completed = 3,
   Cancelled = 4,
   Rescheduled = 5, // Đổi lịch

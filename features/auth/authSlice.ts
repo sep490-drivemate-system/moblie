@@ -23,10 +23,16 @@ interface AuthState extends BaseState {
   registerFormData: ISignUpRequest;
   registerFormErrors: RegisterFormErrors;
   forgotPasswordFormData: IForgotPasswordRequest;
+  // OTP Verification State
+  otpVerification: {
+    sentOtp: string | null;
+    isOtpSent: boolean;
+    enteredOtp: string;
+  };
 }
 
 const initialState: AuthState = {
-  isAuthenticated: true,
+  isAuthenticated: false,
   user: null,
 
   formData: {
@@ -46,6 +52,12 @@ const initialState: AuthState = {
 
   forgotPasswordFormData: {
     emailOrPhone: "",
+  },
+
+  otpVerification: {
+    sentOtp: null,
+    isOtpSent: false,
+    enteredOtp: "",
   },
 
   isLoading: false,
@@ -157,6 +169,21 @@ const authSlice = createSlice({
       }
       state.user.role = action.payload;
     },
+    // OTP Verification Actions
+    setSentOtp: (state, action: PayloadAction<string>) => {
+      state.otpVerification.sentOtp = action.payload;
+      state.otpVerification.isOtpSent = true;
+    },
+    setEnteredOtp: (state, action: PayloadAction<string>) => {
+      state.otpVerification.enteredOtp = action.payload;
+    },
+    resetOtpVerification: (state) => {
+      state.otpVerification = {
+        sentOtp: null,
+        isOtpSent: false,
+        enteredOtp: "",
+      };
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -195,6 +222,9 @@ export const {
   setError,
   setSuccess,
   setUserRole,
+  setSentOtp,
+  setEnteredOtp,
+  resetOtpVerification,
 } = authSlice.actions;
 
 export default authSlice.reducer;

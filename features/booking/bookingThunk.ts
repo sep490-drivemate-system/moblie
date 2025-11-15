@@ -87,11 +87,11 @@ export const getMyPackages = createThunk<
   `/${BOOKING_PATH}`,
   {
     buildUrl: (payload) => {
-      const params = new URLSearchParams();    
+      const params = new URLSearchParams();
       if (payload?.bookingStatus !== undefined && payload.bookingStatus !== BookingStatus.All) {
         params.append('bookingStatus', payload.bookingStatus.toString());
       }
-      
+
       const queryString = params.toString();
       return `/${BOOKING_PATH}${queryString ? `?${queryString}` : ''}`;
     }
@@ -109,12 +109,12 @@ export const getBookingSessions = createThunk<
   {
     buildUrl: (payload) => {
       const params = new URLSearchParams();
-      
+
       // Add status filter if provided
       if (payload?.status !== undefined) {
         params.append('status', payload.status.toString());
       }
-      
+
       const queryString = params.toString();
       return `/${SESSION_PATH}/${BOOKING_PATH}/${payload.bookingId}${queryString ? `?${queryString}` : ''}`;
     }
@@ -133,12 +133,12 @@ export const getAllSessions = createThunk<
   {
     buildUrl: (payload) => {
       const params = new URLSearchParams();
-      
+
       // Add status filter if provided
       if (payload?.status !== undefined) {
         params.append('status', payload.status.toString());
       }
-      
+
       const queryString = params.toString();
       return `/${BOOKING_PATH}/sessions${queryString ? `?${queryString}` : ''}`;
     }
@@ -218,15 +218,15 @@ export const saveSessionRoutes = createAsyncThunk<
   async (payload, { rejectWithValue }) => {
     try {
       const url = `/${SESSION_PATH}/${payload.sessionId}/routes`;
-      
+
       console.log("🚀 Calling API:", url);
       console.log("📦 Request body:", payload.body);
-      
+
       const response = await axiosInstance.post<GenericResponse<boolean>>(
         url,
         payload.body // Send only the routes array as body
       );
-      
+
       console.log("✅ API Response:", response.data);
       return response.data;
     } catch (err) {
@@ -250,13 +250,13 @@ export const getSessionRoutes = createAsyncThunk<
   async (sessionId, { rejectWithValue }) => {
     try {
       const url = `/${SESSION_PATH}/${sessionId}/routes`;
-      
+
       console.log("🚀 Fetching routes from:", url);
-      
+
       const response = await axiosInstance.get<GenericResponse<IGetSessionRoutesResponse>>(
         url
       );
-      
+
       console.log("✅ Routes fetched successfully:", response.data);
       return response.data;
     } catch (err) {
@@ -280,13 +280,13 @@ export const addSessionLog = createAsyncThunk<
   async ({ sessionId, logData }, { rejectWithValue }) => {
     try {
       const url = `/${SESSION_PATH}/${sessionId}/session-log`;
-      
-      
+
+
       const response = await axiosInstance.post<GenericResponse<boolean>>(
         url,
         logData
       );
-      
+
       console.log("✅ Session log added successfully:", response.data);
       return response.data;
     } catch (err) {
@@ -310,15 +310,15 @@ export const cancelSession = createAsyncThunk<
   async ({ sessionId, cancelData }, { rejectWithValue }) => {
     try {
       const url = `/${SESSION_PATH}/${sessionId}/cancel`;
-      
+
       console.log("🚀 Cancelling session:", url);
       console.log("📦 Cancel data:", cancelData);
-      
+
       const response = await axiosInstance.post<GenericResponse<boolean>>(
         url,
         cancelData
       );
-      
+
       console.log("✅ Session cancelled successfully:", response.data);
       return response.data;
     } catch (err) {
@@ -342,21 +342,48 @@ export const rescheduleSession = createAsyncThunk<
   async ({ sessionId, rescheduleData }, { rejectWithValue }) => {
     try {
       const url = `/${SESSION_PATH}/${sessionId}/reschedule`;
-      
-      console.log("🚀 Rescheduling session:", url);
-      console.log("📦 Reschedule data:", rescheduleData);
-      
+
+
       const response = await axiosInstance.post<GenericResponse<boolean>>(
         url,
         rescheduleData
       );
-      
+
       console.log("✅ Session rescheduled successfully:", response.data);
       return response.data;
     } catch (err) {
       const error = err as any;
       console.error("❌ API Error:", error.response?.data || error.message);
       const message = error.response?.data?.message || "Không thể đổi lịch buổi tập lái";
+      return rejectWithValue(message);
+    }
+  }
+);
+
+export const updateSessionStatus = createAsyncThunk<
+  GenericResponse<boolean>,
+  { sessionId: string; status: number }, // status is SessionStatus enum value
+  { rejectValue: string }
+>(
+  "updateSessionStatus",
+  async ({ sessionId, status }, { rejectWithValue }) => {
+    try {
+      const url = `/${SESSION_PATH}/${sessionId}/status`;
+
+      console.log("🚀 Updating session status:", url);
+      console.log("📦 Status:", status);
+
+      const response = await axiosInstance.patch<GenericResponse<boolean>>(
+        url,
+        { status }
+      );
+
+      console.log("✅ Session status updated successfully:", response.data);
+      return response.data;
+    } catch (err) {
+      const error = err as any;
+      console.error("❌ API Error:", error.response?.data || error.message);
+      const message = error.response?.data?.message || "Không thể cập nhật trạng thái buổi tập lái";
       return rejectWithValue(message);
     }
   }

@@ -2,7 +2,7 @@ import { BaseViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { ISignInRequest } from "@/models/auth/signin";
 import { ISignUpRequest } from "@/models/auth/signup";
 import { IForgotPasswordRequest } from "@/models/auth/forgotPassword";
-import { signIn, signUp, verifyEmail } from "@/features/auth/authThunk";
+import { signIn, signUp, verifyEmail, verify } from "@/features/auth/authThunk";
 import { signInSchema, signUpSchema } from "@/validations/authValidation";
 import { ValidationError } from "yup";
 import {
@@ -22,6 +22,9 @@ import {
   setAuthenticated,
   setUserRole,
   logout,
+  setSentOtp,
+  setEnteredOtp,
+  resetOtpVerification,
 } from "@/features/auth/authSlice";
 import { getRoleFromToken } from "@/lib/jwt/tokenUtils";
 import { UserRole } from "@/models/enum/UserRole.enum";
@@ -84,9 +87,9 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         err.inner.forEach((error) => {
           if (error.path) {
             errors[error.path] = error.message;
-            this.dispatch(setRegisterFormError({ 
-              field: error.path as any, 
-              error: error.message 
+            this.dispatch(setRegisterFormError({
+              field: error.path as any,
+              error: error.message
             }));
           }
         });
@@ -104,7 +107,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         );
         if (token) {
           const roleFromToken = getRoleFromToken(token);
- if (roleFromToken) {
+          if (roleFromToken) {
             this.dispatch(setUserRole(roleFromToken));
           }
           this.dispatch(setAuthenticated(true));
@@ -120,7 +123,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     );
   }
 
-  handleGoogleLogin = async () => {};
+  handleGoogleLogin = async () => { };
 
   async handleSignOut(): Promise<void> {
     await AsyncStorage.removeItem(
@@ -157,8 +160,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
           );
         }
       },
-      () => {},
-      () => {},
+      () => { },
+      () => { },
       {
         setLoading,
         setError,
@@ -340,8 +343,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
           signUp(currentState.registerFormData)
         ).unwrap();
       },
-      () => {},
-      (error) => {},
+      () => { },
+      (error) => { },
       {
         setLoading,
         setError,
@@ -401,25 +404,23 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     }
   }
 
-  handleRegister = async (): Promise<void> => {
+  handleRegister = async (router?: any): Promise<void> => {
     const registerFormData = this.getCurrentState().registerFormData;
-    console.log("🚀 Register Button Pressed!");
-    console.log("📋 Complete Register Form Data:");
-    console.log(JSON.stringify(registerFormData, null, 2));
-    console.log("---");
-    console.log("Email:", registerFormData.email);
-    console.log("Fullname:", registerFormData.fullname);
-    console.log("Password:", registerFormData.password ? "***" : "");
-    console.log(
-      "Confirm Password:",
-      registerFormData.confirmPassword ? "***" : ""
-    );
-    console.log("Phone:", registerFormData.phone);
-    console.log("Accept Terms:", registerFormData.acceptTerms);
 
-    // Navigate to OTP screen
-    this.navigate("/(onboarding)/otp");
-    // await this.signup();
+
+    router.push("/(onboarding)/otp");
+
+
+    const result = await this.dispatch(verify({
+      email: registerFormData.email,
+      phoneNumber: registerFormData.phone
+    })).unwrap();
+
+
+    if (result.value) {
+
+      this.dispatch(setSentOtp(result.value));
+    }
   };
 
   handleResetRegisterForm(): void {
@@ -549,5 +550,35 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       (result) => result || { success: false, message: "Có lỗi xảy ra" },
       (error) => ({ success: false, message: error || "Có lỗi xảy ra" })
     );
+  }
+
+
+  // Method to update entered OTP
+  updateEnteredOtp(otp: string): void {
+    this.dispatch(setEnteredOtp(otp));
+  }
+
+  // Method to verify OTP
+  verifyOtp(): boolean {
+    const currentState = this.getCurrentState();
+    const { sentOtp, enteredOtp } = currentState.otpVerification;
+
+    if (!sentOtp || !enteredOtp) {
+      this.dispatch(setError("Mã OTP không hợp lệ"));
+      return false;
+    }
+
+    if (sentOtp === enteredOtp) {
+      this.dispatch(resetOtpVerification());
+      return true;
+    } else {
+      this.dispatch(setError("Mã OTP không đúng"));
+      return false;
+    }
+  }
+
+  // Get OTP verification state
+  getOtpVerificationState() {
+    return this.getCurrentState().otpVerification;
   }
 }

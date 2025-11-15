@@ -150,7 +150,7 @@ export default function InstructorDetailScreen() {
       });
     } catch (error: any) {
       // Error handling
-      console.error('Purchase failed:', error);
+      console.log('Purchase failed:', error);
       
       // Hiển thị error message cho user
       const errorMessage = error?.message || 'Không thể mua gói. Vui lòng thử lại.';

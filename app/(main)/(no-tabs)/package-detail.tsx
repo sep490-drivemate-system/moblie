@@ -70,15 +70,6 @@ export default function PackageDetailScreen() {
     carPrice: packageDataFromParams.carPrice,
   } : null;
   
-  // Debug log
-  console.log("Package Detail Debug:", {
-    packageId,
-    hasParamsData: !!params.packageData,
-    packageDataFromParams,
-    packageData,
-    instructorIdFromParams: params.instructorId,
-    carIdFromParams: params.carId,
-  });
   
   // Extract params for booking
   const instructorIdFromParams = params.instructorId as string || packageData?.instructorId;
@@ -90,7 +81,7 @@ export default function PackageDetailScreen() {
     switch (status) {
       case SessionStatus.Pending:
         return "planing";
-      case SessionStatus.Confirmed:
+      case SessionStatus.Upcoming:
         return "upcoming";
       case SessionStatus.Completed:
         return "completed";
@@ -393,21 +384,19 @@ export default function PackageDetailScreen() {
         {packageData && (
         <View style={styles.packageCard}>
           <View style={styles.instructorSection}>
-            <Image
+            {/* <Image
               source={{ uri: packageData.instructorAvatar }}
               style={styles.instructorAvatar}
-            />
+            /> */}
             <View style={styles.instructorInfo}>
-              <Text style={styles.instructorName}>
+              {/* <Text style={styles.instructorName}>
                 {packageData.instructorName}
-              </Text>
+              </Text> */}
               <Text style={styles.packageName}>{packageData.packageName}</Text>
 
-              {/* Skills & Road Types */}
-              <View style={styles.skillsContainer}>
+              {/* <View style={styles.skillsContainer}>
                 <Text style={styles.skillsTitle}>Kỹ năng & Loại đường</Text>
                 
-                {/* Basic Skills */}
                 <View style={styles.skillCategory}>
                   <Text style={styles.categoryTitle}>🚗 Kỹ năng cơ bản</Text>
                   <View style={styles.skillsTags}>
@@ -425,8 +414,6 @@ export default function PackageDetailScreen() {
                   </View>
                 </View>
 
-
-                {/* Road Types */}
                 <View style={styles.skillCategory}>
                   <Text style={styles.categoryTitle}>🛣️ Loại đường</Text>
                   <View style={styles.skillsTags}>
@@ -446,7 +433,7 @@ export default function PackageDetailScreen() {
                     ))}
                   </View>
                 </View>
-              </View>
+              </View> */}
 
 
             </View>
@@ -628,12 +615,12 @@ export default function PackageDetailScreen() {
                   </View>
 
                   {/* Location */}
-                  <View style={styles.sessionRow}>
+                  {/* <View style={styles.sessionRow}>
                     <MapPin size={18} color="#64748b" strokeWidth={2} />
                     <Text style={styles.sessionText} numberOfLines={1}>
                       {session.location}
                     </Text>
-                  </View>
+                  </View> */}
 
                   {/* Vehicle */}
                   {session.vehicleName && (

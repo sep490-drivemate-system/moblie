@@ -18,38 +18,7 @@ interface Step3Props {
   isLoading?: boolean;
 }
 
-const pickupLocations = [
-  {
-    id: "fpt_hcm",
-    name: "FPT University Hồ Chí Minh",
-    address: "Khu Công nghệ cao, Quận 9, TP.HCM",
-  },
-  {
-    id: "fpt_hanoi",
-    name: "FPT University Hà Nội",
-    address: "Khu Công nghệ cao Hòa Lạc, Thạch Thất, Hà Nội",
-  },
-  {
-    id: "fpt_danang",
-    name: "FPT University Đà Nẵng",
-    address: "Khu Công nghệ cao, Quận Liên Chiểu, Đà Nẵng",
-  },
-  {
-    id: "fpt_cantho",
-    name: "FPT University Cần Thơ",
-    address: "Khu Công nghệ cao, Quận Ninh Kiều, Cần Thơ",
-  },
-  {
-    id: "fpt_quynhon",
-    name: "FPT University Quy Nhơn",
-    address: "Khu Công nghệ cao, Quận Bình Định, Quy Nhơn",
-  },
-  {
-    id: "fpt_hoian",
-    name: "FPT University Hội An",
-    address: "Khu Công nghệ cao, Quận Hội An, Quảng Nam",
-  },
-];
+
 
 export default function Step3({
   selectedLocationId,
@@ -65,7 +34,7 @@ export default function Step3({
         name: addr.addressString,
         address: addr.addressString,
       }))
-    : pickupLocations;
+    : [];
 
   return (
     <View style={styles.section}>

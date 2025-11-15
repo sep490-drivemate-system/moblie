@@ -23,14 +23,14 @@ export default function OTPScreen() {
     (state: RootState) => state.auth
   );
   const email = authState.registerFormData.email;
+  const phone = authState.registerFormData.phone;
   const isLoading = authState.isLoading;
+  const otpVerification = authViewModel.getOtpVerificationState();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [receivedOtp, setReceivedOtp] = useState<string>("");
   const [otpError, setOtpError] = useState<string>("");
   const [canResend, setCanResend] = useState(true);
   const [isResending, setIsResending] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [hasCalledApi, setHasCalledApi] = useState(false);
   const [modalConfig, setModalConfig] = useState({
     title: "",
     message: "",
@@ -59,31 +59,29 @@ export default function OTPScreen() {
     setShowModal(true);
   }, []);
 
-  // Call verify-email API when component mounts - TEMPORARILY DISABLED
+  // Auto focus first input when component mounts
   useEffect(() => {
-    // BYPASS: Skip API call for development
-    console.log("OTP API call bypassed for development");
-    setReceivedOtp("123456"); // Set dummy OTP for testing
-    
-    // Auto focus first input when component mounts
     setTimeout(() => {
       inputRefs.current[0]?.focus();
     }, 100);
   }, []);
 
   const handleOtpChange = (value: string, index: number) => {
-    if (value.length > 1) return; // Only allow single digit
+    console.log(`🔍 Input Debug - Index: ${index}, Value: "${value}", Length: ${value.length}`);
+    
+    if (value.length > 1) return; 
 
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
+    
+    console.log("🔍 New OTP Array:", newOtp);
+    console.log("🔍 All filled?", newOtp.every(digit => digit !== ""));
 
-    // Clear error when user starts typing
     if (otpError) {
       setOtpError("");
     }
 
-    // Auto focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -91,9 +89,9 @@ export default function OTPScreen() {
     // Auto verify when all 6 digits are filled
     if (newOtp.every(digit => digit !== "")) {
       Keyboard.dismiss();
-      // Auto verify after a short delay to show completed input
+      // Use newOtp directly instead of waiting for state update
       setTimeout(() => {
-        handleVerifyOTP();
+        handleVerifyOTPWithArray(newOtp);
       }, 300);
     }
   };
@@ -116,33 +114,82 @@ export default function OTPScreen() {
     }
   };
 
+  const handleVerifyOTPWithArray = async (otpArray: string[]) => {
+    const enteredOtpString = otpArray.join("");
+    
+    console.log("🔍 OTP Debug (with array):");
+    console.log("OTP Array:", otpArray);
+    console.log("OTP String:", enteredOtpString);
+    console.log("OTP Length:", enteredOtpString.length);
+    console.log("Each digit:", otpArray.map((digit, i) => `[${i}]: "${digit}"`));
+    
+    if (enteredOtpString.length !== 6) {
+      setOtpError("Vui lòng nhập đầy đủ 6 chữ số");
+      return;
+    }
+
+    // Update entered OTP in Redux
+    authViewModel.updateEnteredOtp(enteredOtpString);
+    
+    // Debug: Check OTP in Redux state
+    const otpState = authViewModel.getOtpVerificationState();
+    console.log("🔍 Redux OTP State:");
+    console.log("Sent OTP:", otpState.sentOtp);
+    console.log("Entered OTP:", otpState.enteredOtp);
+    console.log("Is OTP Sent:", otpState.isOtpSent);
+    
+    // Verify OTP directly with current input
+    const isValid = otpState.sentOtp === enteredOtpString;
+    console.log("🔍 Direct OTP Verification:");
+    console.log("Sent:", otpState.sentOtp);
+    console.log("Entered:", enteredOtpString);
+    console.log("Result:", isValid);
+    
+    if (isValid) {
+      console.log("✅ OTP verification successful");
+      router.push("/(onboarding)/role-selection");
+    } else {
+      setOtpError("Mã OTP không đúng. Vui lòng thử lại.");
+      // Clear OTP inputs
+      setOtp(["", "", "", "", "", ""]);
+      // Focus first input
+      setTimeout(() => {
+        inputRefs.current[0]?.focus();
+      }, 100);
+    }
+  };
+
   const handleVerifyOTP = async () => {
-router.push("/(onboarding)/role-selection");
+    await handleVerifyOTPWithArray(otp);
   };
 
   const handleResendOTP = async () => {
-    // BYPASS: Skip resend API call for development
     if (canResend && !isResending) {
       setCanResend(false);
       setIsResending(true);
       
-      // Simulate API delay
-      setTimeout(() => {
-        setReceivedOtp("123456"); // Set dummy OTP
+      try {
+        // Call handleRegister again to resend OTP
+        await authViewModel.handleRegister(router);
+        
         setOtp(["", "", "", "", "", ""]);
         setOtpError("");
         // Auto focus first input after resend
         setTimeout(() => {
           inputRefs.current[0]?.focus();
         }, 100);
-        showCustomAlert("Thành công", "Mã OTP mới đã được gửi (Demo)", () =>
+        showCustomAlert("Thành công", "Mã OTP mới đã được gửi", () =>
           setShowModal(false)
         );
+      } catch (error) {
+        showCustomAlert("Lỗi", "Có lỗi xảy ra khi gửi lại mã OTP", () =>
+          setShowModal(false)
+        );
+      } finally {
         setIsResending(false);
-        
         // Re-enable resend after 60 seconds
         setTimeout(() => setCanResend(true), 60000);
-      }, 1000);
+      }
     }
   };
 
@@ -167,7 +214,7 @@ router.push("/(onboarding)/role-selection");
           <Text style={styles.title}>Xác minh tài khoản với mã OTP</Text>
           <Text style={styles.description}>
             Chúng tôi đã gửi một mã có 6 chữ số đến email{" "}
-            {email ? email.replace(/(.{2})(.*)(@.*)/, "$1***$3") : ""}
+            {email ? email.replace(/(.{2})(.*)(@.*)/, "$1***$3") : ""} 
           </Text>
         </View>
 

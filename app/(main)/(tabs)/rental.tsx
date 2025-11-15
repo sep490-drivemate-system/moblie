@@ -191,6 +191,7 @@ export default function RentalScreen() {
       
       const rescheduleData: IRescheduleSessionRequest = {
         note: rescheduleNote.trim()
+        
       };
 
       await dispatch(rescheduleSession({ sessionId: selectedSession.id, rescheduleData })).unwrap();
@@ -275,8 +276,6 @@ export default function RentalScreen() {
     switch (displayStatus) {
       case "planing":
         return "Lên lộ trình";
-      case "pending_confirmation":
-        return "Đợi xác nhận";
       case "up_coming":
         return "Sắp diễn ra";
       case "in_progress":
@@ -331,6 +330,7 @@ export default function RentalScreen() {
         pickupLocation: session.location || "Điểm đón",
         startingLatitude: session.startingLatitude?.toString() || "10.8231",
         startingLongtitude: session.startingLongtitude?.toString() || "106.6297",
+        duration: session.duration?.toString() || "2", // Truyền duration để validate thời gian
       },
     });
   };
@@ -426,32 +426,6 @@ export default function RentalScreen() {
                 ]}
               >
                 Lên lộ trình
-              </Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              selectedTab === "pending_confirmation" && styles.activeTab,
-            ]}
-            onPress={() => setSelectedTab("pending_confirmation")}
-          >
-            <View style={styles.tabContent}>
-              <AlertCircle
-                size={16}
-                color={
-                  selectedTab === "pending_confirmation" ? "#ffffff" : "#6b7280"
-                }
-                strokeWidth={2}
-              />
-              <Text
-                style={[
-                  styles.tabText,
-                  selectedTab === "pending_confirmation" &&
-                    styles.activeTabText,
-                ]}
-              >
-                Đợi xác nhận
               </Text>
             </View>
           </TouchableOpacity>
@@ -625,26 +599,14 @@ export default function RentalScreen() {
                   end={{ x: 1, y: 1 }}
                 >
                   <View style={styles.bookingHeader}>
-                    <View style={styles.instructorInfo}>
-                      <Image
-                        source={{
-                          uri: session.noviceAvatar || "https://i.pravatar.cc/150?img=1",
-                        }}
-                        style={styles.instructorAvatarImage}
-                      />
-                      <View style={styles.instructorDetails}>
-                        <Text style={styles.instructorName}>
-                          {session.noviceDriverName}
-                        </Text>
-                        {session.packageName && (
-                          <Text
-                            style={styles.packageNameText}
-                            numberOfLines={1}
-                          >
+                    <View style={styles.packageInfoContainer}>
+                      {session.packageName && (
+                        <View style={styles.packageNameContainer}>
+                          <Text style={styles.packageNameText}>
                             {session.packageName}
                           </Text>
-                        )}
-                      </View>
+                        </View>
+                      )}
                     </View>
                     <View
                       style={[
@@ -706,7 +668,6 @@ export default function RentalScreen() {
                       style={[styles.actionButton, styles.routeButton]}
                       onPress={() => handlePlanRoute(session)}
                     >
-                      <Eye size={16} color="#ffffff" strokeWidth={2} />
                       <Text style={styles.routeButtonText}>Xem chi tiết</Text>
                     </TouchableOpacity>
                     
@@ -722,7 +683,6 @@ export default function RentalScreen() {
                             setShowRescheduleModal(true);
                           }}
                         >
-                          <Calendar size={14} color="#ffffff" strokeWidth={2} />
                           <Text style={styles.rescheduleButtonText}>Đổi lịch</Text>
                         </TouchableOpacity>
                         
@@ -735,7 +695,6 @@ export default function RentalScreen() {
                             setShowCancelModal(true);
                           }}
                         >
-                          <X size={14} color="#ffffff" strokeWidth={2} />
                           <Text style={styles.cancelButtonText}>Hủy</Text>
                         </TouchableOpacity>
                       </>
@@ -1204,11 +1163,22 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#e2e8f0",
   },
+  packageInfoContainer: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  packageNameContainer: {
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+  },
   packageNameText: {
-    fontSize: 12,
-    color: "#64748b",
-    fontWeight: "500",
-    marginTop: 2,
+    fontSize: 14,
+    color: "#334155",
+    fontWeight: "600",
+    textAlign: "center",
   },
   routeButton: {
     backgroundColor: AppColors.primary,

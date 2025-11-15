@@ -255,7 +255,7 @@ export default function SignUpScreen() {
                   !authViewModel.isRegisterFormValid() &&
                     styles.primaryButtonDisabled,
                 ]}
-                onPress={authViewModel.handleRegister}
+                onPress={() => authViewModel.handleRegister(router)}
                 disabled={!authViewModel.isRegisterFormValid()}
               >
                 <Text
