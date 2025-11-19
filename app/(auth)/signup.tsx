@@ -14,23 +14,43 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
+import CustomAlert from "@/components/CustomAlert";
+import { ActivityIndicator } from "react-native";
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const [_, authViewModel] = useViewModel(
+  const [authState, authViewModel] = useViewModel(
     AuthViewModel,
     (state: RootState) => state.auth
   );
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
 
   // Set router to ViewModel for navigation
   useEffect(() => {
     authViewModel.setRouter(router);
   }, [router, authViewModel]);
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // Hiển thị modal lỗi khi có errorMessage
+  useEffect(() => {
+    if (authState.errorMessage) {
+      setShowErrorAlert(true);
+      console.log("authState.errorMessage", authState.errorMessage);
+    }
+  }, [authState.errorMessage]);
+
+  if (authState.isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#70E000" />
+        <Text style={styles.loadingText}>Đang xử lý...</Text>
+      </View>
+    );
+  }
 
   return (
     <>
@@ -81,10 +101,9 @@ export default function SignUpScreen() {
                 <TextInput
                   style={[
                     styles.input,
-                    authViewModel.getRegisterFormErrors().email &&
-                      styles.inputError,
+                    authState.registerFormErrors.email && styles.inputError,
                   ]}
-                  value={authViewModel.getRegisterFormData().email}
+                  value={authState.registerFormData.email}
                   onChangeText={(value) =>
                     authViewModel.updateRegisterFormData("email", value)
                   }
@@ -93,9 +112,9 @@ export default function SignUpScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-                {authViewModel.getRegisterFormErrors().email && (
+                {authState.registerFormErrors.email && (
                   <Text style={styles.errorText}>
-                    {authViewModel.getRegisterFormErrors().email}
+                    {authState.registerFormErrors.email}
                   </Text>
                 )}
               </View>
@@ -107,10 +126,10 @@ export default function SignUpScreen() {
                   <TextInput
                     style={[
                       styles.passwordInput,
-                      authViewModel.getRegisterFormErrors().password &&
+                      authState.registerFormErrors.password &&
                         styles.inputError,
                     ]}
-                    value={authViewModel.getRegisterFormData().password}
+                    value={authState.registerFormData.password}
                     onChangeText={(value) =>
                       authViewModel.updateRegisterFormData("password", value)
                     }
@@ -129,7 +148,7 @@ export default function SignUpScreen() {
                     )}
                   </TouchableOpacity>
                 </View>
-                {authViewModel.getRegisterFormErrors().password && (
+                {authState.registerFormErrors.password && (
                   <View style={styles.errorContainer}>
                     {authViewModel
                       .getRegisterFormErrors()
@@ -255,7 +274,7 @@ export default function SignUpScreen() {
                   !authViewModel.isRegisterFormValid() &&
                     styles.primaryButtonDisabled,
                 ]}
-                onPress={() => authViewModel.handleRegister(router)}
+                onPress={authViewModel.handleRegister}
                 disabled={!authViewModel.isRegisterFormValid()}
               >
                 <Text
@@ -272,6 +291,23 @@ export default function SignUpScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Error Alert Modal */}
+      <CustomAlert
+        visible={showErrorAlert}
+        title="Lỗi"
+        message={authState.errorMessage!}
+        buttons={[
+          {
+            text: "OK",
+            style: "default",
+            onPress: () => {
+              setShowErrorAlert(false);
+              authViewModel.clearError();
+            },
+          },
+        ]}
+      />
     </>
   );
 }
@@ -463,5 +499,17 @@ const styles = StyleSheet.create({
     minHeight: 50,
     paddingTop: 14,
     paddingBottom: 14,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingTop: StatusBar.currentHeight,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#92929D",
   },
 });

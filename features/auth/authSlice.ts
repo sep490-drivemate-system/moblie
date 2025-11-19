@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { UserRole } from "@/models/enum/UserRole.enum";
-import { signIn } from "./authThunk";
+import { signIn, signUp, verify } from "./authThunk";
 import { BaseState } from "@/models/generic/baseState";
 import { ISignInRequest } from "@/models/auth/signin";
 import { ISignUpRequest } from "@/models/auth/signup";
@@ -86,7 +86,10 @@ const authSlice = createSlice({
 
     updateRegisterFormData: (
       state,
-      action: PayloadAction<{ field: keyof ISignUpRequest; value: string | boolean }>
+      action: PayloadAction<{
+        field: keyof ISignUpRequest;
+        value: string | boolean;
+      }>
     ) => {
       const { field, value } = action.payload;
       if (field === "acceptTerms") {
@@ -98,7 +101,10 @@ const authSlice = createSlice({
 
     setRegisterFormError: (
       state,
-      action: PayloadAction<{ field: keyof RegisterFormErrors; error: string | undefined }>
+      action: PayloadAction<{
+        field: keyof RegisterFormErrors;
+        error: string | undefined;
+      }>
     ) => {
       const { field, error } = action.payload;
       if (error) {
@@ -197,10 +203,28 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isSuccess = true;
       })
+      .addCase(signUp.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = false;
+        state.errorMessage = action.payload as string || null;
+      })
       .addCase(signIn.rejected, (state, action) => {
         state.isLoading = false;
         state.isSuccess = false;
         state.errorMessage = action.payload || null;
+      })
+      .addCase(verify.pending, (state) => {
+        state.isLoading = true;
+        state.errorMessage = null;
+      })
+      .addCase(verify.fulfilled, (state) => {
+        state.isLoading = false;
+        state.errorMessage = null;
+      })
+      .addCase(verify.rejected, (state, action) => {
+        state.isLoading = false;
+        // rejectWithValue trả về string message
+        state.errorMessage = (action.payload as string) || null;
       });
   },
 });

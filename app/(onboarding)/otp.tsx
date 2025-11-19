@@ -1,8 +1,7 @@
 import { RootState } from "@/lib/redux/store";
 import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -18,14 +17,12 @@ import {
 
 export default function OTPScreen() {
   const router = useRouter();
-  const [, authViewModel] = useViewModel(
+  const [authState, authViewModel] = useViewModel(
     AuthViewModel,
     (state: RootState) => state.auth
   );
   const email = authState.registerFormData.email;
-  const phone = authState.registerFormData.phone;
-  const isLoading = authState.isLoading;
-  const otpVerification = authViewModel.getOtpVerificationState();
+  const otpVerification = authState.otpVerification;
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState<string>("");
   const [canResend, setCanResend] = useState(true);
@@ -37,52 +34,95 @@ export default function OTPScreen() {
     onConfirm: () => {},
     confirmText: "OK",
   });
-  const inputRefs = useRef<TextInput[]>([]);
-  const lastEmailRef = useRef<string>("");
+  const inputRefs = useRef<(TextInput | null)[]>([]);
 
   // Set router to ViewModel for navigation
   useEffect(() => {
     authViewModel.setRouter(router);
-  }, [router, authViewModel]);
+  }, [router]);
 
-  useEffect(() => {
-    inputRefs.current[0]?.focus();
-  }, []);
+  // Auto focus first input when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      const timer = setTimeout(() => {
+        if (inputRefs.current[0]) {
+          inputRefs.current[0].focus();
+        }
+      }, 400);
 
-  // Auto focus first input when component mounts
-  useEffect(() => {
-    setTimeout(() => {
-      inputRefs.current[0]?.focus();
-    }, 100);
-  }, []);
+      return () => clearTimeout(timer);
+    }, [])
+  );
 
   const handleOtpChange = (value: string, index: number) => {
-    console.log(`🔍 Input Debug - Index: ${index}, Value: "${value}", Length: ${value.length}`);
-    
-    if (value.length > 1) return; 
+    // Xử lý trường hợp paste nhiều ký tự
+    if (value.length > 1) {
+      const digits = value.replace(/\D/g, "").slice(0, 6).split("");
+      const newOtp = [...otp];
 
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-    
-    console.log("🔍 New OTP Array:", newOtp);
-    console.log("🔍 All filled?", newOtp.every(digit => digit !== ""));
+      // Fill các ô với các ký tự đã paste
+      digits.forEach((digit, i) => {
+        if (index + i < 6) {
+          newOtp[index + i] = digit;
+        }
+      });
 
-    if (otpError) {
-      setOtpError("");
-    }
+      setOtp(newOtp);
 
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-    
-    // Auto verify when all 6 digits are filled
-    if (newOtp.every(digit => digit !== "")) {
-      Keyboard.dismiss();
-      // Use newOtp directly instead of waiting for state update
+      // Focus vào ô cuối cùng được fill hoặc ô tiếp theo
+      const nextIndex = Math.min(index + digits.length, 5);
       setTimeout(() => {
-        handleVerifyOTPWithArray(newOtp);
-      }, 300);
+        const nextInput = inputRefs.current[nextIndex];
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }, 100);
+
+      // Auto verify nếu đã fill đủ 6 số
+      if (newOtp.every((digit) => digit !== "")) {
+        Keyboard.dismiss();
+        setTimeout(() => {
+          handleVerifyOTPWithArray(newOtp);
+        }, 300);
+      }
+
+      return;
+    }
+
+    // Chỉ lấy số, bỏ qua các ký tự khác
+    const numericValue = value.replace(/\D/g, "");
+    if (numericValue && numericValue.length > 0) {
+      const newOtp = [...otp];
+      newOtp[index] = numericValue.slice(-1); // Chỉ lấy ký tự cuối cùng
+      setOtp(newOtp);
+
+      if (otpError) {
+        setOtpError("");
+      }
+
+      // Focus vào ô tiếp theo nếu có giá trị và chưa phải ô cuối
+      if (index < 5) {
+        setTimeout(() => {
+          const nextInput = inputRefs.current[index + 1];
+          if (nextInput) {
+            nextInput.focus();
+          }
+        }, 100);
+      }
+
+      // Auto verify when all 6 digits are filled
+      const updatedOtp = [...newOtp];
+      if (updatedOtp.every((digit) => digit !== "")) {
+        Keyboard.dismiss();
+        setTimeout(() => {
+          handleVerifyOTPWithArray(updatedOtp);
+        }, 300);
+      }
+    } else {
+      // Nếu xóa hết, clear ô hiện tại
+      const newOtp = [...otp];
+      newOtp[index] = "";
+      setOtp(newOtp);
     }
   };
 
@@ -93,7 +133,9 @@ export default function OTPScreen() {
         const newOtp = [...otp];
         newOtp[index - 1] = "";
         setOtp(newOtp);
-        inputRefs.current[index - 1]?.focus();
+        setTimeout(() => {
+          inputRefs.current[index - 1]?.focus();
+        }, 50);
       }
       // If current input has value, just clear it (default behavior)
       else if (otp[index]) {
@@ -106,13 +148,16 @@ export default function OTPScreen() {
 
   const handleVerifyOTPWithArray = async (otpArray: string[]) => {
     const enteredOtpString = otpArray.join("");
-    
+
     console.log("🔍 OTP Debug (with array):");
     console.log("OTP Array:", otpArray);
     console.log("OTP String:", enteredOtpString);
     console.log("OTP Length:", enteredOtpString.length);
-    console.log("Each digit:", otpArray.map((digit, i) => `[${i}]: "${digit}"`));
-    
+    console.log(
+      "Each digit:",
+      otpArray.map((digit, i) => `[${i}]: "${digit}"`)
+    );
+
     if (enteredOtpString.length !== 6) {
       setOtpError("Vui lòng nhập đầy đủ 6 chữ số");
       return;
@@ -120,21 +165,21 @@ export default function OTPScreen() {
 
     // Update entered OTP in Redux
     authViewModel.updateEnteredOtp(enteredOtpString);
-    
+
     // Debug: Check OTP in Redux state
     const otpState = authViewModel.getOtpVerificationState();
     console.log("🔍 Redux OTP State:");
     console.log("Sent OTP:", otpState.sentOtp);
     console.log("Entered OTP:", otpState.enteredOtp);
     console.log("Is OTP Sent:", otpState.isOtpSent);
-    
+
     // Verify OTP directly with current input
     const isValid = otpState.sentOtp === enteredOtpString;
     console.log("🔍 Direct OTP Verification:");
     console.log("Sent:", otpState.sentOtp);
     console.log("Entered:", enteredOtpString);
     console.log("Result:", isValid);
-    
+
     if (isValid) {
       console.log("✅ OTP verification successful");
       router.push("/(onboarding)/role-selection");
@@ -157,24 +202,18 @@ export default function OTPScreen() {
     if (canResend && !isResending) {
       setCanResend(false);
       setIsResending(true);
-      
+
       try {
         // Call handleRegister again to resend OTP
-        await authViewModel.handleRegister(router);
-        
+        await authViewModel.handleRegister();
+
         setOtp(["", "", "", "", "", ""]);
         setOtpError("");
         // Auto focus first input after resend
         setTimeout(() => {
           inputRefs.current[0]?.focus();
         }, 100);
-        showCustomAlert("Thành công", "Mã OTP mới đã được gửi", () =>
-          setShowModal(false)
-        );
       } catch (error) {
-        showCustomAlert("Lỗi", "Có lỗi xảy ra khi gửi lại mã OTP", () =>
-          setShowModal(false)
-        );
       } finally {
         setIsResending(false);
         // Re-enable resend after 60 seconds
@@ -204,7 +243,7 @@ export default function OTPScreen() {
           <Text style={styles.title}>Xác minh tài khoản với mã OTP</Text>
           <Text style={styles.description}>
             Chúng tôi đã gửi một mã có 6 chữ số đến email{" "}
-            {email ? email.replace(/(.{2})(.*)(@.*)/, "$1***$3") : ""} 
+            {email ? email.replace(/(.{2})(.*)(@.*)/, "$1***$3") : ""}
           </Text>
         </View>
 
@@ -212,20 +251,26 @@ export default function OTPScreen() {
         <View style={styles.otpContainer}>
           {otp.map((digit, index) => (
             <TextInput
-              key={index}
+              key={`otp-input-${index}`}
               ref={(ref) => {
-                if (ref) inputRefs.current[index] = ref;
+                if (ref) {
+                  inputRefs.current[index] = ref;
+                } else {
+                  inputRefs.current[index] = null;
+                }
               }}
               style={[styles.otpInput, otpError && styles.otpInputError]}
               value={digit}
-              onChangeText={(value) => handleOtpChange(value, index)}
+              onChangeText={(value) => {
+                handleOtpChange(value, index);
+              }}
               onKeyPress={({ nativeEvent }) =>
                 handleKeyPress(nativeEvent.key, index)
               }
-              keyboardType="numeric"
+              keyboardType="number-pad"
               maxLength={1}
               textAlign="center"
-              selectTextOnFocus
+              autoFocus={index === 0 ? true : false}
             />
           ))}
         </View>
@@ -250,16 +295,10 @@ export default function OTPScreen() {
         {/* Verify Button */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[
-              styles.verifyButton,
-              isLoading && styles.verifyButtonDisabled,
-            ]}
+            style={styles.verifyButton}
             onPress={handleVerifyOTP}
-            disabled={isLoading}
           >
-            <Text style={styles.verifyButtonText}>
-              {isLoading ? "Đang gửi..." : "Xác minh"}
-            </Text>
+            <Text style={styles.verifyButtonText}>Xác minh</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -386,10 +425,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#FFFFFF",
-  },
-  verifyButtonDisabled: {
-    backgroundColor: "#CCCCCC",
-    opacity: 0.6,
   },
   modalOverlay: {
     flex: 1,
