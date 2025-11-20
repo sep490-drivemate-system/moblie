@@ -1,30 +1,32 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  Image,
-  TextInput,
-  ScrollView,
-} from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  ArrowLeft,
-  MoreVertical,
-  Edit2Icon,
-  Trash2,
-} from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
+import { RootState } from "@/lib/redux/store";
+import { convertImageFile } from "@/utils/utils";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useRouter } from "expo-router";
+import {
+  Edit2Icon,
+  Trash2
+} from "lucide-react-native";
+import React, { useEffect, useState } from "react";
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function FormScreen() {
+  const [authState, authViewModel] = useViewModel(
+    AuthViewModel,
+    (state: RootState) => state.auth
+  );
   const router = useRouter();
-  const [imageUri, setImageUri] = useState<string | null>(null);
   const [tempImageUri, setTempImageUri] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
@@ -35,11 +37,6 @@ export default function FormScreen() {
       onPress: () => void;
       style?: "default" | "cancel" | "destructive";
     }>,
-  });
-
-  // Form data
-  const [formData, setFormData] = useState({
-    issueDate: "",
   });
 
   useEffect(() => {
@@ -54,20 +51,11 @@ export default function FormScreen() {
 
   const loadUserData = async () => {
     try {
-      const savedImage = await AsyncStorage.getItem("criminal_record");
-      const savedFormData = await AsyncStorage.getItem("criminal_record_data");
-
-      if (savedImage) {
-        setImageUri(savedImage);
-      }
-      if (savedFormData) {
-        setFormData(JSON.parse(savedFormData));
-      }
-
       // Load temp image if exists
       const tempImage = await AsyncStorage.getItem("temp_criminal_record");
       if (tempImage) {
         setTempImageUri(tempImage);
+        authViewModel.updateRegisterInstructorFormData("PersonalProfile", convertImageFile(tempImage));
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -79,17 +67,12 @@ export default function FormScreen() {
   };
 
   const handleImagePress = () => {
-    if (tempImageUri || imageUri) {
+    if (tempImageUri) {
       setShowDeleteMode(true);
     }
   };
 
   const handleImageUpload = () => {
-    // Reset saved state when user changes image
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
     router.push(
       `/(onboarding)/(personal-identification)/(criminal-record)/upload-guide`
     );
@@ -129,82 +112,9 @@ export default function FormScreen() {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    // Reset saved state when user changes data
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
-    // Apply date formatting for date fields
-    if (field === "issueDate") {
-      const formattedValue = formatDateInput(value);
-      setFormData((prev) => ({
-        ...prev,
-        [field]: formattedValue,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-    }
-  };
-
   // Check if all fields are filled
   const isFormComplete = () => {
-    return (tempImageUri || imageUri) && formData.issueDate.trim() !== "";
-  };
-
-  const handleSave = async () => {
-    // Validation
-    if (!tempImageUri && !imageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên lý lịch tư pháp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.issueDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    try {
-      const currentImage = tempImageUri || imageUri;
-
-      await AsyncStorage.setItem("criminal_record", currentImage!);
-      await AsyncStorage.setItem(
-        "criminal_record_data",
-        JSON.stringify(formData)
-      );
-
-      setImageUri(currentImage);
-      setTempImageUri(null);
-      await AsyncStorage.removeItem("temp_criminal_record");
-      setIsSaved(true);
-
-      showCustomAlert("Thành công", "Thông tin lý lịch tư pháp đã được lưu", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-    } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu thông tin lý lịch tư pháp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-    }
+    return tempImageUri;
   };
 
   // BYPASS: Temporary function to skip criminal record validation
@@ -218,7 +128,7 @@ export default function FormScreen() {
 
   const handleNext = () => {
     // Validation for image
-    if (!tempImageUri && !imageUri) {
+    if (!tempImageUri) {
       showCustomAlert(
         "Lỗi",
         "Vui lòng tải lên lý lịch tư pháp trước khi tiếp tục",
@@ -229,17 +139,6 @@ export default function FormScreen() {
           },
         ]
       );
-      return;
-    }
-
-    // Validation for form data
-    if (!formData.issueDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp trước khi tiếp tục", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
       return;
     }
 
@@ -277,15 +176,9 @@ export default function FormScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              // Reset saved state when user deletes image
-              if (isSaved) {
-                setIsSaved(false);
-              }
-
               setTempImageUri(null);
-              setImageUri(null);
+              authViewModel.updateRegisterInstructorFormData("PersonalProfile", null);
               await AsyncStorage.removeItem("temp_criminal_record");
-              await AsyncStorage.removeItem("criminal_record");
               setShowDeleteMode(false);
               setShowAlert(false);
 
@@ -343,13 +236,13 @@ export default function FormScreen() {
                 Lý lịch tư pháp <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.imageUploadArea}>
-                {tempImageUri || imageUri ? (
+                {tempImageUri ? (
                   <TouchableOpacity
                     style={styles.imageWrapper}
                     onPress={() => handleImagePress()}
                   >
                     <Image
-                      source={{ uri: (tempImageUri || imageUri)! }}
+                      source={{ uri: tempImageUri! }}
                       style={[
                         styles.uploadedImage,
                         showDeleteMode && styles.dimmedImage,
@@ -389,7 +282,7 @@ export default function FormScreen() {
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNextBypass}>
+            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>
@@ -411,7 +304,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    paddingTop: StatusBar.currentHeight,
   },
   scrollView: {
     flex: 1,

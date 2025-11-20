@@ -17,12 +17,19 @@ import {
   Trash2,
 } from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
+import { convertImageFile, uploadImage } from "@/utils/utils";
+import { RootState } from "@/lib/redux/store";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { IRegisterInstructorRequest } from "@/models/auth/signup";
 
 export default function AvatarScreen() {
+  const [authState, authViewModel] = useViewModel(
+    AuthViewModel,
+    (state: RootState) => state.auth
+  );
   const router = useRouter();
-  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [tempAvatarUri, setTempAvatarUri] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
@@ -51,14 +58,18 @@ export default function AvatarScreen() {
       const tempAvatar = await AsyncStorage.getItem("temp_user_avatar");
       if (tempAvatar) {
         setTempAvatarUri(tempAvatar);
-        setIsSaved(false);
+        const avatarFile = convertImageFile(tempAvatar);
+        authViewModel.updateRegisterInstructorFormData(
+          "Avatar" as keyof IRegisterInstructorRequest,
+          avatarFile
+        );
       } else {
         setTempAvatarUri(null);
-        setIsSaved(false);
+        authViewModel.updateRegisterInstructorFormData(
+          "Avatar" as keyof IRegisterInstructorRequest,
+          null
+        );
       }
-
-      // Clear saved avatar since we're not persisting to AsyncStorage
-      setAvatarUri(null);
     } catch (error) {
       console.error("Error loading user data:", error);
     }
@@ -91,62 +102,27 @@ export default function AvatarScreen() {
     setShowAlert(true);
   };
 
-  const handleSave = async () => {
-    const currentAvatar = tempAvatarUri || avatarUri;
+  const handleNext = () => {
+    const currentAvatar = tempAvatarUri;
     if (!currentAvatar) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh đại diện", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+      showCustomAlert(
+        "Lỗi",
+        "Vui lòng tải lên ảnh đại diện trước khi tiếp tục",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
       return;
     }
-
-    try {
-      // Chỉ lưu ảnh vào state, không lưu vào AsyncStorage
-      setAvatarUri(currentAvatar);
-      setTempAvatarUri(null);
-      setIsSaved(true);
-      // Xóa temp avatar từ AsyncStorage sau khi đã lưu vào state
-      await AsyncStorage.removeItem("temp_user_avatar");
-      showCustomAlert("Thành công", "Ảnh đại diện đã được lưu", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-    } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu ảnh đại diện", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-    }
-  };
-
-  const handleNext = () => {
-    // const currentAvatar = tempAvatarUri || avatarUri;
-    // if (!currentAvatar) {
-    //   showCustomAlert(
-    //     "Lỗi",
-    //     "Vui lòng tải lên ảnh đại diện trước khi tiếp tục",
-    //     [
-    //       {
-    //         text: "OK",
-    //         onPress: () => setShowAlert(false),
-    //       },
-    //     ]
-    //   );
-    //   return;
-    // }
 
     router.push("/(onboarding)/(personal-identification)/(id-card)/form");
   };
 
   const handleImagePress = () => {
-    if (tempAvatarUri || avatarUri) {
+    if (tempAvatarUri) {
       setShowDeleteMode(true);
     }
   };
@@ -181,14 +157,13 @@ export default function AvatarScreen() {
             try {
               // Clear both temp and saved avatar
               setTempAvatarUri(null);
-              setAvatarUri(null);
-              setIsSaved(false);
+              authViewModel.updateRegisterInstructorFormData(
+                "Avatar" as keyof IRegisterInstructorRequest,
+                null
+              );
+              await AsyncStorage.removeItem("temp_user_avatar");
               setShowDeleteMode(false);
               setShowAlert(false);
-
-              // Xóa temp avatar từ AsyncStorage
-              await AsyncStorage.removeItem("temp_user_avatar");
-
               showCustomAlert("Thành công", "Ảnh đại diện đã được xóa", [
                 {
                   text: "OK",
@@ -210,7 +185,7 @@ export default function AvatarScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}></View>
@@ -238,13 +213,13 @@ export default function AvatarScreen() {
         {/* Avatar Section */}
         <View style={styles.avatarContainer}>
           <View style={styles.avatarCircle}>
-            {tempAvatarUri || avatarUri ? (
+            {tempAvatarUri ? (
               <TouchableOpacity
                 style={styles.imageContainer}
                 onPress={handleImagePress}
               >
                 <Image
-                  source={{ uri: (tempAvatarUri || avatarUri)! }}
+                  source={{ uri: tempAvatarUri! }}
                   style={[
                     styles.avatarImage,
                     showDeleteMode && styles.dimmedImage,
@@ -253,6 +228,7 @@ export default function AvatarScreen() {
                 {showDeleteMode && (
                   <View style={styles.deleteOverlay}>
                     <TouchableOpacity
+                      activeOpacity={1}
                       style={styles.trashButton}
                       onPress={handleDeleteAvatar}
                     >
@@ -265,6 +241,7 @@ export default function AvatarScreen() {
               <View style={styles.avatarPlaceholder}></View>
             )}
             <TouchableOpacity
+              activeOpacity={1}
               style={styles.editButton}
               onPress={handleAvatarPress}
             >
@@ -275,10 +252,18 @@ export default function AvatarScreen() {
 
         {/* Buttons */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <TouchableOpacity
+            activeOpacity={1}
+            style={styles.backButton}
+            onPress={handleBack}
+          >
             <Text style={styles.backButtonText}>Quay lại</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.nextButton]} onPress={handleNext}>
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[styles.nextButton]}
+            onPress={handleNext}
+          >
             <Text style={[styles.nextButtonText]}>Kế tiếp</Text>
           </TouchableOpacity>
         </View>
@@ -291,7 +276,7 @@ export default function AvatarScreen() {
         message={alertConfig.message}
         buttons={alertConfig.buttons}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

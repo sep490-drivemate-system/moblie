@@ -37,3 +37,16 @@ export const verify = createThunk<string, IVerifyRequest>(
     `/${AUTH_PATH}/verify`,
 );
 
+export const registerInstructor = createThunk<void, FormData>(
+    HttpMethod.POST,
+    `register-instructor`,
+    `/instructors/register`,
+    {
+        config: () => ({
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        }),
+    }
+);
+

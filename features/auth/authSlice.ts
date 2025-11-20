@@ -3,7 +3,7 @@ import { UserRole } from "@/models/enum/UserRole.enum";
 import { signIn, signUp, verify } from "./authThunk";
 import { BaseState } from "@/models/generic/baseState";
 import { ISignInRequest } from "@/models/auth/signin";
-import { ISignUpRequest } from "@/models/auth/signup";
+import { IRegisterInstructorRequest, ISignUpRequest } from "@/models/auth/signup";
 import { IForgotPasswordRequest } from "@/models/auth/forgotPassword";
 
 interface RegisterFormErrors {
@@ -23,6 +23,7 @@ interface AuthState extends BaseState {
   registerFormData: ISignUpRequest;
   registerFormErrors: RegisterFormErrors;
   forgotPasswordFormData: IForgotPasswordRequest;
+  registerInstructorFormData: IRegisterInstructorRequest;
   // OTP Verification State
   otpVerification: {
     sentOtp: string | null;
@@ -58,6 +59,23 @@ const initialState: AuthState = {
     sentOtp: null,
     isOtpSent: false,
     enteredOtp: "",
+  },
+
+  registerInstructorFormData: {
+    FullName: "",
+    RawPassword: "",
+    Email: "",
+    PhoneNumber: "",
+    Avatar: null,
+    BirthDate: "",
+    Gender: "",
+    DrivingLicenseFront: null,
+    DrivingLicenseBack: null,
+    DrivingLicenseTier: "",
+    TeachingLicenseFront: null,
+    TeachingTier: "",
+    HealthCheckup: null,
+    PersonalProfile: null,
   },
 
   isLoading: false,
@@ -190,6 +208,35 @@ const authSlice = createSlice({
         enteredOtp: "",
       };
     },
+
+    updateRegisterInstructorFormData: (
+      state,
+      action: PayloadAction<{
+        field: keyof IRegisterInstructorRequest;
+        value: any;
+      }>
+    ) => {
+      const { field, value } = action.payload;
+      state.registerInstructorFormData[field] = value as any;
+    },
+    resetRegisterInstructorForm: (state) => {
+      state.registerInstructorFormData = {
+        FullName: "",
+        RawPassword: "",
+        Email: "",
+        PhoneNumber: "",
+        Avatar: null,
+        BirthDate: "",
+        Gender: "",
+        DrivingLicenseFront: null,
+        DrivingLicenseBack: null,
+        DrivingLicenseTier: "",
+        TeachingLicenseFront: null,
+        TeachingTier: "",
+        HealthCheckup: null,
+        PersonalProfile: null,
+      };
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -249,6 +296,8 @@ export const {
   setSentOtp,
   setEnteredOtp,
   resetOtpVerification,
+  updateRegisterInstructorFormData,
+  resetRegisterInstructorForm,
 } = authSlice.actions;
 
 export default authSlice.reducer;

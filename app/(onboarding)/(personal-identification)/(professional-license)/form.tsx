@@ -4,8 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
   Image,
   TextInput,
   ScrollView,
@@ -20,12 +18,19 @@ import {
   ChevronDown,
 } from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { RootState } from "@/lib/redux/store";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { convertImageFile } from "@/utils/utils";
 
 export default function FormScreen() {
+  const [authState, authViewModel] = useViewModel(
+    AuthViewModel,
+    (state: RootState) => state.auth
+  );
   const router = useRouter();
-  const [imageUri, setImageUri] = useState<string | null>(null);
   const [tempImageUri, setTempImageUri] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
   const [showVehicleClassDropdown, setShowVehicleClassDropdown] =
     useState(false);
@@ -41,10 +46,7 @@ export default function FormScreen() {
   });
 
   // Form data
-  const [formData, setFormData] = useState({
-    issueDate: "",
-    vehicleClass: "",
-  });
+  const [vehicleClass, setVehicleClass] = useState<string>("");
 
   // Vehicle class options (same as license classes)
   const vehicleClasses = ["B", "C", "C1", "C2", "D", "E", "F"];
@@ -61,20 +63,14 @@ export default function FormScreen() {
 
   const loadUserData = async () => {
     try {
-      const savedImage = await AsyncStorage.getItem("certificate");
-      const savedFormData = await AsyncStorage.getItem("certificate_data");
-
-      if (savedImage) {
-        setImageUri(savedImage);
-      }
-      if (savedFormData) {
-        setFormData(JSON.parse(savedFormData));
-      }
-
       // Load temp image if exists
       const tempImage = await AsyncStorage.getItem("temp_certificate");
       if (tempImage) {
         setTempImageUri(tempImage);
+        authViewModel.updateRegisterInstructorFormData("TeachingLicenseFront", convertImageFile(tempImage));
+      } else {
+        setTempImageUri(null);
+        authViewModel.updateRegisterInstructorFormData("TeachingLicenseFront", null);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -86,17 +82,12 @@ export default function FormScreen() {
   };
 
   const handleImagePress = () => {
-    if (tempImageUri || imageUri) {
+    if (tempImageUri) {
       setShowDeleteMode(true);
     }
   };
 
   const handleImageUpload = () => {
-    // Reset saved state when user changes image
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
     router.push(
       `/(onboarding)/(personal-identification)/(professional-license)/upload-guide`
     );
@@ -119,131 +110,14 @@ export default function FormScreen() {
     setShowAlert(true);
   };
 
-  const formatDateInput = (value: string) => {
-    // Remove all non-numeric characters
-    const numbers = value.replace(/\D/g, "");
-
-    // Format as DD/MM/YYYY
-    if (numbers.length <= 2) {
-      return numbers;
-    } else if (numbers.length <= 4) {
-      return `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
-    } else {
-      return `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(
-        4,
-        8
-      )}`;
-    }
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    // Reset saved state when user changes data
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
-    // Apply date formatting for date fields
-    if (field === "issueDate") {
-      const formattedValue = formatDateInput(value);
-      setFormData((prev) => ({
-        ...prev,
-        [field]: formattedValue,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-    }
-  };
-
   const handleVehicleClassSelect = (vehicleClass: string) => {
-    // Reset saved state when user changes vehicle class
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      vehicleClass: vehicleClass,
-    }));
+    setVehicleClass(vehicleClass);
     setShowVehicleClassDropdown(false);
   };
 
   // Check if all fields are filled
   const isFormComplete = () => {
-    return (
-      (tempImageUri || imageUri) &&
-      formData.issueDate.trim() !== "" &&
-      formData.vehicleClass.trim() !== ""
-    );
-  };
-
-  const handleSave = async () => {
-    // Validation
-    if (!tempImageUri && !imageUri) {
-      showCustomAlert(
-        "Lỗi",
-        "Vui lòng tải lên chứng chỉ hành nghề giảng dạy lái xe",
-        [
-          {
-            text: "OK",
-            onPress: () => setShowAlert(false),
-          },
-        ]
-      );
-      return;
-    }
-
-    if (!formData.issueDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.vehicleClass.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng chọn hạng xe đào tạo giảng dạy", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    try {
-      const currentImage = tempImageUri || imageUri;
-
-      await AsyncStorage.setItem("certificate", currentImage!);
-      await AsyncStorage.setItem("certificate_data", JSON.stringify(formData));
-
-      setImageUri(currentImage);
-      setTempImageUri(null);
-      await AsyncStorage.removeItem("temp_certificate");
-      setIsSaved(true);
-
-      showCustomAlert(
-        "Thành công",
-        "Thông tin chứng chỉ hành nghề đã được lưu",
-        [
-          {
-            text: "OK",
-            onPress: () => setShowAlert(false),
-          },
-        ]
-      );
-    } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu thông tin chứng chỉ hành nghề", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-    }
+    return tempImageUri && vehicleClass.trim() !== "";
   };
 
   // BYPASS: Temporary function to skip professional license validation
@@ -257,7 +131,7 @@ export default function FormScreen() {
 
   const handleNext = () => {
     // Validation for image
-    if (!tempImageUri && !imageUri) {
+    if (!tempImageUri) {
       showCustomAlert(
         "Lỗi",
         "Vui lòng tải lên chứng chỉ hành nghề giảng dạy lái xe trước khi tiếp tục",
@@ -271,18 +145,7 @@ export default function FormScreen() {
       return;
     }
 
-    // Validation for form data
-    if (!formData.issueDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp trước khi tiếp tục", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.vehicleClass.trim()) {
+    if (!vehicleClass.trim()) {
       showCustomAlert(
         "Lỗi",
         "Vui lòng chọn hạng xe đào tạo giảng dạy trước khi tiếp tục",
@@ -330,15 +193,9 @@ export default function FormScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              // Reset saved state when user deletes image
-              if (isSaved) {
-                setIsSaved(false);
-              }
-
               setTempImageUri(null);
-              setImageUri(null);
+              authViewModel.updateRegisterInstructorFormData("TeachingLicenseFront", null);
               await AsyncStorage.removeItem("temp_certificate");
-              await AsyncStorage.removeItem("certificate");
               setShowDeleteMode(false);
               setShowAlert(false);
 
@@ -397,13 +254,13 @@ export default function FormScreen() {
                 <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.imageUploadArea}>
-                {tempImageUri || imageUri ? (
+                {tempImageUri ? (
                   <TouchableOpacity
                     style={styles.imageWrapper}
                     onPress={() => handleImagePress()}
                   >
                     <Image
-                      source={{ uri: (tempImageUri || imageUri)! }}
+                      source={{ uri: tempImageUri! }}
                       style={[
                         styles.uploadedImage,
                         showDeleteMode && styles.dimmedImage,
@@ -439,7 +296,7 @@ export default function FormScreen() {
           </View>
 
           {/* Form Fields */}
-          {/* <View style={styles.formContainer}>
+          <View style={styles.formContainer}>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
@@ -454,10 +311,10 @@ export default function FormScreen() {
                 <Text
                   style={[
                     styles.dropdownText,
-                    !formData.vehicleClass && styles.placeholderText,
+                    !vehicleClass && styles.placeholderText,
                   ]}
                 >
-                  {formData.vehicleClass || "Chọn hạng xe đào tạo giảng dạy"}
+                  {vehicleClass || "Chọn hạng xe đào tạo giảng dạy"}
                 </Text>
                 <ChevronDown
                   color="#92929D"
@@ -479,7 +336,10 @@ export default function FormScreen() {
                       <TouchableOpacity
                         key={vehicleClass}
                         style={styles.dropdownItem}
-                        onPress={() => handleVehicleClassSelect(vehicleClass)}
+                        onPress={() => {
+                          handleVehicleClassSelect(vehicleClass);
+                          authViewModel.updateRegisterInstructorFormData("TeachingTier", vehicleClass);
+                        }}
                       >
                         <Text style={styles.dropdownItemText}>
                           {vehicleClass}
@@ -490,14 +350,17 @@ export default function FormScreen() {
                 </View>
               )}
             </View>
-          </View> */}
+          </View>
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNextBypass}>
+            <TouchableOpacity
+              style={styles.nextButton}
+              onPress={handleNext}
+            >
               <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>
@@ -519,7 +382,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    paddingTop: StatusBar.currentHeight,
   },
   scrollView: {
     flex: 1,
