@@ -1,5 +1,12 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Switch,
+} from "react-native";
 import { MapPin, CheckCircle } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 
@@ -10,31 +17,90 @@ interface INoviceDriverAddress {
   longitude: number;
 }
 
+type LocationOption = {
+  id: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+};
+
 interface Step3Props {
-  selectedLocationId: string | null;
+  selectedPickupId: string | null;
+  selectedDropoffId: string | null;
   pickupLocation: string;
-  onLocationSelect: (location: string, locationId: string) => void;
+  dropoffLocation: string;
+  onPickupSelect: (location: LocationOption) => void;
+  onDropoffSelect: (location: LocationOption) => void;
+  isSameDropoff: boolean;
+  onToggleSameDropoff: (value: boolean) => void;
+  onMapSelect?: (type: "pickup" | "dropoff") => void;
   addresses?: INoviceDriverAddress[];
   isLoading?: boolean;
 }
 
-
-
 export default function Step3({
-  selectedLocationId,
+  selectedPickupId,
+  selectedDropoffId,
   pickupLocation,
-  onLocationSelect,
+  dropoffLocation,
+  onPickupSelect,
+  onDropoffSelect,
+  isSameDropoff,
+  onToggleSameDropoff,
+  onMapSelect,
   addresses = [],
   isLoading = false,
 }: Step3Props) {
-  // Use API addresses if available, otherwise fallback to mock data
-  const displayLocations = addresses.length > 0 
-    ? addresses.map(addr => ({
+  const displayLocations: LocationOption[] =
+    addresses.length > 0
+      ? addresses.map((addr) => ({
         id: addr.id,
         name: addr.addressString,
         address: addr.addressString,
+        latitude: addr.latitude,
+        longitude: addr.longitude,
       }))
-    : [];
+      : [];
+
+  const renderLocationList = (
+    selectedId: string | null,
+    onSelect: (location: typeof displayLocations[number]) => void
+  ) => (
+    <View style={styles.locationList}>
+      {displayLocations.map((location) => (
+        <TouchableOpacity
+          key={location.id}
+          style={[
+            styles.locationItem,
+            selectedId === location.id && styles.locationItemSelected,
+          ]}
+          onPress={() => onSelect(location)}
+        >
+          <View style={styles.locationItemContent}>
+            <MapPin
+              size={20}
+              color={
+                selectedId === location.id ? AppColors.primary : "#64748b"
+              }
+              strokeWidth={2}
+            />
+            <Text
+              style={[
+                styles.locationItemText,
+                selectedId === location.id && styles.locationItemTextSelected,
+              ]}
+            >
+              {location.name}
+            </Text>
+          </View>
+          {selectedId === location.id && (
+            <CheckCircle size={18} color={AppColors.primary} strokeWidth={2} />
+          )}
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 
   return (
     <View style={styles.section}>
@@ -45,11 +111,16 @@ export default function Step3({
         )}
       </View>
 
-      <View style={styles.locationNote}>
-        <Text style={styles.locationNoteText}>
-          💡 Lưu ý: Điểm đón cũng chính là điểm thả. Bạn sẽ được đón và trả tại
-          cùng một địa điểm đã chọn.
+      <View style={styles.sameLocationCard}>
+        <Text style={styles.sameLocationLabel}>
+          Điểm trả giống điểm đón
         </Text>
+        <Switch
+          value={isSameDropoff}
+          onValueChange={onToggleSameDropoff}
+          trackColor={{ false: "#e2e8f0", true: AppColors.primary + "55" }}
+          thumbColor={isSameDropoff ? AppColors.primary : "#fff"}
+        />
       </View>
 
       {isLoading ? (
@@ -58,46 +129,63 @@ export default function Step3({
           <Text style={styles.loadingText}>Đang tải địa chỉ...</Text>
         </View>
       ) : (
-        <View style={styles.locationList}>
-          {displayLocations.map((location) => (
-            <TouchableOpacity
-              key={location.id}
-              style={[
-                styles.locationItem,
-                selectedLocationId === location.id && styles.locationItemSelected,
-              ]}
-              onPress={() => onLocationSelect(location.name, location.id)}
-            >
-              <View style={styles.locationItemContent}>
-                <MapPin 
-                  size={20} 
-                  color={selectedLocationId === location.id ? AppColors.primary : "#64748b"} 
-                  strokeWidth={2}
-                />
-                <Text
-                  style={[
-                    styles.locationItemText,
-                    selectedLocationId === location.id &&
-                    styles.locationItemTextSelected,
-                  ]}
+        <>
+          <View style={styles.locationSection}>
+            <View style={styles.locationHeaderRow}>
+              <Text style={styles.locationSectionTitle}>Điểm đón</Text>
+              {onMapSelect && (
+                <TouchableOpacity
+                  onPress={() => onMapSelect("pickup")}
+                  style={styles.mapButton}
                 >
-                  {location.name}
-                </Text>
-              </View>
-              {selectedLocationId === location.id && (
-                <CheckCircle size={18} color={AppColors.primary} strokeWidth={2} />
+                  <Text style={styles.mapButtonText}>Chọn trên bản đồ</Text>
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
-          ))}
-        </View>
+            </View>
+            {renderLocationList(selectedPickupId, (location) =>
+              onPickupSelect(location)
+            )}
+          </View>
+
+          {!isSameDropoff && (
+            <View style={styles.locationSection}>
+              <View style={styles.locationHeaderRow}>
+                <Text style={styles.locationSectionTitle}>Điểm trả</Text>
+                {onMapSelect && (
+                  <TouchableOpacity
+                    onPress={() => onMapSelect("dropoff")}
+                    style={styles.mapButton}
+                  >
+                    <Text style={styles.mapButtonText}>Chọn trên bản đồ</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {renderLocationList(selectedDropoffId, (location) =>
+                onDropoffSelect(location)
+              )}
+            </View>
+          )}
+        </>
       )}
 
-      {pickupLocation && (
-        <View style={styles.locationPreview}>
-          <MapPin size={16} color="#10b981" strokeWidth={2} />
-          <Text style={styles.locationPreviewText}>
-            Đã chọn: {pickupLocation}
-          </Text>
+      {(pickupLocation || dropoffLocation) && (
+        <View style={styles.locationPreviewContainer}>
+          {pickupLocation ? (
+            <View style={styles.locationPreview}>
+              <MapPin size={16} color="#10b981" strokeWidth={2} />
+              <Text style={styles.locationPreviewText}>
+                Đón: {pickupLocation}
+              </Text>
+            </View>
+          ) : null}
+          {dropoffLocation ? (
+            <View style={styles.locationPreview}>
+              <MapPin size={16} color="#f97316" strokeWidth={2} />
+              <Text style={styles.locationPreviewText}>
+                Trả: {dropoffLocation}
+              </Text>
+            </View>
+          ) : null}
         </View>
       )}
     </View>
@@ -191,6 +279,36 @@ const styles = StyleSheet.create({
     color: AppColors.primary,
     fontWeight: "700",
   },
+  locationSection: {
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  locationHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  locationSectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  mapButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: AppColors.primary + "10",
+  },
+  mapButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: AppColors.primary,
+  },
+  locationPreviewContainer: {
+    marginTop: 8,
+    gap: 8,
+  },
   locationPreview: {
     flexDirection: "row",
     alignItems: "center",
@@ -199,6 +317,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0fdf4",
     marginTop: 12,
     gap: 8,
+  },
+  sameLocationCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 12,
+    backgroundColor: "#f8fafc",
+  },
+  sameLocationLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1e293b",
   },
   locationPreviewText: {
     flex: 1,

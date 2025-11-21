@@ -17,26 +17,28 @@ export interface IInstructorOption {
 }
 
 export interface IBuyPackageRequest {
-  durationWhenBought: number; 
+  durationWhenBought: number;
   priceAtBuyingTime: number;
   carId: string | null;
   packageId: string;
   instructorId: string;
-  driverId: string;
 }
 
 export interface IBuyPackageResponse {
-  id:string
+  id: string
 }
 
 
 export interface IMyPackgesResponse {
-    id: string;
-    namePackake: string;
-    buyDate: string;
-    bookingStatus: BookingStatus;
-    duration: number;
-    durationInUse: number;
-    precentInUse: number;
-    remainingTime: number;
+  id: string;
+  namePackage: string;
+  buyDate: string;
+  bookingStatus: BookingStatus;
+  duration: number;
+  durationInUse: number;
+  precentInUse: number;
+  remainingTime: number;
+  instructorId: string;
+  roadTypes: string[];
+  drivingSkills: string[];
 }

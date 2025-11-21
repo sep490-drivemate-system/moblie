@@ -6,30 +6,14 @@ import {
   StatusBar,
   TouchableOpacity,
   ScrollView,
-  Image,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter } from "expo-router";
 import { CheckCircle, Calendar, ArrowLeft, Package } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
+import { ROUTES } from "@/constants/routes";
 
 export default function TransactionSuccessScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{
-    instructorId: string;
-    packageId: string;
-    vehicleId?: string;
-  }>();
-
-  const handleBookNow = () => {
-    router.push({
-      pathname: "/(main)/(no-tabs)/my-packages",
-    });
-  };
-
-  const handleBackToInstructor = () => {
-    // Quay lại màn hình trước đó (instructor-detail)
-    router.back();
-  };
 
   return (
     <View style={styles.container}>
@@ -78,15 +62,17 @@ export default function TransactionSuccessScreen() {
       <View style={styles.bottomContainer}>
         <TouchableOpacity
           style={styles.backButtonBottom}
-          onPress={handleBackToInstructor}
+          onPress={() => router.back()}
           activeOpacity={0.8}
-        >         
+        >
           <Text style={styles.backButtonText}>Quay lại</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.bookButton}
-          onPress={handleBookNow}
+          onPress={() => router.push({
+            pathname: ROUTES.MY_PACKAGES
+          })}
           activeOpacity={0.9}
         >
 

@@ -102,11 +102,11 @@ const getTimeFromISO = (isoString: string): string => {
 // Schedule API returns date strings in YYYY-MM-DD format
 const getAvailableDateRanges = (schedule: IInstructorSchedule[]): { start: Date; end: Date }[] => {
   if (!schedule || schedule.length === 0) return [];
-  
-  return schedule.map(slot => {  
+
+  return schedule.map(slot => {
     const startDate = new Date(slot.startTime + 'T00:00:00');
     const endDate = new Date(slot.endTime + 'T00:00:00');
-    
+
     return {
       start: startDate,
       end: endDate
@@ -117,9 +117,9 @@ const getAvailableDateRanges = (schedule: IInstructorSchedule[]): { start: Date;
 // Helper function to check if a date is within available ranges
 const isDateInAvailableRange = (date: Date, availableRanges: { start: Date; end: Date }[]): boolean => {
   if (availableRanges.length === 0) return true; // If no schedule, all dates available
-  
+
   const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  
+
   return availableRanges.some(range => {
     const rangeStart = new Date(range.start.getFullYear(), range.start.getMonth(), range.start.getDate());
     const rangeEnd = new Date(range.end.getFullYear(), range.end.getMonth(), range.end.getDate());
@@ -137,12 +137,13 @@ export default function Step1({
 }: Step1Props) {
   const dispatch = useAppDispatch();
   const today = new Date();
-  
+
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [customTime, setCustomTime] = useState<string>("");
-  
+  const [customTimeError, setCustomTimeError] = useState<string | null>(null);
+
   // API data state
   const [instructorSchedule, setInstructorSchedule] = useState<IInstructorSchedule[]>([]);
   const [instructorBookedSessions, setInstructorBookedSessions] = useState<IInstructorBookedSession[]>([]);
@@ -160,7 +161,7 @@ export default function Step1({
   const fetchInstructorData = async () => {
     try {
       setIsLoading(true);
-      
+
       // Fetch instructor schedule (available date ranges)
       const scheduleResult = await dispatch(
         getInstructorSchedule({ instructorId })
@@ -176,7 +177,7 @@ export default function Step1({
           endDate: new Date(s.endTime + 'T00:00:00')
         }))
       });
-      
+
       // Fetch booked sessions (busy times)
       const sessionsResult = await dispatch(
         getInstructorBookedSessions({ instructorId })
@@ -191,7 +192,7 @@ export default function Step1({
           endTime: getTimeFromISO(s.endTime)
         }))
       });
-      
+
     } catch (error) {
       console.error("Step1 - Failed to fetch instructor data:", error);
     } finally {
@@ -234,32 +235,23 @@ export default function Step1({
   const getBusyTimesForDate = (date: Date): BusyTime[] => {
     const dateStr = formatDate(date);
     const busySlots: BusyTime[] = [];
-    
+
     // Get busy times from mock data (instructorBusyTimes) - for backward compatibility
     const mockBusyTime = instructorBusyTimes.find((bt) => bt.date === dateStr);
     if (mockBusyTime) {
       busySlots.push(...mockBusyTime.busySlots);
     }
-    
+
     // Get booked sessions from API for this date
     // API returns ISO datetime strings like "2025-11-13T10:00:00"
     const bookedForDate = instructorBookedSessions.filter(session => {
       const sessionDate = getDateFromISO(session.startTime);
       const matches = sessionDate === dateStr;
-      
-      // Debug log for date matching
-      if (instructorBookedSessions.length > 0 && date.getDate() >= 13 && date.getDate() <= 14) {
-        console.log(`Step1 - Date matching for ${dateStr}:`, {
-          calendarDate: dateStr,
-          sessionDate: sessionDate,
-          matches: matches,
-          sessionStartTime: session.startTime
-        });
-      }
-      
+
+
       return matches;
     });
-    
+
     // Convert booked sessions to busy time format (HH:MM)
     bookedForDate.forEach(session => {
       const startTime = getTimeFromISO(session.startTime);
@@ -269,7 +261,7 @@ export default function Step1({
         endTime
       });
     });
-    
+
     return busySlots;
   };
 
@@ -353,16 +345,46 @@ export default function Step1({
     }
   };
 
+  const handleCustomTimeChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "").slice(0, 4);
+    setCustomTime(digitsOnly);
+    setCustomTimeError(null);
+  };
+
   const handleCustomTimeSubmit = (busySlots: BusyTime[]) => {
-    // Validate time format (HH:MM)
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/;
-    if (!timeRegex.test(customTime)) {
-      return; // Invalid format
+    if (customTime.length !== 4) {
+      setCustomTimeError("Vui lòng nhập đủ 4 chữ số (HHMM).");
+      return;
     }
 
-    // Check if time is available
-    if (isTimeSlotAvailable(customTime, busySlots) && onTimeSelect) {
-      onTimeSelect(customTime);
+    const hours = parseInt(customTime.slice(0, 2), 10);
+    const minutes = parseInt(customTime.slice(2), 10);
+
+    if (
+      Number.isNaN(hours) ||
+      Number.isNaN(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
+      setCustomTimeError("Giờ không hợp lệ. Định dạng hợp lệ: HHMM (00–23, 00–59).");
+      return;
+    }
+
+    const formattedTime = `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}`;
+
+    if (!isTimeSlotAvailable(formattedTime, busySlots)) {
+      setCustomTimeError("Khung giờ này đã có lịch. Vui lòng chọn giờ khác.");
+      return;
+    }
+
+    if (onTimeSelect) {
+      onTimeSelect(formattedTime);
+      setCustomTime("");
+      setCustomTimeError(null);
     }
   };
 
@@ -528,24 +550,24 @@ export default function Step1({
                     <TextInput
                       style={styles.customTimeInput}
                       value={customTime}
-                      onChangeText={setCustomTime}
-                      placeholder="VD: 08:30"
+                      onChangeText={handleCustomTimeChange}
+                      placeholder="VD: 0830"
                       placeholderTextColor="#94a3b8"
-                      keyboardType="numeric"
-                      maxLength={5}
+                      keyboardType="number-pad"
+                      maxLength={4}
                     />
                     <TouchableOpacity
                       style={{
                         ...styles.customTimeButton,
-                        ...(customTime ? styles.customTimeButtonActive : {}),
+                        ...(customTime.length === 4 ? styles.customTimeButtonActive : {}),
                       }}
                       onPress={() => handleCustomTimeSubmit(busySlots)}
-                      disabled={!customTime}
+                      disabled={customTime.length !== 4}
                     >
                       <Text
                         style={{
                           ...styles.customTimeButtonText,
-                          ...(customTime
+                          ...(customTime.length === 4
                             ? styles.customTimeButtonTextActive
                             : {}),
                         }}
@@ -554,6 +576,9 @@ export default function Step1({
                       </Text>
                     </TouchableOpacity>
                   </View>
+                  {customTimeError && (
+                    <Text style={styles.customTimeError}>{customTimeError}</Text>
+                  )}
                   {selectedTime && (
                     <View style={styles.selectedTimeDisplay}>
                       <Check
@@ -569,7 +594,7 @@ export default function Step1({
                 </View>
 
                 {/* Quick Time Slots (Optional) */}
-                <Text style={styles.quickSlotsTitle}>Hoặc chọn nhanh:</Text>
+                <Text style={styles.quickSlotsTitle}>Hoặc chọn thời gian bắt đầu nhanh:</Text>
                 <View style={styles.timeSlotsGrid}>
                   {timeSlots.map((time) => {
                     const isAvailable = isTimeSlotAvailable(time, busySlots);
@@ -935,6 +960,12 @@ const styles = StyleSheet.create({
   },
   customTimeButtonTextActive: {
     color: "#ffffff",
+  },
+  customTimeError: {
+    fontSize: 12,
+    color: "#ef4444",
+    marginTop: -4,
+    marginBottom: 8,
   },
   selectedTimeDisplay: {
     flexDirection: "row",

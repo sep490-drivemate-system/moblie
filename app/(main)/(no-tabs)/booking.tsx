@@ -29,7 +29,6 @@ import {
 } from "lucide-react-native";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import {
-  getNoviceDriverAddresses,
   getPolicies,
   PolicyType,
   INoviceDriverAddress,
@@ -45,57 +44,46 @@ import { instructorVehicles } from "@/data/instructor_detail";
 import { instructorBusyTimes } from "@/data/user_packages_data";
 import { AppColors } from "@/constants/Colors";
 import { InstructorPackage } from "@/models/instructor/instructor.type";
+import { getNoviceDriverAddresses } from "@/features/user/userThunk";
 
 export default function BookingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const dispatch = useAppDispatch();
-  
+
   const instructorId = params.instructorId as string;
   const packageId = params.packageId as string | undefined;
   const userPackageId = params.userPackageId as string | undefined; // This is the actual bookingId
   const vehicleId = params.vehicleId as string | undefined;
   const carPrice = params.carPrice ? parseFloat(params.carPrice as string) : undefined;
   const remainingHours = params.remainingHours ? parseFloat(params.remainingHours as string) : undefined;
-  
-  console.log("Booking screen received params:", {
-    instructorId,
-    packageId,
-    userPackageId,
-    vehicleId,
-    carPrice,
-    remainingHours,
-    fromUserPackage: params.fromUserPackage,
-  });
 
-  // Step management
+
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Step 1: Date and time selection
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  // Step 2: Duration selection
   const [selectedStartTime, setSelectedStartTime] = useState("");
   const [selectedDuration, setSelectedDuration] = useState(2); // default 2 hours
 
-  // Step 3: Location
   const [pickupLocation, setPickupLocation] = useState("");
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [dropoffLocation, setDropoffLocation] = useState("");
+  const [selectedDropoffId, setSelectedDropoffId] = useState<string | null>(null);
+  const [isSameDropoff, setIsSameDropoff] = useState(true);
   const [addresses, setAddresses] = useState<INoviceDriverAddress[]>([]);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
 
-  // Step 4: Policies and Note
   const [policies, setPolicies] = useState<IPolicy[]>([]);
   const [acceptedPolicies, setAcceptedPolicies] = useState<Record<string, boolean>>({});
   const [isLoadingPolicies, setIsLoadingPolicies] = useState(false);
   const [sessionNote, setSessionNote] = useState("");
   const [isCreatingSession, setIsCreatingSession] = useState(false);
 
-  // User wallet
   const [userCoins, setUserCoins] = useState(500);
 
-  // Tracking card expand/collapse state
+
   const [isTrackingExpanded, setIsTrackingExpanded] = useState(false);
 
   const steps = [
@@ -105,25 +93,20 @@ export default function BookingScreen() {
     { number: 4, label: "Xác nhận" },
   ];
 
-  // Get instructor and package info
   const instructor = instructorsData.find((i) => i.id === instructorId);
   const selectedPackage = instructor?.packages?.find((p: InstructorPackage) => p.id === packageId);
-  
-  // Use remainingHours if booking from user package, otherwise use package duration
+
   const maxDuration = remainingHours !== undefined ? remainingHours : (selectedPackage?.duration || 40);
 
-  // Get vehicle info if vehicleId is provided (from instructorVehicles)
   const selectedVehicle =
     vehicleId && vehicleId !== ""
       ? instructorVehicles.find((v) => v.id === vehicleId)
       : null;
 
-  // Calculate booking cost: base package price + vehicle cost (if selected)
   const bookingCost = (() => {
     const baseCost = selectedPackage?.basePrice || 0;
     let vehicleCost = 0;
 
-    // Use carPrice from params if available (from user package) - only if both carPrice and vehicleId exist
     if (carPrice && vehicleId && selectedDuration > 0) {
       vehicleCost = carPrice * selectedDuration;
     } else if (selectedVehicle && selectedVehicle.price && selectedDuration > 0) {
@@ -133,7 +116,6 @@ export default function BookingScreen() {
     return baseCost + vehicleCost;
   })();
 
-  // Update selectedStartTime when time is selected in Step1
   useEffect(() => {
     if (selectedTime) {
       setSelectedStartTime(selectedTime);
@@ -143,7 +125,7 @@ export default function BookingScreen() {
   // Fetch addresses when moving to step 3
   useEffect(() => {
     if (currentStep === 3 && addresses.length === 0) {
-      fetchAddresses();
+      fetchNoviceDriverAddresses();
     }
   }, [currentStep]);
 
@@ -154,15 +136,24 @@ export default function BookingScreen() {
     }
   }, [currentStep]);
 
-  const fetchAddresses = async () => {
+  const fetchNoviceDriverAddresses = async () => {
     try {
       setIsLoadingAddresses(true);
       const result = await dispatch(getNoviceDriverAddresses()).unwrap();
-      const addressesData = (result as any).value || result;
-      setAddresses(addressesData);
-      console.log("Addresses loaded:", addressesData);
+      const addressesData: INoviceDriverAddress[] =
+        ((result as any)?.value ?? result ?? []) as INoviceDriverAddress[];
+
+      const normalizedAddresses = addressesData.map((address) => ({
+        id: address.id ?? address.addressString,
+        addressString: address.addressString,
+        latitude: address.latitude,
+        longitude: address.longitude,
+      }));
+
+      setAddresses(normalizedAddresses);
+      console.log("Addresses loaded:", normalizedAddresses.length);
     } catch (error) {
-      console.error("Failed to fetch addresses:", error);
+      console.log("Failed to fetch addresses:", error);
     } finally {
       setIsLoadingAddresses(false);
     }
@@ -174,15 +165,13 @@ export default function BookingScreen() {
       const result = await dispatch(getPolicies({ policyType: PolicyType.Booking })).unwrap();
       const policiesData = (result as any).value || result;
       setPolicies(policiesData);
-      
+
       // Initialize all policies as not accepted
       const initialAccepted: Record<string, boolean> = {};
       policiesData.forEach((policy: IPolicy) => {
         initialAccepted[policy.id] = false;
       });
       setAcceptedPolicies(initialAccepted);
-      
-      console.log("Policies loaded:", policiesData);
     } catch (error) {
       console.error("Failed to fetch policies:", error);
     } finally {
@@ -197,7 +186,9 @@ export default function BookingScreen() {
       case 2:
         return selectedStartTime !== "" && selectedDuration > 0;
       case 3:
-        return selectedLocationId !== null;
+        if (!selectedLocationId) return false;
+        if (!isSameDropoff && !selectedDropoffId) return false;
+        return true;
       case 4:
         // Check if all policies are accepted
         const allAccepted = Object.values(acceptedPolicies).every((v) => v === true);
@@ -221,6 +212,13 @@ export default function BookingScreen() {
     }
   };
 
+  const handleMapSelect = (type: "pickup" | "dropoff") => {
+    Alert.alert(
+      "Chọn trên bản đồ",
+      "Tính năng chọn địa điểm trên bản đồ sẽ sớm được cập nhật."
+    );
+  };
+
   const calculateEndTime = (startTime: string, duration: number): string => {
     if (!startTime) return "00:00";
     const [hours, minutes] = startTime.split(":").map(Number);
@@ -232,41 +230,48 @@ export default function BookingScreen() {
 
   const handleConfirmBooking = async () => {
 
-      console.log("Selected location ID:", selectedLocationId);
-    console.log("Addresses:", addresses);
-    console.log("Selected address:", addresses.find(addr => addr.id === selectedLocationId));
-    console.log("Selected address latitude:", addresses.find(addr => addr.id === selectedLocationId)?.latitude);
-    console.log("Selected address longitude:", addresses.find(addr => addr.id === selectedLocationId)?.longitude);
-    // Use userPackageId if available (from user package), otherwise use packageId
     const bookingId = userPackageId || packageId;
-    
+
     if (!bookingId || !selectedDate || !selectedStartTime || !selectedLocationId) {
       Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin");
       return;
     }
 
-    console.log("Selected location ID:", selectedLocationId);
-    console.log("Addresses:", addresses);
-    console.log("Selected address:", addresses.find(addr => addr.id === selectedLocationId));
-    console.log("Selected address latitude:", addresses.find(addr => addr.id === selectedLocationId)?.latitude);
-    console.log("Selected address longitude:", addresses.find(addr => addr.id === selectedLocationId)?.longitude);
-
-    
     // Get selected address for coordinates
-    const selectedAddress = addresses.find(addr => addr.id === selectedLocationId);
-    if (!selectedAddress) {
+    const pickupAddress = addresses.find(
+      (addr) => addr.id === selectedLocationId
+    );
+    if (!pickupAddress) {
       Alert.alert("Lỗi", "Không tìm thấy địa chỉ đón");
       return;
     }
 
-    console.log("📍 Selected address full object:", JSON.stringify(selectedAddress, null, 2));
+    let dropoffAddress = pickupAddress;
+    if (!isSameDropoff) {
+      dropoffAddress = addresses.find(
+        (addr) => addr.id === selectedDropoffId
+      ) as INoviceDriverAddress;
+      if (!dropoffAddress) {
+        Alert.alert("Lỗi", "Vui lòng chọn địa điểm trả");
+        return;
+      }
+    }
+
+    console.log(
+      "📍 Selected pickup address:",
+      JSON.stringify(pickupAddress, null, 2)
+    );
+    console.log(
+      "📍 Selected dropoff address:",
+      JSON.stringify(dropoffAddress, null, 2)
+    );
 
     try {
       setIsCreatingSession(true);
 
       // Combine date and time to create ISO datetime string (keep local timezone)
       const startDateTime = new Date(`${selectedDate}T${selectedStartTime}:00`);
-      
+
       // Format to ISO string but keep local timezone offset instead of converting to UTC
       const year = startDateTime.getFullYear();
       const month = String(startDateTime.getMonth() + 1).padStart(2, '0');
@@ -274,44 +279,43 @@ export default function BookingScreen() {
       const hours = String(startDateTime.getHours()).padStart(2, '0');
       const minutes = String(startDateTime.getMinutes()).padStart(2, '0');
       const seconds = String(startDateTime.getSeconds()).padStart(2, '0');
-      
+
       // Create ISO string with local timezone (+07:00 for Vietnam)
       const isoStartTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+07:00`;
-      
-      console.log("🕐 Original selected time:", `${selectedDate} ${selectedStartTime}`);
-      console.log("🕐 Formatted ISO time:", isoStartTime);
+
 
       // Calculate vehicle cost
-      const vehicleCost = vehicleId && carPrice && selectedDuration > 0 
-        ? carPrice * selectedDuration 
+      const vehicleCost = vehicleId && carPrice && selectedDuration > 0
+        ? carPrice * selectedDuration
         : 0;
-
-      // Use displayName from address if available, otherwise use addressString as fallback
-      const displayName = selectedAddress.displayName || selectedAddress.addressString || "Địa điểm đón";
 
       // Create session request
       const sessionRequest = {
         bookingId: bookingId, // Use userPackageId if available, otherwise packageId
         startTime: isoStartTime,
-        startingLatitude: selectedAddress.latitude,
-        startingLongtitude: selectedAddress.longitude, // Note: API typo
+        startingLatitude: pickupAddress.latitude,
+        startingLongtitude: pickupAddress.longitude, // Note: API typo
+        displayName: pickupAddress.addressString || "",
+        displayStartLocationName: pickupAddress.addressString || "",
         priceForCar: vehicleCost,
         duration: selectedDuration,
         sessionNote: sessionNote || "",
-        displayName: displayName, // Display name from selected address or fallback
+        displayEndLocationName: dropoffAddress.addressString || "",
+        endingLatitude: dropoffAddress.latitude,
+        endingLongtitude: dropoffAddress.longitude,
       };
-      
+
       console.log("🚀 Creating session with request:", JSON.stringify(sessionRequest, null, 2));
 
-      
+
 
       const response = await dispatch(createSession(sessionRequest)).unwrap();
-      
+
       console.log("Session created, response:", response);
 
       // Extract boolean from GenericResponse wrapper
       const success = (response as any)?.data?.value ?? (response as any)?.value ?? response;
-      
+
       console.log("Extracted success value:", success);
 
       // API returns boolean: true = success, false = failed
@@ -630,12 +634,34 @@ export default function BookingScreen() {
         {/* Step 3: Location */}
         {currentStep === 3 && (
           <Step3
-            selectedLocationId={selectedLocationId}
+            selectedPickupId={selectedLocationId}
+            selectedDropoffId={selectedDropoffId}
             pickupLocation={pickupLocation}
-            onLocationSelect={(location: string, locationId: string) => {
-              setPickupLocation(location);
-              setSelectedLocationId(locationId);
+            dropoffLocation={isSameDropoff ? pickupLocation : dropoffLocation}
+            onPickupSelect={(location) => {
+              setPickupLocation(location.name);
+              setSelectedLocationId(location.id);
+              if (isSameDropoff) {
+                setDropoffLocation(location.name);
+                setSelectedDropoffId(location.id);
+              }
             }}
+            onDropoffSelect={(location) => {
+              setDropoffLocation(location.name);
+              setSelectedDropoffId(location.id);
+            }}
+            isSameDropoff={isSameDropoff}
+            onToggleSameDropoff={(value) => {
+              setIsSameDropoff(value);
+              if (value) {
+                setSelectedDropoffId(selectedLocationId);
+                setDropoffLocation(pickupLocation);
+              } else {
+                setSelectedDropoffId(null);
+                setDropoffLocation("");
+              }
+            }}
+            onMapSelect={handleMapSelect}
             addresses={addresses}
             isLoading={isLoadingAddresses}
           />

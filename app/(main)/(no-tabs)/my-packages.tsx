@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  Image,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
@@ -15,20 +14,18 @@ import {
   ArrowLeft,
   Package,
   Clock,
-  User,
   ChevronRight,
   Calendar,
-  TrendingUp,
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
-import { useAppDispatch } from "@/lib/redux/hooks";
-import { getMyPackages } from "@/features/booking/bookingThunk";
-import { IUserPackageAPI, BookingStatus } from "@/models/package/user-package";
+import { BookingStatus } from "@/models/package/user-package";
 import { IMyPackgesResponse } from "@/models/package/package";
+import { ROUTES } from "@/constants/routes";
+import { useBookingViewModel } from "@/viewmodels/booking/BookingViewModel";
 
 export default function MyPackagesScreen() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
+  const bookingViewModel = useBookingViewModel();
 
   const [selectedStatus, setSelectedStatus] = useState<BookingStatus>(BookingStatus.All);
   const [allPackages, setAllPackages] = useState<IMyPackgesResponse[]>([]);
@@ -36,18 +33,10 @@ export default function MyPackagesScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const statusOptions = useMemo(
-    () => [
-      { key: BookingStatus.All, label: "Tất cả" },
-      { key: BookingStatus.Purchased, label: "Đã mua" },
-      { key: BookingStatus.InUse, label: "Đang sử dụng" },
-      { key: BookingStatus.Used, label: "Đã sử dụng" },
-      { key: BookingStatus.CancellationWithRefund, label: "Hủy có hoàn trả" },
-      { key: BookingStatus.CancellationWithoutRefund, label: "Hủy không hoàn trả" },
-    ],
-    []
+    () => bookingViewModel.getStatusOptions(),
+    [bookingViewModel]
   );
 
-  // Fetch ALL packages once on mount để tính counts
   useEffect(() => {
     fetchAllPackages();
   }, []);
@@ -58,14 +47,11 @@ export default function MyPackagesScreen() {
     } else {
       setIsLoading(true);
     }
-    
+
     try {
-      const result = await dispatch(getMyPackages(undefined)).unwrap();
-      
-      const packagesData: IMyPackgesResponse[] = (result as any).value || result;
+      const packagesData = await bookingViewModel.fetchMyPackages();
       setAllPackages(packagesData);
     } catch (error) {
-      console.error('Failed to fetch packages:', error);
       setAllPackages([]);
     } finally {
       if (isRefresh) {
@@ -80,79 +66,15 @@ export default function MyPackagesScreen() {
     await fetchAllPackages(true);
   };
 
-  const displayedPackages = useMemo(() => {
-    if (selectedStatus === BookingStatus.All) {
-      return allPackages;
-    }
-    return allPackages.filter(p => p.bookingStatus === selectedStatus);
-  }, [allPackages, selectedStatus]);
+  const displayedPackages = useMemo(
+    () => bookingViewModel.filterPackages(allPackages, selectedStatus),
+    [allPackages, selectedStatus, bookingViewModel]
+  );
 
-  const statusCounts = useMemo(() => {
-    const counts: Record<number, number> = {
-      [BookingStatus.All]: allPackages.length,
-      [BookingStatus.Purchased]: 0,
-      [BookingStatus.InUse]: 0,
-      [BookingStatus.Used]: 0,
-      [BookingStatus.CancellationWithRefund]: 0,
-      [BookingStatus.CancellationWithoutRefund]: 0,
-    };
-    allPackages.forEach((p) => {
-      if (counts[p.bookingStatus] !== undefined) {
-        counts[p.bookingStatus] += 1;
-      }
-    });
-    return counts;
-  }, [allPackages]);
-
-  const getStatusColor = (status: BookingStatus) => {
-    switch (status) {
-      case BookingStatus.Purchased:
-        return AppColors.yellow;
-      case BookingStatus.InUse:
-        return AppColors.primary;
-      case BookingStatus.Used:
-        return AppColors.gray;
-      case BookingStatus.CancellationWithRefund:
-        return AppColors.blue;
-      case BookingStatus.CancellationWithoutRefund:
-        return AppColors.red;
-      default:
-        return AppColors.gray;
-    }
-  };
-
-  const getStatusText = (status: BookingStatus) => {
-    switch (status) {
-      case BookingStatus.Purchased:
-        return "Đã mua";
-      case BookingStatus.InUse:
-        return "Đang sử dụng";
-      case BookingStatus.Used:
-        return "Đã sử dụng";
-      case BookingStatus.CancellationWithRefund:
-        return "Hủy có hoàn trả";
-      case BookingStatus.CancellationWithoutRefund:
-        return "Hủy không hoàn trả";
-      default:
-        return "Không xác định";
-    }
-  };
-
-  const handlePackagePress = (pkg: IMyPackgesResponse) => {
-    console.log("Navigating to package detail with package:", pkg);
-    
-    router.push({
-      pathname: "/(main)/(no-tabs)/package-detail",
-      params: { 
-        packageId: pkg.id,
-        packageData: JSON.stringify(pkg), // Truyền toàn bộ package data
-      },
-    });
-  };
-
-  const getProgressPercentage = (percentInUse: number) => {
-    return Math.min(percentInUse, 100);
-  };
+  const statusCounts = useMemo(
+    () => bookingViewModel.calculateStatusCounts(allPackages),
+    [allPackages, bookingViewModel]
+  );
 
   return (
     <View style={styles.container}>
@@ -182,7 +104,7 @@ export default function MyPackagesScreen() {
             const color =
               opt.key === BookingStatus.All
                 ? AppColors.gray
-                : getStatusColor(opt.key);
+                : bookingViewModel.getStatusColor(opt.key);
             return (
               <TouchableOpacity
                 key={opt.key}
@@ -254,21 +176,24 @@ export default function MyPackagesScreen() {
           </View>
         ) : (
           displayedPackages.map((pkg: IMyPackgesResponse) => {
-            const progressPercentage = getProgressPercentage(pkg.precentInUse);
-            const statusColor = getStatusColor(pkg.bookingStatus);
-
+            const progressPercentage =
+              bookingViewModel.getProgressPercentage(pkg.precentInUse);
+            const statusColor = bookingViewModel.getStatusColor(
+              pkg.bookingStatus
+            );
+            const purchaseDateLabel =
+              bookingViewModel.formatPurchaseDate(pkg.buyDate);
             return (
               <TouchableOpacity
                 key={pkg.id}
                 style={styles.packageCard}
-                onPress={() => handlePackagePress(pkg)}
                 activeOpacity={0.7}
               >
 
                 {/* Package Name with Status */}
                 <View style={styles.packageNameRow}>
                   <Text style={styles.packageName}>
-                    {pkg.namePackake || 'Gói học lái xe'}
+                    {pkg.namePackage}
                   </Text>
                   <View
                     style={[
@@ -288,7 +213,7 @@ export default function MyPackagesScreen() {
                     <Text
                       style={[styles.statusText, { color: statusColor }]}
                     >
-                      {getStatusText(pkg.bookingStatus)}
+                      {bookingViewModel.getStatusText(pkg.bookingStatus)}
                     </Text>
                   </View>
                 </View>
@@ -301,14 +226,7 @@ export default function MyPackagesScreen() {
                     strokeWidth={2}
                   />
                   <Text style={styles.purchaseDateText}>
-                    Mua ngày: {new Date(pkg.buyDate).toLocaleDateString('vi-VN', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric'
-                    })} lúc {new Date(pkg.buyDate).toLocaleTimeString('vi-VN', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {purchaseDateLabel}
                   </Text>
                 </View>
 
@@ -381,7 +299,14 @@ export default function MyPackagesScreen() {
 
                 {/* Footer */}
                 <View style={styles.cardFooter}>
-                  <Text style={styles.viewDetailText}>Xem chi tiết</Text>
+                  <TouchableOpacity onPress={() => router.push({
+                    pathname: ROUTES.MY_PACKAGE_DETAIL,
+                    params: {
+                      packageData: JSON.stringify(pkg),
+                    },
+                  })}>
+                    <Text style={styles.viewDetailText}>Xem chi tiết</Text>
+                  </TouchableOpacity>
                   <ChevronRight
                     size={18}
                     color={AppColors.primary}

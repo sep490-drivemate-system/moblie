@@ -1,4 +1,5 @@
 import { BookingStatus, RouteStatus } from "@/constants/enums";
+import { SessionStatus } from "../session/session.enum";
 
 export type PackageType = "instructor" | "full";
 
@@ -23,13 +24,14 @@ export interface RoadType {
   icon: string;
 }
 
-export interface IBookingSession {
-  id: string;
-  date: string;
-  time: string;
-  status: string;
-  completed?: boolean;
-}
+// Old interface - replaced by API Response type below
+// export interface IBookingSession {
+//   id: string;
+//   date: string;
+//   time: string;
+//   status: string;
+//   completed?: boolean;
+// }
 
 // For rental screen specific booking structure
 export interface IBookingItem {
@@ -166,37 +168,25 @@ export interface RouteSegment {
   coordinates: Array<{ latitude: number; longitude: number }>;
 }
 
-// Session Status Enum
-export enum SessionStatus {
-  Pending = 1,
-  Upcoming = 2,
-  Completed = 3,
-  Cancelled = 4,
-  Rescheduled = 5, // Đổi lịch
-}
+
 
 // API Response types for booking sessions
-export interface IBookingSessionAPI {
+export interface IBookingSession {
   id: string;
-  packageId: string;
   packageName: string;
-  noviceDriverName: string;
-  displayName: string | null; // Tên hiển thị của địa điểm
-  noviceAvatar: string;
-  date: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
-  duration: number; // in hours
-  location: string; // Address text
-  vehicleId: string | null;
-  startingLatitude: number; // Latitude của điểm đón
-  startingLongtitude: number; // Longitude của điểm đón (lưu ý: API dùng "Longtitude" không phải "Longitude")
+  displayStartLocationName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  startingLatitude: number;
+  startingLongtitude: number;
+  displayEndLocationName: string;
+  endingLatitude: number;
+  endingLongtitude: number;
   vehicleName: string | null;
-  status: SessionStatus; // Enum: Pending=1, Confirmed=2, Completed=3, Cancelled=4, Rescheduled=5
-  statusDisplayString: string; // "planning", "upcoming", "completed", "cancelled"
-  createdAt: string; // ISO datetime
-  hasRoute: boolean;
-  priceForCar: number | null;
+  status: SessionStatus;
+  createdAt: string;
 }
 
 export interface IGetBookingSessionsParams {
@@ -207,3 +197,17 @@ export interface IGetBookingSessionsParams {
 export interface IGetAllSessionsParams {
   status?: SessionStatus; // Optional status filter
 }
+
+// Session Detail Response
+export interface ISessionDetailResponse {
+  displayStartLocationName: string;
+  startingLatitude: number;
+  startingLongtitude: number;
+  displayEndLocationName: string;
+  endingLatitude: number;
+  endingLongtitude: number;
+  status: SessionStatus;
+}
+
+export { SessionStatus };
+

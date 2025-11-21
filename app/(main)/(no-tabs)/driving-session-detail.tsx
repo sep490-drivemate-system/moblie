@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+﻿import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -21,7 +21,6 @@ import {
   MapPin,
   Car,
   ArrowLeft,
-  Route,
   User,
   Loader,
   Play,
@@ -31,27 +30,52 @@ import { AppColors } from "@/constants/Colors";
 import { userPackagesData } from "@/data/user_packages_data";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, UrlTile } from "react-native-maps";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { 
-  getSessionRoutes, 
-  addSessionLog, 
-  cancelSession, 
+import {
+  getSessionRoutes,
+  addSessionLog,
+  cancelSession,
   ICancelSessionRequest,
   ISessionLogRequest,
-  updateSessionStatus
+  updateSessionStatus,
+  getAllSessions,
+  getSessionDetail
 } from "@/features/booking/bookingThunk";
 import { IGetSessionRoutesResponse } from "@/models/route/route";
-import { SessionStatus } from "@/models/booking/booking";
+import { IBookingSession, SessionStatus, ISessionDetailResponse } from "@/models/booking/booking";
 
 export default function MyDrivingSessionDetailScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { sessionId: rawSessionId } = useLocalSearchParams();
-  
-  // Convert sessionId to string (handle both string and string[] types)
-  const sessionId = Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId;
+  const params = useLocalSearchParams();
+  const sessionId = params.sessionId;
+
+  const getStringParam = (value: string | string[] | undefined) => {
+    if (Array.isArray(value)) return value[0];
+    return value ?? undefined;
+  };
+
+  const getNumberParam = (value: string | string[] | undefined) => {
+    const str = getStringParam(value);
+    if (!str) return undefined;
+    const num = Number(str);
+    return Number.isNaN(num) ? undefined : num;
+  };
+  useEffect(() => {
+    console.log("Session ID: ádasdaádasda", sessionId);
+  }, [sessionId]);
+
 
   const allSessions = userPackagesData.flatMap((p) => p.sessions || []);
-  const session = allSessions.find((s) => s.id === sessionId);
+  const localSession = allSessions.find((s) => s.id === sessionId);
+  const [remoteSession, setRemoteSession] = useState<IBookingSession | null>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const session = remoteSession ?? localSession ?? null;
+  const sessionLocationData = session as any;
+
+  // State for session detail from API
+  const [sessionDetail, setSessionDetail] = useState<ISessionDetailResponse | null>(null);
+  const [isLoadingSessionDetail, setIsLoadingSessionDetail] = useState(false);
 
   // State for routes from API
   const [routesData, setRoutesData] = useState<IGetSessionRoutesResponse | null>(null);
@@ -75,7 +99,42 @@ export default function MyDrivingSessionDetailScreen() {
   // Goong API Keys
   const GOONG_API_KEY = process.env.EXPO_PUBLIC_GOONG_API_KEY;
   const GOONG_MAPTILES_KEY = process.env.EXPO_PUBLIC_GOONG_MAPTILES_KEY;
-  
+
+  const parseCoordinateValue = (
+    value: number | string | undefined | null
+  ): number | null => {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : null;
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (
+        trimmed === "" ||
+        trimmed.toLowerCase() === "null" ||
+        trimmed.toLowerCase() === "undefined"
+      ) {
+        return null;
+      }
+
+      const parsed = Number(trimmed);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+  };
+
+  const formatCoordinateText = (
+    value: number | string | undefined | null
+  ): string => {
+    const parsed = parseCoordinateValue(value);
+    return parsed !== null ? parsed.toFixed(6) : "--";
+  };
+
 
   type RoutePoint = {
     id: string;
@@ -100,7 +159,6 @@ export default function MyDrivingSessionDetailScreen() {
     totalDuration?: string;
   };
 
-  // Decode polyline from Goong API
   const decodePolyline = (encoded: string) => {
     const points: { latitude: number; longitude: number }[] = [];
     let index = 0;
@@ -143,12 +201,33 @@ export default function MyDrivingSessionDetailScreen() {
   // Fetch directions from Goong API
   const fetchGoongDirections = async (data: IGetSessionRoutesResponse) => {
     try {
-      
+
+      const startLat = parseCoordinateValue(data.sessionStartingLat as any);
+      const startLng = parseCoordinateValue(data.sessionStartingLong as any);
+
+      if (startLat === null || startLng === null) {
+        console.warn("⚠️ Goong directions skipped: invalid start coordinates");
+        return;
+      }
+
       // Create waypoints array: start point + all route points
+      const routes = data.routes || [];
       const allPoints = [
-        { lat: data.sessionStartingLat, lng: data.sessionStartingLong },
-        ...data.routes.map(r => ({ lat: r.latitudeStart, lng: r.longitudeStart }))
+        { lat: startLat, lng: startLng },
+        ...routes
+          .map((r) => {
+            const lat = parseCoordinateValue(r.latitudeStart as any);
+            const lng = parseCoordinateValue(r.longitudeStart as any);
+            if (lat === null || lng === null) return null;
+            return { lat, lng };
+          })
+          .filter((point): point is { lat: number; lng: number } => point !== null),
       ];
+
+      if (allPoints.length < 2) {
+        console.warn("⚠️ Goong directions skipped: not enough points");
+        return;
+      }
 
       console.log("📍 Total points to connect:", allPoints.length);
 
@@ -160,9 +239,9 @@ export default function MyDrivingSessionDetailScreen() {
         const destination = allPoints[i + 1];
 
         const url = `https://rsapi.goong.io/Direction?origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&vehicle=car&api_key=${GOONG_API_KEY}`;
-        
+
         console.log(`🚗 Fetching segment ${i + 1}/${allPoints.length - 1}...`);
-        
+
         const response = await fetch(url);
         const json = await response.json();
 
@@ -171,9 +250,9 @@ export default function MyDrivingSessionDetailScreen() {
         if (json.routes && json.routes[0]) {
           const route = json.routes[0];
           const coordinates = decodePolyline(route.overview_polyline.points);
-          
+
           console.log(`✅ Segment ${i + 1}: ${coordinates.length} coordinates`);
-          
+
           segments.push({
             coordinates,
             distance: route.legs[0].distance.text,
@@ -221,7 +300,7 @@ export default function MyDrivingSessionDetailScreen() {
   // Get street name from coordinates (mock - in production use reverse geocoding)
   const getStreetName = async (lat: number, lng: number): Promise<string> => {
     // Mock street names based on route data
-    if (routesData) {
+    if (routesData && routesData.routes) {
       const nearestRoute = routesData.routes.find((r) => {
         const distance = Math.sqrt(
           Math.pow(r.latitudeStart - lat, 2) + Math.pow(r.longitudeStart - lng, 2)
@@ -259,189 +338,190 @@ export default function MyDrivingSessionDetailScreen() {
     }
   };
 
-  const handelUpdate = async (sessionId: string) => {
-    try {
-      const response = await dispatch(updateSessionStatus({ sessionId, status: SessionStatus.Upcoming })).unwrap();
-      console.log("✅ Session status updated successfully:", response);
-      Alert.alert("Thành công", "Lưu lại thành công");
-      router.back();
-    } catch (error) {
-      console.error("❌ Error updating session status:", error);
-      Alert.alert("Lỗi", "Không thể lưu lại");
-    }
-  };
+  // const handelUpdate = async (sessionId: string) => {
+  //   try {
+  //     const response = await dispatch(updateSessionStatus({ sessionId, status: SessionStatus.Upcoming })).unwrap();
+  //     console.log("✅ Session status updated successfully:", response);
+  //     Alert.alert("Thành công", "Lưu lại thành công");
+  //     router.back();
+  //   } catch (error) {
+  //     console.error("❌ Error updating session status:", error);
+  //     Alert.alert("Lỗi", "Không thể lưu lại");
+  //   }
+  // };
   // Start vehicle simulation - Round trip (khứ hồi)
-  const startSimulation = () => {
-    if (!routeSegments.length || isSimulating) return;
+  // const startSimulation = () => {
+  //   if (!routeSegments.length || isSimulating) return;
 
-    // Collect all coordinates from route segments for outbound trip
-    const outboundCoordinates: Array<{ latitude: number; longitude: number }> = [];
-    routeSegments.forEach((segment) => {
-      outboundCoordinates.push(...segment.coordinates);
-    });
+  //   // Collect all coordinates from route segments for outbound trip
+  //   const outboundCoordinates: Array<{ latitude: number; longitude: number }> = [];
+  //   routeSegments.forEach((segment) => {
+  //     outboundCoordinates.push(...segment.coordinates);
+  //   });
 
-    if (outboundCoordinates.length === 0) {
-      Alert.alert("Lỗi", "Không có lộ trình để giả lập");
-      return;
-    }
+  //   if (outboundCoordinates.length === 0) {
+  //     Alert.alert("Lỗi", "Không có lộ trình để giả lập");
+  //     return;
+  //   }
 
-    // Create round trip: outbound + return journey
-    const returnCoordinates = [...outboundCoordinates].reverse(); // Reverse for return trip
-    const roundTripCoordinates = [...outboundCoordinates, ...returnCoordinates];
-    
-    console.log("🔄 Round trip simulation:", {
-      outboundPoints: outboundCoordinates.length,
-      returnPoints: returnCoordinates.length,
-      totalPoints: roundTripCoordinates.length
-    });
+  //   // Create round trip: outbound + return journey
+  //   const returnCoordinates = [...outboundCoordinates].reverse(); // Reverse for return trip
+  //   const roundTripCoordinates = [...outboundCoordinates, ...returnCoordinates];
 
-    allRouteCoordinates.current = roundTripCoordinates;
-    setIsSimulating(true);
-    setSimulationProgress(0);
+  //   console.log("🔄 Round trip simulation:", {
+  //     outboundPoints: outboundCoordinates.length,
+  //     returnPoints: returnCoordinates.length,
+  //     totalPoints: roundTripCoordinates.length
+  //   });
 
-    // Set initial position
-    const startPos = roundTripCoordinates[0];
-    const nextPos = roundTripCoordinates[1] || startPos;
-    const initialHeading = calculateHeading(startPos, nextPos);
-    setCurrentPosition({
-      ...startPos,
-      heading: initialHeading,
-      speed: 40, // 40 km/h
-    });
+  //   allRouteCoordinates.current = roundTripCoordinates;
+  //   setIsSimulating(true);
+  //   setSimulationProgress(0);
 
-    let currentIndex = 0;
-    const totalPoints = roundTripCoordinates.length;
-    const outboundLength = outboundCoordinates.length;
-    const simulationSpeed = 100; // Update every 100ms for smooth animation
-    const speedKmh = 40; // Average speed 40 km/h
+  //   // Set initial position
+  //   const startPos = roundTripCoordinates[0];
+  //   const nextPos = roundTripCoordinates[1] || startPos;
+  //   const initialHeading = calculateHeading(startPos, nextPos);
+  //   setCurrentPosition({
+  //     ...startPos,
+  //     heading: initialHeading,
+  //     speed: 40, // 40 km/h
+  //   });
 
-    // Simulation interval - move vehicle along route
-    simulationIntervalRef.current = setInterval(() => {
-      currentIndex++;
-      if (currentIndex >= totalPoints) {
-        stopSimulation();
-        Alert.alert(
-          "Hoàn thành chuyến khứ hồi", 
-          "Đã hoàn thành lộ trình giả lập khứ hồi!\n\n" +
-          `✅ Lượt đi: ${outboundLength} điểm\n` +
-          `✅ Lượt về: ${returnCoordinates.length} điểm\n` +
-          `🎯 Tổng cộng: ${totalPoints} điểm`
-        );
-        return;
-      }
+  //   let currentIndex = 0;
+  //   const totalPoints = roundTripCoordinates.length;
+  //   const outboundLength = outboundCoordinates.length;
+  //   const simulationSpeed = 100; // Update every 100ms for smooth animation
+  //   const speedKmh = 40; // Average speed 40 km/h
 
-      const currentPos = roundTripCoordinates[currentIndex];
-      const nextPos = roundTripCoordinates[currentIndex + 1] || currentPos;
-      const heading = calculateHeading(currentPos, nextPos);
+  //   // Simulation interval - move vehicle along route
+  //   simulationIntervalRef.current = setInterval(() => {
+  //     currentIndex++;
+  //     if (currentIndex >= totalPoints) {
+  //       stopSimulation();
+  //       Alert.alert(
+  //         "Hoàn thành chuyến khứ hồi",
+  //         "Đã hoàn thành lộ trình giả lập khứ hồi!\n\n" +
+  //         `✅ Lượt đi: ${outboundLength} điểm\n` +
+  //         `✅ Lượt về: ${returnCoordinates.length} điểm\n` +
+  //         `🎯 Tổng cộng: ${totalPoints} điểm`
+  //       );
+  //       return;
+  //     }
 
-      // Determine if we're on outbound or return trip
-      const isOutbound = currentIndex < outboundLength;
-      const tripPhase = isOutbound ? "Lượt đi" : "Lượt về";
-      const phaseProgress = isOutbound 
-        ? (currentIndex / outboundLength) * 100
-        : ((currentIndex - outboundLength) / returnCoordinates.length) * 100;
+  //     const currentPos = roundTripCoordinates[currentIndex];
+  //     const nextPos = roundTripCoordinates[currentIndex + 1] || currentPos;
+  //     const heading = calculateHeading(currentPos, nextPos);
 
-      console.log(`🚗 ${tripPhase}: ${Math.round(phaseProgress)}% (${currentIndex}/${totalPoints})`);
+  //     // Determine if we're on outbound or return trip
+  //     const isOutbound = currentIndex < outboundLength;
+  //     const tripPhase = isOutbound ? "Lượt đi" : "Lượt về";
+  //     const phaseProgress = isOutbound
+  //       ? (currentIndex / outboundLength) * 100
+  //       : ((currentIndex - outboundLength) / returnCoordinates.length) * 100;
 
-      setCurrentPosition({
-        ...currentPos,
-        heading,
-        speed: speedKmh + Math.random() * 10 - 5, // Random speed variation ±5 km/h
-      });
 
-      setSimulationProgress((currentIndex / totalPoints) * 100);
+  //     setCurrentPosition({
+  //       ...currentPos,
+  //       heading,
+  //       speed: speedKmh + Math.random() * 10 - 5, // Random speed variation ±5 km/h
+  //     });
 
-      // Animate map to follow vehicle
-      if (mapRef.current) {
-        mapRef.current.animateToRegion(
-          {
-            latitude: currentPos.latitude,
-            longitude: currentPos.longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          },
-          500
-        );
-      }
-    }, simulationSpeed);
+  //     setSimulationProgress((currentIndex / totalPoints) * 100);
 
-    // Log interval - send to API every 5 minutes (300000ms)
-    logIntervalRef.current = setInterval(() => {
-      if (currentPosition) {
-        sendSessionLog(
-          currentPosition.latitude,
-          currentPosition.longitude,
-          currentPosition.heading,
-          currentPosition.speed
-        );
-      }
-    }, 300000); // 5 minutes
+  //     // Animate map to follow vehicle
+  //     if (mapRef.current) {
+  //       mapRef.current.animateToRegion(
+  //         {
+  //           latitude: currentPos.latitude,
+  //           longitude: currentPos.longitude,
+  //           latitudeDelta: 0.01,
+  //           longitudeDelta: 0.01,
+  //         },
+  //         500
+  //       );
+  //     }
+  //   }, simulationSpeed);
 
-    // Also send initial log immediately
-    sendSessionLog(startPos.latitude, startPos.longitude, initialHeading, speedKmh);
-  };
+  //   // Log interval - send to API every 5 minutes (300000ms)
+  //   logIntervalRef.current = setInterval(() => {
+  //     if (currentPosition) {
+  //       sendSessionLog(
+  //         currentPosition.latitude,
+  //         currentPosition.longitude,
+  //         currentPosition.heading,
+  //         currentPosition.speed
+  //       );
+  //     }
+  //   }, 300000); // 5 minutes
+
+  //   // Also send initial log immediately
+  //   sendSessionLog(startPos.latitude, startPos.longitude, initialHeading, speedKmh);
+  // };
 
   // Stop vehicle simulation
-  const stopSimulation = () => {
-    if (simulationIntervalRef.current) {
-      clearInterval(simulationIntervalRef.current);
-      simulationIntervalRef.current = null;
-    }
-    if (logIntervalRef.current) {
-      clearInterval(logIntervalRef.current);
-      logIntervalRef.current = null;
-    }
-    setIsSimulating(false);
-  };
+  // const stopSimulation = () => {
+  //   if (simulationIntervalRef.current) {
+  //     clearInterval(simulationIntervalRef.current);
+  //     simulationIntervalRef.current = null;
+  //   }
+  //   if (logIntervalRef.current) {
+  //     clearInterval(logIntervalRef.current);
+  //     logIntervalRef.current = null;
+  //   }
+  //   setIsSimulating(false);
+  // };
 
   // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopSimulation();
-    };
-  }, []);
+  // useEffect(() => {
+  //   return () => {
+  //     stopSimulation();
+  //   };
+  // }, []);
 
   // Fetch routes from API
-  useEffect(() => {
-    if (!sessionId || typeof sessionId !== 'string') return;
+  // useEffect(() => {
+  //   if (!shouldFetchRoutes || !sessionId || typeof sessionId !== "string") {
+  //     return;
+  //   }
 
-    const fetchRoutes = async () => {
-      try {
-        setIsLoadingRoutes(true);
-        console.log("🗺️ Fetching routes for session:", sessionId);
+  //   const fetchRoutes = async () => {
+  //     try {
+  //       setIsLoadingRoutes(true);
+  //       console.log("🗺️ Fetching routes for session:", sessionId);
 
-        const result = await dispatch(getSessionRoutes(sessionId)).unwrap();
-        
-        // API trả về isSuccess, nhưng GenericResponse type định nghĩa success
-        // Cast để access cả 2 properties
-        const apiResult = result as any;
-        if ((apiResult.isSuccess || result.success) && result.value) {
-          setRoutesData(result.value);
-          console.log("✅ Routes loaded:", result.value);
-          console.log("📊 DEBUG - Routes data structure:", {
-            startLat: result.value.sessionStartingLat,
-            startLng: result.value.sessionStartingLong,
-            routesCount: result.value.routes.length,
-            firstRoute: result.value.routes[0]
-          });
-          
-          // Fetch directions from Goong API
-          console.log("🚀 DEBUG - About to call fetchGoongDirections...");
-          await fetchGoongDirections(result.value);
-          console.log("✅ DEBUG - fetchGoongDirections completed");
-        } else {
-          console.warn("⚠️ DEBUG - API response not successful or no value:", result);
-        }
-      } catch (error) {
-        console.error("❌ Error fetching routes:", error);
-        Alert.alert("Lỗi", "Không thể tải thông tin lộ trình");
-      } finally {
-        setIsLoadingRoutes(false);
-      }
-    };
+  //       const result = await dispatch(getSessionRoutes({ sessionId })).unwrap();
 
-    fetchRoutes();
-  }, [sessionId]);
+  //       // API trả về isSuccess, nhưng GenericResponse type định nghĩa success
+  //       // Cast để access cả 2 properties
+  //       const apiResult = result as any;
+  //       if ((apiResult.isSuccess || result.success) && result.value) {
+  //         setRoutesData(result.value);
+  //         console.log("✅ Routes loaded:", result.value);
+  //         console.log("📊 DEBUG - Routes data structure:", {
+  //           startLat: result.value.sessionStartingLat,
+  //           startLng: result.value.sessionStartingLong,
+  //           routesCount: result.value.routes.length,
+  //           firstRoute: result.value.routes[0]
+  //         });
+
+  //         // Fetch directions from Goong API
+  //         console.log("🚀 DEBUG - About to call fetchGoongDirections...");
+  //         await fetchGoongDirections(result.value);
+  //         console.log("✅ DEBUG - fetchGoongDirections completed");
+  //       } else {
+  //         console.warn("⚠️ DEBUG - API response not successful or no value:", result);
+  //       }
+  //     } catch (error) {
+  //       console.error("❌ Error fetching routes:", error);
+  //       Alert.alert("Lỗi", "Không thể tải thông tin lộ trình");
+  //     } finally {
+  //       setIsLoadingRoutes(false);
+  //     }
+  //   };
+
+  //   fetchRoutes();
+  // }, [sessionId, shouldFetchRoutes]);
 
 
   const [routeDecision, setRouteDecision] = useState<
@@ -450,7 +530,7 @@ export default function MyDrivingSessionDetailScreen() {
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
-  
+
   // New states for API calls
   const [cancelNote, setCancelNote] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
@@ -502,19 +582,19 @@ export default function MyDrivingSessionDetailScreen() {
 
     try {
       setIsCancelling(true);
-      
+
       const cancelData: ICancelSessionRequest = {
         note: cancelNote.trim()
       };
 
       await dispatch(cancelSession({ sessionId, cancelData })).unwrap();
-      
+
       setShowCancelModal(false);
       setCancelNote("");
       setSelectedReasons([]);
-      
+
       Alert.alert(
-        "Thành công", 
+        "Thành công",
         "Đã hủy buổi tập lái thành công",
         [
           {
@@ -533,18 +613,18 @@ export default function MyDrivingSessionDetailScreen() {
 
 
   // Allow override via route params after reschedule
-  const params = useLocalSearchParams();
-  const overrideDate = (params.overrideDate as string) || undefined;
-  const overrideStartTime = (params.overrideStartTime as string) || undefined;
-  const overrideEndTime = (params.overrideEndTime as string) || undefined;
-  const overrideLocation = (params.overrideLocation as string) || undefined;
-  const overrideInstructor = (params.overrideInstructor as string) || undefined;
-  const overrideDuration = params.overrideDuration
-    ? Number(params.overrideDuration)
-    : undefined;
+  const overrideDate = getStringParam(params.overrideDate);
+  const overrideStartTime = getStringParam(params.overrideStartTime);
+  const overrideEndTime = getStringParam(params.overrideEndTime);
+  const overrideLocation = getStringParam(params.overrideLocation);
+  const overrideInstructor = getStringParam(params.overrideInstructor);
+  const overrideDurationValue = getNumberParam(params.overrideDuration);
+  const overrideDuration =
+    overrideDurationValue !== undefined ? overrideDurationValue : undefined;
 
-  const displaySession = session
-    ? {
+  const displaySession = useMemo(() => {
+    if (session) {
+      return {
         ...session,
         date: overrideDate || (session as any).date,
         startTime: overrideStartTime || (session as any).startTime,
@@ -552,14 +632,346 @@ export default function MyDrivingSessionDetailScreen() {
         location: overrideLocation || (session as any).location,
         instructorName: overrideInstructor || (session as any).instructorName,
         duration: overrideDuration || (session as any).duration,
+      };
+    }
+
+    if (
+      overrideDate ||
+      overrideStartTime ||
+      overrideEndTime ||
+      overrideLocation ||
+      overrideInstructor ||
+      overrideDuration
+    ) {
+      return {
+        id: sessionId || "temp-session",
+        date: overrideDate || new Date().toISOString(),
+        startTime: overrideStartTime || "--:--",
+        endTime: overrideEndTime || "--:--",
+        location:
+          overrideLocation || sessionLocationData?.displayStartLocationName || "",
+        instructorName: overrideInstructor || "",
+        duration: overrideDuration ?? 0,
+        vehicleName: sessionLocationData?.vehicleName || "",
+      } as any;
+    }
+
+    return null;
+  }, [
+    session,
+    overrideDate,
+    overrideStartTime,
+    overrideEndTime,
+    overrideLocation,
+    overrideInstructor,
+    overrideDuration,
+    sessionId,
+    sessionLocationData?.vehicleName,
+  ]);
+
+  const normalizeCoordinate = (value: number | string | undefined | null) => {
+    const parsed = parseCoordinateValue(value);
+    return parsed === null ? undefined : parsed;
+  };
+
+  const parseLocationString = (value?: string | null) => {
+    if (!value) {
+      return { lat: undefined, long: undefined };
+    }
+
+    const [latPart, longPart] = value.split(",");
+    return {
+      lat: normalizeCoordinate(latPart?.trim()),
+      long: normalizeCoordinate(longPart?.trim()),
+    };
+  };
+
+  useEffect(() => {
+    if (!sessionId || typeof sessionId !== "string") return;
+    if (localSession) return;
+
+    let isMounted = true;
+
+    const fetchSessionDetail = async () => {
+      try {
+        setIsLoadingSession(true);
+        setSessionError(null);
+        const response = await dispatch(getAllSessions(undefined)).unwrap();
+        const allSessionsResult = (response?.value ?? []) as IBookingSession[];
+        if (!isMounted) return;
+
+        const found = allSessionsResult.find(
+          (item) => item.id === sessionId
+        );
+
+        if (found) {
+          setRemoteSession(found);
+        } else {
+          setSessionError("Không tìm thấy thông tin buổi tập.");
+        }
+      } catch (error) {
+        console.error("❌ Error fetching session detail:", error);
+        if (isMounted) {
+          setSessionError("Không thể tải thông tin buổi tập.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingSession(false);
+        }
       }
-    : null;
+    };
+
+    fetchSessionDetail();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [sessionId, localSession, dispatch]);
+
+  // Fetch session detail with coordinates
+  useEffect(() => {
+    if (!sessionId || typeof sessionId !== "string") return;
+
+    let isMounted = true;
+
+    const fetchSessionDetailData = async () => {
+      try {
+        setIsLoadingSessionDetail(true);
+        console.log("📍 Fetching session detail for:", sessionId);
+        const response = await dispatch(getSessionDetail({ sessionId })).unwrap();
+        if (!isMounted) return;
+
+        const detailData = (response as any)?.value ?? response;
+        if (detailData) {
+          setSessionDetail(detailData as ISessionDetailResponse);
+          console.log("✅ Session detail loaded:", detailData);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching session detail:", error);
+      } finally {
+        if (isMounted) {
+          setIsLoadingSessionDetail(false);
+        }
+      }
+    };
+
+    fetchSessionDetailData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [sessionId, dispatch]);
+
+  const sessionLocationCoords = useMemo(
+    () => parseLocationString(sessionLocationData?.location),
+    [sessionLocationData?.location]
+  );
+
+  const pickupDetails = useMemo(() => {
+    // Priority: sessionDetail API > params > sessionLocationData > sessionLocationCoords
+    const nameParam = getStringParam(params.pickupName);
+    const latParam =
+      normalizeCoordinate(getStringParam(params.pickupLat)) ??
+      normalizeCoordinate(sessionDetail?.startingLatitude) ??
+      normalizeCoordinate(sessionLocationData?.startingLatitude) ??
+      sessionLocationCoords.lat;
+    const longParam =
+      normalizeCoordinate(getStringParam(params.pickupLong)) ??
+      normalizeCoordinate(sessionDetail?.startingLongtitude) ??
+      normalizeCoordinate(sessionLocationData?.startingLongtitude) ??
+      sessionLocationCoords.long;
+
+    return {
+      name:
+        nameParam ||
+        sessionDetail?.displayStartLocationName ||
+        sessionLocationData?.displayStartLocationName ||
+        "",
+      lat: latParam,
+      long: longParam,
+    };
+  }, [params, sessionDetail, sessionLocationData, sessionLocationCoords]);
+
+  const dropoffDetails = useMemo(() => {
+    // Priority: sessionDetail API > params > sessionLocationData > sessionLocationCoords
+    const nameParam = getStringParam(params.dropoffName);
+    const latParam =
+      normalizeCoordinate(getStringParam(params.dropoffLat)) ??
+      normalizeCoordinate(sessionDetail?.endingLatitude) ??
+      normalizeCoordinate(sessionLocationData?.endingLatitude) ??
+      sessionLocationCoords.lat;
+    const longParam =
+      normalizeCoordinate(getStringParam(params.dropoffLong)) ??
+      normalizeCoordinate(sessionDetail?.endingLongtitude) ??
+      normalizeCoordinate(sessionLocationData?.endingLongtitude) ??
+      sessionLocationCoords.long;
+
+    return {
+      name:
+        nameParam ||
+        sessionDetail?.displayEndLocationName ||
+        sessionLocationData?.displayEndLocationName ||
+        "",
+      lat: latParam,
+      long: longParam,
+    };
+  }, [params, sessionDetail, sessionLocationData, sessionLocationCoords]);
+
+  const fallbackRoutesData = useMemo(() => {
+    if (
+      pickupDetails.lat === undefined ||
+      pickupDetails.long === undefined
+    ) {
+      return null;
+    }
+
+    const hasDropoff =
+      dropoffDetails.lat !== undefined && dropoffDetails.long !== undefined;
+
+    return {
+      sessionStartingLat: pickupDetails.lat,
+      sessionStartingLong: pickupDetails.long,
+      routes: hasDropoff
+        ? [
+          {
+            id: `${sessionId || "session"}-dropoff`,
+            sessionId: String(sessionId || "session"),
+            textInstruction: dropoffDetails.name
+              ? `Di chuyển đến ${dropoffDetails.name}`
+              : "Đi đến điểm trả",
+            streetName: dropoffDetails.name || "Điểm trả",
+            latitudeStart: dropoffDetails.lat!,
+            longitudeStart: dropoffDetails.long!,
+          },
+        ]
+        : [],
+    } as IGetSessionRoutesResponse;
+  }, [
+    pickupDetails.lat,
+    pickupDetails.long,
+    dropoffDetails.lat,
+    dropoffDetails.long,
+    dropoffDetails.name,
+    sessionId,
+  ]);
+
+  const effectiveRoutesData = routesData ?? fallbackRoutesData;
+  const routePoints = effectiveRoutesData?.routes ?? [];
+
+  const fallbackSegments = useMemo(() => {
+    if (
+      pickupDetails.lat === undefined ||
+      pickupDetails.long === undefined ||
+      dropoffDetails.lat === undefined ||
+      dropoffDetails.long === undefined
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        coordinates: [
+          { latitude: pickupDetails.lat, longitude: pickupDetails.long },
+          { latitude: dropoffDetails.lat, longitude: dropoffDetails.long },
+        ],
+        distance: "N/A",
+        duration: "N/A",
+      },
+    ];
+  }, [
+    pickupDetails.lat,
+    pickupDetails.long,
+    dropoffDetails.lat,
+    dropoffDetails.long,
+  ]);
+
+  const effectiveRouteSegments =
+    routeSegments.length > 0 ? routeSegments : fallbackSegments;
+
+  // Use pickupDetails coordinates directly (from sessionDetail API) for map
+  const mapStartLat = pickupDetails.lat;
+  const mapStartLong = pickupDetails.long;
+  const hasValidStartCoords =
+    typeof mapStartLat === "number" && typeof mapStartLong === "number";
+
+  // Log for debugging
+  useEffect(() => {
+    console.log("🗺️ Map coordinates check:", {
+      hasValidStartCoords,
+      mapStartLat,
+      mapStartLong,
+      pickupDetails,
+      dropoffDetails,
+      effectiveRoutesData: effectiveRoutesData ? "exists" : "null",
+      routeSegmentsCount: routeSegments.length,
+      effectiveRouteSegmentsCount: effectiveRouteSegments.length,
+    });
+  }, [hasValidStartCoords, mapStartLat, mapStartLong, pickupDetails, dropoffDetails, effectiveRoutesData, routeSegments.length, effectiveRouteSegments.length]);
+
+  useEffect(() => {
+    if (!sessionId || typeof sessionId !== "string") return;
+
+    let isMounted = true;
+
+    const loadRoutes = async () => {
+      try {
+        setIsLoadingRoutes(true);
+        const response = await dispatch(getSessionRoutes({ sessionId })).unwrap();
+        const result = response?.value ?? null;
+        if (!isMounted) return;
+        if (result) {
+          setRoutesData(result);
+          await fetchGoongDirections(result);
+        } else {
+          setRoutesData(null);
+          setRouteSegments([]);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching routes:", error);
+        if (isMounted) {
+          setRoutesData(null);
+          setRouteSegments([]);
+          Alert.alert("Lỗi", "Không thể tải thông tin lộ trình");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingRoutes(false);
+        }
+      }
+    };
+
+    loadRoutes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [sessionId, dispatch]);
+
+  useEffect(() => {
+    if (!GOONG_API_KEY) {
+      return;
+    }
+
+    const dataForDirections = routesData ?? fallbackRoutesData;
+
+    if (
+      !dataForDirections ||
+      !dataForDirections.routes ||
+      dataForDirections.routes.length === 0 ||
+      dataForDirections.sessionStartingLat === undefined ||
+      dataForDirections.sessionStartingLong === undefined
+    ) {
+      return;
+    }
+
+    fetchGoongDirections(dataForDirections);
+  }, [routesData, fallbackRoutesData, GOONG_API_KEY]);
 
   // SessionStatus enum from backend
   // Planning = 1, Upcoming = 2, InProgress = 3, Completed = 4, Reschedule = 5, Cancelled = 6
   const getSessionStatusMeta = (status?: number | string) => {
     const statusNum = typeof status === 'string' ? parseInt(status) : status;
-    
+
     switch (statusNum) {
       case 1: // Planning
         return {
@@ -640,21 +1052,6 @@ export default function MyDrivingSessionDetailScreen() {
             </View>
 
             {/* Status */}
-            <View style={styles.row}>
-              <Text style={styles.label}>Trạng thái</Text>
-              {(() => {
-                const meta = getSessionStatusMeta((session as any)?.status);
-                return (
-                  <View
-                    style={[styles.statusBadge, { backgroundColor: meta.bg }]}
-                  >
-                    <Text style={[styles.statusText, { color: meta.color }]}>
-                      {meta.label}
-                    </Text>
-                  </View>
-                );
-              })()}
-            </View>
 
             <View style={styles.iconRow}>
               <MapPin size={18} color="#64748b" strokeWidth={2} />
@@ -662,6 +1059,42 @@ export default function MyDrivingSessionDetailScreen() {
                 {displaySession.location}
               </Text>
             </View>
+
+            {(pickupDetails.name || dropoffDetails.name) && (
+              <View style={styles.locationDetailsContainer}>
+                {pickupDetails.name ? (
+                  <View style={styles.locationDetailCard}>
+                    <Text style={styles.locationDetailLabel}>Điểm đón</Text>
+                    <Text style={styles.locationDetailName}>
+                      {pickupDetails.name}
+                    </Text>
+                    {pickupDetails.lat !== undefined &&
+                      pickupDetails.long !== undefined && (
+                        <Text style={styles.locationCoordsText}>
+                          {pickupDetails.lat.toFixed(5)},{" "}
+                          {pickupDetails.long.toFixed(5)}
+                        </Text>
+                      )}
+                  </View>
+                ) : null}
+
+                {dropoffDetails.name ? (
+                  <View style={styles.locationDetailCard}>
+                    <Text style={styles.locationDetailLabel}>Điểm trả</Text>
+                    <Text style={styles.locationDetailName}>
+                      {dropoffDetails.name}
+                    </Text>
+                    {dropoffDetails.lat !== undefined &&
+                      dropoffDetails.long !== undefined && (
+                        <Text style={styles.locationCoordsText}>
+                          {dropoffDetails.lat.toFixed(5)},{" "}
+                          {dropoffDetails.long.toFixed(5)}
+                        </Text>
+                      )}
+                  </View>
+                ) : null}
+              </View>
+            )}
 
             {displaySession.vehicleName ? (
               <View style={styles.iconRow}>
@@ -704,6 +1137,18 @@ export default function MyDrivingSessionDetailScreen() {
             </View>
           </View>
         )}
+        {!displaySession && isLoadingSession && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={AppColors.primary} />
+            <Text style={styles.loadingText}>Đang tải thông tin buổi tập...</Text>
+          </View>
+        )}
+
+        {sessionError && !displaySession && !isLoadingSession && (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>{sessionError}</Text>
+          </View>
+        )}
         {/* Loading State */}
         {isLoadingRoutes && (
           <View style={styles.loadingContainer}>
@@ -712,11 +1157,12 @@ export default function MyDrivingSessionDetailScreen() {
           </View>
         )}
 
+
         {/* Routes from API */}
-        {!isLoadingRoutes && routesData && (
+        {effectiveRoutesData && (
           <View style={styles.routeCard}>
             <Text style={styles.sectionTitle}>
-              Lộ trình buổi tập lái ({routesData.routes.length + 1} điểm)
+              Lộ trình buổi tập lái ({routePoints.length + 1} điểm)
             </Text>
 
             {/* Route status / decision */}
@@ -757,7 +1203,14 @@ export default function MyDrivingSessionDetailScreen() {
                   <View style={styles.pointInfo}>
                     <Text style={styles.pointAddress}>Điểm bắt đầu</Text>
                     <Text style={styles.pointCoords}>
-                      📍 {routesData.sessionStartingLat.toFixed(6)}, {routesData.sessionStartingLong.toFixed(6)}
+                      📍
+                      {formatCoordinateText(
+                        effectiveRoutesData.sessionStartingLat
+                      )}
+                      ,{" "}
+                      {formatCoordinateText(
+                        effectiveRoutesData.sessionStartingLong
+                      )}
                     </Text>
                   </View>
                 </View>
@@ -765,7 +1218,7 @@ export default function MyDrivingSessionDetailScreen() {
               </View>
 
               {/* Route Points */}
-              {routesData.routes.map((point, index) => (
+              {routePoints.map((point, index) => (
                 <View key={point.id} style={styles.routePoint}>
                   <View style={styles.pointHeader}>
                     <View style={styles.pointNumber}>
@@ -774,7 +1227,9 @@ export default function MyDrivingSessionDetailScreen() {
                     <View style={styles.pointInfo}>
                       <Text style={styles.pointAddress}>{point.streetName}</Text>
                       <Text style={styles.pointCoords}>
-                        📍 {point.latitudeStart.toFixed(6)}, {point.longitudeStart.toFixed(6)}
+                        📍{" "}
+                        {formatCoordinateText(point.latitudeStart)},{" "}
+                        {formatCoordinateText(point.longitudeStart)}
                       </Text>
                     </View>
                   </View>
@@ -783,7 +1238,7 @@ export default function MyDrivingSessionDetailScreen() {
                     {point.textInstruction}
                   </Text>
 
-                  {index < routesData.routes.length - 1 && (
+                  {index < routePoints.length - 1 && (
                     <View style={styles.routeLine} />
                   )}
                 </View>
@@ -821,137 +1276,6 @@ export default function MyDrivingSessionDetailScreen() {
                 <Text style={styles.cancelMapButtonText}>Hủy buổi tập</Text>
               </TouchableOpacity>
             </View>
-            {/* Map with Goong Directions */}
-            <Text style={styles.mapTitle}>Bản đồ lộ trình</Text>
-            
-            {/* Simulation Controls - Show if route exists */}
-            {routeSegments.length > 0 && (
-              <View style={styles.simulationControls}>
-                <TouchableOpacity
-                  style={[
-                    styles.simulationButton,
-                    isSimulating ? styles.stopButton : styles.startButton,
-                  ]}
-                  onPress={isSimulating ? stopSimulation : startSimulation}
-                >
-                  {isSimulating ? (
-                    <Square size={20} color="#fff" strokeWidth={2} />
-                  ) : (
-                    <Play size={20} color="#fff" strokeWidth={2} />
-                  )}
-                  <Text style={styles.simulationButtonText}>
-                    {isSimulating ? "Dừng giả lập" : "Bắt đầu giả lập"}
-                  </Text>
-                </TouchableOpacity>
-
-                {isSimulating && (
-                  <View style={styles.simulationInfo}>
-                    <Text style={styles.simulationInfoText}>
-                      Tiến độ: {simulationProgress.toFixed(1)}%
-                    </Text>
-                    {currentPosition && (
-                      <>
-                        <Text style={styles.simulationInfoText}>
-                          Tốc độ: {currentPosition.speed.toFixed(1)} km/h
-                        </Text>
-                        <Text style={styles.simulationInfoText}>
-                          Hướng: {currentPosition.heading.toFixed(0)}°
-                        </Text>
-                      </>
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
-
-
-
-            <View style={styles.mapContainer}>
-              <MapView
-                ref={mapRef}
-                provider={PROVIDER_GOOGLE}
-                style={styles.map}
-                initialRegion={{
-                  latitude: routesData.sessionStartingLat,
-                  longitude: routesData.sessionStartingLong,
-                  latitudeDelta: 0.05,
-                  longitudeDelta: 0.05,
-                }}
-                showsUserLocation={false}
-                showsMyLocationButton={false}
-              >
-                {/* Goong Map Tiles */}
-                {GOONG_MAPTILES_KEY && (
-                  <UrlTile
-                    urlTemplate={`https://tiles.goong.io/assets/navigation_day/{z}/{x}/{y}.png?api_key=${GOONG_MAPTILES_KEY}`}
-                    maximumZ={19}
-                    flipY={false}
-                  />
-                )}
-                {/* Starting Point Marker */}
-                <Marker
-                  coordinate={{
-                    latitude: routesData.sessionStartingLat,
-                    longitude: routesData.sessionStartingLong,
-                  }}
-                  title="Điểm bắt đầu"
-                  pinColor="green"
-                />
-
-                {/* Route Points Markers */}
-                {routesData.routes.map((point, index) => (
-                  <Marker
-                    key={point.id}
-                    coordinate={{
-                      latitude: point.latitudeStart,
-                      longitude: point.longitudeStart,
-                    }}
-                    title={`Điểm ${index + 2}`}
-                    description={point.streetName}
-                    pinColor={index === routesData.routes.length - 1 ? "red" : "blue"}
-                  />
-                ))}
-
-                {/* Route Polylines from Goong */}
-                {routeSegments.map((segment, index) => (
-                  <Polyline
-                    key={`segment-${index}`}
-                    coordinates={segment.coordinates}
-                    strokeColor="#3b82f6"
-                    strokeWidth={4}
-                  />
-                ))}
-
-                {/* Simulated Vehicle Marker */}
-                {currentPosition && isSimulating && (
-                  <Marker
-                    coordinate={{
-                      latitude: currentPosition.latitude,
-                      longitude: currentPosition.longitude,
-                    }}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                    flat={true}
-                    rotation={currentPosition.heading}
-                  >
-                    <View style={styles.vehicleMarker}>
-                      <Car size={24} color="#fff" strokeWidth={2.5} />
-                    </View>
-                  </Marker>
-                )}
-              </MapView>
-            </View>
-
-            {/* Route Info */}
-            {routeSegments.length > 0 && (
-              <View style={styles.routeInfoContainer}>
-                <Text style={styles.routeInfoTitle}>Thông tin lộ trình:</Text>
-                {routeSegments.map((segment, index) => (
-                  <Text key={index} style={styles.routeInfoText}>
-                    • Đoạn {index + 1}: {segment.distance} - {segment.duration}
-                  </Text>
-                ))}
-              </View>
-            )}
 
             {/* Actions */}
             <View style={styles.routeActions}>
@@ -987,7 +1311,7 @@ export default function MyDrivingSessionDetailScreen() {
                         text: "Đồng ý",
                         onPress: async () => {
                           setRouteDecision("accepted");
-                          await handelUpdate(sessionId);
+                          //  await handelUpdate(sessionId);
                         },
                       },
                     ]
@@ -997,6 +1321,154 @@ export default function MyDrivingSessionDetailScreen() {
                 <Text style={styles.acceptButtonText}>Đồng ý lộ trình</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        )}
+
+        {/* Map Section - Display independently when coordinates are available */}
+        {hasValidStartCoords && (
+          <View style={styles.routeCard}>
+            <Text style={styles.mapTitle}>Bản đồ lộ trình</Text>
+
+            {/* Simulation Controls - Show if route exists */}
+            {effectiveRouteSegments.length > 0 && (
+              <View style={styles.simulationControls}>
+                <TouchableOpacity
+                  style={[
+                    styles.simulationButton,
+                    isSimulating ? styles.stopButton : styles.startButton,
+                  ]}
+                // onPress={isSimulating ? stopSimulation : startSimulation}
+                >
+                  {isSimulating ? (
+                    <Square size={20} color="#fff" strokeWidth={2} />
+                  ) : (
+                    <Play size={20} color="#fff" strokeWidth={2} />
+                  )}
+                  <Text style={styles.simulationButtonText}>
+                    {isSimulating ? "Dừng giả lập" : "Bắt đầu giả lập"}
+                  </Text>
+                </TouchableOpacity>
+
+                {isSimulating && (
+                  <View style={styles.simulationInfo}>
+                    <Text style={styles.simulationInfoText}>
+                      Tiến độ: {simulationProgress.toFixed(1)}%
+                    </Text>
+                    {currentPosition && (
+                      <>
+                        <Text style={styles.simulationInfoText}>
+                          Tốc độ: {currentPosition.speed.toFixed(1)} km/h
+                        </Text>
+                        <Text style={styles.simulationInfoText}>
+                          Hướng: {currentPosition.heading.toFixed(0)}°
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+
+            <View style={styles.mapContainer}>
+              <MapView
+                ref={mapRef}
+                provider={PROVIDER_GOOGLE}
+                style={styles.map}
+                initialRegion={{
+                  latitude: mapStartLat!,
+                  longitude: mapStartLong!,
+                  latitudeDelta: 0.05,
+                  longitudeDelta: 0.05,
+                }}
+                showsUserLocation={false}
+                showsMyLocationButton={false}
+                mapType="standard"
+              >
+                {/* Starting Point Marker */}
+                <Marker
+                  coordinate={{
+                    latitude: mapStartLat!,
+                    longitude: mapStartLong!,
+                  }}
+                  title="Điểm bắt đầu"
+                  pinColor="green"
+                />
+
+                {/* Route Points Markers */}
+                {routePoints.map((point, index) => {
+                  const markerLat = parseCoordinateValue(point.latitudeStart as any);
+                  const markerLong = parseCoordinateValue(point.longitudeStart as any);
+                  if (markerLat === null || markerLong === null) {
+                    return null;
+                  }
+                  return (
+                    <Marker
+                      key={point.id}
+                      coordinate={{
+                        latitude: markerLat,
+                        longitude: markerLong,
+                      }}
+                      title={`Điểm ${index + 2}`}
+                      description={point.streetName}
+                      pinColor={
+                        index === routePoints.length - 1 ? "red" : "blue"
+                      }
+                    />
+                  );
+                })}
+
+                {/* Dropoff Point Marker if available */}
+                {dropoffDetails.lat !== undefined && dropoffDetails.long !== undefined && (
+                  <Marker
+                    coordinate={{
+                      latitude: dropoffDetails.lat,
+                      longitude: dropoffDetails.long,
+                    }}
+                    title="Điểm trả"
+                    pinColor="red"
+                  />
+                )}
+
+                {/* Route Polylines from Goong */}
+                {effectiveRouteSegments.map((segment, index) => (
+                  <Polyline
+                    key={`segment-${index}`}
+                    coordinates={segment.coordinates}
+                    strokeColor="#3b82f6"
+                    strokeWidth={4}
+                  />
+                ))}
+
+                {/* Simulated Vehicle Marker */}
+                {currentPosition && isSimulating && (
+                  <Marker
+                    coordinate={{
+                      latitude: currentPosition.latitude,
+                      longitude: currentPosition.longitude,
+                    }}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                    flat={true}
+                    rotation={currentPosition.heading}
+                  >
+                    <View style={styles.vehicleMarker}>
+                      <Car size={24} color="#fff" strokeWidth={2.5} />
+                    </View>
+                  </Marker>
+                )}
+              </MapView>
+            </View>
+
+            {/* Route Info */}
+            {effectiveRouteSegments.length > 0 && (
+              <View style={styles.routeInfoContainer}>
+                <Text style={styles.routeInfoTitle}>Thông tin lộ trình:</Text>
+                {effectiveRouteSegments.map((segment, index) => (
+                  <Text key={index} style={styles.routeInfoText}>
+                    • Đoạn {index + 1}: {segment.distance} - {segment.duration}
+                  </Text>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -1019,11 +1491,11 @@ export default function MyDrivingSessionDetailScreen() {
           Keyboard.dismiss();
         }}>
           <View style={styles.modalBackdrop}>
-            <TouchableWithoutFeedback onPress={() => {}}>
+            <TouchableWithoutFeedback onPress={() => { }}>
               <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Xác nhận hủy buổi tập</Text>
+                <Text style={styles.modalTitle}>Xác nhận hủy buổi tập</Text>
 
-            {/* <View style={styles.modalRow}>
+                {/* <View style={styles.modalRow}>
               <Text style={styles.modalLabel}>Ngày giờ đặt lịch</Text>
               <Text style={styles.modalValue}>
                 {new Date(displaySession.date).toLocaleDateString("vi-VN")}{" "}
@@ -1031,98 +1503,98 @@ export default function MyDrivingSessionDetailScreen() {
               </Text>
             </View> */}
 
-            <View style={styles.modalRow}>
-              <Text style={styles.modalLabel}>Thời điểm hủy</Text>
-              <Text style={styles.modalValue}>
-                {new Date().toLocaleString("vi-VN")}
-              </Text>
-            </View>
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Thời điểm hủy</Text>
+                  <Text style={styles.modalValue}>
+                    {new Date().toLocaleString("vi-VN")}
+                  </Text>
+                </View>
 
-            {canCancelNow() ? (
-              <View
-                style={[styles.noticeBadge, { backgroundColor: "#dcfce7" }]}
-              >
-                <Text style={[styles.noticeText, { color: "#16a34a" }]}>
-                  Có thể hủy: Trước ít nhất 12 giờ.
-                </Text>
-              </View>
-            ) : (
-              <View
-                style={[styles.noticeBadge, { backgroundColor: "#fee2e2" }]}
-              >
-                <Text style={[styles.noticeText, { color: "#dc2626" }]}>
-                  Không thể hủy: Còn dưới 12 giờ trước giờ bắt đầu.
-                </Text>
-              </View>
-            )}
-
-            <Text style={styles.modalSectionTitle}>Lý do hủy lịch</Text>
-
-            <View style={styles.reasonList}>
-              {cancellationReasons.map((reason) => {
-                const selected = selectedReasons.includes(reason);
-                return (
-                  <TouchableOpacity
-                    key={reason}
-                    style={styles.reasonRow}
-                    onPress={() => toggleReason(reason)}
-                    activeOpacity={0.8}
+                {canCancelNow() ? (
+                  <View
+                    style={[styles.noticeBadge, { backgroundColor: "#dcfce7" }]}
                   >
-                    <View
-                      style={[
-                        styles.checkbox,
-                        selected && styles.checkboxSelected,
-                      ]}
-                    >
-                      {selected ? (
-                        <Text style={styles.checkboxTick}>✓</Text>
-                      ) : null}
-                    </View>
-                    <Text style={styles.reasonText}>{reason}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <Text style={styles.modalSectionTitle}>Ghi chú chi tiết</Text>
-            <TextInput
-              style={styles.noteInput}
-              placeholder="Nhập lý do chi tiết để hủy buổi tập lái..."
-              placeholderTextColor="#9ca3af"
-              value={cancelNote}
-              onChangeText={setCancelNote}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.modalCancelBtn}
-                onPress={() => {
-                  setShowCancelModal(false);
-                  setCancelNote("");
-                  setSelectedReasons([]);
-                }}
-              >
-                <Text style={styles.modalCancelBtnText}>Đóng</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.modalConfirmBtn,
-                  (!cancelNote.trim() || isCancelling) && { opacity: 0.5 },
-                ]}
-                disabled={!cancelNote.trim() || isCancelling}
-                onPress={handleCancelSession}
-              >
-                {isCancelling ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                    <Text style={[styles.noticeText, { color: "#16a34a" }]}>
+                      Có thể hủy: Trước ít nhất 12 giờ.
+                    </Text>
+                  </View>
                 ) : (
-                  <Text style={styles.modalConfirmBtnText}>Xác nhận hủy</Text>
+                  <View
+                    style={[styles.noticeBadge, { backgroundColor: "#fee2e2" }]}
+                  >
+                    <Text style={[styles.noticeText, { color: "#dc2626" }]}>
+                      Không thể hủy: Còn dưới 12 giờ trước giờ bắt đầu.
+                    </Text>
+                  </View>
                 )}
-              </TouchableOpacity>
-            </View>
+
+                <Text style={styles.modalSectionTitle}>Lý do hủy lịch</Text>
+
+                <View style={styles.reasonList}>
+                  {cancellationReasons.map((reason) => {
+                    const selected = selectedReasons.includes(reason);
+                    return (
+                      <TouchableOpacity
+                        key={reason}
+                        style={styles.reasonRow}
+                        onPress={() => toggleReason(reason)}
+                        activeOpacity={0.8}
+                      >
+                        <View
+                          style={[
+                            styles.checkbox,
+                            selected && styles.checkboxSelected,
+                          ]}
+                        >
+                          {selected ? (
+                            <Text style={styles.checkboxTick}>✓</Text>
+                          ) : null}
+                        </View>
+                        <Text style={styles.reasonText}>{reason}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={styles.modalSectionTitle}>Ghi chú chi tiết</Text>
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder="Nhập lý do chi tiết để hủy buổi tập lái..."
+                  placeholderTextColor="#9ca3af"
+                  value={cancelNote}
+                  onChangeText={setCancelNote}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={styles.modalCancelBtn}
+                    onPress={() => {
+                      setShowCancelModal(false);
+                      setCancelNote("");
+                      setSelectedReasons([]);
+                    }}
+                  >
+                    <Text style={styles.modalCancelBtnText}>Đóng</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.modalConfirmBtn,
+                      (!cancelNote.trim() || isCancelling) && { opacity: 0.5 },
+                    ]}
+                    disabled={!cancelNote.trim() || isCancelling}
+                    onPress={handleCancelSession}
+                  >
+                    {isCancelling ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.modalConfirmBtnText}>Xác nhận hủy</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -1460,6 +1932,33 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 12,
   },
+  locationDetailsContainer: {
+    marginTop: 12,
+    gap: 12,
+  },
+  locationDetailCard: {
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: "#f8fafc",
+  },
+  locationDetailLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#475569",
+    marginBottom: 4,
+  },
+  locationDetailName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1e293b",
+  },
+  locationCoordsText: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#94a3b8",
+  },
   cancelLessonButton: {
     flex: 1,
     backgroundColor: "#ef4444",
@@ -1657,6 +2156,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6b7280",
     fontWeight: "500",
+  },
+  routeFetchCard: {
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  routeFetchTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 8,
+  },
+  routeFetchDesc: {
+    fontSize: 14,
+    color: "#475569",
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  routeFetchButton: {
+    alignSelf: "flex-start",
+    backgroundColor: AppColors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  routeFetchButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
   },
   pointCoords: {
     fontSize: 11,

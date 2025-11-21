@@ -40,6 +40,16 @@ export default function SignUpScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
+        {/* {authViewModel.getErrorMessage() && (
+          <View style={styles.errorModalOverlay} pointerEvents="none">
+            <View style={styles.errorModal}>
+              <Text style={styles.errorModalTitle}>Không thể đăng ký</Text>
+              <Text style={styles.errorModalMessage}>
+                {authViewModel.getErrorMessage()}
+              </Text>
+            </View>
+          </View>
+        )} */}
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -82,7 +92,7 @@ export default function SignUpScreen() {
                   style={[
                     styles.input,
                     authViewModel.getRegisterFormErrors().email &&
-                      styles.inputError,
+                    styles.inputError,
                   ]}
                   value={authViewModel.getRegisterFormData().email}
                   onChangeText={(value) =>
@@ -108,7 +118,7 @@ export default function SignUpScreen() {
                     style={[
                       styles.passwordInput,
                       authViewModel.getRegisterFormErrors().password &&
-                        styles.inputError,
+                      styles.inputError,
                     ]}
                     value={authViewModel.getRegisterFormData().password}
                     onChangeText={(value) =>
@@ -152,7 +162,7 @@ export default function SignUpScreen() {
                     style={[
                       styles.passwordInput,
                       authViewModel.getRegisterFormErrors().confirmPassword &&
-                        styles.inputError,
+                      styles.inputError,
                     ]}
                     value={authViewModel.getRegisterFormData().confirmPassword}
                     onChangeText={(value) =>
@@ -191,7 +201,7 @@ export default function SignUpScreen() {
                   style={[
                     styles.input,
                     authViewModel.getRegisterFormErrors().phone &&
-                      styles.inputError,
+                    styles.inputError,
                   ]}
                   value={authViewModel.getRegisterFormData().phone}
                   onChangeText={(value) => {
@@ -228,7 +238,7 @@ export default function SignUpScreen() {
                   style={[
                     styles.checkbox,
                     authViewModel.getRegisterFormData().acceptTerms &&
-                      styles.checkboxChecked,
+                    styles.checkboxChecked,
                   ]}
                 >
                   {authViewModel.getRegisterFormData().acceptTerms && (
@@ -253,16 +263,16 @@ export default function SignUpScreen() {
                 style={[
                   styles.primaryButton,
                   !authViewModel.isRegisterFormValid() &&
-                    styles.primaryButtonDisabled,
+                  styles.primaryButtonDisabled,
                 ]}
-                onPress={() => authViewModel.handleRegister(router)}
+                onPress={() => authViewModel.handleRegister()}
                 disabled={!authViewModel.isRegisterFormValid()}
               >
                 <Text
                   style={[
                     styles.primaryButtonText,
                     !authViewModel.isRegisterFormValid() &&
-                      styles.primaryButtonTextDisabled,
+                    styles.primaryButtonTextDisabled,
                   ]}
                 >
                   Tiếp theo
@@ -344,6 +354,40 @@ const styles = StyleSheet.create({
   formContainer: {
     paddingHorizontal: 20,
     marginBottom: 20,
+  },
+  errorModalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    zIndex: 10,
+  },
+  errorModal: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: "#FF8080",
+  },
+  errorModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#B00020",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  errorModalMessage: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#5B0000",
+    textAlign: "center",
   },
   inputGroup: {
     marginBottom: 20,

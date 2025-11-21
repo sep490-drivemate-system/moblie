@@ -33,12 +33,13 @@ import {
   PlayCircle,
   RefreshCw,
 } from "lucide-react-native";
-import { IBookingSessionAPI, SessionStatus } from "@/models/booking/booking";
+import { IBookingSession } from "@/models/booking/booking";
+import { SessionStatus } from "@/models/session/session.enum";
 import { AppColors } from "@/constants/Colors";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
-import { 
-  getAllSessions, 
-  cancelSession, 
+import {
+  getAllSessions,
+  cancelSession,
   rescheduleSession,
   ICancelSessionRequest,
   IRescheduleSessionRequest
@@ -49,19 +50,13 @@ const { width } = Dimensions.get("window");
 export default function RentalScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  
+
   const [selectedTab, setSelectedTab] = useState<
     | "all"
-    | "planing"
-    | "pending_confirmation"
-    | "up_coming"
-    | "in_progress"
-    | "completed"
-    | "reschedule"
-    | "cancelled"
+    | SessionStatus
   >("all");
-  
-  const [sessions, setSessions] = useState<IBookingSessionAPI[]>([]);
+
+  const [sessions, setSessions] = useState<IBookingSession[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +64,7 @@ export default function RentalScreen() {
   // Modal states
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<IBookingSessionAPI | null>(null);
+  const [selectedSession, setSelectedSession] = useState<IBookingSession | null>(null);
   const [cancelNote, setCancelNote] = useState("");
   const [rescheduleNote, setRescheduleNote] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
@@ -82,14 +77,19 @@ export default function RentalScreen() {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const result = await dispatch(getAllSessions(status ? { status } : undefined)).unwrap();
-      
-      // Extract data from GenericResponse
+
       const sessionsData = (result as any).value || result;
-      setSessions(sessionsData);
+      const normalizedSessions = Array.isArray(sessionsData)
+        ? sessionsData.map((s: any) => ({
+          ...s,
+          status: typeof s.status === 'string' ? parseInt(s.status) : s.status
+        }))
+        : sessionsData;
+      setSessions(normalizedSessions);
     } catch (err: any) {
-      console.error('Failed to fetch sessions:', err);
+      console.log('Failed to fetch sessions:', err);
       setError(err.message || 'Không thể tải dữ liệu');
     } finally {
       setIsLoading(false);
@@ -108,27 +108,14 @@ export default function RentalScreen() {
     fetchSessions();
   }, []);
 
-  // Cancellation reasons
-  const cancellationReasons = [
-    "Bận việc đột xuất",
-  ];
 
-  // Toggle reason selection
-  const toggleReason = (reason: string) => {
-    setSelectedReasons(prev =>
-      prev.includes(reason)
-        ? prev.filter(r => r !== reason)
-        : [...prev, reason]
-    );
-  };
-
-  const toggleRescheduleReason = (reason: string) => {
-    setSelectedRescheduleReasons(prev =>
-      prev.includes(reason)
-        ? prev.filter(r => r !== reason)
-        : [...prev, reason]
-    );
-  };
+  // const toggleRescheduleReason = (reason: string) => {
+  //   setSelectedRescheduleReasons(prev =>
+  //     prev.includes(reason)
+  //       ? prev.filter(r => r !== reason)
+  //       : [...prev, reason]
+  //   );
+  // };
 
   // Handle cancel session
   const handleCancelSession = async () => {
@@ -144,20 +131,20 @@ export default function RentalScreen() {
 
     try {
       setIsCancelling(true);
-      
+
       const cancelData: ICancelSessionRequest = {
         note: cancelNote.trim()
       };
 
       await dispatch(cancelSession({ sessionId: selectedSession.id, cancelData })).unwrap();
-      
+
       setShowCancelModal(false);
       setCancelNote("");
       setSelectedReasons([]);
       setSelectedSession(null);
-      
+
       Alert.alert(
-        "Thành công", 
+        "Thành công",
         "Đã hủy thuê xe thành công",
         [
           {
@@ -175,162 +162,142 @@ export default function RentalScreen() {
   };
 
   // Handle reschedule session
-  const handleRescheduleSession = async () => {
-    if (!selectedSession?.id) {
-      Alert.alert("Lỗi", "Không tìm thấy thông tin buổi tập lái");
-      return;
-    }
+  // const handleRescheduleSession = async () => {
+  //   if (!selectedSession?.id) {
+  //     Alert.alert("Lỗi", "Không tìm thấy thông tin buổi tập lái");
+  //     return;
+  //   }
 
-    if (!rescheduleNote.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập lý do đổi lịch thuê xe");
-      return;
-    }
+  //   if (!rescheduleNote.trim()) {
+  //     Alert.alert("Lỗi", "Vui lòng nhập lý do đổi lịch thuê xe");
+  //     return;
+  //   }
 
-    try {
-      setIsRescheduling(true);
-      
-      const rescheduleData: IRescheduleSessionRequest = {
-        note: rescheduleNote.trim()
-        
-      };
+  //   try {
+  //     setIsRescheduling(true);
 
-      await dispatch(rescheduleSession({ sessionId: selectedSession.id, rescheduleData })).unwrap();
-      
-      setShowRescheduleModal(false);
-      setRescheduleNote("");
-      setSelectedRescheduleReasons([]);
-      setSelectedSession(null);
-      
-      Alert.alert(
-        "Thành công", 
-        "Đã gửi yêu cầu đổi lịch thành công. Vui lòng chờ xác nhận từ giảng viên.",
-        [
-          {
-            text: "OK",
-            onPress: () => fetchSessions() // Refresh data
-          }
-        ]
-      );
-    } catch (error) {
-      console.error("Error rescheduling session:", error);
-      Alert.alert("Lỗi", error as string || "Không thể đổi lịch buổi tập lái");
-    } finally {
-      setIsRescheduling(false);
-    }
-  };
+  //     const rescheduleData: IRescheduleSessionRequest = {
+  //       note: rescheduleNote.trim()
 
-  // Map SessionStatus enum to display status string
-  const mapStatusToDisplayString = (status: SessionStatus): string => {
-    switch (status) {
-      case SessionStatus.Pending:
-        return "planing";
-      case SessionStatus.Confirmed:
-        return "up_coming";
-      case SessionStatus.Completed:
-        return "completed";
-      case SessionStatus.Cancelled:
-        return "cancelled";
-      case SessionStatus.Rescheduled:
-        return "reschedule";
-      default:
-        return "planing";
-    }
-  };
+  //     };
 
-  // Removed mock data - now using API data from sessions state
+  //     await dispatch(rescheduleSession({ sessionId: selectedSession.id, rescheduleData })).unwrap();
 
+  //     setShowRescheduleModal(false);
+  //     setRescheduleNote("");
+  //     setSelectedRescheduleReasons([]);
+  //     setSelectedSession(null);
+
+  //     Alert.alert(
+  //       "Thành công",
+  //       "Đã gửi yêu cầu đổi lịch thành công. Vui lòng chờ xác nhận từ giảng viên.",
+  //       [
+  //         {
+  //           text: "OK",
+  //           onPress: () => fetchSessions() // Refresh data
+  //         }
+  //       ]
+  //     );
+  //   } catch (error) {
+  //     console.error("Error rescheduling session:", error);
+  //     Alert.alert("Lỗi", error as string || "Không thể đổi lịch buổi tập lái");
+  //   } finally {
+  //     setIsRescheduling(false);
+  //   }
+  // };
+
+  // Filter sessions based on enum status
   const getFilteredSessions = () => {
     if (selectedTab === "all") {
       return sessions;
     }
     return sessions.filter((session) => {
-      const displayStatus = mapStatusToDisplayString(session.status);
-      return displayStatus === selectedTab;
+      // Convert status to number if it's a string
+      const sessionStatus = typeof session.status === 'string'
+        ? parseInt(session.status)
+        : session.status;
+      return sessionStatus === selectedTab;
     });
   };
 
-  const getStatusColor = (status: SessionStatus | string) => {
-    const displayStatus = typeof status === 'number' ? mapStatusToDisplayString(status) : status;
-    switch (displayStatus) {
-      case "planing":
+  const getStatusColor = (status: SessionStatus) => {
+    switch (status) {
+      case SessionStatus.Planning:
         return "#3b82f6";
-      case "pending_confirmation":
-        return "#f59e0b";
-      case "up_coming":
+      case SessionStatus.Upcoming:
         return "#10b981";
-      case "in_progress":
+      case SessionStatus.InProgress:
         return "#10b981";
-      case "completed":
+      case SessionStatus.Completed:
         return "#6b7280";
-      case "reschedule":
+      case SessionStatus.Reschedule:
         return "#f59e0b";
-      case "cancelled":
+      case SessionStatus.Cancelled:
         return "#9ca3af";
       default:
         return "#6b7280";
     }
   };
 
-  const getStatusText = (status: SessionStatus | string) => {
-    const displayStatus = typeof status === 'number' ? mapStatusToDisplayString(status) : status;
-    switch (displayStatus) {
-      case "planing":
+  const getStatusText = (status: SessionStatus) => {
+    switch (status) {
+      case SessionStatus.Planning:
         return "Lên lộ trình";
-      case "up_coming":
+      case SessionStatus.Upcoming:
         return "Sắp diễn ra";
-      case "in_progress":
+      case SessionStatus.InProgress:
         return "Đang diễn ra";
-      case "completed":
+      case SessionStatus.Completed:
         return "Hoàn thành";
-      case "reschedule":
+      case SessionStatus.Reschedule:
         return "Đổi lịch";
-      case "cancelled":
+      case SessionStatus.Cancelled:
         return "Đã hủy";
       default:
         return "Không xác định";
     }
   };
 
-  const getStatusIcon = (status: SessionStatus | string) => {
-    const displayStatus = typeof status === 'number' ? mapStatusToDisplayString(status) : status;
-    switch (displayStatus) {
-      case "all":
-        return List;
-      case "planing":
+  const getStatusIcon = (status: SessionStatus) => {
+    switch (status) {
+      case SessionStatus.Planning:
         return Navigation;
-      case "pending_confirmation":
-        return AlertCircle;
-      case "up_coming":
+      case SessionStatus.Upcoming:
         return Calendar;
-      case "in_progress":
+      case SessionStatus.InProgress:
         return PlayCircle;
-      case "completed":
+      case SessionStatus.Completed:
         return CheckCircle;
-      case "reschedule":
+      case SessionStatus.Reschedule:
         return RefreshCw;
-      case "cancelled":
+      case SessionStatus.Cancelled:
         return X;
       default:
         return Clock;
     }
   };
 
-  // Parse location string "lat,lng" to readable address (placeholder)
-  const parseLocation = (location: string): string => {
-    // In production, you would use reverse geocoding API
-    // For now, just return coordinates
-    return location || "Chưa có địa điểm";
-  };
 
-  const handlePlanRoute = (session: IBookingSessionAPI) => {
+
+  const handlePlanRoute = (session: IBookingSession) => {
+    // Convert status to number if it's a string
+    const sessionStatus = typeof session.status === 'string'
+      ? parseInt(session.status)
+      : session.status;
+
     router.push({
-      pathname: "/(main)/(no-tabs)/route-planning" as any,
+      pathname: "/(main)/(no-tabs)/sessions" as any,
       params: {
         sessionId: session.id,
-        pickupLocation: session.location || "Điểm đón",
-        startingLatitude: session.startingLatitude?.toString() || "10.8231",
-        startingLongtitude: session.startingLongtitude?.toString() || "106.6297",
-        duration: session.duration?.toString() || "2", // Truyền duration để validate thời gian
+        pickupLocation: session.displayStartLocationName,
+        startingLatitude: session.startingLatitude?.toString(),
+        startingLongtitude: session.startingLongtitude?.toString(),
+        duration: session.duration?.toString(),
+        status: session.status,
+        displayStartLocationName: session.displayStartLocationName,
+        displayEndLocationName: session.displayEndLocationName,
+        endingLatitude: session.endingLatitude?.toString(),
+        endingLongtitude: session.endingLongtitude?.toString(),
       },
     });
   };
@@ -343,7 +310,6 @@ export default function RentalScreen() {
   };
 
   const formatDate = (dateString: string) => {
-    // Convert from yyyy-mm-dd to dd/mm/yyyy
     const [year, month, day] = dateString.split("-");
     return `${day}/${month}/${year}`;
   };
@@ -354,7 +320,6 @@ export default function RentalScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Modern Header with Gradient */}
       <LinearGradient
         colors={[
           AppColors.primary,
@@ -368,9 +333,6 @@ export default function RentalScreen() {
         <View style={styles.headerContent}>
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>Buổi huấn luyện của tôi</Text>
-            <Text style={styles.headerSubtitle}>
-              Quản lý các buổi huấn luyện đang diễn ra
-            </Text>
           </View>
           <View style={styles.headerStats}>
             <View style={styles.statItem}>
@@ -382,7 +344,6 @@ export default function RentalScreen() {
         <View style={styles.headerCurve} />
       </LinearGradient>
 
-      {/* Modern Tabs */}
       <View style={styles.tabsContainer}>
         <ScrollView
           horizontal
@@ -410,145 +371,157 @@ export default function RentalScreen() {
             </View>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, selectedTab === "planing" && styles.activeTab]}
-            onPress={() => setSelectedTab("planing")}
+            style={[styles.tab, selectedTab === SessionStatus.Planning && styles.activeTab]}
+            onPress={() => setSelectedTab(SessionStatus.Planning)}
           >
             <View style={styles.tabContent}>
               <Navigation
                 size={16}
-                color={selectedTab === "planing" ? "#ffffff" : "#6b7280"}
+                color={selectedTab === SessionStatus.Planning ? "#ffffff" : "#6b7280"}
                 strokeWidth={2}
               />
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === "planing" && styles.activeTabText,
+                  selectedTab === SessionStatus.Planning && styles.activeTabText,
                 ]}
               >
-                Lên lộ trình
+                Lên lộ trình ({sessions.filter((session) => {
+                  return session.status === SessionStatus.Planning;
+                }).length})
               </Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.tab,
-              selectedTab === "up_coming" && styles.activeTab,
+              selectedTab === SessionStatus.Upcoming && styles.activeTab,
             ]}
-            onPress={() => setSelectedTab("up_coming")}
+            onPress={() => setSelectedTab(SessionStatus.Upcoming)}
           >
             <View style={styles.tabContent}>
               <Calendar
                 size={16}
-                color={selectedTab === "up_coming" ? "#ffffff" : "#6b7280"}
+                color={selectedTab === SessionStatus.Upcoming ? "#ffffff" : "#6b7280"}
                 strokeWidth={2}
               />
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === "up_coming" && styles.activeTabText,
+                  selectedTab === SessionStatus.Upcoming && styles.activeTabText,
                 ]}
               >
-                Sắp diễn ra
+                Sắp diễn ra ({sessions.filter((session) => {
+                  return session.status === SessionStatus.Upcoming;
+                }).length})
               </Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.tab,
-              selectedTab === "in_progress" && styles.activeTab,
+              selectedTab === SessionStatus.InProgress && styles.activeTab,
             ]}
-            onPress={() => setSelectedTab("in_progress")}
+            onPress={() => setSelectedTab(SessionStatus.InProgress)}
           >
             <View style={styles.tabContent}>
               <PlayCircle
                 size={16}
-                color={selectedTab === "in_progress" ? "#ffffff" : "#6b7280"}
+                color={selectedTab === SessionStatus.InProgress ? "#ffffff" : "#6b7280"}
                 strokeWidth={2}
               />
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === "in_progress" && styles.activeTabText,
+                  selectedTab === SessionStatus.InProgress && styles.activeTabText,
                 ]}
               >
-                Đang diễn ra
+                Đang diễn ra ({sessions.filter((session) => {
+                  return session.status === SessionStatus.InProgress;
+                }).length})
               </Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.tab,
-              selectedTab === "completed" && styles.activeTab,
+              selectedTab === SessionStatus.Completed && styles.activeTab,
             ]}
-            onPress={() => setSelectedTab("completed")}
+            onPress={() => setSelectedTab(SessionStatus.Completed)}
           >
             <View style={styles.tabContent}>
               <CheckCircle
                 size={16}
-                color={selectedTab === "completed" ? "#ffffff" : "#6b7280"}
+                color={selectedTab === SessionStatus.Completed ? "#ffffff" : "#6b7280"}
                 strokeWidth={2}
               />
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === "completed" && styles.activeTabText,
+                  selectedTab === SessionStatus.Completed && styles.activeTabText,
                 ]}
               >
-                Hoàn thành
+                Hoàn thành ({sessions.filter((session) => {
+                  return session.status === SessionStatus.Completed;
+                }).length})
               </Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.tab,
-              selectedTab === "reschedule" && styles.activeTab,
+              selectedTab === SessionStatus.Reschedule && styles.activeTab,
             ]}
-            onPress={() => setSelectedTab("reschedule")}
+            onPress={() => setSelectedTab(SessionStatus.Reschedule)}
           >
             <View style={styles.tabContent}>
               <RefreshCw
                 size={16}
-                color={selectedTab === "reschedule" ? "#ffffff" : "#6b7280"}
+                color={selectedTab === SessionStatus.Reschedule ? "#ffffff" : "#6b7280"}
                 strokeWidth={2}
               />
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === "reschedule" && styles.activeTabText,
+                  selectedTab === SessionStatus.Reschedule && styles.activeTabText,
                 ]}
               >
-                Đổi lịch
+                Đổi lịch ({sessions.filter((session) => {
+                  return session.status === SessionStatus.Reschedule;
+                }).length})
               </Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.tab,
-              selectedTab === "cancelled" && styles.activeTab,
+              selectedTab === SessionStatus.Cancelled && styles.activeTab,
             ]}
-            onPress={() => setSelectedTab("cancelled")}
+            onPress={() => setSelectedTab(SessionStatus.Cancelled)}
           >
             <View style={styles.tabContent}>
               <X
                 size={16}
-                color={selectedTab === "cancelled" ? "#ffffff" : "#6b7280"}
+                color={selectedTab === SessionStatus.Cancelled ? "#ffffff" : "#6b7280"}
                 strokeWidth={2}
               />
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === "cancelled" && styles.activeTabText,
+                  selectedTab === SessionStatus.Cancelled && styles.activeTabText,
                 ]}
               >
-                Đã hủy
+                Đã hủy ({sessions.filter((session) => {
+                  return session.status === SessionStatus.Cancelled;
+                }).length})
               </Text>
             </View>
           </TouchableOpacity>
         </ScrollView>
       </View>
 
-      <ScrollView 
-        style={styles.content} 
+      <ScrollView
+        style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -572,24 +545,28 @@ export default function RentalScreen() {
             <Text style={styles.emptyTitle}>
               {selectedTab === "all"
                 ? "Chưa có buổi huấn luyện nào"
-                : selectedTab === "planing"
-                ? "Chưa có buổi huấn luyện cần lên lộ trình"
-                : selectedTab === "pending_confirmation"
-                ? "Chưa có buổi huấn luyện chờ xác nhận"
-                : selectedTab === "up_coming"
-                ? "Chưa có buổi huấn luyện sắp diễn ra"
-                : selectedTab === "in_progress"
-                ? "Chưa có buổi huấn luyện đang diễn ra"
-                : selectedTab === "completed"
-                ? "Chưa có buổi huấn luyện hoàn thành"
-                : selectedTab === "reschedule"
-                ? "Chưa có buổi huấn luyện cần đổi lịch"
-                : "Chưa có buổi huấn luyện đã hủy"}
+                : selectedTab === SessionStatus.Planning
+                  ? "Chưa có buổi huấn luyện cần lên lộ trình"
+                  : selectedTab === SessionStatus.Upcoming
+                    ? "Chưa có buổi huấn luyện sắp diễn ra"
+                    : selectedTab === SessionStatus.InProgress
+                      ? "Chưa có buổi huấn luyện đang diễn ra"
+                      : selectedTab === SessionStatus.Completed
+                        ? "Chưa có buổi huấn luyện hoàn thành"
+                        : selectedTab === SessionStatus.Reschedule
+                          ? "Chưa có buổi huấn luyện cần đổi lịch"
+                          : selectedTab === SessionStatus.Cancelled
+                            ? "Chưa có buổi huấn luyện đã hủy"
+                            : "Chưa có buổi huấn luyện nào"}
             </Text>
           </View>
         ) : (
           filteredSessions.map((session) => {
-            const StatusIcon = getStatusIcon(session.status);
+            // Convert status to number if it's a string
+            const sessionStatus = typeof session.status === 'string'
+              ? parseInt(session.status)
+              : session.status;
+            const StatusIcon = getStatusIcon(sessionStatus);
             return (
               <View key={session.id} style={styles.bookingCard}>
                 <LinearGradient
@@ -613,22 +590,22 @@ export default function RentalScreen() {
                         styles.statusBadge,
                         {
                           backgroundColor:
-                            getStatusColor(session.status) + "15",
+                            getStatusColor(sessionStatus) + "15",
                         },
                       ]}
                     >
                       <StatusIcon
                         size={16}
-                        color={getStatusColor(session.status)}
+                        color={getStatusColor(sessionStatus)}
                         strokeWidth={2}
                       />
                       <Text
                         style={[
                           styles.statusText,
-                          { color: getStatusColor(session.status) },
+                          { color: getStatusColor(sessionStatus) },
                         ]}
                       >
-                        {getStatusText(session.status)}
+                        {getStatusText(sessionStatus)}
                       </Text>
                     </View>
                   </View>
@@ -649,10 +626,22 @@ export default function RentalScreen() {
                     </View>
                     <View style={styles.detailRow}>
                       <MapPin size={16} color="#6b7280" strokeWidth={2} />
-                      <Text style={styles.detailText} numberOfLines={2}>
-                        {parseLocation(session.location)}
-                      </Text>
+                      <View style={styles.locationContainer}>
+                        <Text style={styles.detailText} numberOfLines={2}>
+                          Điểm đón: {session.displayStartLocationName}
+                        </Text>
+                      </View>
                     </View>
+                    {session.displayEndLocationName && (
+                      <View style={styles.detailRow}>
+                        <MapPin size={16} color="#6b7280" strokeWidth={2} />
+                        <View style={styles.locationContainer}>
+                          <Text style={styles.detailText} numberOfLines={2}>
+                            Điểm thả: {session.displayEndLocationName}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
                     {session.vehicleName && (
                       <View style={styles.detailRow}>
                         <FileText size={16} color="#6b7280" strokeWidth={2} />
@@ -670,9 +659,8 @@ export default function RentalScreen() {
                     >
                       <Text style={styles.routeButtonText}>Xem chi tiết</Text>
                     </TouchableOpacity>
-                    
-                    {/* Show cancel/reschedule buttons for appropriate statuses */}
-                    {(session.status === SessionStatus.Pending || session.status === SessionStatus.Confirmed) && (
+
+                    {/* {(session.status === SessionStatus.Pending || session.status === SessionStatus.Confirmed) && (
                       <>
                         <TouchableOpacity
                           style={[styles.actionButton, styles.rescheduleButton]}
@@ -685,7 +673,7 @@ export default function RentalScreen() {
                         >
                           <Text style={styles.rescheduleButtonText}>Đổi lịch</Text>
                         </TouchableOpacity>
-                        
+
                         <TouchableOpacity
                           style={[styles.actionButton, styles.cancelButton]}
                           onPress={() => {
@@ -698,7 +686,7 @@ export default function RentalScreen() {
                           <Text style={styles.cancelButtonText}>Hủy</Text>
                         </TouchableOpacity>
                       </>
-                    )}
+                    )} */}
                   </View>
                 </LinearGradient>
               </View>
@@ -710,7 +698,7 @@ export default function RentalScreen() {
       </ScrollView>
 
       {/* Cancel Modal */}
-      <Modal
+      {/* <Modal
         visible={showCancelModal}
         transparent
         animationType="slide"
@@ -726,7 +714,7 @@ export default function RentalScreen() {
           Keyboard.dismiss();
         }}>
           <View style={styles.modalBackdrop}>
-            <TouchableWithoutFeedback onPress={() => {}}>
+            <TouchableWithoutFeedback onPress={() => { }}>
               <View style={styles.modalCard}>
                 <Text style={styles.modalTitle}>Xác nhận hủy thuê xe</Text>
 
@@ -804,7 +792,7 @@ export default function RentalScreen() {
                   >
                     <Text style={styles.modalCancelBtnText}>Đóng</Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={[
                       styles.modalConfirmBtn,
@@ -824,10 +812,10 @@ export default function RentalScreen() {
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
-      </Modal>
+      </Modal> */}
 
       {/* Reschedule Modal */}
-      <Modal
+      {/* <Modal
         visible={showRescheduleModal}
         transparent
         animationType="slide"
@@ -843,7 +831,7 @@ export default function RentalScreen() {
           Keyboard.dismiss();
         }}>
           <View style={styles.modalBackdrop}>
-            <TouchableWithoutFeedback onPress={() => {}}>
+            <TouchableWithoutFeedback onPress={() => { }}>
               <View style={styles.modalCard}>
                 <Text style={styles.modalTitle}>Xác nhận dời lịch</Text>
 
@@ -906,7 +894,7 @@ export default function RentalScreen() {
                   >
                     <Text style={styles.modalCancelBtnText}>Đóng</Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={[
                       styles.rescheduleConfirmBtn,
@@ -926,7 +914,7 @@ export default function RentalScreen() {
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
-      </Modal>
+      </Modal> */}
     </View>
   );
 }
@@ -1239,6 +1227,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6b7280",
     flex: 1,
+  },
+  locationContainer: {
+    flex: 1,
+  },
+  locationLabel: {
+    fontSize: 12,
+    color: "#9ca3af",
+    fontWeight: "600",
+    marginBottom: 2,
   },
   routeSection: {
     backgroundColor: "#f0fdf4",

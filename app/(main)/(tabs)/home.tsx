@@ -86,7 +86,7 @@ export default function HomeScreen() {
             renderItem={({ item }) => <PackageItem package={item} key={item.id} />}
           />
         </View>
-                <View style={styles.listItemContainer}>
+        <View style={styles.listItemContainer}>
           <Text style={styles.listLabel}>Người hướng dẫn nổi bật</Text>
           <FlatList
             data={instructorsData}
@@ -98,7 +98,7 @@ export default function HomeScreen() {
           />
         </View>
         <View style={styles.listItemContainer}>
-          <Text style={styles.listLabel}>Xe được thuê thường xuyên</Text>
+          <Text style={styles.listLabel}>Xe nổi bật</Text>
           <FlatList
             data={listCar}
             keyExtractor={(item) => item.id}

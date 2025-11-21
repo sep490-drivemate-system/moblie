@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { UserRole } from "@/models/enum/UserRole.enum";
-import { signIn } from "./authThunk";
+import { signIn, verify } from "./authThunk";
 import { BaseState } from "@/models/generic/baseState";
 import { ISignInRequest } from "@/models/auth/signin";
 import { ISignUpRequest } from "@/models/auth/signup";
@@ -198,6 +198,11 @@ const authSlice = createSlice({
         state.isSuccess = true;
       })
       .addCase(signIn.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = false;
+        state.errorMessage = action.payload || null;
+      })
+      .addCase(verify.rejected, (state, action) => {
         state.isLoading = false;
         state.isSuccess = false;
         state.errorMessage = action.payload || null;

@@ -105,7 +105,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://www.bisonic.vn/wp-content/uploads/2024/03/kia-carnival-2022.jpg",
     price: 300000,
-    location: "Quận Bình Thạnh",
     rating: 5,
     seats: 7,
     type: "Số tự động",
@@ -119,7 +118,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://thailon-oto.com/files/toyota-vios-smart-2023-1-4ca0_1-Geb8dN2HLE.jpg",
     price: 350000,
-    location: "Quận 1",
     rating: 4.8,
     seats: 5,
     type: "Số sàn",
@@ -133,7 +131,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://hips.hearstapps.com/hmg-prod/images/2022-mazda-cx-5-2p5-turbo-signature-123-1657559083.jpg?crop=0.805xw:0.680xh;0.0977xw,0.252xh&resize=2048:*",
     price: 320000,
-    location: "Quận 7",
     rating: 4.9,
     seats: 5,
     type: "Số tự động",
@@ -147,7 +144,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaeslus73sARGnLf-MWwCQtKkD32DVipRlEg&s",
     price: 1000000,
-    location: "Quận Gò Vấp",
     rating: 4.6,
     seats: 5,
     type: "Số sàn",
@@ -160,7 +156,6 @@ export const listCar: ICar[] = [
     brand: "Honda",
     imageUrl: "https://hondalongbien.vn/wp-content/uploads/2020/07/ab3.jpg",
     price: 1600000,
-    location: "Quận Thủ Đức",
     rating: 4.7,
     seats: 7,
     type: "Số tự động",
@@ -174,7 +169,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSWXRGWjxGteJVFXxXbHO9QvA3M5VZOGz_ejQ&s",
     price: 1800000,
-    location: "Quận 2",
     rating: 4.8,
     seats: 5,
     type: "Số sàn",
@@ -188,7 +182,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://mitsubishinamdinh.vn/wp-content/uploads/Xpander-2024.webp",
     price: 1400000,
-    location: "Quận 12",
     rating: 4.5,
     seats: 7,
     type: "Số tự động",
@@ -202,7 +195,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://vinfastotohaiphong.com.vn/images/news/978z24812906670422f678d7da3c35a1ed93b32fb546c2644.jpg",
     price: 1500000,
-    location: "Quận 3",
     rating: 4.4,
     seats: 5,
     type: "Số tự động",
@@ -216,7 +208,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS8lkFloNSxVTbYbfgqbYfRxVqxIxTKbuRjSQ&s",
     price: 2800000,
-    location: "Quận 5",
     rating: 5.0,
     seats: 5,
     type: "Số tự động",
@@ -230,7 +221,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://bmwvietnam.com.vn/wp-content/uploads/2022/05/BMW-X5-MSP-LCI-2024-400x300.jpg",
     price: 3200000,
-    location: "Quận 10",
     rating: 4.9,
     seats: 7,
     type: "Số tự động",
@@ -244,7 +234,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://giaxeaudi.com.vn/wp-content/uploads/Audi-Q7-2-e1722932278302.jpg",
     price: 3600000,
-    location: "Quận 7",
     rating: 5.0,
     seats: 7,
     type: "Số tự động",
@@ -258,7 +247,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://stimg.cardekho.com/images/carexteriorimages/930x620/Porsche/Cayenne-2024/9903/Porsche-Cayenne-2024-/1681882894783/front-left-side-47.jpg",
     price: 4200000,
-    location: "Quận 1",
     rating: 5.0,
     seats: 5,
     type: "Số tự động",
@@ -272,7 +260,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://files01.danhgiaxe.com/liL7gMAPnir2hdrNrzWPFvFZCrU=/fit-in/1280x0/20221109/1-173206.jpg",
     price: 4000000,
-    location: "Quận Bình Thạnh",
     rating: 4.8,
     seats: 5,
     type: "Số tự động",
@@ -286,7 +273,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://img.tinxe.vn/resize/1000x-/2021/06/28/8EVDUW1z/gia-xe-peugeot-3008-2021-9-1df0.jpg",
     price: 1600000,
-    location: "Quận 4",
     rating: 4.7,
     seats: 5,
     type: "Số tự động",
@@ -300,7 +286,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://files01.danhgiaxe.com/PUtur4J6qcLWnIK3QskMKlAUlJg=/fit-in/1280x0/20210708/dgx_suzuki-ertiga-20-003149-222847.jpeg",
     price: 1200000,
-    location: "Quận 6",
     rating: 4.3,
     seats: 7,
     type: "Số sàn",
@@ -314,7 +299,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://www.winauto.vn/wp-content/uploads/2024/09/isuzu-mu-x-640x427.jpg",
     price: 1700000,
-    location: "Quận 9",
     rating: 4.6,
     seats: 7,
     type: "Số sàn",
@@ -328,7 +312,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://cdn.motor1.com/images/mgl/GNAQ8/s1/2018-chevrolet-colorado-zr2.webp",
     price: 1800000,
-    location: "Quận Tân Bình",
     rating: 4.5,
     seats: 5,
     type: "Số sàn",
@@ -342,7 +325,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://www.carmudi.vn/_next/image/?url=https://static.carmudi.vn/wp-content/uploads/2024-11/GRuNMos7fg.jpg&w=1200&q=75",
     price: 3200000,
-    location: "Quận Phú Nhuận",
     rating: 4.9,
     seats: 7,
     type: "Số tự động",
@@ -356,7 +338,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://www.thecarexpert.co.uk/wp-content/uploads/2020/04/range-rover-evoque-2019.jpg",
     price: 4000000,
-    location: "Quận 7",
     rating: 5.0,
     seats: 5,
     type: "Số tự động",
@@ -370,7 +351,6 @@ export const listCar: ICar[] = [
     imageUrl:
       "https://vcdn1-vnexpress.vnecdn.net/2021/04/07/tesla-model-3-vne-2-jpg-161777-7519-6031-1617781887.jpg?w=460&h=0&q=100&dpr=2&fit=crop&s=hNT1mbsOyc8nZJi5QUnnEA",
     price: 4500000,
-    location: "Quận 2",
     rating: 5.0,
     seats: 5,
     type: "Số tự động",

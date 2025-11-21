@@ -42,10 +42,6 @@ const CarItem: React.FC<Props> = ({ car, variant = "compact" }) => {
       />
       <View style={styles.information}>
         <Text style={styles.carName}>{car.name}</Text>
-        <View style={styles.location}>
-          <LucideMapPin color={"#70E000"} size={20} />
-          <Text style={styles.locationText}>{car.location}</Text>
-        </View>
         <Text style={styles.price}>
           {car.price.toLocaleString("vi-VN")} đ /{" "}
           <Text style={{ fontWeight: "400" }}>giờ</Text>

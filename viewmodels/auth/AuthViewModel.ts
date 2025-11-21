@@ -32,12 +32,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootState } from "@/lib/redux/store";
 import { IVerifyEmailResponse } from "@/models/auth/verifyEmail";
 import { GenericResponse } from "@/models/generic/genericResponse";
+import { ROUTES } from "@/constants/routes";
 
 type AuthState = RootState["auth"];
 
 export class AuthViewModel extends BaseViewModel<AuthState> {
   getRegisterFormData(): ISignUpRequest {
     return this.getCurrentState().registerFormData;
+  }
+
+  getErrorMessage(): string | null {
+    return this.getCurrentState().errorMessage;
   }
 
   updateEmailOrPhoneField(value: string): void {
@@ -94,10 +99,12 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         err.inner.forEach((error) => {
           if (error.path) {
             errors[error.path] = error.message;
-            this.dispatch(setRegisterFormError({
-              field: error.path as any,
-              error: error.message
-            }));
+            this.dispatch(
+              setRegisterFormError({
+                field: error.path as any,
+                error: error.message,
+              })
+            );
           }
         });
         return { isValid: false, errors };
@@ -105,6 +112,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       return { isValid: false };
     }
   }
+
 
   async checkAuthStatus(): Promise<void> {
     await this.executeAsync(
@@ -329,79 +337,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       }
     }
 
-    // Log registerFormData sau mỗi lần cập nhật
-    const updatedFormData = this.getCurrentState().registerFormData;
-    console.log("📝 Register Form Data Updated:");
-    console.log("Field:", field, "→", value);
-    console.log("Current Form Data:", JSON.stringify(updatedFormData, null, 2));
   }
 
-  async signup(): Promise<{ success: boolean }> {
-    // Validate form với Yup trước khi submit
-    const validation = await this.validateSignUpForm();
-    if (!validation.isValid) {
-      return { success: false };
-    }
-
-    await this.executeAsync(
-      async () => {
-        const currentState = this.getCurrentState();
-        const result = await this.dispatch(
-          signUp(currentState.registerFormData)
-        ).unwrap();
-      },
-      () => { },
-      (error) => { },
-      {
-        setLoading,
-        setError,
-        setSuccess,
-      }
-    );
-
-    return { success: true };
-  }
-
-  private validateRegisterForm(formData: ISignUpRequest): boolean {
-    // Check required fields
-    if (
-      !formData.fullname ||
-      !formData.email ||
-      !formData.password ||
-      !formData.confirmPassword ||
-      !formData.phone
-    ) {
-      this.dispatch(setError("All fields are required."));
-      return false;
-    }
-
-    // Check name length
-    if (formData.fullname.length < 2) {
-      this.dispatch(setError("Fullname must be at least 2 characters long."));
-      return false;
-    }
-
-    // Check email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      this.dispatch(setError("Please enter a valid email address."));
-      return false;
-    }
-
-    // Check password strength
-    if (formData.password.length < 6) {
-      this.dispatch(setError("Password must be at least 6 characters."));
-      return false;
-    }
-
-    // Check password match
-    if (formData.password !== formData.confirmPassword) {
-      this.dispatch(setError("Passwords do not match."));
-      return false;
-    }
-
-    return true;
-  }
 
   handleRegisterInputChange(field: keyof ISignUpRequest, value: string): void {
     this.updateRegisterFormData(field, value);
@@ -411,23 +348,36 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     }
   }
 
-  handleRegister = async (router?: any): Promise<void> => {
-    const registerFormData = this.getCurrentState().registerFormData;
+  handleRegister = async (): Promise<void> => {
+    this.navigate(ROUTES.OTP);
+    // const registerFormData = this.getCurrentState().registerFormData;
 
+    // try {
+    //   const result = await this.dispatch(
+    //     verify({
+    //       email: registerFormData.email,
+    //       phoneNumber: registerFormData.phone,
+    //     })
+    //   ).unwrap();
 
-    router.push("/(onboarding)/otp");
+    //   if (result?.value) {
+    //     this.dispatch(setSentOtp(result.value));
 
-
-    const result = await this.dispatch(verify({
-      email: registerFormData.email,
-      phoneNumber: registerFormData.phone
-    })).unwrap();
-
-
-    if (result.value) {
-
-      this.dispatch(setSentOtp(result.value));
-    }
+    //     if (this.router) {
+    //       this.navigate(ROUTES.OTP);
+    //     } else if (this.navigationCallback) {
+    //       this.navigationCallback(ROUTES.OTP);
+    //     }
+    //   }
+    // } catch (error) {
+    //   const message =
+    //     typeof error === "string"
+    //       ? error
+    //       : (error as { message?: string })?.message ||
+    //       this.getCurrentState().errorMessage ||
+    //       "Không thể gửi mã OTP, vui lòng thử lại.";
+    //   this.dispatch(setError(message));
+    // }
   };
 
   handleResetRegisterForm(): void {

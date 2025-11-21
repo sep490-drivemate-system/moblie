@@ -126,18 +126,16 @@ export default function InstructorDetailScreen() {
     setIsProcessing(true);
 
     try {
-      const driverId = await getUserIdFromToken();
       const requestBody: IBuyPackageRequest = {
         durationWhenBought: parseInt(selectedPackage.duration) || 0,
         priceAtBuyingTime: selectedPackage.price,
         carId: selectedVehicle ? selectedVehicle : null,
         packageId: selectedPackage.id,
-        instructorId: instructor.id,
-        driverId: driverId,
+        instructorId: instructor.id
       };
 
       await dispatch(buyPackage(requestBody)).unwrap();
-      
+
       // Success - close modal và navigate
       setShowConfirmModal(false);
       router.push({
@@ -151,7 +149,7 @@ export default function InstructorDetailScreen() {
     } catch (error: any) {
       // Error handling
       console.log('Purchase failed:', error);
-      
+
       // Hiển thị error message cho user
       const errorMessage = error?.message || 'Không thể mua gói. Vui lòng thử lại.';
       Alert.alert('Lỗi mua gói', errorMessage);

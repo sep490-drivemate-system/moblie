@@ -1,7 +1,7 @@
 import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/HttpMethods";
 import { IUserPackageAPI, IGetUserPackagesParams, BookingStatus } from "@/models/package/user-package";
-import { IBookingSessionAPI, IGetBookingSessionsParams, IGetAllSessionsParams } from "@/models/booking/booking";
+import { IBookingSession, IGetBookingSessionsParams, IGetAllSessionsParams, ISessionDetailResponse } from "@/models/booking/booking";
 import { ISaveSessionRoutesPayload, IGetSessionRoutesResponse } from "@/models/route/route";
 import axiosInstance from "@/lib/axios/axiosInstance";
 import { createAsyncThunk } from "@reduxjs/toolkit";
@@ -15,6 +15,17 @@ const NOVICE_DRIVER_PATH = "novice-driver";
 const POLICY_PATH = "policy";
 
 // API Response Interfaces
+export interface IUserInfo {
+  userId: string;
+  avatarUrl: string;
+  phone: string;
+  email: string;
+  fullName: string;
+  birthDate: string;
+  role: number;
+  instructor: any | null;
+  noviceDriver: any | null;
+}
 export interface IInstructorSchedule {
   startTime: string; // Date string format: YYYY-MM-DD (e.g., "2025-11-12")
   endTime: string; // Date string format: YYYY-MM-DD (e.g., "2025-11-19")
@@ -32,7 +43,6 @@ export interface INoviceDriverAddress {
   addressString: string;
   latitude: number;
   longitude: number;
-  displayName: string;
 }
 
 export interface IPolicy {
@@ -55,6 +65,10 @@ export interface ICreateSessionRequest {
   duration: number; // in hours
   sessionNote: string;
   displayName: string;
+  displayStartLocationName?: string;
+  displayEndLocationName?: string;
+  endingLatitude?: number;
+  endingLongtitude?: number;
 }
 
 // Session Log Request Interface
@@ -100,7 +114,7 @@ export const getMyPackages = createThunk<
 
 // Get booking sessions with optional status filter
 export const getBookingSessions = createThunk<
-  IBookingSessionAPI[],
+  IBookingSession[],
   IGetBookingSessionsParams
 >(
   HttpMethod.GET,
@@ -121,10 +135,8 @@ export const getBookingSessions = createThunk<
   }
 );
 
-// Get all sessions (for rental screen) with optional status filter
-// API endpoint: booking/sessions?status=1
 export const getAllSessions = createThunk<
-  IBookingSessionAPI[],
+  IBookingSession[],
   IGetAllSessionsParams | undefined
 >(
   HttpMethod.GET,
@@ -133,8 +145,6 @@ export const getAllSessions = createThunk<
   {
     buildUrl: (payload) => {
       const params = new URLSearchParams();
-
-      // Add status filter if provided
       if (payload?.status !== undefined) {
         params.append('status', payload.status.toString());
       }
@@ -172,14 +182,6 @@ export const getInstructorBookedSessions = createThunk<
 );
 
 // Get novice driver addresses
-export const getNoviceDriverAddresses = createThunk<
-  INoviceDriverAddress[],
-  void
->(
-  HttpMethod.GET,
-  "getNoviceDriverAddresses",
-  `/${NOVICE_DRIVER_PATH}/address`
-);
 
 // Get policies by type
 export const getPolicies = createThunk<
@@ -238,39 +240,31 @@ export const saveSessionRoutes = createAsyncThunk<
   }
 );
 
-// Get session routes
-// API endpoint: GET session/{sessionId}/routes
-// Response: { sessionStartingLat, sessionStartingLong, routes: [] }
-export const getSessionRoutes = createAsyncThunk<
-  GenericResponse<IGetSessionRoutesResponse>,
-  string, // sessionId
-  { rejectValue: string }
+export const getSessionRoutes = createThunk<
+  IGetSessionRoutesResponse,
+  { sessionId: string }
 >(
+  HttpMethod.GET,
   "getSessionRoutes",
-  async (sessionId, { rejectWithValue }) => {
-    try {
-      const url = `/${SESSION_PATH}/${sessionId}/routes`;
-
-      console.log("🚀 Fetching routes from:", url);
-
-      const response = await axiosInstance.get<GenericResponse<IGetSessionRoutesResponse>>(
-        url
-      );
-
-      console.log("✅ Routes fetched successfully:", response.data);
-      return response.data;
-    } catch (err) {
-      const error = err as any;
-      console.error("❌ API Error:", error.response?.data || error.message);
-      const message = error.response?.data?.message || "Không thể lấy thông tin lộ trình";
-      return rejectWithValue(message);
-    }
+  `/${SESSION_PATH}`,
+  {
+    buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}/routes`
   }
 );
 
-// Add session log (tracking)
-// API endpoint: POST session/{sessionId}/session-log
-// Request body: { streetName, latitude, longitude, heading, speed }
+// Get session detail by sessionId
+export const getSessionDetail = createThunk<
+  ISessionDetailResponse,
+  { sessionId: string }
+>(
+  HttpMethod.GET,
+  "getSessionDetail",
+  `/${SESSION_PATH}`,
+  {
+    buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}`
+  }
+);
+
 export const addSessionLog = createAsyncThunk<
   GenericResponse<boolean>,
   { sessionId: string; logData: ISessionLogRequest },
@@ -388,3 +382,4 @@ export const updateSessionStatus = createAsyncThunk<
     }
   }
 );
+
