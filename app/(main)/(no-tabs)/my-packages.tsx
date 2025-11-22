@@ -14,7 +14,6 @@ import {
   ArrowLeft,
   Package,
   Clock,
-  ChevronRight,
   Calendar,
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
@@ -79,11 +78,10 @@ export default function MyPackagesScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.push("/(main)/(tabs)/home")}
+          onPress={() => router.push(ROUTES.PROFILE)}
         >
           <ArrowLeft size={24} color="#ffffff" strokeWidth={2.5} />
         </TouchableOpacity>
@@ -299,19 +297,17 @@ export default function MyPackagesScreen() {
 
                 {/* Footer */}
                 <View style={styles.cardFooter}>
-                  <TouchableOpacity onPress={() => router.push({
-                    pathname: ROUTES.MY_PACKAGE_DETAIL,
-                    params: {
-                      packageData: JSON.stringify(pkg),
-                    },
-                  })}>
-                    <Text style={styles.viewDetailText}>Xem chi tiết</Text>
+                  <TouchableOpacity
+                    style={styles.viewDetailButton}
+                    onPress={() => router.push({
+                      pathname: ROUTES.MY_PACKAGE_DETAIL,
+                      params: {
+                        packageData: JSON.stringify(pkg),
+                      },
+                    })}
+                  >
+                    <Text style={styles.viewDetailText}>Chi tiết</Text>
                   </TouchableOpacity>
-                  <ChevronRight
-                    size={18}
-                    color={AppColors.primary}
-                    strokeWidth={2}
-                  />
                 </View>
               </TouchableOpacity>
             );
@@ -601,13 +597,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: 12,
     paddingTop: 8,
+  },
+  viewDetailButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: AppColors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 4,
   },
   viewDetailText: {
     fontSize: 15,
     fontWeight: "700",
-    color: AppColors.primary,
+    color: "#ffffff",
   },
   loadingState: {
     alignItems: "center",

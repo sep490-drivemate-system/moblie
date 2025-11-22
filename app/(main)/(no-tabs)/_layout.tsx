@@ -93,6 +93,13 @@ export default function NoTabsLayout() {
                     animation: 'slide_from_right',
                 }}
             />
+            <Stack.Screen
+                name="chat"
+                options={{
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                }}
+            />
         </Stack>
     );
 }

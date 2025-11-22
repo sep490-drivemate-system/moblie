@@ -50,19 +50,15 @@ export interface ISessionRouteItem {
 }
 
 // Response from GET session routes API
-export interface ISessionRouteItemResponse {
+
+
+export interface ISessionRoutes {
   id: string;
   sessionId: string;
   textInstruction: string;
   streetName: string;
   latitudeStart: number;
   longitudeStart: number;
-}
-
-export interface IGetSessionRoutesResponse {
-  sessionStartingLat: number;
-  sessionStartingLong: number;
-  routes: ISessionRouteItemResponse[];
 }
 
 export interface ISaveSessionRoutesRequest {

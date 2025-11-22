@@ -56,7 +56,7 @@ export class PackageDetailViewModel {
                 remainingHours: packageDataFromParams.remainingTime || 0,
                 purchaseDate:
                     packageDataFromParams.buyDate || new Date().toISOString(),
-                price: packageDataFromParams.price || 0,
+                price: packageDataFromParams.price,
                 status:
                     packageDataFromParams.bookingStatus === 1 ? "paid" : "in_progress",
                 carId: packageDataFromParams.carId,

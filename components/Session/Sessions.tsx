@@ -379,12 +379,7 @@ export default function SessionsList({
                                         onPress={() => handleSessionPress(session)}
                                         style={styles.viewDetailButton}
                                     >
-                                        <Text style={styles.viewDetailText}>Xem chi tiết</Text>
-                                        <ChevronRight
-                                            size={18}
-                                            color={AppColors.primary}
-                                            strokeWidth={2}
-                                        />
+                                        <Text style={styles.viewDetailText}>Chi tiết</Text>
                                     </TouchableOpacity>
                                 </View>
 
@@ -573,17 +568,22 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     sessionFooter: {
-        marginTop: 4,
-        alignItems: "flex-end",
+        marginTop: 12,
+        alignItems: "stretch",
     },
     viewDetailButton: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 4,
+        justifyContent: "center",
+        backgroundColor: AppColors.primary,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        gap: 6,
     },
     viewDetailText: {
         fontSize: 15,
         fontWeight: "700",
-        color: AppColors.primary,
+        color: "#ffffff",
     },
 });

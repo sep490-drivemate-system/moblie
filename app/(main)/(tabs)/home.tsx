@@ -16,9 +16,55 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
+import { ROUTES } from "@/constants/routes";
+import { getUserIdFromToken, decodeToken } from "@/lib/jwt/tokenUtils";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
 
 export default function HomeScreen() {
   const tabBarHeight = useBottomTabBarHeight();
+  const router = useRouter();
+  const [userId, setUserId] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
+
+  // Lấy thông tin user từ token
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        const id = await getUserIdFromToken();
+        setUserId(id);
+
+        // Lấy username từ token
+        const token = await AsyncStorage.getItem(
+          process.env.EXPO_PUBLIC_STORAGE_TOKEN || "@token"
+        );
+        if (token) {
+          const decoded = decodeToken(token);
+          if (decoded) {
+            setUserName(decoded.username || "User");
+          }
+        }
+      } catch (error) {
+        console.error("Error loading user info:", error);
+      }
+    };
+
+    loadUserInfo();
+  }, []);
+
+  // Handler khi click vào header item
+  const handleHeaderItemPress = async (itemId: string) => {
+    if (itemId === "3") {
+      router.push({
+        pathname: ROUTES.CHAT,
+        params: {
+          userId: userId,
+          userName: userName,
+        },
+      });
+    }
+  };
 
   const renderDrivingLicense = ({ item }: ListRenderItemInfo<LicenseType>) => (
     <TouchableOpacity key={item.id} style={styles.drivingLicenseItem}>
@@ -42,6 +88,7 @@ export default function HomeScreen() {
                   borderColor: "#CCC",
                 },
               ]}
+              onPress={() => handleHeaderItemPress(item.id)}
             >
               <item.icon
                 size={27}

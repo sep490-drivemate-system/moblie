@@ -2,7 +2,7 @@ import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/HttpMethods";
 import { IUserPackageAPI, IGetUserPackagesParams, BookingStatus } from "@/models/package/user-package";
 import { IBookingSession, IGetBookingSessionsParams, IGetAllSessionsParams, ISessionDetailResponse } from "@/models/booking/booking";
-import { ISaveSessionRoutesPayload, IGetSessionRoutesResponse } from "@/models/route/route";
+import { ISaveSessionRoutesPayload, ISessionRoutes } from "@/models/route/route";
 import axiosInstance from "@/lib/axios/axiosInstance";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { GenericResponse } from "@/models/generic/genericResponse";
@@ -27,15 +27,15 @@ export interface IUserInfo {
   noviceDriver: any | null;
 }
 export interface IInstructorSchedule {
-  startTime: string; // Date string format: YYYY-MM-DD (e.g., "2025-11-12")
-  endTime: string; // Date string format: YYYY-MM-DD (e.g., "2025-11-19")
+  startTime: string;
+  endTime: string;
 }
 
 export interface IInstructorBookedSession {
-  id?: string; // Optional - may not be included in API response
-  startTime: string; // ISO datetime format (e.g., "2025-11-13T10:00:00")
-  endTime: string; // ISO datetime format (e.g., "2025-11-13T11:00:00")
-  status?: number; // Optional - booking status
+  id?: string;
+  startTime: string;
+  endTime: string;
+  status?: number;
 }
 
 export interface INoviceDriverAddress {
@@ -83,6 +83,17 @@ export interface ISessionLogRequest {
 // Cancel Session Request Interface
 export interface ICancelSessionRequest {
   note: string;
+}
+
+// Feedback Request Interface
+export interface IFeedbackRequest {
+  instructorRating: number;
+  instructorFeedback: string;
+  carRating: number | null;
+  carFeedback: string | null;
+  carId: string | null;
+  bookingId: string;
+  instructorId: string;
 }
 
 // Reschedule Session Request Interface
@@ -155,7 +166,6 @@ export const getAllSessions = createThunk<
   }
 );
 
-// Get instructor available schedule
 export const getInstructorSchedule = createThunk<
   IInstructorSchedule[],
   { instructorId: string }
@@ -168,7 +178,6 @@ export const getInstructorSchedule = createThunk<
   }
 );
 
-// Get instructor booked sessions
 export const getInstructorBookedSessions = createThunk<
   IInstructorBookedSession[],
   { instructorId: string }
@@ -197,7 +206,6 @@ export const getPolicies = createThunk<
 );
 
 // Create a new booking session
-// API returns boolean: true if success, false if failed
 export const createSession = createThunk<
   boolean,
   ICreateSessionRequest
@@ -207,10 +215,6 @@ export const createSession = createThunk<
   `/${SESSION_PATH}`
 );
 
-// Save session routes
-// API endpoint: POST session/{sessionId}/routes
-// Request body: array of route items
-// Note: Using custom approach because we need sessionId in URL but routes array in body
 export const saveSessionRoutes = createAsyncThunk<
   GenericResponse<boolean>,
   ISaveSessionRoutesPayload,
@@ -241,7 +245,7 @@ export const saveSessionRoutes = createAsyncThunk<
 );
 
 export const getSessionRoutes = createThunk<
-  IGetSessionRoutesResponse,
+  ISessionRoutes[],
   { sessionId: string }
 >(
   HttpMethod.GET,
@@ -383,3 +387,46 @@ export const updateSessionStatus = createAsyncThunk<
   }
 );
 
+// Submit feedback for a booking
+export const submitFeedback = createAsyncThunk<
+  GenericResponse<boolean>,
+  IFeedbackRequest,
+  { rejectValue: string }
+>(
+  "submitFeedback",
+  async (feedbackData, { rejectWithValue }) => {
+    try {
+      const url = `/feedback`;
+
+      console.log("🚀 Submitting feedback:", url);
+      console.log("📦 Feedback data:", feedbackData);
+
+      const response = await axiosInstance.post<GenericResponse<boolean>>(
+        url,
+        feedbackData
+      );
+
+      console.log("✅ Feedback submitted successfully:", response.data);
+      return response.data;
+    } catch (err) {
+      const error = err as any;
+      console.error("❌ API Error:", error.response?.data || error.message);
+      const message = error.response?.data?.message || "Không thể gửi phản hồi";
+      return rejectWithValue(message);
+    }
+  }
+);
+
+
+
+export const cancelBooking = createThunk<
+  boolean,
+  { bookingId: string }
+>(
+  HttpMethod.POST,
+  "cancelBooking",
+  `/${BOOKING_PATH}`,
+  {
+    buildUrl: (payload) => `/${BOOKING_PATH}/${payload.bookingId}/cancel`
+  }
+);

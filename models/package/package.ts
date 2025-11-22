@@ -35,6 +35,7 @@ export interface IMyPackgesResponse {
   buyDate: string;
   bookingStatus: BookingStatus;
   duration: number;
+  price: number;
   durationInUse: number;
   precentInUse: number;
   remainingTime: number;

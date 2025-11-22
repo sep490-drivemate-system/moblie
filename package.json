@@ -26,6 +26,7 @@
     "@gluestack-ui/spinner": "^0.1.15",
     "@gluestack-ui/themed": "^1.1.73",
     "@gluestack-ui/toast": "^1.0.9",
+    "@microsoft/signalr": "^10.0.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@reduxjs/toolkit": "^2.8.2",
     "@rnmapbox/maps": "^10.1.45",

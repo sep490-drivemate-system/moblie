@@ -35,7 +35,7 @@ function InstructorsScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const instructorState = useAppSelector((state) => state.instructor);
-  
+
   // Initialize ViewModel
   const instructorViewModel = useMemo(
     () => new InstructorViewModel(dispatch, () => instructorState),
@@ -45,7 +45,6 @@ function InstructorsScreen() {
   // Get data from Redux state
   const {
     allInstructors,
-    filteredInstructors,
     displayedInstructors,
     searchQuery,
     filters,
@@ -56,14 +55,14 @@ function InstructorsScreen() {
     errorMessage,
     pagination,
   } = instructorState;
-  
+
   // Local search state để debounce
   const [localSearchQuery, setLocalSearchQuery] = useState("");
-  
+
   // Pagination helpers
   const totalPages = Math.ceil(pagination.totalItems / pagination.itemsPerPage);
   const hasMorePages = pagination.currentPage < totalPages;
-  
+
   // Fetch instructors on mount
   useEffect(() => {
     instructorViewModel.fetchInstructors();
@@ -79,7 +78,7 @@ function InstructorsScreen() {
         instructorViewModel.searchInstructors(localSearchQuery);
       }
     }, 500);
-    
+
     return () => clearTimeout(timer);
   }, [localSearchQuery]);
 
@@ -139,24 +138,24 @@ function InstructorsScreen() {
     dispatch(setFilteredInstructors(filtered));
     dispatch(setDisplayedInstructors(filtered));
   }, [filters, sortBy, sortAscending, allInstructors]);
-  
+
   // Action handlers
   const handleSearchChange = (query: string) => {
     instructorViewModel.updateSearchQuery(query);
   };
-  
+
   const handleResetFilters = () => {
     instructorViewModel.resetAllFilters();
   };
-  
+
   const handleSortChange = (sortType: SortType) => {
     instructorViewModel.updateSort(sortType);
   };
-  
+
   const handleRefresh = async () => {
     await instructorViewModel.refreshInstructors();
   };
-  
+
   // Infinite scroll - load more và append data
   const loadMoreInstructors = () => {
     if (hasMorePages && !isLoading) {
@@ -167,7 +166,7 @@ function InstructorsScreen() {
   const handleInstructorPress = (instructor: IInstructors) => {
     router.push({
       pathname: "/instructor-detail",
-      params: { 
+      params: {
         instructorId: instructor.id,
         instructorData: JSON.stringify(instructor)
       },
@@ -182,19 +181,19 @@ function InstructorsScreen() {
     >
       <View style={styles.cardContent}>
         <Image source={{ uri: item.avatar }} style={styles.avatar} />
-      
+
         <View style={styles.mainInfo}>
           <Text style={styles.instructorName}>{item.fullName}</Text>
           <Text style={styles.experience}>{item.experienceYear} năm kinh nghiệm</Text>
           <Text style={styles.packages}>{item.packageCount} gói thuê</Text>
         </View>
-        
+
         <View style={styles.rightInfo}>
           <View style={styles.ratingContainer}>
             <Star size={14} color="#FFD700" fill="#FFD700" />
             <Text style={styles.rating}>{item.averageRating}</Text>
           </View>
-          <Text style={styles.bookings}>({item.bookingCount} lượt đặt)</Text>
+          <Text style={styles.bookings}>({item.bookingCount} lượt thuê)</Text>
           <TouchableOpacity
             style={styles.detailButton}
             onPress={() => handleInstructorPress(item)}
@@ -275,22 +274,6 @@ function InstructorsScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              sortBy === SortType.Price && styles.filterButtonActive,
-            ]}
-            onPress={() => handleSortChange(SortType.Price)}
-          >
-            <Text
-              style={[
-                styles.filterButtonText,
-                sortBy === SortType.Price && styles.filterButtonTextActive,
-              ]}
-            >
-              Số gói {sortBy === SortType.Price && (sortAscending ? "↑" : "↓")}
-            </Text>
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={[
@@ -309,17 +292,9 @@ function InstructorsScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={handleResetFilters}
-          >
-            <Text style={styles.clearButtonText}>✕ Đặt lại</Text>
-          </TouchableOpacity>
         </ScrollView>
       </View>
 
-
-      {/* Instructor List với Infinite Scroll */}
       <FlatList
         data={displayedInstructors}
         renderItem={renderInstructorCard}

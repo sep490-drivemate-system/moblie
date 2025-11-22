@@ -10,23 +10,37 @@ import {
   Modal,
   Pressable,
   Alert,
+  TextInput,
+  Keyboard,
+  TouchableWithoutFeedback,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { IUserInfo } from "@/features/booking/bookingThunk";
-import { ArrowLeft } from "lucide-react-native";
+import { IUserInfo, submitFeedback, IFeedbackRequest, cancelBooking } from "@/features/booking/bookingThunk";
+import { ArrowLeft, Star, MessageSquare } from "lucide-react-native";
 import SessionsList from "@/components/Session/Sessions";
+import CancelPackageModal from "@/components/Package/CancelPackageModal";
 import { userPackagesData } from "@/data/user_packages_data";
 import { AppColors } from "@/constants/Colors";
-import { ROUTES } from "@/constants/routes";
 import { PackageDetailData, usePackageDetailViewModel } from "@/viewmodels/booking/PackageDetailViewModel";
+import { useAppDispatch } from "@/lib/redux/hooks";
 
 export default function PackageDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const packageDetailViewModel = usePackageDetailViewModel();
+  const dispatch = useAppDispatch();
   const packageId = params.packageId as string;
   const [instructorInfo, setInstructorInfo] = useState<IUserInfo | null>(null);
   const [isLoadingInstructor, setIsLoadingInstructor] = useState(false);
+
+  // Feedback modal state
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [instructorRating, setInstructorRating] = useState(0);
+  const [instructorFeedback, setInstructorFeedback] = useState("");
+  const [carRating, setCarRating] = useState(0);
+  const [carFeedback, setCarFeedback] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   const packageData = useMemo(
     () => packageDetailViewModel.parsePackageData(params.packageData as string),
@@ -83,75 +97,127 @@ export default function PackageDetailScreen() {
     router.push(navigationConfig);
   };
 
+  const handleOpenFeedback = () => {
+    setInstructorRating(0);
+    setInstructorFeedback("");
+    setCarRating(0);
+    setCarFeedback("");
+    setShowFeedbackModal(true);
+  };
 
-
-  const handleConfirmCancel = () => {
+  const handleSubmitFeedback = async () => {
     if (!packageData) return;
+
+    if (instructorRating === 0) {
+      Alert.alert("Lỗi", "Vui lòng đánh giá người hướng dẫn");
+      return;
+    }
+
+    if (!instructorFeedback.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập phản hồi cho người hướng dẫn");
+      return;
+    }
+
+    // Check if package has car (you may need to fetch booking detail to get carId)
+    // For now, we'll assume carId is null if not available
+    const hasCar = false; // TODO: Get from booking detail
+    const carId = hasCar ? null : null; // TODO: Get actual carId from booking
+
+    try {
+      setIsSubmittingFeedback(true);
+
+      if (!packageData.instructorId) {
+        Alert.alert("Lỗi", "Không tìm thấy thông tin người hướng dẫn");
+        return;
+      }
+
+      const feedbackData: IFeedbackRequest = {
+        instructorRating,
+        instructorFeedback: instructorFeedback.trim(),
+        carRating: hasCar ? carRating : null,
+        carFeedback: hasCar ? (carFeedback.trim() || null) : null,
+        carId: carId,
+        bookingId: packageData.id,
+        instructorId: packageData.instructorId,
+      };
+
+      await dispatch(submitFeedback(feedbackData)).unwrap();
+
+      Alert.alert("Thành công", "Cảm ơn bạn đã gửi phản hồi!", [
+        {
+          text: "OK",
+          onPress: () => {
+            setShowFeedbackModal(false);
+            router.back();
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      Alert.alert("Lỗi", error as string || "Không thể gửi phản hồi");
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!packageData) return;
+
     setIsProcessingCancel(true);
-    const info = computeRefund({
-      status: localStatus,
-      purchaseDate: packageData.purchaseDate,
-      price: packageData.price,
-      totalHours: packageData.totalHours,
-      usedHours: packageData.usedHours,
-    });
-    const days = daysSince(packageData.purchaseDate);
-    const canRefundPaidUnder30 = localStatus === "paid" && days < 30;
-    const canRefundInProgressUnder30 =
-      localStatus === "in_progress" &&
-      days < 30 &&
-      packageData.usedHours < packageData.totalHours;
-    const cancelNoRefundPaidOver30 = localStatus === "paid" && days >= 30;
-    setTimeout(() => {
+
+    try {
+      // Gọi API hủy gói
+      const result = await dispatch(cancelBooking({ bookingId: packageData.id })).unwrap();
+      if (!result) {
+        Alert.alert("Lỗi", "Không thể hủy gói học");
+        return;
+      }
+
+      // Tính toán thông tin hoàn tiền
+      const info = computeRefund({
+        status: localStatus,
+        purchaseDate: packageData.purchaseDate,
+        price: packageData.price,
+        totalHours: packageData.totalHours,
+        usedHours: packageData.usedHours,
+      });
+
       setIsProcessingCancel(false);
       setShowCancelModal(false);
-      if (canRefundPaidUnder30 || canRefundInProgressUnder30) {
-        const refundAmount = Math.max(info.amount, 0);
-        setLocalStatus("refunded");
+
+      // Hiển thị thông báo dựa trên kết quả tính toán hoàn tiền
+      if (info.eligible) {
         Alert.alert(
           "Hủy gói thành công",
-          `Số tiền hoàn: ${refundAmount.toLocaleString("vi-VN")}₫`,
+          `Số tiền hoàn: ${info.amount.toLocaleString("vi-VN")}₫\n${info.reason}`,
           [
             {
               text: "OK",
               onPress: () => {
-                const idx = userPackagesData.findIndex(
-                  (p) => p.id === packageData.id
-                );
-                if (idx >= 0) userPackagesData.splice(idx, 1);
                 router.replace("/(main)/(no-tabs)/my-packages");
               },
             },
           ]
         );
-        return;
-      }
-      if (cancelNoRefundPaidOver30) {
-        setLocalStatus("not_refund");
+      } else {
         Alert.alert(
           "Hủy gói thành công",
-          "Không có hoàn tiền theo chính sách.",
+          info.reason,
           [
             {
               text: "OK",
               onPress: () => {
-                const idx = userPackagesData.findIndex(
-                  (p) => p.id === packageData.id
-                );
-                if (idx >= 0) userPackagesData.splice(idx, 1);
                 router.replace("/(main)/(no-tabs)/my-packages");
               },
             },
           ]
         );
-        return;
       }
-      setLocalStatus("not_refund");
-      Alert.alert(
-        "Hủy gói không thành công",
-        "Không đủ điều kiện hoàn tiền theo chính sách."
-      );
-    }, 1000);
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      setIsProcessingCancel(false);
+      Alert.alert("Lỗi", error as string || "Không thể hủy gói học");
+    }
   };
 
   return (
@@ -292,6 +358,17 @@ export default function PackageDetailScreen() {
                 ) : null}
               </View>
             </View>
+
+            {/* Feedback Button - Show when package is fully used */}
+            {(packageData.remainingHours === 0 || packageData.usedHours >= packageData.totalHours) && (
+              <TouchableOpacity
+                style={styles.feedbackButton}
+                onPress={handleOpenFeedback}
+              >
+                <MessageSquare size={20} color={AppColors.primary} strokeWidth={2} />
+                <Text style={styles.feedbackButtonText}>Đánh giá</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -310,110 +387,153 @@ export default function PackageDetailScreen() {
       </ScrollView>
 
 
-      <View style={styles.bottomContainer}>
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <TouchableOpacity
-            style={[styles.bookButton, { flex: 1 }]}
-            onPress={handleBookNewSession}
-          >
-            <View style={styles.bookButtonGradient}>
-              <Text style={styles.bookButtonText}>Đặt buổi thuê mới</Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.cancelButton, { flex: 1 }]}
-            onPress={() => {
-              setCancelDateStr(new Date().toISOString());
-              setShowCancelModal(true);
-            }}
-          >
-            <Text style={styles.cancelButtonText}>Hủy gói</Text>
-          </TouchableOpacity>
+      {packageData?.remainingHours !== undefined && packageData.remainingHours > 0 && (
+        <View style={styles.bottomContainer}>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <TouchableOpacity
+              style={[styles.bookButton, { flex: 1 }]}
+              onPress={handleBookNewSession}
+            >
+              <View style={styles.bookButtonGradient}>
+                <Text style={styles.bookButtonText}>Đặt buổi thuê mới</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.cancelButton, { flex: 1 }]}
+              onPress={() => {
+                setCancelDateStr(new Date().toISOString());
+                setShowCancelModal(true);
+              }}
+            >
+              <Text style={styles.cancelButtonText}>Hủy gói</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
+
+
 
 
       {/* Cancel Modal */}
-      {packageData && (
-        <Modal
-          visible={showCancelModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => !isProcessingCancel && setShowCancelModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Xác nhận hủy gói</Text>
-              <View style={{ gap: 8 }}>
-                <Text style={styles.modalText}>
-                  Gói: {packageData.packageName}
-                </Text>
-                {typeof packageData.price === "number" && (
-                  <Text style={styles.modalText}>
-                    Giá gói: {packageData.price.toLocaleString("vi-VN")}VNĐ
-                  </Text>
+      <CancelPackageModal
+        visible={showCancelModal}
+        packageData={packageData}
+        localStatus={localStatus}
+        cancelDateStr={cancelDateStr}
+        isProcessingCancel={isProcessingCancel}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={handleConfirmCancel}
+        getStatusText={(status) => packageDetailViewModel.getStatusText(status)}
+      />
+
+      {/* Feedback Modal */}
+      <Modal
+        visible={showFeedbackModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          Keyboard.dismiss();
+          setShowFeedbackModal(false);
+        }}
+      >
+        <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+          <View style={styles.feedbackModalBackdrop}>
+            <TouchableWithoutFeedback onPress={() => { }}>
+              <View style={styles.feedbackModalContent}>
+                <Text style={styles.feedbackModalTitle}>Đánh giá gói học</Text>
+
+                {/* Instructor Rating */}
+                <View style={styles.ratingSection}>
+                  <Text style={styles.ratingLabel}>Đánh giá người hướng dẫn *</Text>
+                  <View style={styles.starContainer}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <TouchableOpacity
+                        key={star}
+                        onPress={() => setInstructorRating(star)}
+                        style={styles.starButton}
+                      >
+                        <Star
+                          size={32}
+                          color={star <= instructorRating ? "#fbbf24" : "#e2e8f0"}
+                          fill={star <= instructorRating ? "#fbbf24" : "none"}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <TextInput
+                    style={styles.feedbackInput}
+                    placeholder="Nhập phản hồi về người hướng dẫn *"
+                    placeholderTextColor="#9ca3af"
+                    value={instructorFeedback}
+                    onChangeText={setInstructorFeedback}
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                  />
+                </View>
+
+                {/* Car Rating - Only show if package has car */}
+                {packageData && (
+                  <View style={styles.ratingSection}>
+                    <Text style={styles.ratingLabel}>Đánh giá xe (nếu có)</Text>
+                    <View style={styles.starContainer}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <TouchableOpacity
+                          key={star}
+                          onPress={() => setCarRating(star)}
+                          style={styles.starButton}
+                        >
+                          <Star
+                            size={32}
+                            color={star <= carRating ? "#fbbf24" : "#e2e8f0"}
+                            fill={star <= carRating ? "#fbbf24" : "none"}
+                          />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <TextInput
+                      style={styles.feedbackInput}
+                      placeholder="Nhập phản hồi về xe (tùy chọn)"
+                      placeholderTextColor="#9ca3af"
+                      value={carFeedback}
+                      onChangeText={setCarFeedback}
+                      multiline
+                      numberOfLines={3}
+                      textAlignVertical="top"
+                    />
+                  </View>
                 )}
-                <Text style={styles.modalText}>
-                  Trạng thái: {packageDetailViewModel.getStatusText(localStatus)}
-                </Text>
-                <Text style={styles.modalText}>
-                  Ngày mua:{" "}
-                  {new Date(packageData.purchaseDate).toLocaleDateString(
-                    "vi-VN",
-                    { day: "2-digit", month: "2-digit", year: "numeric" }
-                  )}
-                </Text>
-                {cancelDateStr && (
-                  <Text style={styles.modalText}>
-                    Ngày hủy:{" "}
-                    {new Date(cancelDateStr).toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
-                  </Text>
-                )}
-                {renderRefundInfo({ ...packageData, status: localStatus })}
-                <View style={styles.modalNoteBox}>
-                  <Text style={styles.modalNoteTitle}>
-                    Lưu ý chính sách hoàn tiền
-                  </Text>
-                  <Text style={styles.modalSubText}>
-                    - Nếu gói ở trạng thái đã thanh toán hoặc đang sử dụng và được
-                    mua dưới 30 ngày: hoàn 100% nếu chưa dùng giờ nào.
-                  </Text>
-                  <Text style={styles.modalSubText}>
-                    - Nếu gói ở trạng thái đã thanh toán hoặc đang sử dụng và được
-                    mua dưới 30 ngày, đã dùng một phần: số tiền hoàn = (giá gói /
-                    tổng giờ) × (tổng giờ - giờ đã dùng).
-                  </Text>
-                  <Text style={styles.modalSubText}>
-                    - Nếu đã từ 30 ngày trở lên kể từ ngày mua: không hoàn tiền.
-                  </Text>
+
+                {/* Modal Actions */}
+                <View style={styles.feedbackModalActions}>
+                  <TouchableOpacity
+                    style={styles.feedbackModalCancelButton}
+                    onPress={() => {
+                      setShowFeedbackModal(false);
+                    }}
+                  >
+                    <Text style={styles.feedbackModalCancelText}>Hủy</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.feedbackModalSubmitButton,
+                      isSubmittingFeedback && { opacity: 0.6 },
+                    ]}
+                    onPress={handleSubmitFeedback}
+                    disabled={isSubmittingFeedback}
+                  >
+                    {isSubmittingFeedback ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Text style={styles.feedbackModalSubmitText}>Gửi đánh giá</Text>
+                    )}
+                  </TouchableOpacity>
                 </View>
               </View>
-              <View style={styles.modalActions}>
-                <Pressable
-                  disabled={isProcessingCancel}
-                  style={[styles.modalButton, styles.modalCancel]}
-                  onPress={() => setShowCancelModal(false)}
-                >
-                  <Text style={styles.modalCancelText}>Đóng</Text>
-                </Pressable>
-                <Pressable
-                  disabled={isProcessingCancel}
-                  style={[styles.modalButton, styles.modalConfirm]}
-                  onPress={() => handleConfirmCancel()}
-                >
-                  <Text style={styles.modalConfirmText}>
-                    {isProcessingCancel ? "Đang xử lý..." : "Xác nhận hủy"}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
+            </TouchableWithoutFeedback>
           </View>
-        </Modal>
-      )}
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 }
@@ -462,30 +582,6 @@ function computeRefund(pkg: {
     amount: refund,
     reason: "Hoàn theo số giờ chưa sử dụng (< 30 ngày)",
   };
-}
-
-function renderRefundInfo(pkg: any) {
-  const info = computeRefund(pkg);
-  if (!info.eligible) {
-    return (
-      <Text style={[styles.modalText, { fontWeight: "700", color: "#ef4444" }]}>
-        Không đủ điều kiện hoàn tiền ({info.reason})
-      </Text>
-    );
-  }
-  return (
-    <View style={{ gap: 4 }}>
-      <Text
-        style={[
-          styles.modalText,
-          { fontWeight: "800", color: AppColors.primary },
-        ]}
-      >
-        Số tiền dự kiến hoàn: {info.amount.toLocaleString("vi-VN")}₫
-      </Text>
-      <Text style={styles.modalSubText}>{info.reason}</Text>
-    </View>
-  );
 }
 
 //
@@ -912,7 +1008,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#1AD562",
   },
   bookButtonText: {
-    fontSize: 16,
     fontWeight: "800",
     color: AppColors.white,
   },
@@ -924,75 +1019,107 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   cancelButtonText: {
-    fontSize: 16,
     fontWeight: "800",
     color: AppColors.white,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+  feedbackButton: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: AppColors.white,
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
+    borderColor: AppColors.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
     borderRadius: 12,
-    padding: 20,
-    width: "100%",
-    gap: 12,
+    gap: 8,
+    marginTop: 16,
+    marginHorizontal: 20,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  modalText: {
-    fontSize: 14,
-    color: "#374151",
-    fontWeight: "600",
-  },
-  modalSubText: {
-    fontSize: 12,
-    color: "#6b7280",
-  },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-    marginTop: 8,
-  },
-  modalButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  modalCancel: {
-    backgroundColor: "#e5e7eb",
-  },
-  modalCancelText: {
-    fontSize: 14,
+  feedbackButtonText: {
+    fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
+    color: AppColors.primary,
   },
-  modalConfirm: {
-    backgroundColor: AppColors.primary,
+  feedbackModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
-  modalConfirmText: {
-    fontSize: 14,
+  feedbackModalContent: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: "90%",
+  },
+  feedbackModalTitle: {
+    fontSize: 22,
     fontWeight: "800",
-    color: AppColors.white,
+    color: "#1e293b",
+    marginBottom: 24,
+    textAlign: "center",
   },
-  modalNoteBox: {
+  ratingSection: {
+    marginBottom: 24,
+  },
+  ratingLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 12,
+  },
+  starContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  starButton: {
+    padding: 4,
+  },
+  feedbackInput: {
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: "#1e293b",
+    backgroundColor: "#f8fafc",
+    minHeight: 100,
+    textAlignVertical: "top",
+  },
+  feedbackModalActions: {
+    flexDirection: "row",
+    gap: 12,
     marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    gap: 4,
   },
-  modalNoteTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#111827",
+  feedbackModalCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  feedbackModalCancelText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  feedbackModalSubmitButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: AppColors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  feedbackModalSubmitText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#ffffff",
   },
 });

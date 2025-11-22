@@ -44,6 +44,7 @@ import {
   ICancelSessionRequest,
   IRescheduleSessionRequest
 } from "@/features/booking/bookingThunk";
+import { ROUTES } from "@/constants/routes";
 
 const { width } = Dimensions.get("window");
 
@@ -277,30 +278,6 @@ export default function RentalScreen() {
     }
   };
 
-
-
-  const handlePlanRoute = (session: IBookingSession) => {
-    // Convert status to number if it's a string
-    const sessionStatus = typeof session.status === 'string'
-      ? parseInt(session.status)
-      : session.status;
-
-    router.push({
-      pathname: "/(main)/(no-tabs)/sessions" as any,
-      params: {
-        sessionId: session.id,
-        pickupLocation: session.displayStartLocationName,
-        startingLatitude: session.startingLatitude?.toString(),
-        startingLongtitude: session.startingLongtitude?.toString(),
-        duration: session.duration?.toString(),
-        status: session.status,
-        displayStartLocationName: session.displayStartLocationName,
-        displayEndLocationName: session.displayEndLocationName,
-        endingLatitude: session.endingLatitude?.toString(),
-        endingLongtitude: session.endingLongtitude?.toString(),
-      },
-    });
-  };
 
   const handleViewRoute = (sessionId: string) => {
     router.push({
@@ -655,7 +632,13 @@ export default function RentalScreen() {
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
                       style={[styles.actionButton, styles.routeButton]}
-                      onPress={() => handlePlanRoute(session)}
+                      onPress={() => router.push({
+                        pathname: ROUTES.DRIVING_SESSION_DETAIL,
+                        params: {
+                          sessionId: session.id,
+
+                        },
+                      })}
                     >
                       <Text style={styles.routeButtonText}>Xem chi tiết</Text>
                     </TouchableOpacity>

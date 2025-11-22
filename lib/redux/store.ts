@@ -4,6 +4,7 @@ import homeReducer from "@/features/home/homeSlice";
 import mapReducer from "@/features/map/mapSlice";
 import listCarReducer from "@/features/listCar/listCarSlice";
 import instructorReducer from "@/features/instructor/instructorSlice";
+import bookingReducer from "@/features/booking/bookingSlice";
 
 export const store = configureStore({
   reducer: {
@@ -12,17 +13,15 @@ export const store = configureStore({
     map: mapReducer,
     listCar: listCarReducer,
     instructor: instructorReducer,
-    // Thêm các reducers khác ở đây khi cần
+    booking: bookingReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        // Ignore these action types
         ignoredActions: ["persist/PERSIST"],
       },
     }),
 });
 
-// Infer the `RootState` and `AppDispatch` types from the store itself
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
