@@ -20,20 +20,25 @@ import {
 import { AppColors } from "@/constants/Colors";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import {
-  getInstructorSchedule,
-  getInstructorBookedSessions,
   IInstructorSchedule,
   IInstructorBookedSession,
 } from "@/features/booking/bookingThunk";
+import { getInstructorSchedule } from "@/features/schedule/scheduleThunk";
+import { getInstructorBookedSessions } from "@/features/schedule/scheduleThunk";
 
-const { width } = Dimensions.get("window");
 
 interface Step1Props {
   instructorId: string;
+  remainTime?: number;
   selectedDate: string | null;
-  selectedTime: string | null;
+  selectedStartTime: string;
+  selectedEndTime: string;
+  selectedDuration: number;
   onDateSelect: (date: string) => void;
-  onTimeSelect?: (time: string) => void;
+  onStartTimeSelect: (time: string) => void;
+  onEndTimeSelect: (time: string) => void;
+  onDurationChange: (duration: number) => void;
+  maxDuration?: number;
   instructorBusyTimes?: {
     instructorId: string;
     date: string;
@@ -50,56 +55,21 @@ const formatTime = (time: string) => {
   return time.replace(":", "h");
 };
 
-const generateTimeSlots = () => {
-  const slots = [];
-  for (let hour = 6; hour <= 22; hour++) {
-    slots.push(`${hour.toString().padStart(2, "0")}:00`);
-  }
-  return slots;
-};
-
-const isTimeSlotAvailable = (time: string, busySlots: BusyTime[]): boolean => {
-  if (!busySlots || busySlots.length === 0) return true;
-
-  const [hour, minute] = time.split(":").map(Number);
-  const timeMinutes = hour * 60 + minute;
-
-  for (const busySlot of busySlots) {
-    const [busyStartHour, busyStartMin] = busySlot.startTime
-      .split(":")
-      .map(Number);
-    const [busyEndHour, busyEndMin] = busySlot.endTime.split(":").map(Number);
-    const busyStartMinutes = busyStartHour * 60 + busyStartMin;
-    const busyEndMinutes = busyEndHour * 60 + busyEndMin;
-
-    if (timeMinutes >= busyStartMinutes && timeMinutes < busyEndMinutes) {
-      return false;
-    }
-  }
-
-  return true;
-};
-
-// Helper function to convert ISO datetime to date string (YYYY-MM-DD)
 const getDateFromISO = (isoString: string): string => {
   return isoString.split('T')[0];
 };
 
-// Helper function to convert ISO datetime to time string (HH:MM)
 const getTimeFromISO = (isoString: string): string => {
-  // Extract time directly from ISO string to avoid timezone conversion
   const timePart = isoString.split('T')[1];
   if (timePart) {
     const [hours, minutes] = timePart.split(':');
     return `${hours}:${minutes}`;
   }
-  // Fallback to Date parsing if format is different
+
   const date = new Date(isoString);
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 };
 
-// Helper function to get available date ranges from instructor schedule
-// Schedule API returns date strings in YYYY-MM-DD format
 const getAvailableDateRanges = (schedule: IInstructorSchedule[]): { start: Date; end: Date }[] => {
   if (!schedule || schedule.length === 0) return [];
 
@@ -114,9 +84,9 @@ const getAvailableDateRanges = (schedule: IInstructorSchedule[]): { start: Date;
   });
 };
 
-// Helper function to check if a date is within available ranges
 const isDateInAvailableRange = (date: Date, availableRanges: { start: Date; end: Date }[]): boolean => {
-  if (availableRanges.length === 0) return true; // If no schedule, all dates available
+  // If no schedule, no dates are available
+  if (availableRanges.length === 0) return false;
 
   const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
@@ -129,10 +99,16 @@ const isDateInAvailableRange = (date: Date, availableRanges: { start: Date; end:
 
 export default function Step1({
   instructorId,
+  remainTime,
   selectedDate,
-  selectedTime,
+  selectedStartTime,
+  selectedEndTime,
+  selectedDuration,
   onDateSelect,
-  onTimeSelect,
+  onStartTimeSelect,
+  onEndTimeSelect,
+  onDurationChange,
+  maxDuration,
   instructorBusyTimes = [],
 }: Step1Props) {
   const dispatch = useAppDispatch();
@@ -141,28 +117,61 @@ export default function Step1({
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
-  const [customTime, setCustomTime] = useState<string>("");
-  const [customTimeError, setCustomTimeError] = useState<string | null>(null);
+  const [startTimeHour, setStartTimeHour] = useState<string>("");
+  const [startTimeMinute, setStartTimeMinute] = useState<string>("");
+  const [endTimeHour, setEndTimeHour] = useState<string>("");
+  const [endTimeMinute, setEndTimeMinute] = useState<string>("");
+  const [timeError, setTimeError] = useState<string | null>(null);
+  const [selectedDurationPreset, setSelectedDurationPreset] = useState<number | null>(null);
+  const [useDurationMode, setUseDurationMode] = useState(true); // true: chọn duration, false: chọn end time
 
   // API data state
   const [instructorSchedule, setInstructorSchedule] = useState<IInstructorSchedule[]>([]);
   const [instructorBookedSessions, setInstructorBookedSessions] = useState<IInstructorBookedSession[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const timeSlots = generateTimeSlots();
-
-  // Fetch instructor schedule and booked sessions on mount
+  // Log props in useEffect
   useEffect(() => {
-    if (instructorId) {
-      fetchInstructorData();
+    console.log("Step1 Props:", {
+      instructorId,
+      remainTime,
+      selectedDate,
+      selectedStartTime,
+      selectedEndTime,
+      selectedDuration,
+      maxDuration,
+      instructorBusyTimes,
+      instructorSchedule,
+      instructorBookedSessions,
+
+    });
+  }, [instructorId, remainTime, selectedDate, selectedStartTime, selectedEndTime, selectedDuration, maxDuration]);
+
+  // Sync selected times with local state
+  useEffect(() => {
+    if (selectedStartTime) {
+      const [hour, minute] = selectedStartTime.split(":").map(String);
+      setStartTimeHour(hour);
+      setStartTimeMinute(minute);
     }
+  }, [selectedStartTime]);
+
+  useEffect(() => {
+    if (selectedEndTime) {
+      const [hour, minute] = selectedEndTime.split(":").map(String);
+      setEndTimeHour(hour);
+      setEndTimeMinute(minute);
+    }
+  }, [selectedEndTime]);
+
+  useEffect(() => {
+    fetchInstructorData();
   }, [instructorId]);
 
   const fetchInstructorData = async () => {
     try {
       setIsLoading(true);
 
-      // Fetch instructor schedule (available date ranges)
       const scheduleResult = await dispatch(
         getInstructorSchedule({ instructorId })
       ).unwrap();
@@ -316,7 +325,6 @@ export default function Step1({
       }
     }
     setExpandedDate(null); // Close expanded date when navigating
-    setCustomTime(""); // Clear custom time when navigating
   };
 
   const handleDatePress = (date: Date) => {
@@ -330,62 +338,145 @@ export default function Step1({
 
     if (expandedDate === dateStr) {
       setExpandedDate(null);
-      setCustomTime(""); // Clear custom time when closing
     } else {
       setExpandedDate(dateStr);
-      setCustomTime(""); // Clear custom time when selecting new date
       onDateSelect(dateStr);
+      // Reset time when selecting new date
+      setStartTimeHour("");
+      setStartTimeMinute("");
+      setEndTimeHour("");
+      setEndTimeMinute("");
+      setTimeError(null);
+      setSelectedDurationPreset(null);
     }
   };
 
-  const handleTimeSlotPress = (time: string, busySlots: BusyTime[]) => {
-    if (isTimeSlotAvailable(time, busySlots) && onTimeSelect) {
-      onTimeSelect(time);
-      setCustomTime(""); // Clear custom time when selecting from grid
-    }
-  };
-
-  const handleCustomTimeChange = (value: string) => {
-    const digitsOnly = value.replace(/\D/g, "").slice(0, 4);
-    setCustomTime(digitsOnly);
-    setCustomTimeError(null);
-  };
-
-  const handleCustomTimeSubmit = (busySlots: BusyTime[]) => {
-    if (customTime.length !== 4) {
-      setCustomTimeError("Vui lòng nhập đủ 4 chữ số (HHMM).");
+  const handleDurationPreset = (duration: number, busySlots: BusyTime[]) => {
+    if (!startTimeHour || !startTimeMinute) {
+      setTimeError("Vui lòng chọn thời gian bắt đầu trước");
       return;
     }
 
-    const hours = parseInt(customTime.slice(0, 2), 10);
-    const minutes = parseInt(customTime.slice(2), 10);
+    const startHour = parseInt(startTimeHour, 10);
+    const startMin = parseInt(startTimeMinute, 10);
 
+    if (Number.isNaN(startHour) || Number.isNaN(startMin)) {
+      return;
+    }
+
+    // Calculate end time from start time + duration
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = startMinutes + (duration * 60);
+    const endHour = Math.floor(endMinutes / 60);
+    const endMin = endMinutes % 60;
+
+    if (endHour > 23) {
+      setTimeError(`Thời lượng ${duration}h vượt quá 24h. Vui lòng chọn thời gian bắt đầu sớm hơn.`);
+      return;
+    }
+
+    setEndTimeHour(endHour.toString().padStart(2, "0"));
+    setEndTimeMinute(endMin.toString().padStart(2, "0"));
+    setSelectedDurationPreset(duration);
+
+    // Validate the calculated time range
+    setTimeout(() => {
+      const startTime = `${startHour.toString().padStart(2, "0")}:${startMin.toString().padStart(2, "0")}`;
+      const endTime = `${endHour.toString().padStart(2, "0")}:${endMin.toString().padStart(2, "0")}`;
+      validateTimeRange(startTime, endTime, duration, busySlots);
+    }, 100);
+  };
+
+  const validateTimeRange = (startTime: string, endTime: string, duration: number, busySlots: BusyTime[]) => {
+    setTimeError(null);
+
+    const [startHour, startMin] = startTime.split(":").map(Number);
+    const [endHour, endMin] = endTime.split(":").map(Number);
+
+    // Validate start < end
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+
+    if (startMinutes >= endMinutes) {
+      setTimeError("Thời gian kết thúc phải sau thời gian bắt đầu");
+      return;
+    }
+
+    // Validate against busy slots
+    for (const busySlot of busySlots) {
+      const busyStart = busySlot.startTime.split(":").map(Number);
+      const busyEnd = busySlot.endTime.split(":").map(Number);
+      const busyStartMinutes = busyStart[0] * 60 + busyStart[1];
+      const busyEndMinutes = busyEnd[0] * 60 + busyEnd[1];
+
+      // Check if time range overlaps with busy slot
+      if (
+        (startMinutes < busyEndMinutes && endMinutes > busyStartMinutes)
+      ) {
+        setTimeError(`Khung giờ này trùng với thời gian bận: ${busySlot.startTime} - ${busySlot.endTime}`);
+        return;
+      }
+    }
+
+    // Validate against remainTime
+    if (remainTime !== undefined && duration > remainTime) {
+      setTimeError(`Thời lượng vượt quá thời gian còn lại (${remainTime}h)`);
+      return;
+    }
+
+    // Validate against maxDuration
+    if (maxDuration !== undefined && duration > maxDuration) {
+      setTimeError(`Thời lượng vượt quá thời lượng tối đa (${maxDuration}h)`);
+      return;
+    }
+
+    // Update times and duration
+    onStartTimeSelect(startTime);
+    onEndTimeSelect(endTime);
+    onDurationChange(duration);
+  };
+
+  const validateAndUpdateTimeRange = (busySlots: BusyTime[]) => {
+    if (!startTimeHour || !startTimeMinute || !endTimeHour || !endTimeMinute) {
+      return;
+    }
+
+    const startHour = parseInt(startTimeHour, 10);
+    const startMin = parseInt(startTimeMinute, 10);
+    const endHour = parseInt(endTimeHour, 10);
+    const endMin = parseInt(endTimeMinute, 10);
+
+    // Validate time format
     if (
-      Number.isNaN(hours) ||
-      Number.isNaN(minutes) ||
-      hours < 0 ||
-      hours > 23 ||
-      minutes < 0 ||
-      minutes > 59
+      Number.isNaN(startHour) || Number.isNaN(startMin) ||
+      Number.isNaN(endHour) || Number.isNaN(endMin) ||
+      startHour < 0 || startHour > 23 || startMin < 0 || startMin > 59 ||
+      endHour < 0 || endHour > 23 || endMin < 0 || endMin > 59
     ) {
-      setCustomTimeError("Giờ không hợp lệ. Định dạng hợp lệ: HHMM (00–23, 00–59).");
+      setTimeError("Giờ không hợp lệ");
       return;
     }
 
-    const formattedTime = `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}`;
+    const startTime = `${startHour.toString().padStart(2, "0")}:${startMin.toString().padStart(2, "0")}`;
+    const endTime = `${endHour.toString().padStart(2, "0")}:${endMin.toString().padStart(2, "0")}`;
 
-    if (!isTimeSlotAvailable(formattedTime, busySlots)) {
-      setCustomTimeError("Khung giờ này đã có lịch. Vui lòng chọn giờ khác.");
-      return;
-    }
+    // Calculate duration
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    const duration = (endMinutes - startMinutes) / 60;
 
-    if (onTimeSelect) {
-      onTimeSelect(formattedTime);
-      setCustomTime("");
-      setCustomTimeError(null);
-    }
+    // Clear preset when manually selecting end time
+    setSelectedDurationPreset(null);
+
+    validateTimeRange(startTime, endTime, duration, busySlots);
+  };
+
+  const generateHourOptions = () => {
+    return Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"));
+  };
+
+  const generateMinuteOptions = () => {
+    return Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0"));
   };
 
   const renderCalendar = () => {
@@ -537,49 +628,187 @@ export default function Step1({
             return (
               <View style={styles.timeSlotsContainer}>
                 <Text style={styles.timeSlotsTitle}>
-                  Chọn giờ bắt đầu cho ngày{" "}
+                  Chọn khoảng thời gian cho ngày{" "}
                   {expandedDateObj.toLocaleDateString("vi-VN")}:
                 </Text>
 
-                {/* Custom Time Input */}
-                <View style={styles.customTimeSection}>
-                  <Text style={styles.customTimeLabel}>
-                    Nhập giờ bắt đầu (HH:MM):
-                  </Text>
-                  <View style={styles.customTimeInputContainer}>
-                    <TextInput
-                      style={styles.customTimeInput}
-                      value={customTime}
-                      onChangeText={handleCustomTimeChange}
-                      placeholder="VD: 0830"
-                      placeholderTextColor="#94a3b8"
-                      keyboardType="number-pad"
-                      maxLength={4}
-                    />
-                    <TouchableOpacity
-                      style={{
-                        ...styles.customTimeButton,
-                        ...(customTime.length === 4 ? styles.customTimeButtonActive : {}),
-                      }}
-                      onPress={() => handleCustomTimeSubmit(busySlots)}
-                      disabled={customTime.length !== 4}
-                    >
-                      <Text
-                        style={{
-                          ...styles.customTimeButtonText,
-                          ...(customTime.length === 4
-                            ? styles.customTimeButtonTextActive
-                            : {}),
-                        }}
+                {/* Start Time Picker */}
+                <View style={styles.timeRangeSection}>
+                  <View style={styles.timePickerGroup}>
+                    <Text style={styles.timePickerLabel}>Thời gian bắt đầu:</Text>
+                    <View style={styles.timePickerContainer}>
+                      <ScrollView
+                        style={styles.timePickerScroll}
+                        showsVerticalScrollIndicator={false}
+                        nestedScrollEnabled={true}
                       >
-                        OK
-                      </Text>
-                    </TouchableOpacity>
+                        {generateHourOptions().map((hour) => (
+                          <TouchableOpacity
+                            key={hour}
+                            style={[
+                              styles.timePickerOption,
+                              startTimeHour === hour && styles.timePickerOptionSelected,
+                            ]}
+                            onPress={() => {
+                              setStartTimeHour(hour);
+                              setSelectedDurationPreset(null); // Clear preset when changing start time
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.timePickerOptionText,
+                                startTimeHour === hour && styles.timePickerOptionTextSelected,
+                              ]}
+                            >
+                              {hour}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                      <Text style={styles.timePickerSeparator}>:</Text>
+                      <ScrollView
+                        style={styles.timePickerScroll}
+                        showsVerticalScrollIndicator={false}
+                        nestedScrollEnabled={true}
+                      >
+                        {generateMinuteOptions().map((minute) => (
+                          <TouchableOpacity
+                            key={minute}
+                            style={[
+                              styles.timePickerOption,
+                              startTimeMinute === minute && styles.timePickerOptionSelected,
+                            ]}
+                            onPress={() => {
+                              setStartTimeMinute(minute);
+                              setSelectedDurationPreset(null); // Clear preset when changing start time
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.timePickerOptionText,
+                                startTimeMinute === minute && styles.timePickerOptionTextSelected,
+                              ]}
+                            >
+                              {minute}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
                   </View>
-                  {customTimeError && (
-                    <Text style={styles.customTimeError}>{customTimeError}</Text>
+                </View>
+
+                {/* Duration Presets */}
+                {startTimeHour && startTimeMinute && (
+                  <View style={styles.durationPresetsSection}>
+                    <Text style={styles.durationPresetsLabel}>Chọn thời lượng (nhanh):</Text>
+                    <View style={styles.durationPresetsGrid}>
+                      {[1, 2, 3, 4].map((duration) => {
+                        const isDisabled =
+                          (remainTime !== undefined && duration > remainTime) ||
+                          (maxDuration !== undefined && duration > maxDuration);
+                        const isSelected = selectedDurationPreset === duration;
+
+                        return (
+                          <TouchableOpacity
+                            key={duration}
+                            style={[
+                              styles.durationPresetButton,
+                              isSelected && styles.durationPresetButtonSelected,
+                              isDisabled && styles.durationPresetButtonDisabled,
+                            ]}
+                            onPress={() => !isDisabled && handleDurationPreset(duration, busySlots)}
+                            disabled={isDisabled}
+                          >
+                            <Text
+                              style={[
+                                styles.durationPresetText,
+                                isSelected && styles.durationPresetTextSelected,
+                                isDisabled && styles.durationPresetTextDisabled,
+                              ]}
+                            >
+                              {duration}h
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+
+                {/* End Time Picker (Manual) */}
+                <View style={styles.timeRangeSection}>
+                  <Text style={styles.timePickerLabel}>Hoặc chọn thời gian kết thúc thủ công:</Text>
+                  <View style={styles.timeRangeRow}>
+                    <View style={styles.timePickerGroup}>
+                      <Text style={styles.timePickerLabel}>Đến:</Text>
+                      <View style={styles.timePickerContainer}>
+                        <ScrollView
+                          style={styles.timePickerScroll}
+                          showsVerticalScrollIndicator={false}
+                          nestedScrollEnabled={true}
+                        >
+                          {generateHourOptions().map((hour) => (
+                            <TouchableOpacity
+                              key={hour}
+                              style={[
+                                styles.timePickerOption,
+                                endTimeHour === hour && styles.timePickerOptionSelected,
+                              ]}
+                              onPress={() => {
+                                setEndTimeHour(hour);
+                                setTimeout(() => validateAndUpdateTimeRange(busySlots), 100);
+                              }}
+                            >
+                              <Text
+                                style={[
+                                  styles.timePickerOptionText,
+                                  endTimeHour === hour && styles.timePickerOptionTextSelected,
+                                ]}
+                              >
+                                {hour}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                        <Text style={styles.timePickerSeparator}>:</Text>
+                        <ScrollView
+                          style={styles.timePickerScroll}
+                          showsVerticalScrollIndicator={false}
+                          nestedScrollEnabled={true}
+                        >
+                          {generateMinuteOptions().map((minute) => (
+                            <TouchableOpacity
+                              key={minute}
+                              style={[
+                                styles.timePickerOption,
+                                endTimeMinute === minute && styles.timePickerOptionSelected,
+                              ]}
+                              onPress={() => {
+                                setEndTimeMinute(minute);
+                                setTimeout(() => validateAndUpdateTimeRange(busySlots), 100);
+                              }}
+                            >
+                              <Text
+                                style={[
+                                  styles.timePickerOptionText,
+                                  endTimeMinute === minute && styles.timePickerOptionTextSelected,
+                                ]}
+                              >
+                                {minute}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    </View>
+                  </View>
+
+                  {timeError && (
+                    <Text style={styles.timeError}>{timeError}</Text>
                   )}
-                  {selectedTime && (
+
+                  {selectedStartTime && selectedEndTime && selectedDuration > 0 && !timeError && (
                     <View style={styles.selectedTimeDisplay}>
                       <Check
                         size={16}
@@ -587,49 +816,16 @@ export default function Step1({
                         strokeWidth={3}
                       />
                       <Text style={styles.selectedTimeText}>
-                        Đã chọn: {formatTime(selectedTime)}
+                        Đã chọn: {selectedStartTime} - {selectedEndTime} ({selectedDuration.toFixed(1)}h)
                       </Text>
                     </View>
                   )}
-                </View>
 
-                {/* Quick Time Slots (Optional) */}
-                <Text style={styles.quickSlotsTitle}>Hoặc chọn thời gian bắt đầu nhanh:</Text>
-                <View style={styles.timeSlotsGrid}>
-                  {timeSlots.map((time) => {
-                    const isAvailable = isTimeSlotAvailable(time, busySlots);
-                    const isTimeSelected = selectedTime === time;
-
-                    return (
-                      <TouchableOpacity
-                        key={time}
-                        style={[
-                          styles.timeSlot,
-                          isAvailable
-                            ? styles.timeSlotAvailable
-                            : styles.timeSlotBusy,
-                          isTimeSelected && styles.timeSlotSelected,
-                        ]}
-                        onPress={() => handleTimeSlotPress(time, busySlots)}
-                        disabled={!isAvailable}
-                      >
-                        {isTimeSelected && (
-                          <Check size={14} color="#ffffff" strokeWidth={3} />
-                        )}
-                        <Text
-                          style={[
-                            styles.timeSlotText,
-                            isAvailable
-                              ? styles.timeSlotTextAvailable
-                              : styles.timeSlotTextBusy,
-                            isTimeSelected && styles.timeSlotTextSelected,
-                          ]}
-                        >
-                          {formatTime(time)}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                  {remainTime !== undefined && (
+                    <Text style={styles.remainTimeText}>
+                      Thời gian còn lại: {remainTime}h
+                    </Text>
+                  )}
                 </View>
 
                 {/* Busy Times Info */}
@@ -966,6 +1162,121 @@ const styles = StyleSheet.create({
     color: "#ef4444",
     marginTop: -4,
     marginBottom: 8,
+  },
+  timeRangeSection: {
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  timeRangeRow: {
+    flexDirection: "row",
+    gap: 16,
+    justifyContent: "space-between",
+  },
+  timePickerGroup: {
+    flex: 1,
+  },
+  timePickerLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 8,
+  },
+  timePickerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 8,
+    height: 200,
+  },
+  timePickerScroll: {
+    flex: 1,
+    maxHeight: 180,
+  },
+  timePickerOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    marginVertical: 2,
+  },
+  timePickerOptionSelected: {
+    backgroundColor: AppColors.primary,
+  },
+  timePickerOptionText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  timePickerOptionTextSelected: {
+    color: "#ffffff",
+    fontWeight: "700",
+  },
+  timePickerSeparator: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginHorizontal: 4,
+  },
+  timeError: {
+    fontSize: 12,
+    color: "#ef4444",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  remainTimeText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: AppColors.primary,
+    marginTop: 8,
+  },
+  durationPresetsSection: {
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  durationPresetsLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 12,
+  },
+  durationPresetsGrid: {
+    flexDirection: "row",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  durationPresetButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
+    minWidth: 70,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  durationPresetButtonSelected: {
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
+  },
+  durationPresetButtonDisabled: {
+    opacity: 0.4,
+    backgroundColor: "#f1f5f9",
+  },
+  durationPresetText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#64748b",
+  },
+  durationPresetTextSelected: {
+    color: "#ffffff",
+  },
+  durationPresetTextDisabled: {
+    color: "#94a3b8",
   },
   selectedTimeDisplay: {
     flexDirection: "row",

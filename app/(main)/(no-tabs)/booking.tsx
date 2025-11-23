@@ -5,19 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   StatusBar,
-  Modal,
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   CheckCircle,
-  X,
-  Coins,
-  ArrowLeft,
-  CreditCard,
   ChevronDown,
   ChevronUp,
   Users,
@@ -38,7 +33,6 @@ import {
 import Step1 from "@/components/Booking/Step1";
 import Step2 from "@/components/Booking/Step2";
 import Step3 from "@/components/Booking/Step3";
-import Step4 from "@/components/Booking/Step4";
 import { instructorsData } from "@/data/instructors_data";
 import { instructorVehicles } from "@/data/instructor_detail";
 import { instructorBusyTimes } from "@/data/user_packages_data";
@@ -62,9 +56,8 @@ export default function BookingScreen() {
   const [currentStep, setCurrentStep] = useState(1);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
-
   const [selectedStartTime, setSelectedStartTime] = useState("");
+  const [selectedEndTime, setSelectedEndTime] = useState("");
   const [selectedDuration, setSelectedDuration] = useState(2); // default 2 hours
 
   const [pickupLocation, setPickupLocation] = useState("");
@@ -87,10 +80,9 @@ export default function BookingScreen() {
   const [isTrackingExpanded, setIsTrackingExpanded] = useState(false);
 
   const steps = [
-    { number: 1, label: "Ngày & giờ" },
-    { number: 2, label: "Thời lượng" },
-    { number: 3, label: "Địa điểm" },
-    { number: 4, label: "Xác nhận" },
+    { number: 1, label: "Thời gian" },
+    { number: 2, label: "Địa điểm" },
+    { number: 3, label: "Xác nhận" },
   ];
 
   const instructor = instructorsData.find((i) => i.id === instructorId);
@@ -116,22 +108,73 @@ export default function BookingScreen() {
     return baseCost + vehicleCost;
   })();
 
-  useEffect(() => {
-    if (selectedTime) {
-      setSelectedStartTime(selectedTime);
-    }
-  }, [selectedTime]);
 
-  // Fetch addresses when moving to step 3
+  // Handle map selection result
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkMapSelection = async () => {
+        try {
+          const selectionData = await AsyncStorage.getItem("map_selection_result");
+          if (selectionData) {
+            const selection = JSON.parse(selectionData);
+            const { type, latitude, longitude, address } = selection;
+
+            // Create a new address object
+            const newAddress: INoviceDriverAddress = {
+              id: `map_${Date.now()}`,
+              addressString: address,
+              latitude,
+              longitude,
+            };
+
+            if (type === "pickup") {
+              setPickupLocation(address);
+              setSelectedLocationId(newAddress.id);
+              // Add to addresses list if not exists
+              setAddresses((prev) => {
+                if (!prev.find(a => a.id === newAddress.id)) {
+                  return [...prev, newAddress];
+                }
+                return prev;
+              });
+              if (isSameDropoff) {
+                setDropoffLocation(address);
+                setSelectedDropoffId(newAddress.id);
+              }
+            } else {
+              setDropoffLocation(address);
+              setSelectedDropoffId(newAddress.id);
+              // Add to addresses list if not exists
+              setAddresses((prev) => {
+                if (!prev.find(a => a.id === newAddress.id)) {
+                  return [...prev, newAddress];
+                }
+                return prev;
+              });
+            }
+
+            // Clear selection data
+            await AsyncStorage.removeItem("map_selection_result");
+          }
+        } catch (error) {
+          console.error("Error reading map selection:", error);
+        }
+      };
+
+      checkMapSelection();
+    }, [isSameDropoff])
+  );
+
+  // Fetch addresses when moving to step 2
   useEffect(() => {
-    if (currentStep === 3 && addresses.length === 0) {
+    if (currentStep === 2 && addresses.length === 0) {
       fetchNoviceDriverAddresses();
     }
   }, [currentStep]);
 
-  // Fetch policies when moving to step 4
+  // Fetch policies when moving to step 3
   useEffect(() => {
-    if (currentStep === 4 && policies.length === 0) {
+    if (currentStep === 3 && policies.length === 0) {
       fetchPolicies();
     }
   }, [currentStep]);
@@ -163,17 +206,10 @@ export default function BookingScreen() {
     try {
       setIsLoadingPolicies(true);
       const result = await dispatch(getPolicies({ policyType: PolicyType.Booking })).unwrap();
-      const policiesData = (result as any).value || result;
+      const policiesData: IPolicy[] = ((result as any)?.value ?? result ?? []) as IPolicy[];
       setPolicies(policiesData);
-
-      // Initialize all policies as not accepted
-      const initialAccepted: Record<string, boolean> = {};
-      policiesData.forEach((policy: IPolicy) => {
-        initialAccepted[policy.id] = false;
-      });
-      setAcceptedPolicies(initialAccepted);
     } catch (error) {
-      console.error("Failed to fetch policies:", error);
+      console.log("Failed to fetch policies:", error);
     } finally {
       setIsLoadingPolicies(false);
     }
@@ -182,14 +218,12 @@ export default function BookingScreen() {
   const canProceedToNextStep = () => {
     switch (currentStep) {
       case 1:
-        return selectedDate !== null && selectedTime !== null;
+        return selectedDate !== null && selectedStartTime !== "" && selectedEndTime !== "" && selectedDuration > 0;
       case 2:
-        return selectedStartTime !== "" && selectedDuration > 0;
-      case 3:
         if (!selectedLocationId) return false;
         if (!isSameDropoff && !selectedDropoffId) return false;
         return true;
-      case 4:
+      case 3:
         // Check if all policies are accepted
         const allAccepted = Object.values(acceptedPolicies).every((v) => v === true);
         return allAccepted && userCoins >= bookingCost;
@@ -199,7 +233,7 @@ export default function BookingScreen() {
   };
 
   const handleNext = () => {
-    if (canProceedToNextStep() && currentStep < 4) {
+    if (canProceedToNextStep() && currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -213,10 +247,22 @@ export default function BookingScreen() {
   };
 
   const handleMapSelect = (type: "pickup" | "dropoff") => {
-    Alert.alert(
-      "Chọn trên bản đồ",
-      "Tính năng chọn địa điểm trên bản đồ sẽ sớm được cập nhật."
-    );
+    router.push({
+      pathname: "/(main)/(no-tabs)/map-picker",
+      params: {
+        type,
+        initialLat: type === "pickup" && selectedLocationId
+          ? addresses.find(a => a.id === selectedLocationId)?.latitude?.toString()
+          : type === "dropoff" && selectedDropoffId
+            ? addresses.find(a => a.id === selectedDropoffId)?.latitude?.toString()
+            : undefined,
+        initialLng: type === "pickup" && selectedLocationId
+          ? addresses.find(a => a.id === selectedLocationId)?.longitude?.toString()
+          : type === "dropoff" && selectedDropoffId
+            ? addresses.find(a => a.id === selectedDropoffId)?.longitude?.toString()
+            : undefined,
+      },
+    });
   };
 
   const calculateEndTime = (startTime: string, duration: number): string => {
@@ -351,9 +397,7 @@ export default function BookingScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Modern Header with Integrated Progress */}
       <View style={[styles.modernHeader, { backgroundColor: "#1AD562" }]}>
-        {/* Header Section */}
         <View style={styles.headerSection}>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.modernHeaderTitle}>Đặt lịch thuê</Text>
@@ -361,7 +405,6 @@ export default function BookingScreen() {
           <View style={styles.headerRight} />
         </View>
 
-        {/* Steps Navigation */}
         <View style={styles.modernStepsContainer}>
           <View style={styles.stepsRowCentered}>
             {steps.map((step, index) => (
@@ -449,7 +492,6 @@ export default function BookingScreen() {
             showsVerticalScrollIndicator={true}
             nestedScrollEnabled={true}
           >
-            {/* Instructor & Package Info */}
             <View style={styles.trackingGroup}>
               {instructor && (
                 <View style={styles.trackingRow}>
@@ -520,7 +562,6 @@ export default function BookingScreen() {
               )}
             </View>
 
-            {/* Schedule Info */}
             <View style={styles.trackingGroup}>
               {selectedDate && (
                 <View style={styles.trackingRow}>
@@ -536,7 +577,7 @@ export default function BookingScreen() {
                 </View>
               )}
 
-              {selectedTime && selectedDuration > 0 ? (
+              {selectedStartTime && selectedEndTime && selectedDuration > 0 ? (
                 <View style={styles.trackingRow}>
                   <View style={styles.trackingIconContainer}>
                     <Clock size={16} color="#667eea" />
@@ -544,9 +585,7 @@ export default function BookingScreen() {
                   <View style={styles.trackingInfoContainer}>
                     <Text style={styles.trackingLabel}>Thời gian</Text>
                     <Text style={styles.trackingValue}>
-                      {selectedTime} -{" "}
-                      {calculateEndTime(selectedTime, selectedDuration)} (
-                      {selectedDuration}h)
+                      {selectedStartTime} - {selectedEndTime} ({selectedDuration}h)
                     </Text>
                   </View>
                 </View>
@@ -600,40 +639,27 @@ export default function BookingScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Step 1: Date & Time Selection */}
         {currentStep === 1 && (
           <Step1
             instructorId={instructorId}
+            remainTime={remainingHours}
             selectedDate={selectedDate}
-            selectedTime={selectedTime}
+            selectedStartTime={selectedStartTime}
+            selectedEndTime={selectedEndTime}
+            selectedDuration={selectedDuration}
             onDateSelect={setSelectedDate}
-            onTimeSelect={setSelectedTime}
+            onStartTimeSelect={setSelectedStartTime}
+            onEndTimeSelect={setSelectedEndTime}
+            onDurationChange={setSelectedDuration}
+            maxDuration={maxDuration}
             instructorBusyTimes={instructorBusyTimes.filter(
               (bt) => bt.instructorId === instructorId
             )}
           />
         )}
 
-        {/* Step 2: Time & Duration Selection */}
         {currentStep === 2 && (
           <Step2
-            selectedStartTime={selectedStartTime}
-            selectedDuration={selectedDuration}
-            onStartTimeSelect={setSelectedStartTime}
-            onDurationChange={setSelectedDuration}
-            maxDuration={maxDuration}
-            busyTimes={
-              instructorBusyTimes.find(
-                (bt) =>
-                  bt.instructorId === instructorId && bt.date === selectedDate
-              )?.busySlots || []
-            }
-          />
-        )}
-
-        {/* Step 3: Location */}
-        {currentStep === 3 && (
-          <Step3
             selectedPickupId={selectedLocationId}
             selectedDropoffId={selectedDropoffId}
             pickupLocation={pickupLocation}
@@ -667,9 +693,8 @@ export default function BookingScreen() {
           />
         )}
 
-        {/* Step 4: Payment & Confirmation */}
-        {currentStep === 4 && (
-          <Step4
+        {currentStep === 3 && (
+          <Step3
             policies={policies}
             acceptedPolicies={acceptedPolicies}
             onPolicyAccept={(policyId: string, accepted: boolean) => {
@@ -679,7 +704,6 @@ export default function BookingScreen() {
               }));
             }}
             bookingCost={bookingCost}
-            userCoins={userCoins}
             isLoading={isLoadingPolicies}
             vehicleId={vehicleId}
             carPrice={carPrice}
@@ -692,7 +716,6 @@ export default function BookingScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Bottom Actions */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity style={styles.backBottomButton} onPress={handleBack}>
           <Text style={styles.backBottomButtonText}>
@@ -700,8 +723,7 @@ export default function BookingScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* Continue button for steps 1-3 */}
-        {currentStep !== 4 && (
+        {currentStep !== 3 && (
           <TouchableOpacity
             style={[
               styles.continueButton,
@@ -725,8 +747,7 @@ export default function BookingScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Payment button for step 4 */}
-        {currentStep === 4 && (
+        {currentStep === 3 && (
           <TouchableOpacity
             style={[
               styles.paymentButton,
@@ -766,7 +787,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
-  // Modern Header Styles
   modernHeader: {
     paddingTop: 50,
     paddingBottom: 30,

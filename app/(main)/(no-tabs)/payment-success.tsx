@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CheckCircle, Home, Calendar, Car } from 'lucide-react-native';
+import { ROUTES } from '@/constants/routes';
 
 const { width, height } = Dimensions.get('window');
 
@@ -46,9 +47,7 @@ export default function PaymentSuccessScreen() {
     ]).start();
   }, []);
 
-  const handleGoHome = () => {
-    router.replace('/(main)/(tabs)/home');
-  };
+
 
   const handleGoToRental = () => {
     router.replace('/(main)/(tabs)/rental');
@@ -144,7 +143,9 @@ export default function PaymentSuccessScreen() {
             {/* Secondary Button - Go Home */}
             <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={handleGoHome}
+              onPress={() => router.replace({
+                pathname: ROUTES.HOME,
+              })}
               activeOpacity={0.8}
             >
               <View style={styles.buttonContent}>

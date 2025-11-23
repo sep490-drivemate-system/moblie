@@ -20,25 +20,19 @@ export enum FilterType {
   Busy = 'busy',
 }
 
-export enum DistanceFilter {
-  All = 'all',
-  OneToThree = '1-3',
-  ThreeToFive = '3-5',
-  FiveToTen = '5-10',
-  TenPlus = '10+',
+export enum SortType {
+  None = 'none',
+  Experience = 'experience',
+  Rating = 'rating',
 }
 
-export enum SortType {
-  Rating = 'rating',
-  Bookings = 'bookings',
-  Price = 'price',
-  Experience = 'experience',
+export enum SortOrder {
+  Asc = 'asc',
+  Desc = 'desc',
 }
 
 export interface FilterState {
   availability: FilterType;
-  distance: DistanceFilter;
   experience: ExperienceLevel;
   minRating: MinimumRating;
-  priceRange: [number, number];
 }

@@ -21,6 +21,8 @@ import { BookingStatus } from "@/models/package/user-package";
 import { IMyPackgesResponse } from "@/models/package/package";
 import { ROUTES } from "@/constants/routes";
 import { useBookingViewModel } from "@/viewmodels/booking/BookingViewModel";
+import HeaderList from "@/components/Commons/HeaderList";
+import TabFilter, { TabOption } from "@/components/Commons/TabFilter";
 
 export default function MyPackagesScreen() {
   const router = useRouter();
@@ -75,70 +77,54 @@ export default function MyPackagesScreen() {
     [allPackages, bookingViewModel]
   );
 
+  const tabOptions: TabOption<BookingStatus>[] = useMemo(
+    () =>
+      statusOptions.map((opt) => ({
+        value: opt.key,
+        label: opt.label,
+        count: statusCounts[opt.key] ?? 0,
+      })),
+    [statusOptions, statusCounts]
+  );
+
+  const getActiveTabStyle = (status: BookingStatus) => {
+    const color =
+      status === BookingStatus.All
+        ? AppColors.gray
+        : bookingViewModel.getStatusColor(status);
+    return {
+      backgroundColor: color + "15",
+      borderColor: color,
+    };
+  };
+
+  const getActiveTextStyle = (status: BookingStatus) => {
+    const color =
+      status === BookingStatus.All
+        ? AppColors.gray
+        : bookingViewModel.getStatusColor(status);
+    return {
+      color: color,
+    };
+  };
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.push(ROUTES.PROFILE)}
-        >
-          <ArrowLeft size={24} color="#ffffff" strokeWidth={2.5} />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Gói Đã Mua</Text>
-        </View>
-      </View>
+      <HeaderList actionReturnScreen={ROUTES.PROFILE as any} title="Gói Đã Mua" colors={[AppColors.primary, AppColors.gradientStart, AppColors.gradientEnd]} />
 
       {/* Filter Bar */}
-      <View style={styles.filterBarContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterBarScroll}
-        >
-          {statusOptions.map((opt) => {
-            const isActive = selectedStatus === opt.key;
-            const color =
-              opt.key === BookingStatus.All
-                ? AppColors.gray
-                : bookingViewModel.getStatusColor(opt.key);
-            return (
-              <TouchableOpacity
-                key={opt.key}
-                onPress={() => setSelectedStatus(opt.key)}
-                activeOpacity={0.8}
-                style={[
-                  styles.filterChip,
-                  isActive && {
-                    backgroundColor: color + "15",
-                    borderColor: color,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    { color: isActive ? color : "#475569" },
-                  ]}
-                >
-                  {opt.label}
-                </Text>
-                <View
-                  style={[
-                    styles.filterCount,
-                    { backgroundColor: isActive ? color : "#e2e8f0" },
-                  ]}
-                >
-                  <Text style={styles.filterCountText}>
-                    {statusCounts[opt.key] ?? 0}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+      <TabFilter
+        options={tabOptions}
+        activeValue={selectedStatus}
+        onSelect={setSelectedStatus}
+        showCount={true}
+        containerStyle={styles.filterBarContainer}
+        style={styles.filterBarScroll}
+        tabStyle={styles.filterChip}
+        activeTabStyle={getActiveTabStyle}
+        textStyle={styles.filterChipText}
+        activeTextStyle={getActiveTextStyle}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -297,7 +283,7 @@ export default function MyPackagesScreen() {
 
                 {/* Footer */}
                 <View style={styles.cardFooter}>
-                  <TouchableOpacity
+                  <TouchableOpacity activeOpacity={1}
                     style={styles.viewDetailButton}
                     onPress={() => router.push({
                       pathname: ROUTES.MY_PACKAGE_DETAIL,
@@ -371,15 +357,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderBottomColor: "#e2e8f0",
     borderBottomWidth: 1,
+    paddingTop: 0,
+    paddingBottom: 0,
+    borderRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   filterBarScroll: {
     paddingHorizontal: 12,
     paddingVertical: 12,
-    gap: 8,
   },
   filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
     borderWidth: 1,
     borderColor: "#e2e8f0",
     backgroundColor: "#ffffff",
@@ -387,25 +377,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     marginRight: 8,
-    gap: 8,
+    minWidth: undefined,
+    shadowColor: undefined,
+    shadowOffset: undefined,
+    shadowOpacity: undefined,
+    shadowRadius: undefined,
+    elevation: 0,
   },
   filterChipText: {
     fontSize: 14,
     fontWeight: "700",
     color: "#475569",
-  },
-  filterCount: {
-    minWidth: 22,
-    height: 22,
-    paddingHorizontal: 6,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  filterCountText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#ffffff",
   },
   scrollContent: {
     paddingHorizontal: 16,

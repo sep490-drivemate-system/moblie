@@ -1,198 +1,247 @@
 import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Switch,
-} from "react-native";
-import { MapPin, CheckCircle } from "lucide-react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, TextInput } from "react-native";
+import { CheckCircle, Circle, Shield, AlertTriangle, Coins } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 
-interface INoviceDriverAddress {
+interface IPolicy {
   id: string;
-  addressString: string;
-  latitude: number;
-  longitude: number;
+  title: string;
+  detail: string;
 }
 
-type LocationOption = {
-  id: string;
-  name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-};
-
-interface Step3Props {
-  selectedPickupId: string | null;
-  selectedDropoffId: string | null;
-  pickupLocation: string;
-  dropoffLocation: string;
-  onPickupSelect: (location: LocationOption) => void;
-  onDropoffSelect: (location: LocationOption) => void;
-  isSameDropoff: boolean;
-  onToggleSameDropoff: (value: boolean) => void;
-  onMapSelect?: (type: "pickup" | "dropoff") => void;
-  addresses?: INoviceDriverAddress[];
+interface Step4Props {
+  policies: IPolicy[];
+  acceptedPolicies?: Record<string, boolean>;
+  onPolicyAccept?: (policyId: string, accepted: boolean) => void;
+  bookingCost: number;
   isLoading?: boolean;
+  vehicleId?: string | null;
+  carPrice?: number;
+  selectedDuration?: number;
+  sessionNote?: string;
+  onSessionNoteChange?: (note: string) => void;
 }
 
-export default function Step3({
-  selectedPickupId,
-  selectedDropoffId,
-  pickupLocation,
-  dropoffLocation,
-  onPickupSelect,
-  onDropoffSelect,
-  isSameDropoff,
-  onToggleSameDropoff,
-  onMapSelect,
-  addresses = [],
-  isLoading = false,
-}: Step3Props) {
-  const displayLocations: LocationOption[] =
-    addresses.length > 0
-      ? addresses.map((addr) => ({
-        id: addr.id,
-        name: addr.addressString,
-        address: addr.addressString,
-        latitude: addr.latitude,
-        longitude: addr.longitude,
-      }))
-      : [];
 
-  const renderLocationList = (
-    selectedId: string | null,
-    onSelect: (location: typeof displayLocations[number]) => void
-  ) => (
-    <View style={styles.locationList}>
-      {displayLocations.map((location) => (
-        <TouchableOpacity
-          key={location.id}
-          style={[
-            styles.locationItem,
-            selectedId === location.id && styles.locationItemSelected,
-          ]}
-          onPress={() => onSelect(location)}
-        >
-          <View style={styles.locationItemContent}>
-            <MapPin
-              size={20}
-              color={
-                selectedId === location.id ? AppColors.primary : "#64748b"
-              }
-              strokeWidth={2}
-            />
-            <Text
-              style={[
-                styles.locationItemText,
-                selectedId === location.id && styles.locationItemTextSelected,
-              ]}
-            >
-              {location.name}
-            </Text>
-          </View>
-          {selectedId === location.id && (
-            <CheckCircle size={18} color={AppColors.primary} strokeWidth={2} />
-          )}
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
+export default function Step4({
+  policies,
+  acceptedPolicies = {},
+  onPolicyAccept,
+  bookingCost,
+  isLoading = false,
+  vehicleId = null,
+  carPrice = 0,
+  selectedDuration = 0,
+  sessionNote = "",
+  onSessionNoteChange,
+}: Step4Props) {
+
+
+
+
+  // Check if all policies are accepted
+  const allAccepted = policies.length > 0 && policies.every((policy) => acceptedPolicies[policy.id] === true);
+
+  // Handle "Select All" toggle
+  const handleSelectAll = () => {
+    if (!onPolicyAccept) return;
+
+    // If all are already accepted, uncheck all. Otherwise, check all.
+    const newValue = !allAccepted;
+    policies.forEach((policy: IPolicy) => {
+      onPolicyAccept(policy.id, newValue);
+    });
+  };
+
+  // Calculate vehicle cost if vehicle is selected
+  const vehicleCost = vehicleId && carPrice && selectedDuration > 0
+    ? carPrice * selectedDuration
+    : 0;
+
 
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Chọn địa điểm đón</Text>
-        {isLoading && (
-          <ActivityIndicator size="small" color={AppColors.primary} style={{ marginLeft: 8 }} />
+    <View style={styles.container}>
+      {/* Policies Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Shield size={24} color={AppColors.primary} strokeWidth={2} />
+          <Text style={styles.sectionTitle}>Chính sách đặt lịch</Text>
+          {isLoading && (
+            <ActivityIndicator size="small" color={AppColors.primary} style={{ marginLeft: 8 }} />
+          )}
+        </View>
+
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={AppColors.primary} />
+            <Text style={styles.loadingText}>Đang tải chính sách...</Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.sectionSubtitle}>
+              Vui lòng đọc và chấp nhận các chính sách sau:
+            </Text>
+
+            {/* Select All Button */}
+            <TouchableOpacity
+              style={[
+                styles.selectAllButton,
+                allAccepted && styles.selectAllButtonActive,
+              ]}
+              onPress={handleSelectAll}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.selectAllCheckbox,
+                  allAccepted && styles.selectAllCheckboxActive,
+                ]}
+              >
+                {allAccepted ? (
+                  <CheckCircle size={20} color="#ffffff" strokeWidth={2.5} />
+                ) : (
+                  <Circle size={20} color="#94a3b8" strokeWidth={2.5} />
+                )}
+              </View>
+              <Text
+                style={[
+                  styles.selectAllText,
+                  allAccepted && styles.selectAllTextActive,
+                ]}
+              >
+                Chọn tất cả
+              </Text>
+            </TouchableOpacity>
+
+            <ScrollView style={styles.policiesScroll} showsVerticalScrollIndicator={false}>
+              {policies.map((policy: IPolicy) => {
+                const isAccepted = acceptedPolicies[policy.id] === true;
+                return (
+                  <TouchableOpacity
+                    key={policy.id}
+                    style={styles.policyItem}
+                    onPress={() => onPolicyAccept?.(policy.id, !isAccepted)}
+                    activeOpacity={0.7}
+                  >
+                    <View
+                      style={[
+                        styles.checkbox,
+                        isAccepted && styles.checkboxActive,
+                      ]}
+                    >
+                      {isAccepted ? (
+                        <CheckCircle size={20} color="#ffffff" strokeWidth={2.5} />
+                      ) : (
+                        <Circle size={20} color="#94a3b8" strokeWidth={2.5} />
+                      )}
+                    </View>
+
+                    <View style={styles.policyContent}>
+                      <Text style={styles.policyTitle}>{policy.title}</Text>
+                      <Text style={styles.policyDetail}>{policy.detail}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Policy Status */}
+            <View
+              style={[
+                styles.statusBanner,
+                allAccepted ? styles.statusBannerSuccess : styles.statusBannerWarning,
+              ]}
+            >
+              {allAccepted ? (
+                <>
+                  <CheckCircle size={16} color="#16a34a" strokeWidth={2} />
+                  <Text style={styles.statusTextSuccess}>
+                    Đã chấp nhận tất cả chính sách
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle size={16} color="#f59e0b" strokeWidth={2} />
+                  <Text style={styles.statusTextWarning}>
+                    Vui lòng chấp nhận tất cả chính sách để tiếp tục
+                  </Text>
+                </>
+              )}
+            </View>
+          </>
         )}
       </View>
 
-      <View style={styles.sameLocationCard}>
-        <Text style={styles.sameLocationLabel}>
-          Điểm trả giống điểm đón
-        </Text>
-        <Switch
-          value={isSameDropoff}
-          onValueChange={onToggleSameDropoff}
-          trackColor={{ false: "#e2e8f0", true: AppColors.primary + "55" }}
-          thumbColor={isSameDropoff ? AppColors.primary : "#fff"}
-        />
-      </View>
-
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={AppColors.primary} />
-          <Text style={styles.loadingText}>Đang tải địa chỉ...</Text>
-        </View>
-      ) : (
-        <>
-          <View style={styles.locationSection}>
-            <View style={styles.locationHeaderRow}>
-              <Text style={styles.locationSectionTitle}>Điểm đón</Text>
-              {onMapSelect && (
-                <TouchableOpacity
-                  onPress={() => onMapSelect("pickup")}
-                  style={styles.mapButton}
-                >
-                  <Text style={styles.mapButtonText}>Chọn trên bản đồ</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            {renderLocationList(selectedPickupId, (location) =>
-              onPickupSelect(location)
-            )}
+      {/* Payment Section - Only show if vehicle is selected */}
+      {vehicleId && vehicleCost > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Coins size={24} color={AppColors.primary} strokeWidth={2} />
+            <Text style={styles.sectionTitle}>Thanh toán</Text>
           </View>
 
-          {!isSameDropoff && (
-            <View style={styles.locationSection}>
-              <View style={styles.locationHeaderRow}>
-                <Text style={styles.locationSectionTitle}>Điểm trả</Text>
-                {onMapSelect && (
-                  <TouchableOpacity
-                    onPress={() => onMapSelect("dropoff")}
-                    style={styles.mapButton}
-                  >
-                    <Text style={styles.mapButtonText}>Chọn trên bản đồ</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              {renderLocationList(selectedDropoffId, (location) =>
-                onDropoffSelect(location)
-              )}
-            </View>
-          )}
-        </>
-      )}
+          <View style={styles.paymentCard}>
 
-      {(pickupLocation || dropoffLocation) && (
-        <View style={styles.locationPreviewContainer}>
-          {pickupLocation ? (
-            <View style={styles.locationPreview}>
-              <MapPin size={16} color="#10b981" strokeWidth={2} />
-              <Text style={styles.locationPreviewText}>
-                Đón: {pickupLocation}
+            <View style={styles.paymentDivider} />
+
+            <View style={styles.paymentRow}>
+              <Text style={styles.paymentLabel}>Chi phí thuê xe:</Text>
+              <Text style={[styles.paymentValue, styles.paymentCost]}>
+                {vehicleCost.toLocaleString()} xu
               </Text>
             </View>
-          ) : null}
-          {dropoffLocation ? (
-            <View style={styles.locationPreview}>
-              <MapPin size={16} color="#f97316" strokeWidth={2} />
-              <Text style={styles.locationPreviewText}>
-                Trả: {dropoffLocation}
+            <Text style={styles.paymentNote}>
+              ({carPrice?.toLocaleString()} xu/giờ × {selectedDuration} giờ)
+            </Text>
+
+            <View style={styles.paymentDivider} />
+
+            <View style={styles.paymentRow}>
+              <Text style={styles.paymentLabelBold}>Số dư sau khi đặt:</Text>
+              <Text
+                style={[
+                  styles.paymentValueBold,
+                ]}
+              >
+                {vehicleCost.toLocaleString()} xu
               </Text>
             </View>
-          ) : null}
+          </View>
+
         </View>
       )}
+
+      {/* Session Note Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Ghi chú buổi học</Text>
+        </View>
+        <Text style={styles.sectionSubtitle}>
+          Thêm ghi chú cho buổi học (không bắt buộc)
+        </Text>
+        <TextInput
+          style={styles.noteInput}
+          value={sessionNote}
+          onChangeText={onSessionNoteChange}
+          placeholder="VD: Muốn tập lái trên đường cao tốc, cần luyện kỹ năng đỗ xe..."
+          placeholderTextColor="#94a3b8"
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+          maxLength={500}
+        />
+        <Text style={styles.noteHint}>
+          {sessionNote.length}/500 ký tự
+        </Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   section: {
     backgroundColor: "#ffffff",
     marginHorizontal: 16,
@@ -208,12 +257,57 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
     marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#1e293b",
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: "#64748b",
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  selectAllButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+    marginBottom: 16,
+  },
+  selectAllButtonActive: {
+    backgroundColor: AppColors.primary + "10",
+    borderColor: AppColors.primary,
+  },
+  selectAllCheckbox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+  },
+  selectAllCheckboxActive: {
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
+  },
+  selectAllText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#64748b",
+    flex: 1,
+  },
+  selectAllTextActive: {
+    color: AppColors.primary,
   },
   loadingContainer: {
     alignItems: "center",
@@ -225,119 +319,159 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#64748b",
   },
-  locationItemContent: {
+  policiesScroll: {
+    maxHeight: 300,
+    marginBottom: 16,
+  },
+  policyItem: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
-    flex: 1,
-  },
-  sectionDesc: {
-    fontSize: 14,
-    color: "#64748b",
     marginBottom: 16,
-    lineHeight: 20,
-  },
-  locationNote: {
-    backgroundColor: "#f0f9ff",
     padding: 12,
-    borderRadius: 10,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: "#3b82f6",
-  },
-  locationNoteText: {
-    fontSize: 13,
-    color: "#1e40af",
-    fontWeight: "600",
-    lineHeight: 18,
-  },
-  locationList: {
-    gap: 8,
-  },
-  locationItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     backgroundColor: "#f8fafc",
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
   },
-  locationItemSelected: {
+  checkbox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+  },
+  checkboxActive: {
+    backgroundColor: AppColors.primary,
     borderColor: AppColors.primary,
-    backgroundColor: AppColors.primary + "10",
   },
-  locationItemText: {
+  policyContent: {
+    flex: 1,
+  },
+  policyTitle: {
     fontSize: 15,
     fontWeight: "600",
     color: "#1e293b",
-    flex: 1,
+    marginBottom: 4,
   },
-  locationItemTextSelected: {
-    color: AppColors.primary,
-    fontWeight: "700",
+  policyDetail: {
+    fontSize: 13,
+    color: "#64748b",
+    lineHeight: 18,
   },
-  locationSection: {
-    marginTop: 12,
-    marginBottom: 20,
-  },
-  locationHeaderRow: {
+  statusBanner: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
+    gap: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
   },
-  locationSectionTitle: {
+  statusBannerSuccess: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#86efac",
+  },
+  statusBannerWarning: {
+    backgroundColor: "#fef3c7",
+    borderColor: "#fcd34d",
+  },
+  statusTextSuccess: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#16a34a",
+    flex: 1,
+  },
+  statusTextWarning: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#f59e0b",
+    flex: 1,
+  },
+  paymentCard: {
+    backgroundColor: "#f8fafc",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  paymentRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  paymentLabel: {
+    fontSize: 14,
+    color: "#64748b",
+  },
+  paymentLabelBold: {
     fontSize: 16,
     fontWeight: "700",
     color: "#1e293b",
   },
-  mapButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: AppColors.primary + "10",
-  },
-  mapButtonText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: AppColors.primary,
-  },
-  locationPreviewContainer: {
-    marginTop: 8,
-    gap: 8,
-  },
-  locationPreview: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: "#f0fdf4",
-    marginTop: 12,
-    gap: 8,
-  },
-  sameLocationCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    marginBottom: 12,
-    backgroundColor: "#f8fafc",
-  },
-  sameLocationLabel: {
+  paymentValue: {
     fontSize: 14,
     fontWeight: "600",
     color: "#1e293b",
   },
-  locationPreviewText: {
-    flex: 1,
-    fontSize: 14,
-    color: "#15803d",
+  paymentValueBold: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: AppColors.primary,
+  },
+  paymentCost: {
+    color: "#ef4444",
+  },
+  paymentNote: {
+    fontSize: 12,
+    color: "#94a3b8",
+    fontStyle: "italic",
+    marginTop: 4,
+    marginLeft: 16,
+  },
+  paymentValueError: {
+    color: "#dc2626",
+  },
+  paymentDivider: {
+    height: 1,
+    backgroundColor: "#e2e8f0",
+    marginVertical: 8,
+  },
+  warningBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: "#fef2f2",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  warningText: {
+    fontSize: 13,
     fontWeight: "600",
+    color: "#dc2626",
+    flex: 1,
+  },
+  noteInput: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 14,
+    color: "#1e293b",
+    minHeight: 100,
+    marginTop: 12,
+  },
+  noteHint: {
+    fontSize: 12,
+    color: "#94a3b8",
+    marginTop: 8,
+    textAlign: "right",
   },
 });

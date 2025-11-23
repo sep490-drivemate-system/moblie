@@ -24,14 +24,12 @@ export default function TransactionSuccessScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Success Icon */}
         <View style={styles.successIconContainer}>
           <View style={styles.successIconCircle}>
             <CheckCircle size={80} color={AppColors.primary} strokeWidth={2} />
           </View>
         </View>
 
-        {/* Success Message */}
         <View style={styles.messageContainer}>
           <Text style={styles.successTitle}>Giao dịch thành công!</Text>
           <Text style={styles.successSubtitle}>
@@ -40,7 +38,6 @@ export default function TransactionSuccessScreen() {
         </View>
 
 
-        {/* Next Steps */}
         <View style={styles.nextStepsCard}>
           <Text style={styles.nextStepsTitle}>Bước tiếp theo</Text>
           <View style={styles.stepItem}>
@@ -52,13 +49,12 @@ export default function TransactionSuccessScreen() {
           <View style={styles.stepItem}>
             <Package size={20} color={AppColors.primary} strokeWidth={2} />
             <Text style={styles.stepText}>
-              Quản lý gói học của bạn tại màn hình "Gói của tôi"
+              Quản lý gói học của bạn tại màn hình "Gói đã mua"
             </Text>
           </View>
         </View>
       </ScrollView>
 
-      {/* Bottom Actions */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity
           style={styles.backButtonBottom}
@@ -70,7 +66,7 @@ export default function TransactionSuccessScreen() {
 
         <TouchableOpacity
           style={styles.bookButton}
-          onPress={() => router.push({
+          onPress={() => router.replace({
             pathname: ROUTES.MY_PACKAGES
           })}
           activeOpacity={0.9}

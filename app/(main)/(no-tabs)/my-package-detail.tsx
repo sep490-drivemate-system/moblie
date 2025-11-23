@@ -24,6 +24,8 @@ import { userPackagesData } from "@/data/user_packages_data";
 import { AppColors } from "@/constants/Colors";
 import { PackageDetailData, usePackageDetailViewModel } from "@/viewmodels/booking/PackageDetailViewModel";
 import { useAppDispatch } from "@/lib/redux/hooks";
+import HeaderList from "@/components/Commons/HeaderList";
+import { ROUTES } from "@/constants/routes";
 
 export default function PackageDetailScreen() {
   const router = useRouter();
@@ -219,20 +221,9 @@ export default function PackageDetailScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={24} color={AppColors.white} strokeWidth={2} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chi tiết gói</Text>
-        <View style={styles.headerRight} />
-      </View>
+      <HeaderList actionReturnScreen={ROUTES.MY_PACKAGES as any} title="Chi tiết gói" colors={[AppColors.primary, AppColors.gradientStart, AppColors.gradientEnd]} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Instructor Info Card */}
         {packageData && instructorInfo && (
           <View style={styles.instructorCard}>
             <View style={styles.instructorSection}>
@@ -367,14 +358,13 @@ export default function PackageDetailScreen() {
           </View>
         )}
 
-        {/* Sessions Section */}
         <View style={styles.sessionsSection}>
           <Text style={styles.sectionTitle}>Lịch thuê đã đặt</Text>
           <SessionsList
-            bookingId={packageData?.id || ""}
+            bookingId={packageData?.id}
             enableScroll={false}
             showHeader={false}
-            emptyStateText="Bạn chưa có buổi học nào cho gói này."
+            emptyStateText="Bạn chưa có lịch thuê nào cho gói này."
           />
         </View>
 

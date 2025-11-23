@@ -16,6 +16,8 @@ export const ROUTES = {
   MY_PACKAGE_DETAIL: '/(main)/(no-tabs)/my-package-detail',
   BOOKING: '/(main)/(no-tabs)/booking',
   RESCHEDULE_SESSION: '/(main)/(no-tabs)/reschedule-session',
+  INSTRUCTOR_DETAIL: '/(main)/(no-tabs)/instructor-detail',
+  TRANSACTION_SUCCESS: '/(main)/(no-tabs)/transaction-success',
 
   MAIN_NO_TABS_DEPOSIT: '/(main)/(no-tabs)/deposit',
   MAIN_NO_TABS_WITHDRAW: '/(main)/(no-tabs)/withdraw',

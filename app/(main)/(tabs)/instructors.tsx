@@ -16,20 +16,17 @@ import { LucideUsers, Search, X, Star } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { IInstructors } from "@/models/instructor/instructor.type";
 import {
-  FilterType,
-  ExperienceLevel,
-  MinimumRating,
   SortType,
+  SortOrder,
 } from "@/models/instructor/instructor-filter.type";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { InstructorViewModel } from "@/viewmodels/instructor/InstructorViewModel";
-import { setFilteredInstructors, setDisplayedInstructors } from "@/features/instructor/instructorSlice";
+import { setFilteredInstructors, setDisplayedInstructors, setSortBy, setSortAscending } from "@/features/instructor/instructorSlice";
+import HeaderList from "@/components/Commons/HeaderList";
+import SearchBar from "@/components/Commons/SearchBar";
+import TabFilter from "@/components/Commons/TabFilter";
+import { ROUTES } from "@/constants/routes";
 
-const initialFilters = {
-  availability: FilterType.All,
-  experience: ExperienceLevel.All,
-  minRating: MinimumRating.All,
-};
 
 function InstructorsScreen() {
   const router = useRouter();
@@ -63,14 +60,18 @@ function InstructorsScreen() {
   const totalPages = Math.ceil(pagination.totalItems / pagination.itemsPerPage);
   const hasMorePages = pagination.currentPage < totalPages;
 
-  // Fetch instructors on mount
   useEffect(() => {
     instructorViewModel.fetchInstructors();
   }, []);
 
-  // ============================================
-  // SEARCH: Backend API call với debounce
-  // ============================================
+  // Sync localSearchQuery với searchQuery từ Redux khi component mount
+  useEffect(() => {
+    if (searchQuery && !localSearchQuery) {
+      setLocalSearchQuery(searchQuery);
+    }
+  }, [searchQuery]);
+
+  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       if (localSearchQuery !== searchQuery) {
@@ -84,72 +85,58 @@ function InstructorsScreen() {
 
   useEffect(() => {
     if (allInstructors.length === 0) return;
+    let sorted = [...allInstructors];
 
-    console.log('[Filter] Applying filters on', allInstructors.length, 'instructors');
-    console.log('[Filter] Current filters:', filters);
-
-    let filtered = [...allInstructors];
-
-    // Apply filters (client-side)
-    // Filter by Experience
-    if (filters.experience !== ExperienceLevel.All) {
-      const expYears = parseInt(filters.experience.split('-')[0]) || 0;
-      filtered = filtered.filter(instructor => {
-        const instructorYears = parseInt(instructor.experienceYear) || 0;
-        return instructorYears >= expYears;
+    // Sort by Experience or Rating
+    if (sortBy === SortType.Experience) {
+      sorted.sort((a, b) => {
+        const aYears = parseInt(a.experienceYear) || 0;
+        const bYears = parseInt(b.experienceYear) || 0;
+        return sortAscending ? aYears - bYears : bYears - aYears;
       });
-      console.log('[Filter] After experience filter:', filtered.length);
+    } else if (sortBy === SortType.Rating) {
+      sorted.sort((a, b) => {
+        return sortAscending
+          ? a.averageRating - b.averageRating
+          : b.averageRating - a.averageRating;
+      });
     }
 
-    // Filter by Rating
-    if (filters.minRating !== MinimumRating.All) {
-      const minRating = parseFloat(filters.minRating.replace('+', ''));
-      filtered = filtered.filter(instructor => instructor.averageRating >= minRating);
-      console.log('[Filter] After rating filter:', filtered.length);
-    }
-
-    // Apply sorting (client-side)
-    filtered.sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortBy) {
-        case SortType.Rating:
-          comparison = a.averageRating - b.averageRating;
-          break;
-        case SortType.Experience:
-          const aYears = parseInt(a.experienceYear) || 0;
-          const bYears = parseInt(b.experienceYear) || 0;
-          comparison = aYears - bYears;
-          break;
-        case SortType.Price:
-          // Sort by package count
-          comparison = a.packageCount - b.packageCount;
-          break;
-        default:
-          comparison = 0;
-      }
-
-      return sortAscending ? comparison : -comparison;
-    });
-
-    console.log('[Filter] Final result after sort:', filtered.length, 'instructors');
-
-    // Update filtered data
-    dispatch(setFilteredInstructors(filtered));
-    dispatch(setDisplayedInstructors(filtered));
-  }, [filters, sortBy, sortAscending, allInstructors]);
+    dispatch(setFilteredInstructors(sorted));
+    dispatch(setDisplayedInstructors(sorted));
+  }, [sortBy, sortAscending, allInstructors, dispatch]);
 
   // Action handlers
   const handleSearchChange = (query: string) => {
+    setLocalSearchQuery(query);
     instructorViewModel.updateSearchQuery(query);
   };
 
-  const handleResetFilters = () => {
-    instructorViewModel.resetAllFilters();
+  const handleSortChange = (value: string) => {
+    if (value === 'exp') {
+      if (sortBy === SortType.Experience) {
+        // Nếu đang sort theo kinh nghiệm, toggle giữa tăng/giảm
+        dispatch(setSortAscending(!sortAscending));
+      } else {
+        // Nếu chưa sort theo kinh nghiệm, bắt đầu với tăng dần
+        dispatch(setSortBy(SortType.Experience));
+        dispatch(setSortAscending(true));
+      }
+    } else if (value === 'rating') {
+      if (sortBy === SortType.Rating) {
+        // Nếu đang sort theo rating, toggle giữa tăng/giảm
+        dispatch(setSortAscending(!sortAscending));
+      } else {
+        // Nếu chưa sort theo rating, bắt đầu với tăng dần
+        dispatch(setSortBy(SortType.Rating));
+        dispatch(setSortAscending(true));
+      }
+    }
   };
 
-  const handleSortChange = (sortType: SortType) => {
-    instructorViewModel.updateSort(sortType);
+
+  const handleResetFilters = () => {
+    instructorViewModel.resetAllFilters();
   };
 
   const handleRefresh = async () => {
@@ -196,7 +183,13 @@ function InstructorsScreen() {
           <Text style={styles.bookings}>({item.bookingCount} lượt thuê)</Text>
           <TouchableOpacity
             style={styles.detailButton}
-            onPress={() => handleInstructorPress(item)}
+            onPress={() => router.push({
+              pathname: ROUTES.INSTRUCTOR_DETAIL,
+              params: {
+                instructorId: item.id,
+                instructorData: JSON.stringify(item)
+              },
+            })}
           >
             <Text style={styles.detailButtonText}>Chi tiết</Text>
           </TouchableOpacity>
@@ -230,71 +223,33 @@ function InstructorsScreen() {
 
   return (
     <View style={styles.container}>
-
-      {/* Search Container */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputWrapper}>
-          <Search size={20} color={AppColors.gray500} strokeWidth={2} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Tìm kiếm giảng viên..."
-            placeholderTextColor={AppColors.gray400}
-            value={localSearchQuery}
-            onChangeText={setLocalSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearchChange("")}>
-              <X size={20} color={AppColors.gray400} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.filterBar}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterScrollContent}
-        >
-
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              sortBy === SortType.Rating && styles.filterButtonActive,
-            ]}
-            onPress={() => handleSortChange(SortType.Rating)}
-          >
-            <Text
-              style={[
-                styles.filterButtonText,
-                sortBy === SortType.Rating && styles.filterButtonTextActive,
-              ]}
-            >
-              Đánh giá {sortBy === SortType.Rating && (sortAscending ? "↑" : "↓")}
-            </Text>
-          </TouchableOpacity>
+      <HeaderList title="Danh sách người hướng dẫn" />
+      <SearchBar
+        value={localSearchQuery}
+        onChangeText={handleSearchChange}
+        placeholder="Tìm kiếm người hướng dẫn..."
+      />
 
 
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              sortBy === SortType.Experience && styles.filterButtonActive,
-            ]}
-            onPress={() => handleSortChange(SortType.Experience)}
-          >
-            <Text
-              style={[
-                styles.filterButtonText,
-                sortBy === SortType.Experience && styles.filterButtonTextActive,
-              ]}
-            >
-              Kinh nghiệm {sortBy === SortType.Experience && (sortAscending ? "↑" : "↓")}
-            </Text>
-          </TouchableOpacity>
-
-        </ScrollView>
-      </View>
-
+      <TabFilter
+        options={[
+          {
+            value: 'exp',
+            label: sortBy === SortType.Experience
+              ? (sortAscending ? 'Kinh nghiệm ↑' : 'Kinh nghiệm ↓')
+              : 'Kinh nghiệm'
+          },
+          {
+            value: 'rating',
+            label: sortBy === SortType.Rating
+              ? (sortAscending ? 'Đánh giá ↑' : 'Đánh giá ↓')
+              : 'Đánh giá'
+          },
+        ]}
+        activeValue={sortBy === SortType.Experience ? 'exp' : sortBy === SortType.Rating ? 'rating' : ''}
+        onSelect={handleSortChange}
+        showCount={false}
+      />
       <FlatList
         data={displayedInstructors}
         renderItem={renderInstructorCard}
@@ -334,75 +289,30 @@ function InstructorsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: AppColors.backgroundLight,
   },
-  searchContainer: {
-    backgroundColor: AppColors.white,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+  filtersContainer: {
+    backgroundColor: '#ffffff',
+    paddingTop: 12,
+    paddingBottom: 12,
+    paddingHorizontal: 0,
     borderBottomWidth: 1,
-    borderBottomColor: AppColors.borderLight,
+    borderBottomColor: AppColors.gray200,
   },
-  searchInputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: AppColors.gray50,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-    color: AppColors.textPrimary,
-  },
-  filterBar: {
-    backgroundColor: AppColors.white,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: AppColors.borderLight,
-  },
-  filterScrollContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  filterButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-    backgroundColor: AppColors.white,
-    gap: 6,
-  },
-  filterButtonActive: {
-    backgroundColor: "#70E000",
-    borderColor: "#70E000",
-  },
-  filterButtonText: {
+  filterLabel: {
     fontSize: 14,
-    fontWeight: "500",
-    color: AppColors.gray600,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 10,
+    marginLeft: 20,
+    marginTop: 4,
   },
-  filterButtonTextActive: {
-    color: AppColors.white,
-  },
-  filterBadge: {
-    backgroundColor: AppColors.error,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 4,
-  },
-  filterBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: AppColors.white,
+  tabFilterContainer: {
+    borderRadius: 0,
+    shadowOpacity: 0,
+    elevation: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   clearButton: {
     paddingHorizontal: 16,

@@ -166,29 +166,7 @@ export const getAllSessions = createThunk<
   }
 );
 
-export const getInstructorSchedule = createThunk<
-  IInstructorSchedule[],
-  { instructorId: string }
->(
-  HttpMethod.GET,
-  "getInstructorSchedule",
-  `/${BOOKING_PATH}`,
-  {
-    buildUrl: (payload) => `/${INSTRUCTOR_PATH}/${payload.instructorId}/schedule`
-  }
-);
 
-export const getInstructorBookedSessions = createThunk<
-  IInstructorBookedSession[],
-  { instructorId: string }
->(
-  HttpMethod.GET,
-  "getInstructorBookedSessions",
-  `/${INSTRUCTOR_PATH}`,
-  {
-    buildUrl: (payload) => `/${BOOKING_PATH}/instructor/${payload.instructorId}/upcoming-sessions`
-  }
-);
 
 // Get novice driver addresses
 

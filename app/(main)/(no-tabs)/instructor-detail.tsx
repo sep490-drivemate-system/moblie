@@ -20,6 +20,7 @@ import {
   Award,
   Users,
   MapPin,
+  Route,
   Clock,
   Car,
   User,
@@ -34,6 +35,7 @@ import { Gender } from "@/models/user/gender.enum";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { IBuyPackageRequest } from "@/models/package/package";
 import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
+import { ROUTES } from "@/constants/routes";
 
 
 // Helper function to convert gender number to text
@@ -139,7 +141,7 @@ export default function InstructorDetailScreen() {
       // Success - close modal và navigate
       setShowConfirmModal(false);
       router.push({
-        pathname: "/(main)/(no-tabs)/transaction-success",
+        pathname: ROUTES.TRANSACTION_SUCCESS,
         params: {
           instructorId: instructor.id,
           packageId: selectedPackage.id,
@@ -247,11 +249,11 @@ export default function InstructorDetailScreen() {
           {isLoadingPackages ? (
             <View style={styles.loadingCard}>
               <ActivityIndicator size="large" color={AppColors.primary} />
-              <Text style={styles.loadingText}>Đang tải gói học...</Text>
+              <Text style={styles.loadingText}>Đang tải gói thuê...</Text>
             </View>
           ) : packages.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>Chưa có gói học nào</Text>
+              <Text style={styles.emptyText}>Chưa có gói thuê nào</Text>
             </View>
           ) : (
             packages.map((pkg) => (
@@ -283,22 +285,35 @@ export default function InstructorDetailScreen() {
                 <View style={styles.packageDetails}>
                   <View style={styles.packageDetailRow}>
                     <Clock size={16} color="#64748b" strokeWidth={2} />
-                    <Text style={styles.packageDetailText}>{pkg.duration} giờ</Text>
+                    <Text style={styles.packageDetailText}>Thời lượng sử dụng: {pkg.duration} giờ</Text>
                   </View>
 
-                  <View style={styles.packageDetailRow}>
-                    <MapPin size={16} color="#64748b" strokeWidth={2} />
-                    <Text style={styles.packageDetailText}>
-                      {pkg.roadTypes.join(", ")}
-                    </Text>
+                  <View style={styles.packageRoadTypesContainer}>
+                    <View style={styles.packageRoadTypesHeader}>
+                      <Route size={16} color="#64748b" strokeWidth={2} />
+                      <Text style={styles.packageRoadTypesLabel}>Loại đường:</Text>
+                    </View>
+                    <View style={styles.packageRoadTypes}>
+                      {pkg.roadTypes.map((roadType: string, idx: number) => (
+                        <View key={idx} style={styles.roadTypeChip}>
+                          <Text style={styles.roadTypeChipText}>{roadType}</Text>
+                        </View>
+                      ))}
+                    </View>
                   </View>
 
-                  <View style={styles.packageSkills}>
-                    {pkg.drivingSkills.map((skill: string, idx: number) => (
-                      <View key={idx} style={styles.skillChip}>
-                        <Text style={styles.skillChipText}>{skill}</Text>
-                      </View>
-                    ))}
+                  <View style={styles.packageSkillsContainer}>
+                    <View style={styles.packageSkillsHeader}>
+                      <Award size={16} color="#64748b" strokeWidth={2} />
+                      <Text style={styles.packageSkillsLabel}>Kỹ năng lái xe:</Text>
+                    </View>
+                    <View style={styles.packageSkills}>
+                      {pkg.drivingSkills.map((skill: string, idx: number) => (
+                        <View key={idx} style={styles.skillChip}>
+                          <Text style={styles.skillChipText}>{skill}</Text>
+                        </View>
+                      ))}
+                    </View>
                   </View>
                 </View>
 
@@ -322,8 +337,6 @@ export default function InstructorDetailScreen() {
         </View>
 
 
-
-        {/* Cars Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
@@ -434,7 +447,6 @@ export default function InstructorDetailScreen() {
               }
             ]}
           >
-            {/* Modal Header */}
             <View style={styles.confirmModalHeader}>
               <Text style={styles.confirmModalTitle}>Xác nhận mua gói</Text>
               {!isProcessing && (
@@ -461,10 +473,6 @@ export default function InstructorDetailScreen() {
                       {selectedPackage.name}
                     </Text>
 
-                    <Text style={styles.confirmPackageDescription}>
-                      {selectedPackage.description}
-                    </Text>
-
                     <View style={styles.confirmPackageBadge}>
                       {selectedPackage.isRentalCar ? (
                         <View style={styles.confirmBadgeWithVehicle}>
@@ -483,20 +491,23 @@ export default function InstructorDetailScreen() {
                       <View style={styles.confirmDetailRow}>
                         <Clock size={16} color="#64748b" />
                         <Text style={styles.confirmDetailText}>
-                          {selectedPackage.duration} giờ
+                          Thời lượng sử dụng: {selectedPackage.duration} giờ
                         </Text>
                       </View>
                       <View style={styles.confirmDetailRow}>
-                        <MapPin size={16} color="#64748b" />
+                        <Route size={16} color="#64748b" />
                         <Text style={styles.confirmDetailText}>
-                          {selectedPackage.roadTypes.join(", ")}
+                          Loại đường: {selectedPackage.roadTypes.join(", ")}
                         </Text>
                       </View>
                     </View>
 
                     {selectedPackage.drivingSkills && selectedPackage.drivingSkills.length > 0 && (
                       <View style={styles.confirmSkillsContainer}>
-                        <Text style={styles.confirmSkillsLabel}>Kỹ năng học được:</Text>
+                        <View style={styles.confirmSkillsHeader}>
+                          <Award size={16} color="#64748b" strokeWidth={2} />
+                          <Text style={styles.confirmSkillsLabel}>Kỹ năng :</Text>
+                        </View>
                         <View style={styles.confirmSkillsList}>
                           {selectedPackage.drivingSkills.map((skill: string, index: number) => (
                             <View key={index} style={styles.confirmSkillChip}>
@@ -1146,11 +1157,58 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     fontWeight: "500",
   },
+  packageRoadTypesContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  packageRoadTypesHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  packageRoadTypesLabel: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    fontWeight: "500",
+  },
+  packageRoadTypes: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  roadTypeChip: {
+    backgroundColor: "#fef3c7",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#fcd34d",
+  },
+  roadTypeChipText: {
+    fontSize: 11,
+    color: "#92400e",
+    fontWeight: "600",
+  },
+  packageSkillsContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  packageSkillsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  packageSkillsLabel: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    fontWeight: "500",
+  },
   packageSkills: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
-    marginTop: 4,
   },
   skillChip: {
     backgroundColor: "#f0f9ff",
@@ -1365,11 +1423,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: AppColors.borderLight,
   },
+  confirmSkillsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+  },
   confirmSkillsLabel: {
     fontSize: 13,
     fontWeight: "600",
     color: AppColors.textPrimary,
-    marginBottom: 10,
   },
   confirmSkillsList: {
     flexDirection: "row",
