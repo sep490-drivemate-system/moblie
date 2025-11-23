@@ -1,195 +1,180 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { signalRService, SignalRConnectionOptions } from "./signalRService";
 import * as signalR from "@microsoft/signalr";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SignalRHubPaths, SignalRHubUrls } from "@/lib/signalr/signalRConfig";
+import { UseSignalROptions, UseSignalRReturn } from "./signaIR.type";
 
-export interface UseSignalROptions {
-    hubUrl: string;
-    accessToken?: string;
-    enabled?: boolean; // Có tự động kết nối khi mount không
-    onConnected?: () => void;
-    onDisconnected?: (error?: Error) => void;
-    onReconnecting?: (error?: Error) => void;
-    onReconnected?: (connectionId?: string) => void;
-}
 
-export interface UseSignalRReturn {
-    connection: signalR.HubConnection | null;
-    isConnected: boolean;
-    isConnecting: boolean;
-    connectionState: signalR.HubConnectionState | null;
-    connectionId: string | null;
-    connect: () => Promise<void>;
-    disconnect: () => Promise<void>;
-    on: (methodName: string, callback: (...args: any[]) => void) => void;
-    off: (methodName: string, callback?: (...args: any[]) => void) => void;
-    invoke: (methodName: string, ...args: any[]) => Promise<any>;
-    send: (methodName: string, ...args: any[]) => void;
-}
-
-/**
- * Hook để sử dụng SignalR trong React Native components
- * 
- * @example
- * ```tsx
- * const { isConnected, connect, on, invoke } = useSignalR({
- *   hubUrl: 'https://api.example.com/chatHub',
- *   enabled: true,
- * });
- * 
- * useEffect(() => {
- *   if (isConnected) {
- *     on('ReceiveMessage', (user, message) => {
- *       console.log('Nhận tin nhắn:', message);
- *     });
- *   }
- * }, [isConnected, on]);
- * 
- * const sendMessage = async () => {
- *   await invoke('SendMessage', userId, message);
- * };
- * ```
- */
 export function useSignalR(options: UseSignalROptions): UseSignalRReturn {
     const {
-        hubUrl,
-        accessToken,
+        hubPath,
         enabled = true,
-        onConnected,
-        onDisconnected,
-        onReconnecting,
-        onReconnected,
     } = options;
 
+    const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectionState, setConnectionState] = useState<signalR.HubConnectionState | null>(null);
     const [connectionId, setConnectionId] = useState<string | null>(null);
 
-    const optionsRef = useRef(options);
+    const connectionRef = useRef<signalR.HubConnection | null>(null);
     const listenersRef = useRef<Map<string, (...args: any[]) => void>>(new Map());
+    const optionsRef = useRef(options);
 
-    // Cập nhật options ref khi options thay đổi
     useEffect(() => {
         optionsRef.current = options;
-    }, [options]);
+    }, [options, hubPath]);
 
-    // Hàm kết nối
+
+
     const connect = useCallback(async () => {
-        if (isConnecting || isConnected) {
+        if (isConnecting || isConnected || connectionRef.current) {
             return;
         }
 
         setIsConnecting(true);
         try {
-            await signalRService.createConnection({
-                hubUrl,
-                accessToken,
-                onConnected: () => {
-                    setIsConnected(true);
-                    setIsConnecting(false);
-                    setConnectionState(signalRService.getConnectionState());
-                    setConnectionId(signalRService.getConnectionId());
-                    onConnected?.();
-                },
-                onDisconnected: (error) => {
-                    setIsConnected(false);
-                    setIsConnecting(false);
-                    setConnectionState(signalRService.getConnectionState());
-                    setConnectionId(null);
-                    onDisconnected?.(error);
-                },
-                onReconnecting: (error) => {
-                    setIsConnected(false);
-                    setConnectionState(signalRService.getConnectionState());
-                    onReconnecting?.(error);
-                },
-                onReconnected: (connectionId) => {
-                    setIsConnected(true);
-                    setConnectionState(signalRService.getConnectionState());
-                    setConnectionId(connectionId ?? null);
-                    onReconnected?.(connectionId);
-                },
+            const builder = new signalR.HubConnectionBuilder()
+                .withUrl(hubPath)
+                .withAutomaticReconnect({
+                    nextRetryDelayInMilliseconds: (retryContext) => {
+                        if (retryContext.previousRetryCount < 3) {
+                            return 1000;
+                        }
+                        if (retryContext.previousRetryCount < 10) {
+                            return 5000;
+                        }
+                        return 30000;
+                    },
+                });
+
+            const hubConnection = builder.build();
+
+            hubConnection.onclose((error) => {
+                setIsConnected(false);
+                setIsConnecting(false);
+                setConnectionState(hubConnection.state);
+                setConnectionId(null);
+                optionsRef.current.onDisconnected?.(error || undefined);
             });
-        } catch (error) {
+
+            hubConnection.onreconnecting((error) => {
+                setIsConnected(false);
+                setConnectionState(hubConnection.state);
+                optionsRef.current.onReconnecting?.(error || undefined);
+            });
+
+            hubConnection.onreconnected((connectionId) => {
+                setIsConnected(true);
+                setConnectionState(hubConnection.state);
+                setConnectionId(connectionId ?? null);
+                optionsRef.current.onReconnected?.(connectionId);
+            });
+
+            await hubConnection.start();
+
+            setIsConnected(true);
+            setIsConnecting(false);
+            setConnectionState(hubConnection.state);
+            setConnectionId(hubConnection.connectionId ?? null);
+            setConnection(hubConnection);
+            connectionRef.current = hubConnection;
+
+            optionsRef.current.onConnected?.();
+        } catch (error: any) {
             setIsConnecting(false);
             setIsConnected(false);
-            console.error("Lỗi kết nối SignalR:", error);
+            setConnectionState(null);
+            console.log("Lỗi kết nối SignalR:", error);
         }
-    }, [hubUrl, accessToken, isConnecting, isConnected, onConnected, onDisconnected, onReconnecting, onReconnected]);
+    }, [isConnecting, isConnected]);
 
-    // Hàm ngắt kết nối
     const disconnect = useCallback(async () => {
-        // Gỡ tất cả listeners
-        listenersRef.current.forEach((callback, methodName) => {
-            signalRService.off(methodName, callback);
-        });
-        listenersRef.current.clear();
+        if (connectionRef.current) {
+            listenersRef.current.forEach((callback, methodName) => {
+                connectionRef.current?.off(methodName, callback);
+            });
+            listenersRef.current.clear();
 
-        await signalRService.disconnect();
+            if (connectionRef.current.state !== signalR.HubConnectionState.Disconnected) {
+                await connectionRef.current.stop();
+            }
+
+            connectionRef.current = null;
+            setConnection(null);
+        }
+
         setIsConnected(false);
         setIsConnecting(false);
         setConnectionState(null);
         setConnectionId(null);
     }, []);
 
-    // Hàm đăng ký listener
     const on = useCallback((methodName: string, callback: (...args: any[]) => void) => {
-        signalRService.on(methodName, callback);
-        listenersRef.current.set(methodName, callback);
-    }, []);
-
-    // Hàm gỡ listener
-    const off = useCallback((methodName: string, callback?: (...args: any[]) => void) => {
-        if (callback) {
-            signalRService.off(methodName, callback);
-            listenersRef.current.delete(methodName);
-        } else {
-            signalRService.off(methodName);
-            listenersRef.current.delete(methodName);
+        if (connectionRef.current) {
+            connectionRef.current.on(methodName, callback);
+            listenersRef.current.set(methodName, callback);
         }
     }, []);
 
-    // Hàm invoke
+    const off = useCallback((methodName: string, callback?: (...args: any[]) => void) => {
+        if (connectionRef.current) {
+            if (callback) {
+                connectionRef.current.off(methodName, callback);
+                listenersRef.current.delete(methodName);
+            } else {
+                connectionRef.current.off(methodName);
+                listenersRef.current.delete(methodName);
+            }
+        }
+    }, []);
+
     const invoke = useCallback(async (methodName: string, ...args: any[]) => {
-        return await signalRService.invoke(methodName, ...args);
+        if (!connectionRef.current) {
+            throw new Error("SignalR connection is not established");
+        }
+        return await connectionRef.current.invoke(methodName, ...args);
     }, []);
 
-    // Hàm send
     const send = useCallback((methodName: string, ...args: any[]) => {
-        signalRService.send(methodName, ...args);
+        if (connectionRef.current) {
+            connectionRef.current.send(methodName, ...args);
+        }
     }, []);
 
-    // Tự động kết nối khi mount nếu enabled = true
     useEffect(() => {
         if (enabled) {
             connect();
         }
 
-        // Cleanup: ngắt kết nối khi unmount
         return () => {
-            disconnect();
+            if (connectionRef.current) {
+                disconnect();
+            }
         };
-    }, [enabled]); // Chỉ chạy khi enabled thay đổi
+    }, [enabled]);
 
-    // Cập nhật connection state định kỳ
     useEffect(() => {
-        if (!enabled) return;
+        if (!enabled || !connectionRef.current) return;
 
-        const interval = setInterval(() => {
-            const state = signalRService.getConnectionState();
-            const connected = signalRService.isConnected();
-            const id = signalRService.getConnectionId();
+        const updateState = () => {
+            if (connectionRef.current) {
+                const state = connectionRef.current.state;
+                const connected = state === signalR.HubConnectionState.Connected;
+                const id = connectionRef.current.connectionId;
 
-            setConnectionState(state);
-            setIsConnected(connected);
-            setConnectionId(id);
-        }, 1000);
+                setConnectionState(state);
+                setIsConnected(connected);
+                setConnectionId(id ?? null);
+            }
+        };
 
+        const interval = setInterval(updateState, 1000);
         return () => clearInterval(interval);
     }, [enabled]);
 
     return {
-        connection: null, // Không expose connection trực tiếp để tránh misuse
+        connection,
         isConnected,
         isConnecting,
         connectionState,
