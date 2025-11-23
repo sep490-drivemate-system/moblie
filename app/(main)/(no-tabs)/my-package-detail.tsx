@@ -30,7 +30,6 @@ export default function PackageDetailScreen() {
   const params = useLocalSearchParams();
   const packageDetailViewModel = usePackageDetailViewModel();
   const dispatch = useAppDispatch();
-  const packageId = params.packageId as string;
   const [instructorInfo, setInstructorInfo] = useState<IUserInfo | null>(null);
   const [isLoadingInstructor, setIsLoadingInstructor] = useState(false);
 
@@ -118,10 +117,8 @@ export default function PackageDetailScreen() {
       return;
     }
 
-    // Check if package has car (you may need to fetch booking detail to get carId)
-    // For now, we'll assume carId is null if not available
-    const hasCar = false; // TODO: Get from booking detail
-    const carId = hasCar ? null : null; // TODO: Get actual carId from booking
+    const hasCar = false;
+    const carId = hasCar ? null : null;
 
     try {
       setIsSubmittingFeedback(true);
@@ -153,7 +150,6 @@ export default function PackageDetailScreen() {
         },
       ]);
     } catch (error) {
-      console.error("Error submitting feedback:", error);
       Alert.alert("Lỗi", error as string || "Không thể gửi phản hồi");
     } finally {
       setIsSubmittingFeedback(false);
@@ -214,7 +210,6 @@ export default function PackageDetailScreen() {
         );
       }
     } catch (error) {
-      console.error("Error cancelling booking:", error);
       setIsProcessingCancel(false);
       Alert.alert("Lỗi", error as string || "Không thể hủy gói học");
     }

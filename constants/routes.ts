@@ -22,5 +22,6 @@ export const ROUTES = {
   MAIN_NO_TABS_SERVICE_PACKAGE_SERVICE_PACKAGE_MANAGEMENT: `/(main)/(no-tabs)/(service-package)/service-package-management`,
   MAIN_NO_TABS_MY_PACKAGES: `/(main)/(no-tabs)/my-packages`,
   MAIN_NO_TABS_INTRO: `/(onboarding)`,
+  CHAT_LIST: `/(main)/(no-tabs)/chat-list`,
   CHAT: `/(main)/(no-tabs)/chat`,
 } as const;

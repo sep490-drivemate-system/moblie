@@ -53,16 +53,9 @@ export default function HomeScreen() {
     loadUserInfo();
   }, []);
 
-  // Handler khi click vào header item
   const handleHeaderItemPress = async (itemId: string) => {
     if (itemId === "3") {
-      router.push({
-        pathname: ROUTES.CHAT,
-        params: {
-          userId: userId,
-          userName: userName,
-        },
-      });
+      router.push(ROUTES.CHAT_LIST);
     }
   };
 

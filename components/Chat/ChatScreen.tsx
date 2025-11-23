@@ -33,33 +33,8 @@ interface ChatScreenProps {
     chatRoomId?: string; // ID của phòng chat (nếu có)
 }
 
-/**
- * Component Chat Screen sử dụng SignalR
- * 
- * @example
- * ```tsx
- * // Cách 1: Dùng hubUrl trực tiếp
- * <ChatScreen
- *   hubUrl="https://api.example.com/chatHub"
- *   userId="user123"
- *   userName="Nguyễn Văn A"
- * />
- * 
- * // Cách 2: Dùng hubPath (tự động lấy từ EXPO_PUBLIC_API_URL)
- * <ChatScreen
- *   hubPath="/chatHub"
- *   userId="user123"
- *   userName="Nguyễn Văn A"
- * />
- * 
- * // Cách 3: Dùng helper có sẵn
- * <ChatScreen
- *   hubUrl={SignalRHubUrls.CHAT}
- *   userId="user123"
- *   userName="Nguyễn Văn A"
- * />
- * ```
- */
+
+
 export default function ChatScreen({
     hubUrl,
     hubPath,
@@ -78,8 +53,6 @@ export default function ChatScreen({
     const {
         isConnected,
         isConnecting,
-        connectionState,
-        connect,
         disconnect,
         on,
         off,
