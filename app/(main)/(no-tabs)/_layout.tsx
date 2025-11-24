@@ -87,13 +87,6 @@ export default function NoTabsLayout() {
                 }}
             />
             <Stack.Screen
-                name="booking-details"
-                options={{
-                    presentation: 'card',
-                    animation: 'slide_from_right',
-                }}
-            />
-            <Stack.Screen
                 name="chat-list"
                 options={{
                     presentation: 'card',

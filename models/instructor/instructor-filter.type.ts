@@ -20,6 +20,14 @@ export enum FilterType {
   Busy = 'busy',
 }
 
+export enum DistanceFilter {
+  All = 'all',
+  Within5km = '5km',
+  Within10km = '10km',
+  Within20km = '20km',
+  Within50km = '50km',
+}
+
 export enum SortType {
   None = 'none',
   Experience = 'experience',
@@ -33,6 +41,8 @@ export enum SortOrder {
 
 export interface FilterState {
   availability: FilterType;
+  distance: DistanceFilter;
   experience: ExperienceLevel;
+  priceRange: [number, number];
   minRating: MinimumRating;
 }

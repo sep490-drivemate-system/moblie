@@ -243,7 +243,7 @@ export default function SessionsList({
                             : STATUS_CONFIG[option.key as Exclude<StatusFilter, "all">]
                                 ?.color ?? AppColors.primary;
                     return (
-                        <TouchableOpacity
+                        <TouchableOpacity activeOpacity={1}
                             key={option.key}
                             style={[
                                 styles.filterChip,

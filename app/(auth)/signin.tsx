@@ -22,7 +22,7 @@ import { UserRole } from "@/models/enum/UserRole.enum";
 import { ROUTES } from "@/constants/routes";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 
-const {  height } = Dimensions.get("window");
+const { height } = Dimensions.get("window");
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.videoContainer}>
+      {/* <View style={styles.videoContainer}>
         <Video
           source={require("@/assets/videos/background_intro.mp4")}
           style={styles.backgroundVideo}
@@ -52,7 +52,7 @@ export default function SignInScreen() {
           resizeMode={ResizeMode.COVER}
         />
         <View style={styles.videoOverlay} />
-      </View>
+      </View> */}
 
       {/* Login Form Section */}
       <View style={styles.formSection}>

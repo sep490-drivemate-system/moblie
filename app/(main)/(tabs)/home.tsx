@@ -57,6 +57,9 @@ export default function HomeScreen() {
     if (itemId === "3") {
       router.push(ROUTES.CHAT_LIST);
     }
+    if (itemId === "2") {
+      router.push(ROUTES.NOTIFICATIONS);
+    }
   };
 
   const renderDrivingLicense = ({ item }: ListRenderItemInfo<LicenseType>) => (

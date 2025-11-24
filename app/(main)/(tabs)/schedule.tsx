@@ -1,4 +1,5 @@
 import { AppColors } from "@/constants/Colors";
+import { ROUTES } from "@/constants/routes";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useRouter } from "expo-router";
 import {
@@ -403,12 +404,7 @@ export default function ScheduleScreen() {
 
   // navigate to the map
   const handleBookingPress = (booking: BookingItem) => {
-    router.push({
-      pathname: "/booking-details",
-      params: {
-        booking: JSON.stringify(booking),
-      },
-    });
+    router.push(ROUTES.BOOKING);
   };
 
   const renderBookingCard = (booking: BookingItem) => (

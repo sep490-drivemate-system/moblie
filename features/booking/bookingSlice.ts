@@ -22,8 +22,6 @@ import {
     getAllSessions,
     getSessionRoutes,
     getSessionDetail,
-    getInstructorSchedule,
-    getInstructorBookedSessions,
     getPolicies,
     createSession,
     saveSessionRoutes,
@@ -34,6 +32,10 @@ import {
     submitFeedback,
     cancelBooking,
 } from './bookingThunk';
+import {
+    getInstructorSchedule,
+    getInstructorBookedSessions,
+} from '../schedule/scheduleThunk';
 
 interface BookingState extends BaseState {
     // Packages

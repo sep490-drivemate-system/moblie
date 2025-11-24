@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ScrollView,
   View,
@@ -24,6 +24,8 @@ import {
   Clock,
   Computer,
 } from "lucide-react-native";
+import { useSignalR } from "@/lib/signalr/useSignalR";
+import { SignalRHubUrls } from "@/lib/signalr/signalRConfig";
 
 type NotificationType =
   | "message"
@@ -48,6 +50,11 @@ interface Notification {
 }
 
 export default function NotificationsScreen() {
+  const { connectionId, isConnected, invoke } = useSignalR({
+    hubPath: SignalRHubUrls.NOTIFICATION,
+    enabled: true,
+  });
+
   const router = useRouter();
   const role = useAppSelector((s) => s.auth.user?.role ?? null);
   const [activeFilter, setActiveFilter] = useState<NotificationCategory>("all");
@@ -317,7 +324,7 @@ export default function NotificationsScreen() {
             style={[
               styles.tab,
               (activeFilter === "customer" || activeFilter === "instructor") &&
-                styles.activeTab,
+              styles.activeTab,
             ]}
             onPress={() =>
               setActiveFilter(
@@ -340,7 +347,7 @@ export default function NotificationsScreen() {
                   styles.tabText,
                   (activeFilter === "customer" ||
                     activeFilter === "instructor") &&
-                    styles.activeTabText,
+                  styles.activeTabText,
                 ]}
               >
                 {getFilterLabel()} ({stats.customer})

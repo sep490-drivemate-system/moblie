@@ -7,23 +7,10 @@ import {
   StatusBar,
   ScrollView,
   Alert,
-  Modal,
-  ActivityIndicator,
-  TextInput,
-  Keyboard,
-  TouchableWithoutFeedback,
-  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  Calendar,
-  Car,
-  Play,
-  Square,
-} from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { userPackagesData } from "@/data/user_packages_data";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import {
   getSessionRoutes,
@@ -38,8 +25,15 @@ import { ISessionRoutes } from "@/models/route/route";
 import { IBookingSession, SessionStatus, ISessionDetailResponse } from "@/models/booking/booking";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import { ROUTES } from "@/constants/routes";
+import HeaderList from "@/components/Commons/HeaderList";
+import SessionRouteList from "@/components/Session/SessionRouteList";
+import SessionMapView from "@/components/Session/SessionMapView";
+import SimulationControls from "@/components/Session/SimulationControls";
+import SessionActions from "@/components/Session/SessionActions";
+import RouteActions from "@/components/Session/RouteActions";
+import CancelSessionModal from "@/components/Session/CancelSessionModal";
 
-export default function MyDrivingSessionDetailScreen() {
+export default function DrivingSessionDetailScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const params = useLocalSearchParams();
@@ -71,12 +65,20 @@ export default function MyDrivingSessionDetailScreen() {
 
   // State for session detail from API
   const [sessionDetail, setSessionDetail] = useState<ISessionDetailResponse | null>(null);
-  const [isLoadingSessionDetail, setIsLoadingSessionDetail] = useState(false);
 
   // State for routes from API
   const [routesData, setRoutesData] = useState<ISessionRoutes[] | null>(null);
   const [isLoadingRoutes, setIsLoadingRoutes] = useState(false);
   const [routeSegments, setRouteSegments] = useState<any[]>([]);
+
+  // State for planning route points (clicked on map)
+  const [selectedRoutePoints, setSelectedRoutePoints] = useState<Array<{
+    id: string;
+    latitude: number;
+    longitude: number;
+    streetName?: string;
+    order: number;
+  }>>([]);
 
   // State for vehicle simulation
   const [isSimulating, setIsSimulating] = useState(false);
@@ -89,7 +91,7 @@ export default function MyDrivingSessionDetailScreen() {
   const [simulationProgress, setSimulationProgress] = useState(0);
   const simulationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const logIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
   const allRouteCoordinates = useRef<Array<{ latitude: number; longitude: number }>>([]);
 
   // Goong API Keys
@@ -361,10 +363,43 @@ export default function MyDrivingSessionDetailScreen() {
     }
   };
 
-  // Get street name from coordinates (mock - in production use reverse geocoding)
+  // Get street name from coordinates using Goong Geocoding API
   const getStreetName = async (lat: number, lng: number): Promise<string> => {
-    // Mock street names based on route data
-    return "Đường không xác định";
+    try {
+      if (!GOONG_API_KEY) {
+        return "Đường không xác định";
+      }
+      const url = `https://rsapi.goong.io/Geocode?latlng=${lat},${lng}&api_key=${GOONG_API_KEY}`;
+      const response = await fetch(url);
+      const json = await response.json();
+
+      if (json.status === "OK" && json.results && json.results.length > 0) {
+        const address = json.results[0].formatted_address || json.results[0].address_components?.[0]?.long_name;
+        return address || "Đường không xác định";
+      }
+      return "Đường không xác định";
+    } catch (error) {
+      console.error("Error getting street name:", error);
+      return "Đường không xác định";
+    }
+  };
+
+  // Handle map press to add route point (only for Planning status)
+  const handleMapPress = async (event: any) => {
+    if (!shouldShowMapForPlanning) return;
+
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    const streetName = await getStreetName(latitude, longitude);
+
+    const newPoint = {
+      id: `point-${Date.now()}`,
+      latitude,
+      longitude,
+      streetName,
+      order: selectedRoutePoints.length + 1,
+    };
+
+    setSelectedRoutePoints((prev) => [...prev, newPoint]);
   };
 
   // Send session log to API
@@ -435,13 +470,6 @@ export default function MyDrivingSessionDetailScreen() {
       Alert.alert("Lỗi", "Không có lộ trình để giả lập");
       return;
     }
-
-    console.log("🚗 Bắt đầu giả lập:", {
-      totalPoints: allCoordinates.length,
-      duration: "2 phút",
-      saveInterval: "15 giây"
-    });
-
     allRouteCoordinates.current = allCoordinates;
     setIsSimulating(true);
     setSimulationProgress(0);
@@ -571,50 +599,6 @@ export default function MyDrivingSessionDetailScreen() {
       stopSimulation();
     };
   }, []);
-
-  // Fetch routes from API
-  // useEffect(() => {
-  //   if (!shouldFetchRoutes || !sessionId || typeof sessionId !== "string") {
-  //     return;
-  //   }
-
-  //   const fetchRoutes = async () => {
-  //     try {
-  //       setIsLoadingRoutes(true);
-  //       console.log("🗺️ Fetching routes for session:", sessionId);
-
-  //       const result = await dispatch(getSessionRoutes({ sessionId })).unwrap();
-
-  //       // API trả về isSuccess, nhưng GenericResponse type định nghĩa success
-  //       // Cast để access cả 2 properties
-  //       const apiResult = result as any;
-  //       if ((apiResult.isSuccess || result.success) && result.value) {
-  //         setRoutesData(result.value);
-  //         console.log("✅ Routes loaded:", result.value);
-  //         console.log("📊 DEBUG - Routes data structure:", {
-  //           startLat: result.value.sessionStartingLat,
-  //           startLng: result.value.sessionStartingLong,
-  //           routesCount: result.value.routes.length,
-  //           firstRoute: result.value.routes[0]
-  //         });
-
-  //         // Fetch directions from Goong API
-  //         console.log("🚀 DEBUG - About to call fetchGoongDirections...");
-  //         await fetchGoongDirections(result.value);
-  //         console.log("✅ DEBUG - fetchGoongDirections completed");
-  //       } else {
-  //         console.warn("⚠️ DEBUG - API response not successful or no value:", result);
-  //       }
-  //     } catch (error) {
-  //       console.error("❌ Error fetching routes:", error);
-  //       Alert.alert("Lỗi", "Không thể tải thông tin lộ trình");
-  //     } finally {
-  //       setIsLoadingRoutes(false);
-  //     }
-  //   };
-
-  //   fetchRoutes();
-  // }, [sessionId, shouldFetchRoutes]);
 
 
   const [routeDecision, setRouteDecision] = useState<
@@ -1004,6 +988,15 @@ export default function MyDrivingSessionDetailScreen() {
   const hasValidStartCoords =
     typeof mapStartLat === "number" && typeof mapStartLong === "number";
 
+  // Check if should show map for Planning status (Instructor can view route)
+  const isPlanningStatus =
+    sessionDetail?.status === SessionStatus.Planning ||
+    session?.status === SessionStatus.Planning;
+  const shouldShowMapForPlanning =
+    hasValidStartCoords &&
+    role === UserRole.Instructor &&
+    isPlanningStatus;
+
   useEffect(() => {
     if (!sessionId || typeof sessionId !== "string") return;
 
@@ -1073,17 +1066,7 @@ export default function MyDrivingSessionDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chi tiết buổi tập lái</Text>
-        <View style={styles.headerRight} />
-      </View>
+      <HeaderList actionReturnScreen={ROUTES.MY_PACKAGES as any} title="Chi tiết buổi tập lái" />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {(sessionDetail || effectiveRoutesData) && (
@@ -1119,91 +1102,21 @@ export default function MyDrivingSessionDetailScreen() {
             )}
 
             {/* Route Points Section */}
-            <View style={styles.routePointsSection}>
-              {/* Starting Point */}
-              <View style={styles.routePoint}>
-                <View style={styles.pointHeader}>
-                  <View style={[styles.pointNumber, styles.pointNumberPrimary]}>
-                    <Text style={styles.pointNumberText}>1</Text>
-                  </View>
-                  <View style={styles.pointInfo}>
-                    <Text style={styles.pointAddress}>Điểm bắt đầu</Text>
-                    <Text style={styles.pointCoords}>
-                      {sessionDetail?.displayStartLocationName}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.routeLine} />
-              </View>
+            <SessionRouteList
+              routePoints={routePoints}
+              sessionDetail={sessionDetail}
+            />
 
-              {/* Route Points */}
-              {routePoints.map((point, index) => (
-                <View key={point.id} style={styles.routePoint}>
-                  <View style={styles.pointHeader}>
-                    <View style={styles.pointNumber}>
-                      <Text style={styles.pointNumberText}>{index + 2}</Text>
-                    </View>
-                    <View style={styles.pointInfo}>
-                      <Text style={styles.pointAddress}>{point.streetName}</Text>
-                    </View>
-                  </View>
-
-                  {index < routePoints.length - 1 && (
-                    <View style={styles.routeLine} />
-                  )}
-                </View>
-              ))}
-
-              {sessionDetail?.displayEndLocationName && (
-                <View style={styles.routePoint}>
-                  <View style={styles.pointHeader}>
-                    <View style={[styles.pointNumber, styles.pointNumberPrimary]}>
-                      <Text style={styles.pointNumberText}>
-                        {routePoints.length + 2}
-                      </Text>
-                    </View>
-                    <View style={styles.pointInfo}>
-                      <Text style={styles.pointAddress}>Điểm kết thúc</Text>
-                      <Text style={styles.pointCoords}>
-                        {sessionDetail?.displayEndLocationName}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-            </View>
-            <View style={styles.sessionManagementControls}>
-              <TouchableOpacity
-                style={styles.rescheduleMapButton}
-                onPress={() => {
-                  router.push({
-                    pathname: ROUTES.RESCHEDULE_SESSION as any,
-                    params: {
-                      sessionId: sessionId,
-                      instructorName: displaySession?.instructorName || "",
-                      date: displaySession?.date || "",
-                      startTime: displaySession?.startTime || "",
-                      duration: Number(displaySession?.duration) || 2,
-                      location: displaySession?.location || "",
-                    },
-                  });
-                }}
-              >
-                <Calendar size={18} color="#fff" strokeWidth={2} />
-                <Text style={styles.rescheduleMapButtonText}>Đổi lịch</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.cancelMapButton}
-                onPress={() => {
-                  setCancelNote("");
-                  setSelectedReasons([]);
-                  setShowCancelModal(true);
-                }}
-              >
-                <Text style={styles.cancelMapButtonText}>Hủy buổi tập</Text>
-              </TouchableOpacity>
-            </View>
+            {/* Session Actions */}
+            <SessionActions
+              sessionId={sessionId}
+              displaySession={displaySession}
+              onCancelPress={() => {
+                setCancelNote("");
+                setSelectedReasons([]);
+                setShowCancelModal(true);
+              }}
+            />
 
             {/* Actions */}
 
@@ -1211,196 +1124,105 @@ export default function MyDrivingSessionDetailScreen() {
         )}
 
         {/* Map Section - Display independently when coordinates are available */}
-        {hasValidStartCoords && (
+        {/* Show map for: 1) Valid coords, or 2) Instructor with Planning status */}
+        {(hasValidStartCoords || shouldShowMapForPlanning) && (
           <View style={styles.routeCard}>
             <Text style={styles.mapTitle}>Bản đồ lộ trình</Text>
+
+            {/* Planning Status Badge for Instructor */}
+            {shouldShowMapForPlanning && (
+              <View style={[styles.statusBadge, { backgroundColor: "#fef3c7", marginBottom: 12 }]}>
+                <Text style={[styles.statusText, { color: "#d97706" }]}>
+                  Trạng thái: Đang lên kế hoạch - Nhấn vào bản đồ để thêm các điểm lộ trình
+                </Text>
+              </View>
+            )}
 
             {/* Simulation Controls - Show if route exists, user is instructor, and session is upcoming */}
             {effectiveRouteSegments.length > 0 &&
               role === UserRole.Instructor &&
               (sessionDetail?.status === SessionStatus.Upcoming || session?.status === SessionStatus.Upcoming) && (
-                <View style={styles.simulationControls}>
-                  <TouchableOpacity
-                    style={[
-                      styles.simulationButton,
-                      isSimulating ? styles.stopButton : styles.startButton,
-                    ]}
-                    onPress={isSimulating ? stopSimulation : startSimulation}
-                  >
-                    {isSimulating ? (
-                      <Square size={20} color="#fff" strokeWidth={2} />
-                    ) : (
-                      <Play size={20} color="#fff" strokeWidth={2} />
-                    )}
-                    <Text style={styles.simulationButtonText}>
-                      {isSimulating ? "Dừng giả lập" : "Bắt đầu giả lập"}
-                    </Text>
-                  </TouchableOpacity>
-
-                  {isSimulating && (
-                    <View style={styles.simulationInfo}>
-                      <Text style={styles.simulationInfoText}>
-                        Tiến độ: {simulationProgress.toFixed(1)}%
-                      </Text>
-                      {currentPosition && (
-                        <>
-                          <Text style={styles.simulationInfoText}>
-                            Tốc độ: {currentPosition.speed.toFixed(1)} km/h
-                          </Text>
-                          <Text style={styles.simulationInfoText}>
-                            Hướng: {currentPosition.heading.toFixed(0)}°
-                          </Text>
-                        </>
-                      )}
-                    </View>
-                  )}
-                </View>
+                <SimulationControls
+                  isSimulating={isSimulating}
+                  simulationProgress={simulationProgress}
+                  currentPosition={currentPosition}
+                  onStart={startSimulation}
+                  onStop={stopSimulation}
+                />
               )}
 
-            <View style={styles.mapContainer}>
-              <MapView
-                ref={mapRef}
-                provider={PROVIDER_GOOGLE}
-                style={styles.map}
-                initialRegion={{
-                  latitude: mapStartLat!,
-                  longitude: mapStartLong!,
-                  latitudeDelta: 0.05,
-                  longitudeDelta: 0.05,
-                }}
-                showsUserLocation={false}
-                showsMyLocationButton={false}
-                mapType="standard"
-              >
-                {/* Starting Point Marker */}
-                <Marker
-                  coordinate={{
-                    latitude: mapStartLat!,
-                    longitude: mapStartLong!,
-                  }}
-                  title="Điểm bắt đầu"
-                  pinColor="green"
-                />
+            {/* Map View */}
+            <SessionMapView
+              startLat={mapStartLat!}
+              startLong={mapStartLong!}
+              endLat={dropoffDetails.lat}
+              endLong={dropoffDetails.long}
+              routePoints={routePoints}
+              routeSegments={effectiveRouteSegments}
+              currentPosition={currentPosition}
+              isSimulating={isSimulating}
+              mapRef={mapRef}
+              onMapPress={handleMapPress}
+              selectedRoutePoints={selectedRoutePoints}
+              enableMapPress={shouldShowMapForPlanning}
+            />
 
-                {/* Route Points Markers */}
-                {routePoints.map((point, index) => {
-                  const markerLat = parseCoordinateValue(point.latitudeStart as any);
-                  const markerLong = parseCoordinateValue(point.longitudeStart as any);
-                  if (markerLat === null || markerLong === null) {
-                    return null;
-                  }
-                  return (
-                    <Marker
-                      key={point.id}
-                      coordinate={{
-                        latitude: markerLat,
-                        longitude: markerLong,
-                      }}
-                      title={`Điểm ${index + 2}`}
-                      description={point.streetName}
-                      pinColor={
-                        index === routePoints.length - 1 ? "red" : "blue"
-                      }
-                    />
-                  );
-                })}
-
-                {/* Dropoff Point Marker if available */}
-                {dropoffDetails.lat !== undefined && dropoffDetails.long !== undefined && (
-                  <Marker
-                    coordinate={{
-                      latitude: dropoffDetails.lat,
-                      longitude: dropoffDetails.long,
-                    }}
-                    title="Điểm trả"
-                    pinColor="red"
-                  />
-                )}
-
-                {effectiveRouteSegments.map((segment, index) => (
-                  <Polyline
-                    key={`segment-${index}`}
-                    coordinates={segment.coordinates}
-                    strokeColor="#3b82f6"
-                    strokeWidth={4}
-                  />
-                ))}
-
-                {/* Simulated Vehicle Marker */}
-                {currentPosition && isSimulating && (
-                  <Marker
-                    coordinate={{
-                      latitude: currentPosition.latitude,
-                      longitude: currentPosition.longitude,
-                    }}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                    flat={true}
-                    rotation={currentPosition.heading}
-                  >
-                    <View style={styles.vehicleMarker}>
-                      <Car size={24} color="#fff" strokeWidth={2.5} />
+            {/* Selected Route Points List (Planning mode) */}
+            {shouldShowMapForPlanning && selectedRoutePoints.length > 0 && (
+              <View style={styles.selectedPointsContainer}>
+                <Text style={styles.selectedPointsTitle}>
+                  Các điểm đã chọn ({selectedRoutePoints.length})
+                </Text>
+                {selectedRoutePoints.map((point, index) => (
+                  <View key={point.id} style={styles.selectedPointItem}>
+                    <View style={styles.selectedPointNumber}>
+                      <Text style={styles.selectedPointNumberText}>
+                        {point.order}
+                      </Text>
                     </View>
-                  </Marker>
-                )}
-              </MapView>
-            </View>
-
-            {/* Route Info */}
-            {effectiveRouteSegments.length > 0 && (
-              <View style={styles.routeInfoContainer}>
-                <Text style={styles.routeInfoTitle}>Thông tin lộ trình:</Text>
-                {effectiveRouteSegments.map((segment, index) => (
-                  <Text key={index} style={styles.routeInfoText}>
-                    • Đoạn {index + 1}: {segment.distance} - {segment.duration}
-                  </Text>
+                    <View style={styles.selectedPointInfo}>
+                      <Text style={styles.selectedPointAddress}>
+                        {point.streetName || "Đường không xác định"}
+                      </Text>
+                      <Text style={styles.selectedPointCoords}>
+                        {point.latitude.toFixed(6)}, {point.longitude.toFixed(6)}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.removePointButton}
+                      onPress={() => {
+                        setSelectedRoutePoints((prev) =>
+                          prev.filter((p) => p.id !== point.id).map((p, idx) => ({
+                            ...p,
+                            order: idx + 1,
+                          }))
+                        );
+                      }}
+                    >
+                      <Text style={styles.removePointButtonText}>×</Text>
+                    </TouchableOpacity>
+                  </View>
                 ))}
+                <TouchableOpacity
+                  style={styles.clearAllButton}
+                  onPress={() => setSelectedRoutePoints([])}
+                >
+                  <Text style={styles.clearAllButtonText}>Xóa tất cả</Text>
+                </TouchableOpacity>
               </View>
             )}
-            {/* Only show route action buttons if routes exist from API */}
-            {routesData && role === UserRole.NoviceDriver && routesData.length > 0 && (
-              <View style={styles.routeActions}>
-                <TouchableOpacity
-                  style={styles.rejectButton}
-                  onPress={() => {
-                    Alert.alert(
-                      "Từ chối lộ trình",
-                      "Bạn không đồng ý với lộ trình đề xuất này?",
-                      [
-                        { text: "Hủy", style: "cancel" },
-                        {
-                          text: "Từ chối",
-                          style: "destructive",
-                          onPress: () => setRouteDecision("rejected"),
-                        },
-                      ]
-                    );
-                  }}
-                >
-                  <Text style={styles.rejectButtonText}>Không đồng ý</Text>
-                </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.acceptButton}
-                  onPress={() => {
-                    Alert.alert(
-                      "Xác nhận lộ trình",
-                      "Bạn đồng ý với lộ trình mà người hướng dẫn đưa ra?",
-                      [
-                        { text: "Hủy", style: "cancel" },
-                        {
-                          text: "Đồng ý",
-                          onPress: async () => {
-                            setRouteDecision("accepted");
-                            //  await handelUpdate(sessionId);
-                          },
-                        },
-                      ]
-                    );
-                  }}
-                >
-                  <Text style={styles.acceptButtonText}>Đồng ý lộ trình</Text>
-                </TouchableOpacity>
-              </View>
+            {/* Route Actions - Only show for Novice Driver */}
+            {routesData && role === UserRole.NoviceDriver && routesData.length > 0 && (
+              <RouteActions
+                onAccept={() => {
+                  setRouteDecision("accepted");
+                  // await handelUpdate(sessionId);
+                }}
+                onReject={() => {
+                  setRouteDecision("rejected");
+                }}
+              />
             )}
           </View>
         )}
@@ -1409,130 +1231,22 @@ export default function MyDrivingSessionDetailScreen() {
       </ScrollView>
 
       {/* Cancel confirmation modal */}
-      <Modal
+      <CancelSessionModal
         visible={showCancelModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => {
-          Keyboard.dismiss();
+        cancelNote={cancelNote}
+        selectedReasons={selectedReasons}
+        isCancelling={isCancelling}
+        canCancel={canCancelNow()}
+        cancellationReasons={cancellationReasons}
+        onClose={() => {
           setShowCancelModal(false);
           setCancelNote("");
           setSelectedReasons([]);
         }}
-      >
-        <TouchableWithoutFeedback onPress={() => {
-          Keyboard.dismiss();
-        }}>
-          <View style={styles.modalBackdrop}>
-            <TouchableWithoutFeedback onPress={() => { }}>
-              <View style={styles.modalCard}>
-                <Text style={styles.modalTitle}>Xác nhận hủy buổi tập</Text>
-
-                {/* <View style={styles.modalRow}>
-              <Text style={styles.modalLabel}>Ngày giờ đặt lịch</Text>
-              <Text style={styles.modalValue}>
-                {new Date(displaySession.date).toLocaleDateString("vi-VN")}{" "}
-                {displaySession.startTime} - {displaySession.endTime}
-              </Text>
-            </View> */}
-
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Thời điểm hủy</Text>
-                  <Text style={styles.modalValue}>
-                    {new Date().toLocaleString("vi-VN")}
-                  </Text>
-                </View>
-
-                {canCancelNow() ? (
-                  <View
-                    style={[styles.noticeBadge, { backgroundColor: "#dcfce7" }]}
-                  >
-                    <Text style={[styles.noticeText, { color: "#16a34a" }]}>
-                      Có thể hủy: Trước ít nhất 12 giờ.
-                    </Text>
-                  </View>
-                ) : (
-                  <View
-                    style={[styles.noticeBadge, { backgroundColor: "#fee2e2" }]}
-                  >
-                    <Text style={[styles.noticeText, { color: "#dc2626" }]}>
-                      Không thể hủy: Còn dưới 12 giờ trước giờ bắt đầu.
-                    </Text>
-                  </View>
-                )}
-
-                <Text style={styles.modalSectionTitle}>Lý do hủy lịch</Text>
-
-                <View style={styles.reasonList}>
-                  {cancellationReasons.map((reason) => {
-                    const selected = selectedReasons.includes(reason);
-                    return (
-                      <TouchableOpacity
-                        key={reason}
-                        style={styles.reasonRow}
-                        onPress={() => toggleReason(reason)}
-                        activeOpacity={0.8}
-                      >
-                        <View
-                          style={[
-                            styles.checkbox,
-                            selected && styles.checkboxSelected,
-                          ]}
-                        >
-                          {selected ? (
-                            <Text style={styles.checkboxTick}>✓</Text>
-                          ) : null}
-                        </View>
-                        <Text style={styles.reasonText}>{reason}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                <Text style={styles.modalSectionTitle}>Ghi chú chi tiết</Text>
-                <TextInput
-                  style={styles.noteInput}
-                  placeholder="Nhập lý do chi tiết để hủy buổi tập lái..."
-                  placeholderTextColor="#9ca3af"
-                  value={cancelNote}
-                  onChangeText={setCancelNote}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-
-                <View style={styles.modalActions}>
-                  <TouchableOpacity
-                    style={styles.modalCancelBtn}
-                    onPress={() => {
-                      setShowCancelModal(false);
-                      setCancelNote("");
-                      setSelectedReasons([]);
-                    }}
-                  >
-                    <Text style={styles.modalCancelBtnText}>Đóng</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.modalConfirmBtn,
-                      (!cancelNote.trim() || isCancelling) && { opacity: 0.5 },
-                    ]}
-                    disabled={!cancelNote.trim() || isCancelling}
-                    onPress={handleCancelSession}
-                  >
-                    {isCancelling ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Text style={styles.modalConfirmBtnText}>Xác nhận hủy</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+        onNoteChange={setCancelNote}
+        onToggleReason={toggleReason}
+        onConfirm={handleCancelSession}
+      />
     </View>
   );
 }
@@ -2233,6 +1947,86 @@ const styles = StyleSheet.create({
   },
   cancelMapButtonText: {
     color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  // Selected Route Points (Planning mode)
+  selectedPointsContainer: {
+    marginTop: 16,
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  selectedPointsTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 12,
+  },
+  selectedPointItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: AppColors.white,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  selectedPointNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f59e0b",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  selectedPointNumberText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: AppColors.white,
+  },
+  selectedPointInfo: {
+    flex: 1,
+  },
+  selectedPointAddress: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 4,
+  },
+  selectedPointCoords: {
+    fontSize: 12,
+    color: "#64748b",
+  },
+  removePointButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#ef4444",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
+  },
+  removePointButtonText: {
+    color: AppColors.white,
+    fontSize: 18,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  clearAllButton: {
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: "#ef4444",
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  clearAllButtonText: {
+    color: AppColors.white,
     fontSize: 14,
     fontWeight: "700",
   },
