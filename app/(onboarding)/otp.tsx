@@ -1,4 +1,4 @@
-import { RootState } from "@/lib/redux/store";
+
 import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -7,19 +7,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
+  StyleSheet, 
   TouchableOpacity,
   TextInput,
   SafeAreaView,
   StatusBar,
-  Modal,
-  InteractionManager,
+  Modal,  
   Keyboard,
 } from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ArrowLeft } from "lucide-react-native";
-import { useAppSelector } from "@/lib/redux/hooks";
 import { RootState } from "@/lib/redux/store";
 
 const maskEmail = (email: string): string => {
@@ -115,10 +110,6 @@ export default function OTPScreen() {
       newOtp[index] = numericValue.slice(-1); // Chỉ lấy ký tự cuối cùng
       setOtp(newOtp);
 
-      if (otpError) {
-        setOtpError("");
-      }
-
       // Focus vào ô tiếp theo nếu có giá trị và chưa phải ô cuối
       if (index < 5) {
         setTimeout(() => {
@@ -178,7 +169,6 @@ export default function OTPScreen() {
     );
 
     if (enteredOtpString.length !== 6) {
-      setOtpError("Vui lòng nhập đầy đủ 6 chữ số");
       return;
     }
 
@@ -203,13 +193,6 @@ export default function OTPScreen() {
       console.log("✅ OTP verification successful");
       router.push("/(onboarding)/role-selection");
     } else {
-      setOtpError("Mã OTP không đúng. Vui lòng thử lại.");
-      // Clear OTP inputs
-      setOtp(["", "", "", "", "", ""]);
-      // Focus first input
-      setTimeout(() => {
-        inputRefs.current[0]?.focus();
-      }, 100);
     }
   };
 
@@ -218,27 +201,17 @@ export default function OTPScreen() {
   };
 
   const handleResendOTP = async () => {
-    if (canResend && !isResending) {
-      setCanResend(false);
-      setIsResending(true);
-
       try {
         // Call handleRegister again to resend OTP
         await authViewModel.handleRegister();
 
         setOtp(["", "", "", "", "", ""]);
-        setOtpError("");
         // Auto focus first input after resend
         setTimeout(() => {
           inputRefs.current[0]?.focus();
         }, 100);
       } catch (error) {
-      } finally {
-        setIsResending(false);
-        // Re-enable resend after 60 seconds
-        setTimeout(() => setCanResend(true), 60000);
       }
-    }
   };
 
   const handleBack = () => {
