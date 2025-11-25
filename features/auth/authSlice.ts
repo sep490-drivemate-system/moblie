@@ -1,9 +1,9 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { UserRole } from "@/models/enum/UserRole.enum";
-import { signIn, verify } from "./authThunk";
+import { signIn, signUp, verify } from "./authThunk";
 import { BaseState } from "@/models/generic/baseState";
 import { ISignInRequest } from "@/models/auth/signin";
-import { ISignUpRequest } from "@/models/auth/signup";
+import { IRegisterInstructorRequest, ISignUpRequest } from "@/models/auth/signup";
 import { IForgotPasswordRequest } from "@/models/auth/forgotPassword";
 
 interface RegisterFormErrors {
@@ -23,6 +23,7 @@ interface AuthState extends BaseState {
   registerFormData: ISignUpRequest;
   registerFormErrors: RegisterFormErrors;
   forgotPasswordFormData: IForgotPasswordRequest;
+  registerInstructorFormData: IRegisterInstructorRequest;
   // OTP Verification State
   otpVerification: {
     sentOtp: string | null;
@@ -60,6 +61,23 @@ const initialState: AuthState = {
     enteredOtp: "",
   },
 
+  registerInstructorFormData: {
+    FullName: "",
+    RawPassword: "",
+    Email: "",
+    PhoneNumber: "",
+    Avatar: null,
+    BirthDate: "",
+    Gender: "",
+    DrivingLicenseFront: null,
+    DrivingLicenseBack: null,
+    DrivingLicenseTier: "",
+    TeachingLicenseFront: null,
+    TeachingTier: "",
+    HealthCheckup: null,
+    PersonalProfile: null,
+  },
+
   isLoading: false,
   errorMessage: null,
   isSuccess: false,
@@ -86,7 +104,10 @@ const authSlice = createSlice({
 
     updateRegisterFormData: (
       state,
-      action: PayloadAction<{ field: keyof ISignUpRequest; value: string | boolean }>
+      action: PayloadAction<{
+        field: keyof ISignUpRequest;
+        value: string | boolean;
+      }>
     ) => {
       const { field, value } = action.payload;
       if (field === "acceptTerms") {
@@ -98,7 +119,10 @@ const authSlice = createSlice({
 
     setRegisterFormError: (
       state,
-      action: PayloadAction<{ field: keyof RegisterFormErrors; error: string | undefined }>
+      action: PayloadAction<{
+        field: keyof RegisterFormErrors;
+        error: string | undefined;
+      }>
     ) => {
       const { field, error } = action.payload;
       if (error) {
@@ -184,6 +208,35 @@ const authSlice = createSlice({
         enteredOtp: "",
       };
     },
+
+    updateRegisterInstructorFormData: (
+      state,
+      action: PayloadAction<{
+        field: keyof IRegisterInstructorRequest;
+        value: any;
+      }>
+    ) => {
+      const { field, value } = action.payload;
+      state.registerInstructorFormData[field] = value as any;
+    },
+    resetRegisterInstructorForm: (state) => {
+      state.registerInstructorFormData = {
+        FullName: "",
+        RawPassword: "",
+        Email: "",
+        PhoneNumber: "",
+        Avatar: null,
+        BirthDate: "",
+        Gender: "",
+        DrivingLicenseFront: null,
+        DrivingLicenseBack: null,
+        DrivingLicenseTier: "",
+        TeachingLicenseFront: null,
+        TeachingTier: "",
+        HealthCheckup: null,
+        PersonalProfile: null,
+      };
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -197,15 +250,28 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isSuccess = true;
       })
+      .addCase(signUp.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = false;
+        state.errorMessage = action.payload as string || null;
+      })
       .addCase(signIn.rejected, (state, action) => {
         state.isLoading = false;
         state.isSuccess = false;
         state.errorMessage = action.payload || null;
       })
+      .addCase(verify.pending, (state) => {
+        state.isLoading = true;
+        state.errorMessage = null;
+      })
+      .addCase(verify.fulfilled, (state) => {
+        state.isLoading = false;
+        state.errorMessage = null;
+      })
       .addCase(verify.rejected, (state, action) => {
         state.isLoading = false;
-        state.isSuccess = false;
-        state.errorMessage = action.payload || null;
+        // rejectWithValue trả về string message
+        state.errorMessage = (action.payload as string) || null;
       });
   },
 });
@@ -230,6 +296,8 @@ export const {
   setSentOtp,
   setEnteredOtp,
   resetOtpVerification,
+  updateRegisterInstructorFormData,
+  resetRegisterInstructorForm,
 } = authSlice.actions;
 
 export default authSlice.reducer;

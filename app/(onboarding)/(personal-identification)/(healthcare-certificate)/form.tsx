@@ -1,30 +1,29 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  Image,
-  TextInput,
-  ScrollView,
-} from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  ArrowLeft,
-  MoreVertical,
-  Edit2Icon,
-  Trash2,
-} from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
+import { RootState } from "@/lib/redux/store";
+import { convertImageFile } from "@/utils/utils";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useRouter } from "expo-router";
+import { Edit2Icon, Trash2 } from "lucide-react-native";
+import React, { useEffect, useState } from "react";
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function FormScreen() {
+  const [authState, authViewModel] = useViewModel(
+    AuthViewModel,
+    (state: RootState) => state.auth
+  );
   const router = useRouter();
-  const [imageUri, setImageUri] = useState<string | null>(null);
   const [tempImageUri, setTempImageUri] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
@@ -35,11 +34,6 @@ export default function FormScreen() {
       onPress: () => void;
       style?: "default" | "cancel" | "destructive";
     }>,
-  });
-
-  // Form data
-  const [formData, setFormData] = useState({
-    issueDate: "",
   });
 
   useEffect(() => {
@@ -54,24 +48,16 @@ export default function FormScreen() {
 
   const loadUserData = async () => {
     try {
-      const savedImage = await AsyncStorage.getItem("healthcare_certificate");
-      const savedFormData = await AsyncStorage.getItem(
-        "healthcare_certificate_data"
-      );
-
-      if (savedImage) {
-        setImageUri(savedImage);
-      }
-      if (savedFormData) {
-        setFormData(JSON.parse(savedFormData));
-      }
-
       // Load temp image if exists
       const tempImage = await AsyncStorage.getItem(
         "temp_healthcare_certificate"
       );
       if (tempImage) {
         setTempImageUri(tempImage);
+        authViewModel.updateRegisterInstructorFormData(
+          "HealthCheckup",
+          convertImageFile(tempImage)
+        );
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -83,17 +69,12 @@ export default function FormScreen() {
   };
 
   const handleImagePress = () => {
-    if (tempImageUri || imageUri) {
+    if (tempImageUri) {
       setShowDeleteMode(true);
     }
   };
 
   const handleImageUpload = () => {
-    // Reset saved state when user changes image
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
     router.push(
       `/(onboarding)/(personal-identification)/(healthcare-certificate)/upload-guide`
     );
@@ -133,98 +114,27 @@ export default function FormScreen() {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    // Reset saved state when user changes data
-    if (isSaved) {
-      setIsSaved(false);
-    }
-
-    // Apply date formatting for date fields
-    if (field === "issueDate") {
-      const formattedValue = formatDateInput(value);
-      setFormData((prev) => ({
-        ...prev,
-        [field]: formattedValue,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-    }
-  };
-
-  // Check if all fields are filled
-  const isFormComplete = () => {
-    return (tempImageUri || imageUri) && formData.issueDate.trim() !== "";
-  };
-
-  const handleSave = async () => {
-    // Validation
-    if (!tempImageUri && !imageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên giấy khám sức khỏe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.issueDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    try {
-      const currentImage = tempImageUri || imageUri;
-
-      await AsyncStorage.setItem("healthcare_certificate", currentImage!);
-      await AsyncStorage.setItem(
-        "healthcare_certificate_data",
-        JSON.stringify(formData)
-      );
-
-      setImageUri(currentImage);
-      setTempImageUri(null);
-      await AsyncStorage.removeItem("temp_healthcare_certificate");
-      setIsSaved(true);
-
-      showCustomAlert(
-        "Thành công",
-        "Thông tin giấy khám sức khỏe đã được lưu",
-        [
-          {
-            text: "OK",
-            onPress: () => setShowAlert(false),
-          },
-        ]
-      );
-    } catch (error) {
-      showCustomAlert("Lỗi", "Không thể lưu thông tin giấy khám sức khỏe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-    }
-  };
-
   // BYPASS: Temporary function to skip healthcare certificate validation
-  const handleNextBypass = () => {
+  const handleNextBypass = async () => {
     console.log("Bypassing healthcare certificate form validation");
     // Navigate to next step in onboarding flow
-    router.push("/(onboarding)/emergency-contact");
+    // router.push("/(onboarding)/emergency-contact");
+    await authViewModel.submitRegisterInstructor();
+    if (authState.isSuccess) {
+      router.push("/(onboarding)/waiting-confirm");
+    } else {
+      showCustomAlert("Lỗi", authState.errorMessage || "Không thể tiếp tục", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
+    }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     // Validation for image
-    if (!tempImageUri && !imageUri) {
+    if (!tempImageUri) {
       showCustomAlert(
         "Lỗi",
         "Vui lòng tải lên giấy khám sức khỏe trước khi tiếp tục",
@@ -238,19 +148,34 @@ export default function FormScreen() {
       return;
     }
 
-    // Validation for form data
-    if (!formData.issueDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp trước khi tiếp tục", [
+    // List all values in registerInstructorFormData
+    const formData = authState.registerInstructorFormData;
+    console.log("📋 Register Instructor Form Data:");
+    console.log("=====================================");
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value instanceof File || (value && typeof value === 'object' && value.uri)) {
+        console.log(`${key}: [File] ${value.name || value.uri || 'N/A'}`);
+      } else if (value === null || value === undefined) {
+        console.log(`${key}: null/undefined`);
+      } else {
+        console.log(`${key}: ${value}`);
+      }
+    });
+    console.log("=====================================");
+
+    // All validations passed, navigate to next page
+    // router.push("/(onboarding)/emergency-contact");
+    await authViewModel.submitRegisterInstructor();
+    if (authState.isSuccess) {
+      router.push("/(onboarding)/waiting-confirm");
+    } else {
+      showCustomAlert("Lỗi", authState.errorMessage || "Không thể tiếp tục", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
         },
       ]);
-      return;
     }
-
-    // All validations passed, navigate to next page
-    router.push("/(onboarding)/emergency-contact");
   };
 
   // Auto exit delete mode after 3 seconds
@@ -281,15 +206,12 @@ export default function FormScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              // Reset saved state when user deletes image
-              if (isSaved) {
-                setIsSaved(false);
-              }
-
               setTempImageUri(null);
-              setImageUri(null);
+              authViewModel.updateRegisterInstructorFormData(
+                "HealthCheckup",
+                null
+              );
               await AsyncStorage.removeItem("temp_healthcare_certificate");
-              await AsyncStorage.removeItem("healthcare_certificate");
               setShowDeleteMode(false);
               setShowAlert(false);
 
@@ -347,13 +269,13 @@ export default function FormScreen() {
                 Giấy khám sức khỏe <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.imageUploadArea}>
-                {tempImageUri || imageUri ? (
+                {tempImageUri ? (
                   <TouchableOpacity
                     style={styles.imageWrapper}
                     onPress={() => handleImagePress()}
                   >
                     <Image
-                      source={{ uri: (tempImageUri || imageUri)! }}
+                      source={{ uri: tempImageUri! }}
                       style={[
                         styles.uploadedImage,
                         showDeleteMode && styles.dimmedImage,
@@ -393,7 +315,7 @@ export default function FormScreen() {
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNextBypass}>
+            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>
@@ -415,7 +337,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    paddingTop: StatusBar.currentHeight,
   },
   scrollView: {
     flex: 1,

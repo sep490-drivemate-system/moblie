@@ -4,7 +4,7 @@ export interface ServiceError {
 }
 
 export interface GenericResponse<T> {
-    success: boolean;
+    isSuccess: boolean;
     message: string;
     errorCode?: string | null;
     value?: T;

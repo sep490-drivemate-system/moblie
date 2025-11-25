@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,9 @@ import {
   ChevronUp,
   MoreVertical,
 } from "lucide-react-native";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { RootState } from "@/lib/redux/store";
 
 interface Role {
   id: string;
@@ -36,6 +39,10 @@ const roles: Role[] = [
 
 export default function RoleSelectionScreen() {
   const router = useRouter();
+  const [authState, authViewModel] = useViewModel(
+    AuthViewModel,
+    (state: RootState) => state.auth
+  );
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -44,6 +51,10 @@ export default function RoleSelectionScreen() {
     message: "",
     onConfirm: () => {},
   });
+
+  useEffect(() => {
+    authViewModel.setRouter(router);
+  }, [authViewModel, router]);
 
   const handleRoleSelect = (role: Role) => {
     setSelectedRole(role);
@@ -81,6 +92,23 @@ export default function RoleSelectionScreen() {
         await AsyncStorage.setItem("onboarding_completed", "true");
         router.replace("/(main)/(tabs)/home");
       } else if (selectedRole.id === "instructor") {
+        const registerFormData = authState.registerFormData;
+        authViewModel.updateRegisterInstructorFormData(
+          "FullName",
+          registerFormData.fullname
+        );
+        authViewModel.updateRegisterInstructorFormData(
+          "RawPassword",
+          registerFormData.password
+        );
+        authViewModel.updateRegisterInstructorFormData(
+          "PhoneNumber",
+          registerFormData.phone
+        );
+        authViewModel.updateRegisterInstructorFormData(
+          "Email",
+          registerFormData.email
+        );
         // Instructor goes to quiz
         router.push("/(onboarding)/(quiz)/quiz-1");
       }

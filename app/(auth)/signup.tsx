@@ -14,23 +14,136 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
+import CustomAlert from "@/components/CustomAlert";
+import { ActivityIndicator } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const [_, authViewModel] = useViewModel(
+  const [authState, authViewModel] = useViewModel(
     AuthViewModel,
     (state: RootState) => state.auth
   );
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
 
   // Set router to ViewModel for navigation
   useEffect(() => {
     authViewModel.setRouter(router);
   }, [router, authViewModel]);
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // Hiển thị modal lỗi khi có errorMessage
+  useEffect(() => {
+    if (authState.errorMessage) {
+      setShowErrorAlert(true);
+      console.log("authState.errorMessage", authState.errorMessage);
+    }
+  }, [authState.errorMessage]);
+
+  useEffect(() => {
+    const resetOnboardingData = async () => {
+      try {
+        // Danh sách tất cả các keys cần xóa trong quá trình onboarding
+        const keysToRemove = [
+          // Role và onboarding status
+          "user_role",
+          "onboarding_completed",
+          "quiz_completed",
+          "car_added",
+          "otp_verified",
+
+          // Form data
+          "terms_and_conditions_data",
+          "emergency_contact_data",
+          "commitment_data",
+
+          // Personal Identification - Avatar
+          "temp_user_avatar",
+          "user_avatar",
+
+          // Personal Identification - ID Card
+          "temp_id_front",
+          "temp_id_back",
+          "id_front",
+          "id_back",
+          "id_card_data",
+
+          // Personal Identification - License
+          "temp_license_front",
+          "temp_license_back",
+          "license_front",
+          "license_back",
+          "license_data",
+
+          // Personal Identification - Professional License/Certificate
+          "temp_certificate",
+          "certificate",
+          "certificate_data",
+
+          // Personal Identification - Healthcare Certificate
+          "temp_healthcare_certificate",
+          "healthcare_certificate",
+          "healthcare_certificate_data",
+
+          // Personal Identification - Criminal Record
+          "temp_criminal_record",
+          "criminal_record",
+          "criminal_record_data",
+
+          // Car - Registration
+          "temp_car_registration_front",
+          "temp_car_registration_back",
+          "car_registration_front",
+          "car_registration_back",
+          "car_registration_data",
+
+          // Car - Insurance
+          "temp_car_insurance_front",
+          "temp_car_insurance_back",
+          "car_insurance_front",
+          "car_insurance_back",
+          "car_insurance_data",
+
+          // Car - Inspection Certificate
+          "temp_car_inspection_certificate_front",
+          "temp_car_inspection_certificate_back",
+          "car_inspection_certificate_front",
+          "car_inspection_certificate_back",
+          "car_inspection_certificate_data",
+
+          // Car - Verification Images
+          "temp_car_verification_front",
+          "temp_car_verification_back",
+          "temp_car_verification_side",
+          "temp_car_verification_interior",
+        ];
+
+        // Xóa tất cả các keys
+        await Promise.all(
+          keysToRemove.map((key) => AsyncStorage.removeItem(key))
+        );
+
+        console.log("Onboarding data has been reset successfully");
+      } catch (error) {
+        console.error("Error resetting onboarding data:", error);
+      }
+    };
+
+    resetOnboardingData();
+  }, []);
+
+  if (authState.isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#70E000" />
+        <Text style={styles.loadingText}>Đang xử lý...</Text>
+      </View>
+    );
+  }
 
   return (
     <>
@@ -91,10 +204,9 @@ export default function SignUpScreen() {
                 <TextInput
                   style={[
                     styles.input,
-                    authViewModel.getRegisterFormErrors().email &&
-                    styles.inputError,
+                    authState.registerFormErrors.email && styles.inputError,
                   ]}
-                  value={authViewModel.getRegisterFormData().email}
+                  value={authState.registerFormData.email}
                   onChangeText={(value) =>
                     authViewModel.updateRegisterFormData("email", value)
                   }
@@ -103,9 +215,9 @@ export default function SignUpScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-                {authViewModel.getRegisterFormErrors().email && (
+                {authState.registerFormErrors.email && (
                   <Text style={styles.errorText}>
-                    {authViewModel.getRegisterFormErrors().email}
+                    {authState.registerFormErrors.email}
                   </Text>
                 )}
               </View>
@@ -117,10 +229,10 @@ export default function SignUpScreen() {
                   <TextInput
                     style={[
                       styles.passwordInput,
-                      authViewModel.getRegisterFormErrors().password &&
-                      styles.inputError,
+                      authState.registerFormErrors.password &&
+                        styles.inputError,
                     ]}
-                    value={authViewModel.getRegisterFormData().password}
+                    value={authState.registerFormData.password}
                     onChangeText={(value) =>
                       authViewModel.updateRegisterFormData("password", value)
                     }
@@ -139,7 +251,7 @@ export default function SignUpScreen() {
                     )}
                   </TouchableOpacity>
                 </View>
-                {authViewModel.getRegisterFormErrors().password && (
+                {authState.registerFormErrors.password && (
                   <View style={styles.errorContainer}>
                     {authViewModel
                       .getRegisterFormErrors()
@@ -265,7 +377,7 @@ export default function SignUpScreen() {
                   !authViewModel.isRegisterFormValid() &&
                   styles.primaryButtonDisabled,
                 ]}
-                onPress={() => authViewModel.handleRegister()}
+                onPress={authViewModel.handleRegister}
                 disabled={!authViewModel.isRegisterFormValid()}
               >
                 <Text
@@ -282,6 +394,23 @@ export default function SignUpScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Error Alert Modal */}
+      <CustomAlert
+        visible={showErrorAlert}
+        title="Lỗi"
+        message={authState.errorMessage!}
+        buttons={[
+          {
+            text: "OK",
+            style: "default",
+            onPress: () => {
+              setShowErrorAlert(false);
+              authViewModel.clearError();
+            },
+          },
+        ]}
+      />
     </>
   );
 }
@@ -507,5 +636,17 @@ const styles = StyleSheet.create({
     minHeight: 50,
     paddingTop: 14,
     paddingBottom: 14,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingTop: StatusBar.currentHeight,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#92929D",
   },
 });

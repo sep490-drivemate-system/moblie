@@ -1,4 +1,9 @@
-import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import { RootState } from "@/lib/redux/store";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { useFocusEffect, useRouter } from "expo-router";
+import { ArrowLeft } from "lucide-react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -34,6 +39,12 @@ const maskEmail = (email: string): string => {
 
 export default function OTPScreen() {
   const router = useRouter();
+  const [authState, authViewModel] = useViewModel(
+    AuthViewModel,
+    (state: RootState) => state.auth
+  );
+  const email = authState.registerFormData.email;
+  const otpVerification = authState.otpVerification;
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [showModal, setShowModal] = useState(false);
   const [modalConfig, setModalConfig] = useState({
@@ -42,124 +53,192 @@ export default function OTPScreen() {
     onConfirm: () => { },
     confirmText: "OK",
   });
-  const inputRefs = useRef<TextInput[]>([]);
-  const registerEmail = useAppSelector(
-    (state: RootState) => state.auth.registerFormData.email
-  );
+  const inputRefs = useRef<(TextInput | null)[]>([]);
 
-  const maskedEmail = useMemo(() => maskEmail(registerEmail), [registerEmail]);
+  // Set router to ViewModel for navigation
+  useEffect(() => {
+    authViewModel.setRouter(router);
+  }, [router]);
 
-  const focusInputByIndex = useCallback((index: number) => {
-    if (index < 0 || index >= otp.length) return;
-    requestAnimationFrame(() => {
-      inputRefs.current[index]?.focus();
-    });
-  }, [otp.length]);
-
+  // Auto focus first input when screen is focused
   useFocusEffect(
     useCallback(() => {
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      const interaction = InteractionManager.runAfterInteractions(() => {
-        timeoutId = setTimeout(() => {
-          focusInputByIndex(0);
-        }, 50);
-      });
-
-      return () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
+      const timer = setTimeout(() => {
+        if (inputRefs.current[0]) {
+          inputRefs.current[0].focus();
         }
-        interaction.cancel();
-      };
-    }, [focusInputByIndex])
+      }, 400);
+
+      return () => clearTimeout(timer);
+    }, [])
   );
 
-  useEffect(() => {
-    const firstEmptyIndex = otp.findIndex((digit) => digit === "");
-    if (firstEmptyIndex === -1) {
-      Keyboard.dismiss();
+  const handleOtpChange = (value: string, index: number) => {
+    // Xử lý trường hợp paste nhiều ký tự
+    if (value.length > 1) {
+      const digits = value.replace(/\D/g, "").slice(0, 6).split("");
+      const newOtp = [...otp];
+
+      // Fill các ô với các ký tự đã paste
+      digits.forEach((digit, i) => {
+        if (index + i < 6) {
+          newOtp[index + i] = digit;
+        }
+      });
+
+      setOtp(newOtp);
+
+      // Focus vào ô cuối cùng được fill hoặc ô tiếp theo
+      const nextIndex = Math.min(index + digits.length, 5);
+      setTimeout(() => {
+        const nextInput = inputRefs.current[nextIndex];
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }, 100);
+
+      // Auto verify nếu đã fill đủ 6 số
+      if (newOtp.every((digit) => digit !== "")) {
+        Keyboard.dismiss();
+        setTimeout(() => {
+          handleVerifyOTPWithArray(newOtp);
+        }, 300);
+      }
+
       return;
     }
 
-    focusInputByIndex(firstEmptyIndex);
-  }, [otp, focusInputByIndex]);
+    // Chỉ lấy số, bỏ qua các ký tự khác
+    const numericValue = value.replace(/\D/g, "");
+    if (numericValue && numericValue.length > 0) {
+      const newOtp = [...otp];
+      newOtp[index] = numericValue.slice(-1); // Chỉ lấy ký tự cuối cùng
+      setOtp(newOtp);
 
-  const handleOtpChange = (value: string, index: number) => {
-    const sanitizedValue = value.replace(/[^\d]/g, "").slice(-1);
-    setOtp((prev) => {
-      const next = [...prev];
-      next[index] = sanitizedValue;
-      return next;
-    });
-  };
+      if (otpError) {
+        setOtpError("");
+      }
 
-  const handleKeyPress = (key: string, index: number) => {
-    if (key === "Backspace" && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+      // Focus vào ô tiếp theo nếu có giá trị và chưa phải ô cuối
+      if (index < 5) {
+        setTimeout(() => {
+          const nextInput = inputRefs.current[index + 1];
+          if (nextInput) {
+            nextInput.focus();
+          }
+        }, 100);
+      }
+
+      // Auto verify when all 6 digits are filled
+      const updatedOtp = [...newOtp];
+      if (updatedOtp.every((digit) => digit !== "")) {
+        Keyboard.dismiss();
+        setTimeout(() => {
+          handleVerifyOTPWithArray(updatedOtp);
+        }, 300);
+      }
+    } else {
+      // Nếu xóa hết, clear ô hiện tại
+      const newOtp = [...otp];
+      newOtp[index] = "";
+      setOtp(newOtp);
     }
   };
 
-  const showCustomAlert = (
-    title: string,
-    message: string,
-    onConfirm: () => void,
-    confirmText: string = "OK"
-  ) => {
-    setModalConfig({
-      title,
-      message,
-      onConfirm,
-      confirmText,
-    });
-    setShowModal(true);
+  const handleKeyPress = (key: string, index: number) => {
+    if (key === "Backspace") {
+      // If current input is empty, move to previous input and clear it
+      if (!otp[index] && index > 0) {
+        const newOtp = [...otp];
+        newOtp[index - 1] = "";
+        setOtp(newOtp);
+        setTimeout(() => {
+          inputRefs.current[index - 1]?.focus();
+        }, 50);
+      }
+      // If current input has value, just clear it (default behavior)
+      else if (otp[index]) {
+        const newOtp = [...otp];
+        newOtp[index] = "";
+        setOtp(newOtp);
+      }
+    }
+  };
+
+  const handleVerifyOTPWithArray = async (otpArray: string[]) => {
+    const enteredOtpString = otpArray.join("");
+
+    console.log("🔍 OTP Debug (with array):");
+    console.log("OTP Array:", otpArray);
+    console.log("OTP String:", enteredOtpString);
+    console.log("OTP Length:", enteredOtpString.length);
+    console.log(
+      "Each digit:",
+      otpArray.map((digit, i) => `[${i}]: "${digit}"`)
+    );
+
+    if (enteredOtpString.length !== 6) {
+      setOtpError("Vui lòng nhập đầy đủ 6 chữ số");
+      return;
+    }
+
+    // Update entered OTP in Redux
+    authViewModel.updateEnteredOtp(enteredOtpString);
+
+    // Debug: Check OTP in Redux state
+    const otpState = authViewModel.getOtpVerificationState();
+    console.log("🔍 Redux OTP State:");
+    console.log("Sent OTP:", otpState.sentOtp);
+    console.log("Entered OTP:", otpState.enteredOtp);
+    console.log("Is OTP Sent:", otpState.isOtpSent);
+
+    // Verify OTP directly with current input
+    const isValid = otpState.sentOtp === enteredOtpString;
+    console.log("🔍 Direct OTP Verification:");
+    console.log("Sent:", otpState.sentOtp);
+    console.log("Entered:", enteredOtpString);
+    console.log("Result:", isValid);
+
+    if (isValid) {
+      console.log("✅ OTP verification successful");
+      router.push("/(onboarding)/role-selection");
+    } else {
+      setOtpError("Mã OTP không đúng. Vui lòng thử lại.");
+      // Clear OTP inputs
+      setOtp(["", "", "", "", "", ""]);
+      // Focus first input
+      setTimeout(() => {
+        inputRefs.current[0]?.focus();
+      }, 100);
+    }
   };
 
   const handleVerifyOTP = async () => {
-
-    router.push("/(onboarding)/role-selection");
-    const otpString = otp.join("");
-
-    // if (otpString.length !== 6) {
-    //   showCustomAlert("Lỗi", "Vui lòng nhập đầy đủ 6 chữ số", () =>
-    //     setShowModal(false)
-    //   );
-    //   return;
-    // }
-
-
-    // if (otpString === "123456") {
-    //   // Correct OTP
-    //   try {
-    //     // Save OTP verification status
-    //     await AsyncStorage.setItem("otp_verified", "true");
-
-    //     showCustomAlert("Thành công", "Xác minh OTP thành công!", () => {
-    //       setShowModal(false);
-    //       router.push("/(onboarding)/role-selection");
-    //     });
-    //   } catch (error) {
-    //     showCustomAlert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.", () =>
-    //       setShowModal(false)
-    //     );
-    //   }
-    // } else {
-    //   // Wrong OTP
-    //   showCustomAlert(
-    //     "Lỗi",
-    //     "Mã OTP không đúng. Vui lòng kiểm tra lại.",
-    //     () => {
-    //       setShowModal(false);
-    //       setOtp(["", "", "", "", "", ""]);
-    //       inputRefs.current[0]?.focus();
-    //     },
-    //     "Thử lại"
-    //   );
-    // }
+    await handleVerifyOTPWithArray(otp);
   };
 
-  const handleResendOTP = () => {
-    setOtp(["", "", "", "", "", ""]);
-    inputRefs.current[0]?.focus();
+  const handleResendOTP = async () => {
+    if (canResend && !isResending) {
+      setCanResend(false);
+      setIsResending(true);
+
+      try {
+        // Call handleRegister again to resend OTP
+        await authViewModel.handleRegister();
+
+        setOtp(["", "", "", "", "", ""]);
+        setOtpError("");
+        // Auto focus first input after resend
+        setTimeout(() => {
+          inputRefs.current[0]?.focus();
+        }, 100);
+      } catch (error) {
+      } finally {
+        setIsResending(false);
+        // Re-enable resend after 60 seconds
+        setTimeout(() => setCanResend(true), 60000);
+      }
+    }
   };
 
   const handleBack = () => {
@@ -184,9 +263,7 @@ export default function OTPScreen() {
           <Text style={styles.title}>Xác minh tài khoản với mã OTP</Text>
           <Text style={styles.description}>
             Chúng tôi đã gửi một mã có 6 chữ số đến email{" "}
-            <Text style={styles.highlightedEmail}>
-              {maskedEmail || "đã đăng ký"}
-            </Text>
+            {email ? email.replace(/(.{2})(.*)(@.*)/, "$1***$3") : ""}
           </Text>
         </View>
 
@@ -194,21 +271,26 @@ export default function OTPScreen() {
         <View style={styles.otpContainer}>
           {otp.map((digit, index) => (
             <TextInput
-              key={index}
+              key={`otp-input-${index}`}
               ref={(ref) => {
-                if (ref) inputRefs.current[index] = ref;
+                if (ref) {
+                  inputRefs.current[index] = ref;
+                } else {
+                  inputRefs.current[index] = null;
+                }
               }}
               style={styles.otpInput}
               value={digit}
-              onChangeText={(value) => handleOtpChange(value, index)}
+              onChangeText={(value) => {
+                handleOtpChange(value, index);
+              }}
               onKeyPress={({ nativeEvent }) =>
                 handleKeyPress(nativeEvent.key, index)
               }
-              keyboardType="numeric"
+              keyboardType="number-pad"
               maxLength={1}
               textAlign="center"
-              selectTextOnFocus
-              autoFocus={index === 0}
+              autoFocus={index === 0 ? true : false}
             />
           ))}
         </View>
