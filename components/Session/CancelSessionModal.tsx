@@ -18,7 +18,6 @@ interface CancelSessionModalProps {
   selectedReasons: string[];
   isCancelling: boolean;
   canCancel: boolean;
-  cancellationReasons: string[];
   onClose: () => void;
   onNoteChange: (text: string) => void;
   onToggleReason: (reason: string) => void;
@@ -28,13 +27,10 @@ interface CancelSessionModalProps {
 export default function CancelSessionModal({
   visible,
   cancelNote,
-  selectedReasons,
   isCancelling,
   canCancel,
-  cancellationReasons,
   onClose,
   onNoteChange,
-  onToggleReason,
   onConfirm,
 }: CancelSessionModalProps) {
   return (
@@ -53,7 +49,7 @@ export default function CancelSessionModal({
         }}
       >
         <View style={styles.modalBackdrop}>
-          <TouchableWithoutFeedback onPress={() => {}}>
+          <TouchableWithoutFeedback onPress={() => { }}>
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Xác nhận hủy buổi tập</Text>
 
@@ -84,31 +80,7 @@ export default function CancelSessionModal({
 
               <Text style={styles.modalSectionTitle}>Lý do hủy lịch</Text>
 
-              <View style={styles.reasonList}>
-                {cancellationReasons.map((reason) => {
-                  const selected = selectedReasons.includes(reason);
-                  return (
-                    <TouchableOpacity
-                      key={reason}
-                      style={styles.reasonRow}
-                      onPress={() => onToggleReason(reason)}
-                      activeOpacity={0.8}
-                    >
-                      <View
-                        style={[
-                          styles.checkbox,
-                          selected && styles.checkboxSelected,
-                        ]}
-                      >
-                        {selected ? (
-                          <Text style={styles.checkboxTick}>✓</Text>
-                        ) : null}
-                      </View>
-                      <Text style={styles.reasonText}>{reason}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+
 
               <Text style={styles.modalSectionTitle}>Ghi chú chi tiết</Text>
               <TextInput

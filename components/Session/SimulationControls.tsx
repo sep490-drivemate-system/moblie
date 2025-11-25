@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Play, Square } from "lucide-react-native";
+import { Play, PauseCircle } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 
 interface SimulationControlsProps {
@@ -33,7 +33,7 @@ export default function SimulationControls({
         onPress={isSimulating ? onStop : onStart}
       >
         {isSimulating ? (
-          <Square size={20} color="#fff" strokeWidth={2} />
+          <PauseCircle size={20} color="#fff" strokeWidth={2} />
         ) : (
           <Play size={20} color="#fff" strokeWidth={2} />
         )}

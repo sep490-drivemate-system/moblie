@@ -45,6 +45,7 @@ import {
   IRescheduleSessionRequest
 } from "@/features/booking/bookingThunk";
 import { ROUTES } from "@/constants/routes";
+import HeaderList from "@/components/Commons/HeaderList";
 
 const { width } = Dimensions.get("window");
 
@@ -295,32 +296,9 @@ export default function RentalScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-
-      <LinearGradient
-        colors={[
-          AppColors.primary,
-          AppColors.gradientStart,
-          AppColors.gradientEnd,
-        ]}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Buổi huấn luyện của tôi</Text>
-          </View>
-          <View style={styles.headerStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{filteredSessions.length}</Text>
-              <Text style={styles.statLabel}>Tổng</Text>
-            </View>
-          </View>
-        </View>
-        <View style={styles.headerCurve} />
-      </LinearGradient>
-
+      <HeaderList
+        title="Danh sách buổi huấn luyện"
+      />
       <View style={styles.tabsContainer}>
         <ScrollView
           horizontal
@@ -636,6 +614,14 @@ export default function RentalScreen() {
                         pathname: ROUTES.DRIVING_SESSION_DETAIL,
                         params: {
                           sessionId: session.id,
+                          status: session.status,
+                          displayStartLocationName: session.displayStartLocationName,
+                          startingLatitude: session.startingLatitude,
+                          startingLongtitude: session.startingLongtitude,
+                          duration: session.duration,
+                          displayEndLocationName: session.displayEndLocationName,
+                          endingLatitude: session.endingLatitude,
+                          endingLongtitude: session.endingLongtitude,                          
 
                         },
                       })}

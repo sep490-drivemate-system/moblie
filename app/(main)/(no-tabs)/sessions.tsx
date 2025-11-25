@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SessionStatus } from "@/models/session/session.enum";
-import RouteDetail from "../../../components/Session/RouteDetail";
 import SessionsList, {
   StatusFilter,
 } from "@/components/Session/Sessions";
@@ -36,9 +35,7 @@ export default function RoutesScreen() {
   }>();
   const router = useRouter();
 
-  if (params.sessionId) {
-    return <RouteDetail />;
-  }
+
 
   const initialStatus = useMemo<StatusFilter>(
     () => mapStatusToFilter(params.status),

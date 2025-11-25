@@ -35,7 +35,12 @@ export function useSignalR(options: UseSignalROptions): UseSignalRReturn {
         setIsConnecting(true);
         try {
             const builder = new signalR.HubConnectionBuilder()
-                .withUrl(hubPath)
+                .withUrl(hubPath, {
+                    accessTokenFactory: async () => {
+                        const token = await AsyncStorage.getItem(process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token');
+                        return token ?? '';
+                    },
+                })
                 .withAutomaticReconnect({
                     nextRetryDelayInMilliseconds: (retryContext) => {
                         if (retryContext.previousRetryCount < 3) {

@@ -14,6 +14,8 @@ import { RootState } from "@/lib/redux/store";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SignalRHubUrls } from "@/lib/signalr/signalRConfig";
+import { useSignalR } from "@/lib/signalr/useSignalR";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -32,6 +34,15 @@ export default function RootLayout() {
   useEffect(() => {
     if (error) throw error;
   }, [error]);
+
+  useSignalR({
+    hubPath: SignalRHubUrls.NOTIFICATION,
+    enabled: loaded,
+  });
+  useSignalR({
+    hubPath: SignalRHubUrls.CHAT,
+    enabled: loaded,
+  });
 
   useEffect(() => {
     if (loaded) {

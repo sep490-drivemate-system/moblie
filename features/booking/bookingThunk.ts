@@ -1,7 +1,7 @@
 import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/HttpMethods";
 import { IUserPackageAPI, IGetUserPackagesParams, BookingStatus } from "@/models/package/user-package";
-import { IBookingSession, IGetBookingSessionsParams, IGetAllSessionsParams, ISessionDetailResponse } from "@/models/booking/booking";
+import { IBookingSession, IGetBookingSessionsParams, IGetAllSessionsParams, ISessionDetailResponse, SessionStatus } from "@/models/booking/booking";
 import { ISaveSessionRoutesPayload, ISessionRoutes } from "@/models/route/route";
 import axiosInstance from "@/lib/axios/axiosInstance";
 import { createAsyncThunk } from "@reduxjs/toolkit";
@@ -336,33 +336,14 @@ export const rescheduleSession = createAsyncThunk<
   }
 );
 
-export const updateSessionStatus = createAsyncThunk<
-  GenericResponse<boolean>,
-  { sessionId: string; status: number }, // status is SessionStatus enum value
-  { rejectValue: string }
+export const updateSessionStatus = createThunk<
+  boolean,
+  { sessionId: string; status: SessionStatus }
 >(
+  HttpMethod.PATCH,
   "updateSessionStatus",
-  async ({ sessionId, status }, { rejectWithValue }) => {
-    try {
-      const url = `/${SESSION_PATH}/${sessionId}/status`;
-
-      console.log("🚀 Updating session status:", url);
-      console.log("📦 Status:", status);
-
-      const response = await axiosInstance.patch<GenericResponse<boolean>>(
-        url,
-        { status }
-      );
-
-      console.log("✅ Session status updated successfully:", response.data);
-      return response.data;
-    } catch (err) {
-      const error = err as any;
-      console.error("❌ API Error:", error.response?.data || error.message);
-      const message = error.response?.data?.message || "Không thể cập nhật trạng thái buổi tập lái";
-      return rejectWithValue(message);
-    }
-  }
+  `/${SESSION_PATH}`,
+  { buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}?status=${payload.status}` }
 );
 
 // Submit feedback for a booking
