@@ -26,11 +26,9 @@ import {
     createSession,
     saveSessionRoutes,
     addSessionLog,
-    cancelSession,
-    rescheduleSession,
+
     updateSessionStatus,
     submitFeedback,
-    cancelBooking,
 } from './bookingThunk';
 import {
     getInstructorSchedule,
@@ -320,37 +318,10 @@ const bookingSlice = createSlice({
                 state.errorMessage = action.payload || 'Không thể thêm log';
             });
 
-        // Cancel Session
-        builder
-            .addCase(cancelSession.pending, (state) => {
-                state.isCancellingSession = true;
-                state.errorMessage = null;
-            })
-            .addCase(cancelSession.fulfilled, (state) => {
-                state.isCancellingSession = false;
-                state.isSuccess = true;
-            })
-            .addCase(cancelSession.rejected, (state, action) => {
-                state.isCancellingSession = false;
-                state.isSuccess = false;
-                state.errorMessage = action.payload || 'Không thể hủy buổi tập lái';
-            });
+
 
         // Reschedule Session
-        builder
-            .addCase(rescheduleSession.pending, (state) => {
-                state.isReschedulingSession = true;
-                state.errorMessage = null;
-            })
-            .addCase(rescheduleSession.fulfilled, (state) => {
-                state.isReschedulingSession = false;
-                state.isSuccess = true;
-            })
-            .addCase(rescheduleSession.rejected, (state, action) => {
-                state.isReschedulingSession = false;
-                state.isSuccess = false;
-                state.errorMessage = action.payload || 'Không thể đổi lịch buổi tập lái';
-            });
+
 
         // Update Session Status
         builder
@@ -384,21 +355,6 @@ const bookingSlice = createSlice({
                 state.errorMessage = action.payload || 'Không thể gửi phản hồi';
             });
 
-        // Cancel Booking
-        builder
-            .addCase(cancelBooking.pending, (state) => {
-                state.isCancellingBooking = true;
-                state.errorMessage = null;
-            })
-            .addCase(cancelBooking.fulfilled, (state) => {
-                state.isCancellingBooking = false;
-                state.isSuccess = true;
-            })
-            .addCase(cancelBooking.rejected, (state, action) => {
-                state.isCancellingBooking = false;
-                state.isSuccess = false;
-                state.errorMessage = action.payload || 'Không thể hủy gói học';
-            });
     },
 });
 

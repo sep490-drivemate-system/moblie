@@ -1,13 +1,12 @@
 import { gender } from "@/constants/enums";
-import { Car } from "../car/car";
+import { Car, LicenseTier } from "../car/car";
 import { Gender } from "../user/gender.enum";
 
-// API Response types
-export interface InstructorPackageAPI {
+export interface IInstructorPackages {
   id: string;
   name: string;
   description: string;
-  duration: string; // "30", "45" from API
+  duration: number;
   price: number;
   instructorId: string;
   drivingSkills: string[];
@@ -15,10 +14,11 @@ export interface InstructorPackageAPI {
   isRentalCar: boolean;
 }
 
-export interface InstructorCarAPI {
+export interface IInstructorCar {
   id: string;
   thumbnailUrl: string;
   modelName: string;
+  licenseTier: LicenseTier;
   unitPrice: number;
   seatCounts: number;
   vehicleType: string | null;

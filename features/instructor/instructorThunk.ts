@@ -2,8 +2,7 @@ import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/HttpMethods";
 import { 
   IInstructors, 
-  InstructorPackageAPI, 
-  InstructorCarAPI,
+  IInstructorCar,
   PaginatedInstructorsResponse,
   GetInstructorsParams 
 } from "@/models/instructor/instructor.type";
@@ -38,14 +37,6 @@ export const getInstructorById = createThunk<IInstructors, { id: string }>(
     `${INSTRUCTOR_PATH}/:id`,
 );
 
-export const getInstructorPackages = createThunk<InstructorPackageAPI[], { id: string }>(
-    HttpMethod.GET,
-    "getInstructorPackages",
-    `package/instructor/:id`,
-    {
-        buildUrl: (payload) => `package/instructor/${payload.id}`,
-    }
-);
 
 export const getInstructorCars = createThunk<InstructorCarAPI[], { id: string }>(
     HttpMethod.GET,

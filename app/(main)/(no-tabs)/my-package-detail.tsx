@@ -19,7 +19,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { IUserInfo, submitFeedback, IFeedbackRequest, cancelBooking } from "@/features/booking/bookingThunk";
 import { ArrowLeft, Star, MessageSquare } from "lucide-react-native";
 import SessionsList from "@/components/Session/Sessions";
-import CancelPackageModal from "@/components/Package/CancelPackageModal";
+import CancelPackageModal from "@/components/Modal/CancelPackageModal";
 import { userPackagesData } from "@/data/user_packages_data";
 import { AppColors } from "@/constants/Colors";
 import { PackageDetailData, usePackageDetailViewModel } from "@/viewmodels/booking/PackageDetailViewModel";

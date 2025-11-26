@@ -1,7 +1,8 @@
 import { useAppDispatch, useAppSelector } from '@/lib/redux/hooks';
 import { BaseState } from '@/models/generic/baseState';
+import { RootState } from '@/lib/redux/store';
 import { Router } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 
 export type NavigationCallback = (route: string) => void;
@@ -21,15 +22,15 @@ export abstract class BaseViewModel<T extends BaseState> {
         this.navigationCallback = callback;
     }
 
-      setRouter(router: Router): void {
-    this.router = router;
-     }
-    protected navigate(route: string): void {
-         if (this.router) {
-      this.router.replace(route as any);
-    } else if (this.navigationCallback) {
-      this.navigationCallback(route);
+    setRouter(router: Router): void {
+        this.router = router;
     }
+    protected navigate(route: string): void {
+        if (this.router) {
+            this.router.replace(route as any);
+        } else if (this.navigationCallback) {
+            this.navigationCallback(route);
+        }
     }
 
     protected async executeAsync<TResult>(
@@ -56,7 +57,7 @@ export abstract class BaseViewModel<T extends BaseState> {
             onSuccess?.(result);
             return result;
         } catch (error) {
-            console.log("error",error);
+            console.log("error", error);
             return null;
         } finally {
             if (actions) {
@@ -68,16 +69,20 @@ export abstract class BaseViewModel<T extends BaseState> {
 
 export function useViewModel<T extends BaseState, VM extends BaseViewModel<T>>(
     ViewModelClass: new (dispatch: ReturnType<typeof useAppDispatch>, getCurrentState: () => T) => VM,
-    selector: (state: any) => T
+    selector: (state: RootState) => T
 ): [T, VM] {
     const dispatch = useAppDispatch();
     const state = useAppSelector(selector);
+    const stateRef = useRef(state);
 
-    const getCurrentState = () => state;
-    const viewModel = useMemo(() =>
-        new ViewModelClass(dispatch, getCurrentState),
-        [dispatch, state]
+    useEffect(() => {
+        stateRef.current = state;
+    }, [state]);
+
+    const viewModel = useMemo(
+        () => new ViewModelClass(dispatch, () => stateRef.current),
+        [dispatch]
     );
 
     return [state, viewModel];
-} 
+}

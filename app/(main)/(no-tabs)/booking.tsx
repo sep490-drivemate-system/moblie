@@ -11,17 +11,7 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  Users,
-  Package,
-  Calendar,
-  MapPin,
-  Clock,
-  Car,
-} from "lucide-react-native";
+import { CheckCircle } from "lucide-react-native";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import {
   getPolicies,
@@ -33,10 +23,10 @@ import {
 import Step1 from "@/components/Booking/Step1";
 import Step2 from "@/components/Booking/Step2";
 import Step3 from "@/components/Booking/Step3";
+import BookingSummaryCard from "@/components/Booking/BookingSummaryCard";
 import { instructorsData } from "@/data/instructors_data";
 import { instructorVehicles } from "@/data/instructor_detail";
 import { instructorBusyTimes } from "@/data/user_packages_data";
-import { AppColors } from "@/constants/Colors";
 import { InstructorPackage } from "@/models/instructor/instructor.type";
 import { getNoviceDriverAddresses } from "@/features/user/userThunk";
 
@@ -246,25 +236,6 @@ export default function BookingScreen() {
     }
   };
 
-  const handleMapSelect = (type: "pickup" | "dropoff") => {
-    router.push({
-      pathname: "/(main)/(no-tabs)/map-picker",
-      params: {
-        type,
-        initialLat: type === "pickup" && selectedLocationId
-          ? addresses.find(a => a.id === selectedLocationId)?.latitude?.toString()
-          : type === "dropoff" && selectedDropoffId
-            ? addresses.find(a => a.id === selectedDropoffId)?.latitude?.toString()
-            : undefined,
-        initialLng: type === "pickup" && selectedLocationId
-          ? addresses.find(a => a.id === selectedLocationId)?.longitude?.toString()
-          : type === "dropoff" && selectedDropoffId
-            ? addresses.find(a => a.id === selectedDropoffId)?.longitude?.toString()
-            : undefined,
-      },
-    });
-  };
-
   const calculateEndTime = (startTime: string, duration: number): string => {
     if (!startTime) return "00:00";
     const [hours, minutes] = startTime.split(":").map(Number);
@@ -469,174 +440,19 @@ export default function BookingScreen() {
         <View style={styles.curvedHeaderBottom} />
       </View>
 
-      {/* Tracking Card */}
-      <View style={styles.trackingCard}>
-        <TouchableOpacity
-          style={styles.trackingHeader}
-          onPress={() => setIsTrackingExpanded(!isTrackingExpanded)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.trackingTitleContainer}>
-            <Text style={styles.trackingTitle}>Thông tin đặt lịch</Text>
-          </View>
-          {isTrackingExpanded ? (
-            <ChevronUp size={20} color="#4338ca" />
-          ) : (
-            <ChevronDown size={20} color="#4338ca" />
-          )}
-        </TouchableOpacity>
-
-        {isTrackingExpanded && (
-          <ScrollView
-            style={styles.trackingContent}
-            showsVerticalScrollIndicator={true}
-            nestedScrollEnabled={true}
-          >
-            <View style={styles.trackingGroup}>
-              {instructor && (
-                <View style={styles.trackingRow}>
-                  <View style={styles.trackingIconContainer}>
-                    <Users size={16} color="#667eea" />
-                  </View>
-                  <View style={styles.trackingInfoContainer}>
-                    <Text style={styles.trackingLabel}>Người hướng dẫn</Text>
-                    <Text style={styles.trackingValue} numberOfLines={1}>
-                      {instructor.name}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {selectedPackage && (
-                <View style={styles.trackingRow}>
-                  <View style={styles.trackingIconContainer}>
-                    <Package size={16} color="#667eea" />
-                  </View>
-                  <View style={styles.trackingInfoContainer}>
-                    <Text style={styles.trackingLabel}>Gói thuê</Text>
-                    <Text style={styles.trackingValue} numberOfLines={1}>
-                      {selectedPackage.name}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {selectedPackage && (
-                <View style={styles.trackingRow}>
-                  <View style={styles.trackingIconContainer}>
-                    <Clock size={16} color="#667eea" />
-                  </View>
-                  <View style={styles.trackingInfoContainer}>
-                    <Text style={styles.trackingLabel}>Thời lượng</Text>
-                    <Text style={styles.trackingValue}>
-                      {selectedPackage.duration} giờ
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {selectedVehicle && (
-                <View style={styles.trackingRow}>
-                  <View style={styles.trackingIconContainer}>
-                    <Car size={16} color="#667eea" />
-                  </View>
-                  <View style={styles.trackingInfoContainer}>
-                    <Text style={styles.trackingLabel}>Xe</Text>
-                    <Text style={styles.trackingValue} numberOfLines={1}>
-                      {selectedVehicle.name}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {!selectedVehicle && vehicleId === "" && (
-                <View style={styles.trackingRow}>
-                  <View style={styles.trackingIconContainer}>
-                    <Car size={16} color="#667eea" />
-                  </View>
-                  <View style={styles.trackingInfoContainer}>
-                    <Text style={styles.trackingLabel}>Xe</Text>
-                    <Text style={styles.trackingValue}>🚙 Xe riêng</Text>
-                  </View>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.trackingGroup}>
-              {selectedDate && (
-                <View style={styles.trackingRow}>
-                  <View style={styles.trackingIconContainer}>
-                    <Calendar size={16} color="#667eea" />
-                  </View>
-                  <View style={styles.trackingInfoContainer}>
-                    <Text style={styles.trackingLabel}>Ngày</Text>
-                    <Text style={styles.trackingValue}>
-                      {new Date(selectedDate).toLocaleDateString("vi-VN")}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {selectedStartTime && selectedEndTime && selectedDuration > 0 ? (
-                <View style={styles.trackingRow}>
-                  <View style={styles.trackingIconContainer}>
-                    <Clock size={16} color="#667eea" />
-                  </View>
-                  <View style={styles.trackingInfoContainer}>
-                    <Text style={styles.trackingLabel}>Thời gian</Text>
-                    <Text style={styles.trackingValue}>
-                      {selectedStartTime} - {selectedEndTime} ({selectedDuration}h)
-                    </Text>
-                  </View>
-                </View>
-              ) : null}
-
-              {pickupLocation && (
-                <View style={styles.trackingRow}>
-                  <View style={styles.trackingIconContainer}>
-                    <MapPin size={16} color="#667eea" />
-                  </View>
-                  <View style={styles.trackingInfoContainer}>
-                    <Text style={styles.trackingLabel}>Địa điểm</Text>
-                    <Text style={styles.trackingValue} numberOfLines={2}>
-                      {pickupLocation}
-                    </Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          </ScrollView>
-        )}
-
-        {!isTrackingExpanded && (
-          <View style={styles.trackingContentCollapsed}>
-            {instructor && (
-              <View style={styles.trackingRow}>
-                <Text style={styles.trackingLabel}>Người hướng dẫn:</Text>
-                <Text style={styles.trackingValue} numberOfLines={1}>
-                  {instructor.name}
-                </Text>
-              </View>
-            )}
-            {selectedPackage && (
-              <View style={styles.trackingRow}>
-                <Text style={styles.trackingLabel}>Gói thuê:</Text>
-                <Text style={styles.trackingValue} numberOfLines={1}>
-                  {selectedPackage.name}
-                </Text>
-              </View>
-            )}
-            {selectedDate && (
-              <View style={styles.trackingRow}>
-                <Text style={styles.trackingLabel}>Ngày:</Text>
-                <Text style={styles.trackingValue}>
-                  {new Date(selectedDate).toLocaleDateString("vi-VN")}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-      </View>
+      <BookingSummaryCard
+        isExpanded={isTrackingExpanded}
+        onToggle={() => setIsTrackingExpanded((prev) => !prev)}
+        instructorName={instructor?.name}
+        packageName={selectedPackage?.name}
+        packageDuration={selectedPackage?.duration}
+        vehicleName={selectedVehicle?.name ?? null}
+        selectedDate={selectedDate}
+        selectedStartTime={selectedStartTime}
+        selectedEndTime={selectedEndTime}
+        selectedDuration={selectedDuration}
+        pickupLocation={pickupLocation}
+      />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {currentStep === 1 && (
@@ -667,6 +483,20 @@ export default function BookingScreen() {
             onPickupSelect={(location) => {
               setPickupLocation(location.name);
               setSelectedLocationId(location.id);
+              setAddresses((prev) => {
+                if (prev.find((addr) => addr.id === location.id)) {
+                  return prev;
+                }
+                return [
+                  ...prev,
+                  {
+                    id: location.id,
+                    addressString: location.address || location.name,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                  },
+                ];
+              });
               if (isSameDropoff) {
                 setDropoffLocation(location.name);
                 setSelectedDropoffId(location.id);
@@ -675,6 +505,20 @@ export default function BookingScreen() {
             onDropoffSelect={(location) => {
               setDropoffLocation(location.name);
               setSelectedDropoffId(location.id);
+              setAddresses((prev) => {
+                if (prev.find((addr) => addr.id === location.id)) {
+                  return prev;
+                }
+                return [
+                  ...prev,
+                  {
+                    id: location.id,
+                    addressString: location.address || location.name,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                  },
+                ];
+              });
             }}
             isSameDropoff={isSameDropoff}
             onToggleSameDropoff={(value) => {
@@ -687,7 +531,6 @@ export default function BookingScreen() {
                 setDropoffLocation("");
               }
             }}
-            onMapSelect={handleMapSelect}
             addresses={addresses}
             isLoading={isLoadingAddresses}
           />
@@ -724,7 +567,7 @@ export default function BookingScreen() {
         </TouchableOpacity>
 
         {currentStep !== 3 && (
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={[
               styles.continueButton,
               !canProceedToNextStep() && styles.continueButtonDisabled,
@@ -977,102 +820,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-  },
-  trackingCard: {
-    backgroundColor: "#ffffff",
-    marginHorizontal: 16,
-    marginTop: -10,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: "#667eea",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: "#e0e7ff",
-    zIndex: 1,
-  },
-  trackingHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  trackingTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  trackingBackButton: {
-    backgroundColor: "#667eea",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  trackingTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#4338ca",
-  },
-  coinBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fef3c7",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 4,
-  },
-  coinIcon: {
-    fontSize: 16,
-  },
-  coinText: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#92400e",
-  },
-  trackingContent: {
-    maxHeight: 200,
-  },
-  trackingContentCollapsed: {
-    gap: 8,
-  },
-  trackingGroup: {
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-  },
-  trackingRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 12,
-    gap: 12,
-  },
-  trackingIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#f0f9ff",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 2,
-  },
-  trackingInfoContainer: {
-    flex: 1,
-  },
-  trackingLabel: {
-    fontSize: 12,
-    color: "#64748b",
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-  trackingValue: {
-    fontSize: 14,
-    color: "#1e293b",
-    fontWeight: "600",
-    lineHeight: 20,
   },
   content: {
     flex: 1,

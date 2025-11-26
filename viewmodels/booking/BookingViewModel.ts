@@ -1,11 +1,14 @@
 import { useMemo } from "react";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { getMyPackages } from "@/features/booking/bookingThunk";
+import { buyPackage } from "@/features/instructor/instructorThunk";
 import { BookingStatus } from "@/models/package/user-package";
-import { IMyPackgesResponse } from "@/models/package/package";
+import { IBuyPackageRequest, IMyPackgesResponse } from "@/models/package/package";
 import { AppColors } from "@/constants/Colors";
 import { AppDispatch } from "@/lib/redux/store";
 import { router } from "expo-router";
+import { IInstructorPackages } from "@/models/instructor/instructor.type";
+import { ROUTES } from "@/constants/routes";
 
 type StatusOption = {
     key: BookingStatus;
@@ -18,6 +21,8 @@ export class BookingViewModel {
     constructor(dispatch: AppDispatch) {
         this.dispatch = dispatch;
     }
+
+
 
     async fetchMyPackages(): Promise<IMyPackgesResponse[]> {
         const result = await this.dispatch(getMyPackages(undefined)).unwrap();
@@ -128,9 +133,31 @@ export class BookingViewModel {
             },
         });
     }
-}
 
-export const useBookingViewModel = (): BookingViewModel => {
-    const dispatch = useAppDispatch();
-    return useMemo(() => new BookingViewModel(dispatch), [dispatch]);
-};
+    async handleConfirmPurchase(options: {
+        instructorId: string;
+        selectedPackage: IInstructorPackages;
+        selectedVehicleId?: string | null;
+    }): Promise<void> {
+        const { instructorId, selectedPackage, selectedVehicleId } = options;
+
+        const payload: IBuyPackageRequest = {
+            durationWhenBought: selectedPackage.duration,
+            priceAtBuyingTime: selectedPackage.price,
+            carId: selectedVehicleId ? selectedVehicleId : null,
+            packageId: selectedPackage.id,
+            instructorId,
+        };
+
+        await this.dispatch(buyPackage(payload)).unwrap();
+
+        router.push({
+            pathname: ROUTES.TRANSACTION_SUCCESS,
+            params: {
+                instructorId,
+                packageId: selectedPackage.id,
+                vehicleId: selectedVehicleId || "",
+            },
+        });
+    }
+}

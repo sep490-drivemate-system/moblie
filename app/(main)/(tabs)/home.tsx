@@ -1,14 +1,16 @@
 import CarItem from "@/components/ui/car-item";
 import InstructorItem from "@/components/ui/instructor-item";
 import PackageItem from "@/components/ui/package-item";
-import { drivingLicenses, headerItems, listCar, popularPackages } from "@/data/home_data";
+import { drivingLicenses, listCar, popularPackages } from "@/data/home_data";
 import { instructorsData } from "@/data/instructors_data";
 import { LicenseType } from "@/models/license/license";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { ChevronRight } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import { Bell, ChevronRight, MessageSquareMore, Wallet } from "lucide-react-native";
 import {
   FlatList,
   ListRenderItemInfo,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -18,40 +20,28 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { ROUTES } from "@/constants/routes";
-import { getUserIdFromToken, decodeToken } from "@/lib/jwt/tokenUtils";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useState } from "react";
-
+import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 export default function HomeScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
-  const [userId, setUserId] = useState<string>("");
-  const [userName, setUserName] = useState<string>("");
+  const [walletState, walletViewModel] = useViewModel(WalletViewModel, (state) => state.wallet);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Lấy thông tin user từ token
   useEffect(() => {
-    const loadUserInfo = async () => {
-      try {
-        const id = await getUserIdFromToken();
-        setUserId(id);
+    if (walletState.balance === 0) {
+      walletViewModel.getWalletBalance();
+    }
+  }, [walletState.balance, walletViewModel]);
 
-        // Lấy username từ token
-        const token = await AsyncStorage.getItem(
-          process.env.EXPO_PUBLIC_STORAGE_TOKEN || "@token"
-        );
-        if (token) {
-          const decoded = decodeToken(token);
-          if (decoded) {
-            setUserName(decoded.username || "User");
-          }
-        }
-      } catch (error) {
-        console.error("Error loading user info:", error);
-      }
-    };
-
-    loadUserInfo();
-  }, []);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await walletViewModel.getWalletBalance();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleHeaderItemPress = async (itemId: string) => {
     if (itemId === "3") {
@@ -71,37 +61,49 @@ export default function HomeScreen() {
     <ScrollView
       style={[styles.container, { paddingBottom: tabBarHeight + 16 }]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#70E000" />
+      }
     >
       <View style={styles.header}>
         <View style={styles.floatingContainer}>
-          {headerItems.map((item, index) => (
+          <TouchableOpacity
+            style={styles.walletSection}
+            onPress={() => handleHeaderItemPress("1")}
+          >
+            <Wallet size={24} color={"#70E000"} />
+            <View style={styles.walletTextContainer}>
+              <Text style={styles.headerItemLabel}>Ví DriveMate</Text>
+              <Text style={styles.headerItemValue}>{walletState.balance} đ</Text>
+            </View>
+            <ChevronRight size={20} color="#92929D" />
+          </TouchableOpacity>
+
+          <View style={styles.iconGroup}>
             <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.headerItem,
-                index !== headerItems.length - 1 && {
-                  borderRightWidth: 1,
-                  borderColor: "#CCC",
-                },
-              ]}
-              onPress={() => handleHeaderItemPress(item.id)}
+              style={styles.iconButton}
+              onPress={() => handleHeaderItemPress("2")}
             >
-              <item.icon
-                size={27}
-                color={"#70E000"}
-                style={index !== 0 && { marginLeft: 2 }}
-              />
-              <View>
-                <Text style={styles.headerItemLabel}>{item.label}</Text>
-                <Text style={styles.headerItemValue}>
-                  {item.value} {item.label === "Ví DriveMate" && "đ"}
-                </Text>
-              </View>
-              <View style={{ justifyContent: "flex-end" }}>
-                <ChevronRight size={20} />
+              <View style={styles.iconContainer}>
+                <Bell size={24} color={"#70E000"} />
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>100</Text>
+                </View>
               </View>
             </TouchableOpacity>
-          ))}
+
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => handleHeaderItemPress("3")}
+            >
+              <View style={styles.iconContainer}>
+                <MessageSquareMore size={24} color={"#70E000"} />
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>100</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
       <View style={styles.body}>
@@ -157,93 +159,6 @@ export default function HomeScreen() {
     </ScrollView>
   );
 }
-
-//   container: { flex: 1, backgroundColor: "#FAFAFA" },
-//   carouselContainer: {
-//     width: width,
-//     height: 200,
-//     position: "relative",
-//   },
-//   carouseItem: {
-//     width: width,
-//     height: 200,
-//   },
-//   carouselDotContainer: {
-//     flexDirection: "row",
-//     justifyContent: "center",
-//     gap: 10,
-//     position: "absolute",
-//     left: 0,
-//     width: "100%",
-//     bottom: 10,
-//   },
-//   carouselDot: {
-//     width: 10,
-//     height: 10,
-//     borderRadius: "50%",
-//     backgroundColor: "red",
-//   },
-//   contenContainer: {
-//     flex: 1,
-//   },
-//   voucherContainer: {
-//     marginVertical: 20,
-//     marginHorizontal: 20,
-//     padding: 10,
-//     flexDirection: "row",
-//     alignItems: "center",
-//     borderWidth: 1.5,
-//     borderColor: "#026AA7",
-//     borderRadius: 10,
-//   },
-//   voucherContent: {
-//     flex: 1,
-//   },
-//   voucherTitle: {
-//     fontSize: 16,
-//     color: "#026AA7",
-//     fontWeight: 600,
-//     marginBottom: 10,
-//   },
-//   voucherDes: {
-//     fontSize: 14,
-//     color: "#333",
-//   },
-//   voucherIcon: {
-//     width: 80,
-//     height: 80,
-//   },
-//   licenseContainer: {
-//     paddingHorizontal: 10,
-//   },
-//   label: {
-//     fontSize: 20,
-//     fontWeight: 600,
-//     color: "#026AA7",
-//   },
-//   licenseItem: {
-//     width: 80,
-//     height: 80,
-//     backgroundColor: "#ffffff",
-//     borderWidth: 1,
-//     borderColor: "#026AA7",
-//     borderRadius: 10,
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-//   licenseItemText: {
-//     fontSize: 16,
-//     fontWeight: 600,
-//     color: "#026AA7",
-//   },
-//   listCarContainer: {
-//     paddingHorizontal: 10,
-//   },
-//   listContainer: {
-//     marginVertical: 10,
-//     padding: 5,
-//   },
-// });
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -260,17 +175,36 @@ const styles = StyleSheet.create({
     width: "95%",
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     backgroundColor: "#FFF",
-    padding: 10,
-    borderRadius: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
     position: "absolute",
     top: 50,
     elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  headerItem: {
+  walletSection: {
     flexDirection: "row",
-    gap: 5,
     alignItems: "center",
+    gap: 8,
+    flex: 1,
+    paddingRight: 12,
+    borderRightWidth: 1,
+    borderRightColor: "#E5E5E5",
+  },
+  walletTextContainer: {
+    flex: 1,
+  },
+  iconGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    paddingLeft: 12,
   },
   headerItemLabel: {
     fontSize: 12,
@@ -316,5 +250,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: "#70E000",
+  },
+  iconButton: {
+    padding: 4,
+  },
+  iconContainer: {
+    position: "relative",
+    width: 28,
+    height: 28,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badge: {
+    position: "absolute",
+    top: -6,
+    right: -8,
+    backgroundColor: "#FF3B30",
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: "#FFF",
+  },
+  badgeText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "700",
   },
 });

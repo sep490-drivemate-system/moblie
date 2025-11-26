@@ -20,6 +20,16 @@ export const getUserById = createThunk<
     }
 );
 
+export const getLicenseValidity = createThunk<
+    boolean,
+    void
+>(
+    HttpMethod.GET,
+    "getLicenseValidity",
+    `/${NOVICE_DRIVER_PATH}/license-validity`
+);
+
+
 export const getNoviceDriverAddresses = createThunk<
     INoviceDriverAddress[],
     void

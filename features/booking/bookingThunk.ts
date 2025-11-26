@@ -274,67 +274,7 @@ export const addSessionLog = createAsyncThunk<
   }
 );
 
-// Cancel session
-// API endpoint: POST session/{sessionId}/cancel
-// Request body: { note: string }
-export const cancelSession = createAsyncThunk<
-  GenericResponse<boolean>,
-  { sessionId: string; cancelData: ICancelSessionRequest },
-  { rejectValue: string }
->(
-  "cancelSession",
-  async ({ sessionId, cancelData }, { rejectWithValue }) => {
-    try {
-      const url = `/${SESSION_PATH}/${sessionId}/cancel`;
 
-      console.log("🚀 Cancelling session:", url);
-      console.log("📦 Cancel data:", cancelData);
-
-      const response = await axiosInstance.post<GenericResponse<boolean>>(
-        url,
-        cancelData
-      );
-
-      console.log("✅ Session cancelled successfully:", response.data);
-      return response.data;
-    } catch (err) {
-      const error = err as any;
-      console.error("❌ API Error:", error.response?.data || error.message);
-      const message = error.response?.data?.message || "Không thể hủy buổi tập lái";
-      return rejectWithValue(message);
-    }
-  }
-);
-
-// Reschedule session
-// API endpoint: POST session/{sessionId}/reschedule
-// Request body: { note: string }
-export const rescheduleSession = createAsyncThunk<
-  GenericResponse<boolean>,
-  { sessionId: string; rescheduleData: IRescheduleSessionRequest },
-  { rejectValue: string }
->(
-  "rescheduleSession",
-  async ({ sessionId, rescheduleData }, { rejectWithValue }) => {
-    try {
-      const url = `/${SESSION_PATH}/${sessionId}/reschedule`;
-
-
-      const response = await axiosInstance.post<GenericResponse<boolean>>(
-        url,
-        rescheduleData
-      );
-
-      console.log("✅ Session rescheduled successfully:", response.data);
-      return response.data;
-    } catch (err) {
-      const error = err as any;
-      console.error("❌ API Error:", error.response?.data || error.message);
-      const message = error.response?.data?.message || "Không thể đổi lịch buổi tập lái";
-      return rejectWithValue(message);
-    }
-  }
-);
 
 export const updateSessionStatus = createThunk<
   boolean,
@@ -378,12 +318,12 @@ export const submitFeedback = createAsyncThunk<
 
 
 
-export const cancelBooking = createThunk<
+export const cancelPackageBooking = createThunk<
   boolean,
   { bookingId: string }
 >(
   HttpMethod.POST,
-  "cancelBooking",
+  "cancelPackageBooking",
   `/${BOOKING_PATH}`,
   {
     buildUrl: (payload) => `/${BOOKING_PATH}/${payload.bookingId}/cancel`

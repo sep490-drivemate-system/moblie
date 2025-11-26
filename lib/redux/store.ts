@@ -5,6 +5,9 @@ import mapReducer from "@/features/map/mapSlice";
 import listCarReducer from "@/features/listCar/listCarSlice";
 import instructorReducer from "@/features/instructor/instructorSlice";
 import bookingReducer from "@/features/booking/bookingSlice";
+import walletReducer from "@/features/wallet/walletSlice";
+import userReducer from "@/features/user/userSlice";
+import packageReducer from "@/features/package/packageSlice";
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +17,9 @@ export const store = configureStore({
     listCar: listCarReducer,
     instructor: instructorReducer,
     booking: bookingReducer,
+    wallet: walletReducer,
+    user: userReducer,
+    package: packageReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

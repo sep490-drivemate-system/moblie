@@ -10,7 +10,7 @@ export interface Car {
     fullDay: { price: number; duration: number };
   };
   location: string;
-  rating: number 
+  rating: number
   seats: number;
   type: string;
   fuel: string;
@@ -18,3 +18,18 @@ export interface Car {
   instructor?: { experience: string };
 }
 
+
+export enum LicenseTier {
+  B = "B",
+  C1 = "C1",
+  C = "C",
+  D1 = "D1",
+  D2 = "D2",
+  D = "D",
+  BE = "BE",
+  C1E = "C1E",
+  CE = "CE",
+  D1E = "D1E",
+  D2E = "D2E",
+  DE = "DE",
+}

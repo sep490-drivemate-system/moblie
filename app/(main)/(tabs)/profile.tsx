@@ -28,9 +28,12 @@ import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { useMemo } from "react";
+import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 
 
-function ProfileScreen() {
+export default function ProfileScreen() {
+  const [walletState,] = useViewModel(WalletViewModel, (state) => state.wallet);
   const router = useRouter();
   const dispatch = useAppDispatch();
   const authState = useAppSelector((state) => state.auth);
@@ -75,7 +78,7 @@ function ProfileScreen() {
                   <Text style={styles.walletLabel}>Số dư ví</Text>
                 </View>
                 <Text style={styles.walletBalance}>
-                  {mockUserProfile.walletBalance.toLocaleString("vi-VN")} vnd
+                  {walletState.balance.toLocaleString("vi-VN")} vnd
                 </Text>
               </View>
               <TouchableOpacity
@@ -591,5 +594,3 @@ const styles = StyleSheet.create({
     color: "white",
   },
 });
-
-export default React.memo(ProfileScreen);

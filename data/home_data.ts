@@ -1,28 +1,6 @@
 import { ICar } from "@/models/car/car";
 import { LicenseType } from "@/models/license/license";
 import { IInstructorOption } from "@/models/package/package";
-import { Bell, MessageSquareMore, Wallet } from "lucide-react-native";
-
-export const headerItems = [
-  {
-    id: "1",
-    label: "Ví DriveMate",
-    value: 100000,
-    icon: Wallet,
-  },
-  {
-    id: "2",
-    label: "Thông báo",
-    value: 100,
-    icon: Bell,
-  },
-  {
-    id: "3",
-    label: "Tin nhắn",
-    value: 100,
-    icon: MessageSquareMore,
-  },
-];
 
 export const carousels = [
   {

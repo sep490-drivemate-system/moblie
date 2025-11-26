@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { MapPin, CheckCircle } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
+import MapPickerModal from "./MapPickerModal";
 
 interface INoviceDriverAddress {
   id: string;
@@ -34,7 +35,6 @@ interface Step3Props {
   onDropoffSelect: (location: LocationOption) => void;
   isSameDropoff: boolean;
   onToggleSameDropoff: (value: boolean) => void;
-  onMapSelect?: (type: "pickup" | "dropoff") => void;
   addresses?: INoviceDriverAddress[];
   isLoading?: boolean;
 }
@@ -48,7 +48,6 @@ export default function Step3({
   onDropoffSelect,
   isSameDropoff,
   onToggleSameDropoff,
-  onMapSelect,
   addresses = [],
   isLoading = false,
 }: Step3Props) {
@@ -62,6 +61,61 @@ export default function Step3({
         longitude: addr.longitude,
       }))
       : [];
+
+  const [mapPickerVisible, setMapPickerVisible] = useState(false);
+  const [mapSelectionType, setMapSelectionType] = useState<"pickup" | "dropoff">(
+    "pickup"
+  );
+  const [mapInitialCoordinate, setMapInitialCoordinate] = useState<
+    { latitude: number; longitude: number } | undefined
+  >(undefined);
+
+  const findLocationById = useMemo(
+    () => (locationId: string | null) =>
+      displayLocations.find((location) => location.id === locationId),
+    [displayLocations]
+  );
+
+  const openMapPicker = (type: "pickup" | "dropoff") => {
+    const selectedLocation =
+      type === "pickup"
+        ? findLocationById(selectedPickupId)
+        : findLocationById(selectedDropoffId);
+
+    if (selectedLocation) {
+      setMapInitialCoordinate({
+        latitude: selectedLocation.latitude,
+        longitude: selectedLocation.longitude,
+      });
+    } else {
+      setMapInitialCoordinate(undefined);
+    }
+
+    setMapSelectionType(type);
+    setMapPickerVisible(true);
+  };
+
+  const handleMapConfirm = (result: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  }) => {
+    const newLocation: LocationOption = {
+      id: `map_${Date.now()}`,
+      name: result.address,
+      address: result.address,
+      latitude: result.latitude,
+      longitude: result.longitude,
+    };
+
+    if (mapSelectionType === "pickup") {
+      onPickupSelect(newLocation);
+    } else {
+      onDropoffSelect(newLocation);
+    }
+
+    setMapPickerVisible(false);
+  };
 
   const renderLocationList = (
     selectedId: string | null,
@@ -133,14 +187,12 @@ export default function Step3({
           <View style={styles.locationSection}>
             <View style={styles.locationHeaderRow}>
               <Text style={styles.locationSectionTitle}>Điểm đón</Text>
-              {onMapSelect && (
-                <TouchableOpacity
-                  onPress={() => onMapSelect("pickup")}
-                  style={styles.mapButton}
-                >
-                  <Text style={styles.mapButtonText}>Chọn trên bản đồ</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                onPress={() => openMapPicker("pickup")}
+                style={styles.mapButton}
+              >
+                <Text style={styles.mapButtonText}>Chọn trên bản đồ</Text>
+              </TouchableOpacity>
             </View>
             {renderLocationList(selectedPickupId, (location) =>
               onPickupSelect(location)
@@ -151,14 +203,12 @@ export default function Step3({
             <View style={styles.locationSection}>
               <View style={styles.locationHeaderRow}>
                 <Text style={styles.locationSectionTitle}>Điểm trả</Text>
-                {onMapSelect && (
-                  <TouchableOpacity
-                    onPress={() => onMapSelect("dropoff")}
-                    style={styles.mapButton}
-                  >
-                    <Text style={styles.mapButtonText}>Chọn trên bản đồ</Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  onPress={() => openMapPicker("dropoff")}
+                  style={styles.mapButton}
+                >
+                  <Text style={styles.mapButtonText}>Chọn trên bản đồ</Text>
+                </TouchableOpacity>
               </View>
               {renderLocationList(selectedDropoffId, (location) =>
                 onDropoffSelect(location)
@@ -188,6 +238,14 @@ export default function Step3({
           ) : null}
         </View>
       )}
+
+      <MapPickerModal
+        visible={mapPickerVisible}
+        selectionType={mapSelectionType}
+        initialCoordinate={mapInitialCoordinate}
+        onClose={() => setMapPickerVisible(false)}
+        onConfirm={handleMapConfirm}
+      />
     </View>
   );
 }

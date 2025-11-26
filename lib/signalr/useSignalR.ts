@@ -41,6 +41,7 @@ export function useSignalR(options: UseSignalROptions): UseSignalRReturn {
                         return token ?? '';
                     },
                 })
+                .configureLogging(signalR.LogLevel.None)
                 .withAutomaticReconnect({
                     nextRetryDelayInMilliseconds: (retryContext) => {
                         if (retryContext.previousRetryCount < 3) {
