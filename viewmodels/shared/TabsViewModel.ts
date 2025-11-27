@@ -38,7 +38,7 @@ export class TabsViewModel {
     };
 
     private normalizeRole(role?: UserRole | null): UserRole {
-        return role ?? UserRole.NoviceDriver;
+        return role ?? UserRole.Instructor;
     }
 
     getTabsForRole(role?: UserRole | null): TabConfigItem[] {
