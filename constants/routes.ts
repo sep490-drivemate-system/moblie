@@ -18,6 +18,8 @@ export const ROUTES = {
   RESCHEDULE_SESSION: '/(main)/(no-tabs)/reschedule-session',
   INSTRUCTOR_DETAIL: '/(main)/(no-tabs)/instructor-detail',
   SCHEDULE_DETAIL: '/(main)/(no-tabs)/schedule-detail',
+  IDENTIFICATION_DOCUMENT_MANAGEMENT_INSTRUCTOR:
+    '/(main)/(no-tabs)/identification-document-management-instructor',
   TRANSACTION_SUCCESS: '/(main)/(no-tabs)/transaction-success',
   NOTIFICATIONS: '/(main)/(tabs)/notifications',
 

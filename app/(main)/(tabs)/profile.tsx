@@ -105,10 +105,24 @@ export default function ProfileScreen() {
                 <Text style={styles.menuItemText}>Thông tin tài khoản</Text>
               </View>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() =>
+                router.push(
+                  "/(main)/(no-tabs)/identification-document-management-instructor"
+                )
+              }
+            >
+              <View style={styles.menuItemLeft}>
+                <IdCard size={20} color="#70E000" />
+                <Text style={styles.menuItemText}>Giấy tờ tùy thân Instr</Text>
+              </View>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
                 <IdCard size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Giấy tờ tùy thân</Text>
+                <Text style={styles.menuItemText}>Giấy tờ tùy thân Novi</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity
