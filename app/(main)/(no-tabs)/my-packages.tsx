@@ -20,13 +20,15 @@ import { AppColors } from "@/constants/Colors";
 import { BookingStatus } from "@/models/package/user-package";
 import { IMyPackgesResponse } from "@/models/package/package";
 import { ROUTES } from "@/constants/routes";
-import { useBookingViewModel } from "@/viewmodels/booking/BookingViewModel";
+import { BookingViewModel } from "@/viewmodels/booking/BookingViewModel";
 import HeaderList from "@/components/Commons/HeaderList";
 import TabFilter, { TabOption } from "@/components/Commons/TabFilter";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { RootState } from "@/lib/redux/store";
 
 export default function MyPackagesScreen() {
   const router = useRouter();
-  const bookingViewModel = useBookingViewModel();
+  const [bookingState, bookingViewModel] = useViewModel<RootState["booking"], BookingViewModel>(BookingViewModel, (state) => state.booking);
 
   const [selectedStatus, setSelectedStatus] = useState<BookingStatus>(BookingStatus.All);
   const [allPackages, setAllPackages] = useState<IMyPackgesResponse[]>([]);

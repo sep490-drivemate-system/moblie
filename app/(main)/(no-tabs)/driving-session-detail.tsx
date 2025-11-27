@@ -48,9 +48,8 @@ export default function DrivingSessionDetailScreen() {
   const endingLatitude = params.endingLatitude;
   const endingLongtitude = params.endingLongtitude;
 
-  useEffect(() => {
-    console.log("🔎 DrivingSessionDetail params:", params);
-  }, [params]);
+  // Debug log removed - params object is recreated on each render causing multiple logs
+  // If debugging is needed, use sessionId specifically: useEffect(() => { console.log("sessionId:", sessionId); }, [sessionId]);
 
 
   const allSessions = userPackagesData.flatMap((p) => p.sessions || []);
@@ -410,8 +409,18 @@ export default function DrivingSessionDetailScreen() {
     return null;
   }, [durationFromParams, displaySession]);
 
+  const FALLBACK_START_COORDS = useMemo(
+    () => ({
+      latitude: 10.823099,
+      longitude: 106.629664,
+    }),
+    []
+  );
+  const [stableMapStartLat, setStableMapStartLat] = useState<number | null>(null);
+  const [stableMapStartLong, setStableMapStartLong] = useState<number | null>(null);
+
   // Lấy tọa độ bắt đầu: ưu tiên từ pickupDetails, nếu không có thì lấy từ route đầu tiên
-  const mapStartLat = useMemo(() => {
+  const rawMapStartLat = useMemo(() => {
     const fromPickup = parseCoordinateValue(pickupDetails.lat as any);
     if (fromPickup !== null) return fromPickup;
     if (routesData && routesData.length > 0) {
@@ -420,7 +429,7 @@ export default function DrivingSessionDetailScreen() {
     return null;
   }, [pickupDetails.lat, routesData]);
 
-  const mapStartLong = useMemo(() => {
+  const rawMapStartLong = useMemo(() => {
     const fromPickup = parseCoordinateValue(pickupDetails.long as any);
     if (fromPickup !== null) return fromPickup;
     if (routesData && routesData.length > 0) {
@@ -429,13 +438,41 @@ export default function DrivingSessionDetailScreen() {
     return null;
   }, [pickupDetails.long, routesData]);
 
-  const hasValidStartCoords =
-    typeof mapStartLat === "number" && typeof mapStartLong === "number";
+  useEffect(() => {
+    if (typeof rawMapStartLat === "number") {
+      setStableMapStartLat(rawMapStartLat);
+    }
+    if (typeof rawMapStartLong === "number") {
+      setStableMapStartLong(rawMapStartLong);
+    }
+  }, [rawMapStartLat, rawMapStartLong]);
 
-  const currentSessionStatus = (sessionDetail?.status ??
+  const mapStartLat =
+    rawMapStartLat ?? stableMapStartLat ?? FALLBACK_START_COORDS.latitude;
+  const mapStartLong =
+    rawMapStartLong ?? stableMapStartLong ?? FALLBACK_START_COORDS.longitude;
+
+  const hasValidStartCoords =
+    typeof rawMapStartLat === "number" && typeof rawMapStartLong === "number";
+
+  const [localStatus, setLocalStatus] = useState<SessionStatus | undefined>(
+    (sessionDetail?.status ?? session?.status) as SessionStatus | undefined
+  );
+
+  // Cập nhật localStatus khi sessionDetail thay đổi
+  useEffect(() => {
+    if (sessionDetail?.status) {
+      setLocalStatus(sessionDetail.status as SessionStatus);
+    } else if (session?.status) {
+      setLocalStatus(session.status as SessionStatus);
+    }
+  }, [sessionDetail?.status, session?.status]);
+
+  const currentSessionStatus = localStatus ?? (sessionDetail?.status ??
     session?.status) as SessionStatus | undefined;
   const isPlanningStatus = currentSessionStatus === SessionStatus.Planning;
-  const isInProgressStatus = currentSessionStatus === SessionStatus.Upcoming;
+  const isUpcomingStatus = currentSessionStatus === SessionStatus.Upcoming;
+  const isInProgressStatus = currentSessionStatus === SessionStatus.InProgress;
 
   const allowInstructorRoutePlanning =
     Boolean(isInstructor && isPlanningStatus && hasValidStartCoords);
@@ -446,6 +483,50 @@ export default function DrivingSessionDetailScreen() {
     (allowNoviceApproval && Boolean(routesData && routesData.length > 0));
   const sessionStatusForMap =
     (currentSessionStatus ?? SessionStatus.Planning) as SessionStatus;
+
+  // Xử lý khi simulation hoàn thành: cập nhật status thành Completed và hiển thị thông báo
+  const handleSimulationComplete = useCallback(async () => {
+    if (!sessionId || typeof sessionId !== "string") {
+      return;
+    }
+
+    try {
+      // Cập nhật status thành Completed
+      await dispatch(
+        updateSessionStatus({
+          sessionId,
+          status: SessionStatus.Completed,
+        })
+      ).unwrap();
+
+      // Cập nhật local status
+      setLocalStatus(SessionStatus.Completed);
+
+      // Refresh session detail
+      await dispatch(getSessionDetail({ sessionId })).unwrap();
+
+      // Hiển thị thông báo hoàn thành
+      setAlertTitle("Hoàn thành");
+      setAlertMessage("Đã hoàn thành buổi tập lái này!");
+      setAlertVariant(AlertVariant.Success);
+      setAlertPrimaryButton({
+        label: "OK",
+        onPress: () => setAlertVisible(false),
+      });
+      setAlertVisible(true);
+    } catch (error) {
+      console.error("Error updating session status to Completed:", error);
+      // Vẫn hiển thị thông báo dù có lỗi
+      setAlertTitle("Hoàn thành");
+      setAlertMessage("Đã hoàn thành buổi tập lái này!");
+      setAlertVariant(AlertVariant.Success);
+      setAlertPrimaryButton({
+        label: "OK",
+        onPress: () => setAlertVisible(false),
+      });
+      setAlertVisible(true);
+    }
+  }, [sessionId, dispatch]);
 
   const {
     mapRef,
@@ -469,6 +550,7 @@ export default function DrivingSessionDetailScreen() {
     shouldShowMapForPlanning,
     goongApiKey: GOONG_API_KEY,
     maxDurationMinutes: allowedDurationMinutes ?? undefined,
+    onSimulationComplete: handleSimulationComplete,
   });
 
   // Kiểm tra nếu instructor đã có route và đang chờ chấp nhận
@@ -545,7 +627,38 @@ export default function DrivingSessionDetailScreen() {
   }, [dispatch, selectedRoutePoints, sessionId, router]);
 
   const canShowSimulationControls =
-    isInstructor && isInProgressStatus && effectiveRouteSegments.length > 0;
+    isInstructor && (isInProgressStatus || isUpcomingStatus) && effectiveRouteSegments.length > 0;
+
+  // Xử lý khi bắt đầu simulation: cập nhật status thành InProgress
+  const handleStartSimulation = useCallback(async () => {
+    if (!sessionId || typeof sessionId !== "string") {
+      return;
+    }
+
+    // Nếu status chưa phải InProgress, cập nhật nó
+    if (currentSessionStatus !== SessionStatus.InProgress) {
+      try {
+        await dispatch(
+          updateSessionStatus({
+            sessionId,
+            status: SessionStatus.InProgress,
+          })
+        ).unwrap();
+
+        // Cập nhật local status ngay lập tức
+        setLocalStatus(SessionStatus.InProgress);
+
+        // Refresh session detail
+        await dispatch(getSessionDetail({ sessionId })).unwrap();
+      } catch (error) {
+        console.error("Error updating session status:", error);
+        // Vẫn cho phép bắt đầu simulation dù có lỗi
+      }
+    }
+
+    // Bắt đầu simulation
+    startSimulation();
+  }, [sessionId, currentSessionStatus, dispatch, startSimulation]);
 
   const canShowRouteActions =
     allowNoviceApproval && Boolean(routesData && routesData.length > 0);
@@ -621,63 +734,16 @@ export default function DrivingSessionDetailScreen() {
     }
   }, [sessionId, dispatch]);
 
-  useEffect(() => {
-    if (!sessionId || typeof sessionId !== "string") return;
-
-    let isMounted = true;
-
-    const loadRoutes = async () => {
-      try {
-        setIsLoadingRoutes(true);
-        const response = await dispatch(getSessionRoutes({ sessionId })).unwrap();
-
-        let routes: ISessionRoutes[] | null = null;
-        if (Array.isArray(response)) {
-          routes = response;
-        } else if (response?.value && Array.isArray(response.value)) {
-          routes = response.value;
-        } else if ((response as any)?.isSuccess && (response as any)?.value && Array.isArray((response as any).value)) {
-          routes = (response as any).value;
-        }
-
-        if (!isMounted) return;
-
-        if (routes && routes.length > 0) {
-          setRoutesData(routes);
-        } else {
-          setRoutesData(null);
-        }
-
-      } catch (error) {
-        if (isMounted) {
-          setRoutesData(null);
-          Alert.alert("Lỗi", "Không thể tải thông tin lộ trình");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingRoutes(false);
-        }
-      }
-    };
-
-    loadRoutes();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [sessionId, dispatch]);
-
-
 
   return (
     <View style={styles.container}>
-      <HeaderList actionReturnScreen={ROUTES.MY_PACKAGES as any} title="Chi tiết buổi tập lái" />
+      <HeaderList actionReturnScreen={ROUTES.PROFILE as any} title="Chi tiết buổi tập lái" />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <SessionRouteList
           routePoints={routePoints}
           sessionDetail={sessionDetail}
-          status={sessionDetail?.status as SessionStatus}
+          status={localStatus ?? (sessionDetail?.status as SessionStatus)}
           sessionId={sessionId}
           displaySession={displaySession}
           onCancelPress={() => {
@@ -686,6 +752,9 @@ export default function DrivingSessionDetailScreen() {
             setShowCancelModal(true);
           }}
           showRouteCard
+          isSimulating={isSimulating}
+          simulationProgress={simulationProgress}
+          currentPosition={currentPosition}
         />
 
         <SessionMap
@@ -699,7 +768,7 @@ export default function DrivingSessionDetailScreen() {
           currentPosition={currentPosition}
           isSimulating={isSimulating}
           simulationProgress={simulationProgress}
-          onStartSimulation={startSimulation}
+          onStartSimulation={handleStartSimulation}
           onStopSimulation={stopSimulation}
           onMapPress={allowInstructorRoutePlanning && !isInstructorWaitingApproval ? handleMapPress : undefined}
           selectedRoutePoints={selectedRoutePoints}

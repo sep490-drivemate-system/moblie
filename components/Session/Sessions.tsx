@@ -123,7 +123,7 @@ export interface SessionsListProps {
 
 export default function SessionsList({
     bookingId,
-    title = "Danh sách buổi học",
+    title = "Danh sách buổi thuê",
     initialStatus = "all",
     enableScroll = true,
     showHeader = true,

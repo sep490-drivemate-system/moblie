@@ -32,6 +32,7 @@ interface UseSessionMapOptions {
     shouldShowMapForPlanning: boolean;
     goongApiKey?: string;
     maxDurationMinutes?: number | null;
+    onSimulationComplete?: () => void;
 }
 
 interface UseSessionMapResult {
@@ -70,6 +71,7 @@ export function useSessionMap({
     shouldShowMapForPlanning,
     goongApiKey,
     maxDurationMinutes,
+    onSimulationComplete,
 }: UseSessionMapOptions): UseSessionMapResult {
     const dispatch = useAppDispatch();
     const mapRef = useRef<MapView | null>(null);
@@ -176,7 +178,7 @@ export function useSessionMap({
                 }
 
                 if (startPointLat === undefined || startPointLng === undefined) {
-                    console.warn("⚠️ Goong directions skipped: invalid start coordinates");
+                    console.warn(" Goong directions skipped: invalid start coordinates");
                     return;
                 }
 
@@ -263,6 +265,19 @@ export function useSessionMap({
                     }
                 }
 
+                if (segments.length === 0) {
+                    const fallbackSegments = allPoints.slice(0, -1).map((point, index) => ({
+                        coordinates: [
+                            { latitude: point.lat, longitude: point.lng },
+                            { latitude: allPoints[index + 1].lat, longitude: allPoints[index + 1].lng },
+                        ],
+                        distance: "N/A",
+                        duration: "N/A",
+                    }));
+                    setRouteSegments(fallbackSegments);
+                    return;
+                }
+
                 setRouteSegments(segments);
             } catch (error) {
                 console.error("❌ Error fetching Goong directions:", error);
@@ -306,12 +321,7 @@ export function useSessionMap({
                     : "temp-session";
 
         if (selectedRoutePoints.length === 0) {
-            const fallbackRoutes = routesData ?? [];
-            fetchGoongDirections(
-                fallbackRoutes as unknown as ISessionRoutes[],
-                mapStartLat as number,
-                mapStartLong as number
-            );
+            // Không refetch bằng dữ liệu rỗng để tránh mất polyline hiện có
             return;
         }
 
@@ -340,7 +350,7 @@ export function useSessionMap({
     ]);
 
     const sendSessionLog = useCallback(
-        async (lat: number, lng: number, heading: number, speed: number) => {
+        async (lat: number, lng: number, heading: number, speed: number, isCompleted: boolean = false) => {
             if (!sessionId || typeof sessionId !== "string") return;
 
             try {
@@ -354,6 +364,7 @@ export function useSessionMap({
                             longitude: lng,
                             heading: heading.toFixed(2) + "°",
                             speed: Math.round(speed),
+                            isCompleted: isCompleted,
                         },
                     })
                 ).unwrap();
@@ -477,7 +488,7 @@ export function useSessionMap({
         const startTime = Date.now();
         const totalPoints = allCoordinates.length;
 
-        sendSessionLog(startPos.latitude, startPos.longitude, initialHeading, speedKmh);
+        sendSessionLog(startPos.latitude, startPos.longitude, initialHeading, speedKmh, false);
         let lastSaveTime = 0;
 
         simulationIntervalRef.current = setInterval(() => {
@@ -496,9 +507,16 @@ export function useSessionMap({
                     finalPos.latitude,
                     finalPos.longitude,
                     finalHeading,
-                    speedKmh
+                    speedKmh,
+                    true // Điểm cuối cùng: isCompleted = true
                 );
+                // Đặt progress = 100 để đảm bảo tất cả điểm có tích
+                setSimulationProgress(100);
                 stopSimulation();
+                // Gọi callback khi simulation hoàn thành
+                if (onSimulationComplete) {
+                    onSimulationComplete();
+                }
                 return;
             }
 
@@ -541,7 +559,8 @@ export function useSessionMap({
                     currentPos.latitude,
                     currentPos.longitude,
                     heading,
-                    currentSpeed
+                    currentSpeed,
+                    false // Các điểm giữa chừng: isCompleted = false
                 );
             }
         }, UPDATE_INTERVAL);
@@ -549,6 +568,7 @@ export function useSessionMap({
         effectiveRouteSegments,
         isSimulating,
         sendSessionLog,
+        onSimulationComplete,
     ]);
 
     const stopSimulation = useCallback(() => {

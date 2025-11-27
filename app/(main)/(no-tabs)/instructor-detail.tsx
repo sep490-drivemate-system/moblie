@@ -45,7 +45,7 @@ const getGenderText = (gender: Gender): string => {
 export default function InstructorDetailScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const bookingVM = new BookingViewModel(dispatch);
+  const [, bookingVM] = useViewModel(BookingViewModel, (state) => state.booking);
   const { instructorData } = useLocalSearchParams();
   const [instructor, setInstructor] = useState<IInstructors | null>(null);
   const [packages, setPackages] = useState<IInstructorPackages[]>([]);
@@ -161,14 +161,20 @@ export default function InstructorDetailScreen() {
 
     setIsProcessing(true);
 
-    await bookingVM.handleConfirmPurchase({
-      instructorId: instructor.id,
-      selectedPackage,
-      selectedVehicleId: selectedVehicle,
-    });
-
-    setShowConfirmModal(false);
-
+    try {
+      await bookingVM.handleConfirmPurchase({
+        instructorId: instructor.id,
+        selectedPackage,
+        selectedVehicleId: selectedVehicle,
+      });
+      // Thanh toán thành công, đóng modal và reset trạng thái xử lý
+      setShowConfirmModal(false);
+    } catch (error) {
+      console.error("Error while confirming purchase:", error);
+    } finally {
+      // Dù thành công hay thất bại thì cũng tắt trạng thái xử lý
+      setIsProcessing(false);
+    }
   };
 
   if (!instructor) {

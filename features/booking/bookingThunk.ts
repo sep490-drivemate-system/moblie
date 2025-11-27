@@ -78,6 +78,7 @@ export interface ISessionLogRequest {
   longitude: number;
   heading: string;
   speed: number;
+  isCompleted: boolean;
 }
 
 // Cancel Session Request Interface
@@ -284,6 +285,60 @@ export const updateSessionStatus = createThunk<
   "updateSessionStatus",
   `/${SESSION_PATH}`,
   { buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}?status=${payload.status}` }
+);
+
+// Cancel a session
+export const cancelSession = createAsyncThunk<
+  GenericResponse<boolean>,
+  { sessionId: string; cancelData: ICancelSessionRequest },
+  { rejectValue: string }
+>(
+  "cancelSession",
+  async ({ sessionId, cancelData }, { rejectWithValue }) => {
+    try {
+      const url = `/${SESSION_PATH}/${sessionId}/cancel`;
+
+      const response = await axiosInstance.post<GenericResponse<boolean>>(
+        url,
+        cancelData
+      );
+
+      console.log("✅ Session cancelled successfully:", response.data);
+      return response.data;
+    } catch (err) {
+      const error = err as any;
+      console.error("❌ API Error:", error.response?.data || error.message);
+      const message = error.response?.data?.message || "Không thể hủy buổi tập";
+      return rejectWithValue(message);
+    }
+  }
+);
+
+// Reschedule a session
+export const rescheduleSession = createAsyncThunk<
+  GenericResponse<boolean>,
+  { sessionId: string; rescheduleData: IRescheduleSessionRequest },
+  { rejectValue: string }
+>(
+  "rescheduleSession",
+  async ({ sessionId, rescheduleData }, { rejectWithValue }) => {
+    try {
+      const url = `/${SESSION_PATH}/${sessionId}/reschedule`;
+
+      const response = await axiosInstance.post<GenericResponse<boolean>>(
+        url,
+        rescheduleData
+      );
+
+      console.log("✅ Session rescheduled successfully:", response.data);
+      return response.data;
+    } catch (err) {
+      const error = err as any;
+      console.error("❌ API Error:", error.response?.data || error.message);
+      const message = error.response?.data?.message || "Không thể đổi lịch buổi tập";
+      return rejectWithValue(message);
+    }
+  }
 );
 
 // Submit feedback for a booking

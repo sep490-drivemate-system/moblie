@@ -5,27 +5,29 @@ import { buyPackage } from "@/features/instructor/instructorThunk";
 import { BookingStatus } from "@/models/package/user-package";
 import { IBuyPackageRequest, IMyPackgesResponse } from "@/models/package/package";
 import { AppColors } from "@/constants/Colors";
-import { AppDispatch } from "@/lib/redux/store";
+import { AppDispatch, RootState } from "@/lib/redux/store";
 import { router } from "expo-router";
 import { IInstructorPackages } from "@/models/instructor/instructor.type";
 import { ROUTES } from "@/constants/routes";
+import { BaseViewModel } from "../shared/BaseViewModel";
 
 type StatusOption = {
     key: BookingStatus;
     label: string;
 };
 
-export class BookingViewModel {
-    private dispatch: AppDispatch;
-
-    constructor(dispatch: AppDispatch) {
-        this.dispatch = dispatch;
+export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
+    constructor(dispatch: AppDispatch, getCurrentState: () => RootState["booking"]) {
+        super(dispatch, getCurrentState);
     }
 
 
 
     async fetchMyPackages(): Promise<IMyPackgesResponse[]> {
-        const result = await this.dispatch(getMyPackages(undefined)).unwrap();
+        const result = await this.executeAsync(async () => {
+            const response = await this.dispatch(getMyPackages(undefined)).unwrap();
+            return (response as any).value || response;
+        });
         const packages: IMyPackgesResponse[] = (result as any)?.value || result || [];
         return packages;
     }

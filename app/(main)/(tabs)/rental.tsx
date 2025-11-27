@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Calendar,
@@ -75,7 +75,7 @@ export default function RentalScreen() {
   const [selectedRescheduleReasons, setSelectedRescheduleReasons] = useState<string[]>([]);
 
   // Fetch sessions from API
-  const fetchSessions = async (status?: SessionStatus) => {
+  const fetchSessions = useCallback(async (status?: SessionStatus) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -88,27 +88,30 @@ export default function RentalScreen() {
           ...s,
           status: typeof s.status === 'string' ? parseInt(s.status) : s.status
         }))
-        : sessionsData;
-      setSessions(normalizedSessions);
+        : [];
+      // Đảm bảo sessions luôn là một mảng
+      setSessions(Array.isArray(normalizedSessions) ? normalizedSessions : []);
     } catch (err: any) {
       console.log('Failed to fetch sessions:', err);
       setError(err.message || 'Không thể tải dữ liệu');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dispatch]);
 
   // Refresh sessions
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await fetchSessions();
     setIsRefreshing(false);
-  };
+  }, [fetchSessions]);
 
-  // Fetch sessions on mount
-  useEffect(() => {
-    fetchSessions();
-  }, []);
+  // Fetch sessions only when tab is focused (lazy loading)
+  useFocusEffect(
+    useCallback(() => {
+      fetchSessions();
+    }, [fetchSessions])
+  );
 
 
   // const toggleRescheduleReason = (reason: string) => {
@@ -210,6 +213,9 @@ export default function RentalScreen() {
 
   // Filter sessions based on enum status
   const getFilteredSessions = () => {
+    if (!Array.isArray(sessions)) {
+      return [];
+    }
     if (selectedTab === "all") {
       return sessions;
     }
@@ -341,9 +347,9 @@ export default function RentalScreen() {
                   selectedTab === SessionStatus.Planning && styles.activeTabText,
                 ]}
               >
-                Lên lộ trình ({sessions.filter((session) => {
+                Lên lộ trình ({(Array.isArray(sessions) ? sessions.filter((session) => {
                   return session.status === SessionStatus.Planning;
-                }).length})
+                }) : []).length})
               </Text>
             </View>
           </TouchableOpacity>
@@ -366,9 +372,9 @@ export default function RentalScreen() {
                   selectedTab === SessionStatus.Upcoming && styles.activeTabText,
                 ]}
               >
-                Sắp diễn ra ({sessions.filter((session) => {
+                Sắp diễn ra ({(Array.isArray(sessions) ? sessions.filter((session) => {
                   return session.status === SessionStatus.Upcoming;
-                }).length})
+                }) : []).length})
               </Text>
             </View>
           </TouchableOpacity>
@@ -391,9 +397,9 @@ export default function RentalScreen() {
                   selectedTab === SessionStatus.InProgress && styles.activeTabText,
                 ]}
               >
-                Đang diễn ra ({sessions.filter((session) => {
+                Đang diễn ra ({(Array.isArray(sessions) ? sessions.filter((session) => {
                   return session.status === SessionStatus.InProgress;
-                }).length})
+                }) : []).length})
               </Text>
             </View>
           </TouchableOpacity>
@@ -416,9 +422,9 @@ export default function RentalScreen() {
                   selectedTab === SessionStatus.Completed && styles.activeTabText,
                 ]}
               >
-                Hoàn thành ({sessions.filter((session) => {
+                Hoàn thành ({(Array.isArray(sessions) ? sessions.filter((session) => {
                   return session.status === SessionStatus.Completed;
-                }).length})
+                }) : []).length})
               </Text>
             </View>
           </TouchableOpacity>
@@ -441,9 +447,9 @@ export default function RentalScreen() {
                   selectedTab === SessionStatus.Reschedule && styles.activeTabText,
                 ]}
               >
-                Đổi lịch ({sessions.filter((session) => {
+                Đổi lịch ({(Array.isArray(sessions) ? sessions.filter((session) => {
                   return session.status === SessionStatus.Reschedule;
-                }).length})
+                }) : []).length})
               </Text>
             </View>
           </TouchableOpacity>
@@ -466,9 +472,9 @@ export default function RentalScreen() {
                   selectedTab === SessionStatus.Cancelled && styles.activeTabText,
                 ]}
               >
-                Đã hủy ({sessions.filter((session) => {
+                Đã hủy ({(Array.isArray(sessions) ? sessions.filter((session) => {
                   return session.status === SessionStatus.Cancelled;
-                }).length})
+                }) : []).length})
               </Text>
             </View>
           </TouchableOpacity>
@@ -621,7 +627,7 @@ export default function RentalScreen() {
                           duration: session.duration,
                           displayEndLocationName: session.displayEndLocationName,
                           endingLatitude: session.endingLatitude,
-                          endingLongtitude: session.endingLongtitude,                          
+                          endingLongtitude: session.endingLongtitude,
 
                         },
                       })}

@@ -88,9 +88,22 @@ export default function SessionMap({
   hasExistingRoutes = false,
   isInstructorWaitingApproval = false,
 }: SessionMapProps) {
-  if (typeof mapStartLat !== "number" || typeof mapStartLong !== "number") {
-    return null;
-  }
+  const FALLBACK_COORDS = useMemo(
+    () => ({
+      latitude: 10.823099,
+      longitude: 106.629664,
+    }),
+    []
+  );
+
+  const isPlaceholderCoords =
+    typeof mapStartLat !== "number" || typeof mapStartLong !== "number";
+  const effectiveMapLat = isPlaceholderCoords
+    ? FALLBACK_COORDS.latitude
+    : (mapStartLat as number);
+  const effectiveMapLong = isPlaceholderCoords
+    ? FALLBACK_COORDS.longitude
+    : (mapStartLong as number);
 
   const internalMapRef = useRef<MapView>(null);
   const finalMapRef = mapRef ?? internalMapRef;
@@ -109,7 +122,7 @@ export default function SessionMap({
     typeof endDetails.lat === "number" && typeof endDetails.long === "number";
   const hasDistinctEndPoint =
     hasEndPoint &&
-    (endDetails.lat !== mapStartLat || endDetails.long !== mapStartLong);
+    (endDetails.lat !== effectiveMapLat || endDetails.long !== effectiveMapLong);
   // Hiển thị route nếu: có route segments, hoặc có existing routes và đang chờ chấp nhận
   const shouldRenderRoute =
     routeSegments.length > 0 ||
@@ -237,8 +250,8 @@ export default function SessionMap({
           provider={PROVIDER_GOOGLE}
           style={styles.map}
           initialRegion={{
-            latitude: mapStartLat,
-            longitude: mapStartLong,
+            latitude: effectiveMapLat,
+            longitude: effectiveMapLong,
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
           }}
@@ -249,8 +262,8 @@ export default function SessionMap({
         >
           <Marker
             coordinate={{
-              latitude: mapStartLat,
-              longitude: mapStartLong,
+              latitude: effectiveMapLat,
+              longitude: effectiveMapLong,
             }}
             title="Điểm bắt đầu"
             pinColor="green"
@@ -333,6 +346,14 @@ export default function SessionMap({
             </Marker>
           )}
         </MapView>
+        {isPlaceholderCoords && (
+          <View style={styles.placeholderOverlay} pointerEvents="none">
+            <ActivityIndicator size="small" color={AppColors.primary} />
+            <Text style={styles.placeholderText}>
+              Đang tải tọa độ chính xác...
+            </Text>
+          </View>
+        )}
 
         <View style={styles.legendContainer}>
           {legendItems.map((item) => (
@@ -482,6 +503,23 @@ const styles = StyleSheet.create({
   map: {
     height: 260,
     width: "100%",
+  },
+  placeholderOverlay: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  placeholderText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: "#1f2937",
+    textAlign: "center",
   },
   legendContainer: {
     flexDirection: "row",

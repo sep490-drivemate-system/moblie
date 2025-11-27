@@ -91,7 +91,7 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
 
         const sessions = await this.executeAsync<IBookingSession[]>(
             async () => {
-                const result = await this.dispatch(getSessions(apiStatus)).unwrap();
+                const result = await this.dispatch(getAllSessions(apiStatus ? { status: apiStatus } : undefined)).unwrap();
                 return result?.value ?? [];
             },
             (sessions) => {

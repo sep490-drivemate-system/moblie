@@ -36,26 +36,20 @@ import {
 } from '../schedule/scheduleThunk';
 
 interface BookingState extends BaseState {
-    // Packages
     myPackages: IMyPackgesResponse[];
 
-    // Sessions
     bookingSessions: IBookingSession[];
     allSessions: IBookingSession[];
     sessionDetail: ISessionDetailResponse | null;
     sessionRoutes: ISessionRoutes[];
 
-    // Instructor
     instructorSchedule: IInstructorSchedule[];
     instructorBookedSessions: IInstructorBookedSession[];
 
-    // Policies
     policies: IPolicy[];
 
-    // User Info
     userInfo: IUserInfo | null;
 
-    // Operation states
     isCreatingSession: boolean;
     isSavingRoutes: boolean;
     isAddingLog: boolean;
@@ -67,7 +61,6 @@ interface BookingState extends BaseState {
 }
 
 const initialState: BookingState = {
-    // Base State
     isLoading: false,
     errorMessage: null,
     isSuccess: false,

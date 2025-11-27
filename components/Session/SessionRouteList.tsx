@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { Check } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { ISessionRoutes } from "@/models/route/route";
 import { ISessionDetailResponse, SessionStatus } from "@/models/booking/booking";
@@ -19,6 +20,14 @@ interface SessionRouteListProps {
   } | null;
   onCancelPress: () => void;
   showRouteCard: boolean;
+  isSimulating?: boolean;
+  simulationProgress?: number;
+  currentPosition?: {
+    latitude: number;
+    longitude: number;
+    heading: number;
+    speed: number;
+  } | null;
 }
 
 const getStatusDisplay = (status?: SessionStatus) => {
@@ -48,12 +57,51 @@ export default function SessionRouteList({
   displaySession,
   onCancelPress,
   showRouteCard,
+  isSimulating = false,
+  simulationProgress = 0,
+  currentPosition = null,
 }: SessionRouteListProps) {
   if (!showRouteCard) {
     return null;
   }
 
   const statusDisplay = getStatusDisplay(status);
+
+  // Tính toán điểm nào đã đi qua dựa trên simulationProgress
+  // Tổng số điểm = 1 (điểm bắt đầu) + routePoints.length + 1 (điểm kết thúc)
+  const totalPoints = 1 + routePoints.length + (sessionDetail?.displayEndLocationName ? 1 : 0);
+
+  // Lưu lại số điểm đã đi qua tối đa để giữ dấu tích sau khi simulation kết thúc
+  const maxCompletedPointsRef = useRef(0);
+
+  // Tính số điểm đã đi qua dựa trên progress (0-100)
+  const currentCompletedPoints = Math.floor((simulationProgress / 100) * totalPoints);
+
+  // Cập nhật số điểm đã đi qua tối đa khi simulation đang chạy hoặc progress tăng
+  useEffect(() => {
+    if (isSimulating || currentCompletedPoints > maxCompletedPointsRef.current) {
+      maxCompletedPointsRef.current = Math.max(maxCompletedPointsRef.current, currentCompletedPoints);
+    }
+  }, [isSimulating, currentCompletedPoints]);
+
+  // Sử dụng số điểm đã đi qua tối đa để hiển thị dấu tích (giữ lại sau khi simulation kết thúc)
+  // Khi bắt đầu simulation, điểm bắt đầu ngay lập tức có tích (ít nhất = 1)
+  const completedPointsCount = isSimulating
+    ? Math.max(1, currentCompletedPoints) // Đảm bảo ít nhất 1 điểm (điểm bắt đầu) khi đang simulation
+    : maxCompletedPointsRef.current;
+
+  // Kiểm tra điểm bắt đầu đã đi qua chưa
+  // Điểm bắt đầu có tích ngay khi bắt đầu simulation hoặc đã đi qua
+  const isStartPointCompleted = isSimulating || completedPointsCount > 0;
+
+  // Kiểm tra các route points đã đi qua
+  const getRoutePointCompleted = (index: number) => {
+    // Điểm bắt đầu = 0, routePoints bắt đầu từ 1
+    return completedPointsCount > index + 1;
+  };
+
+  // Kiểm tra điểm kết thúc đã đi qua chưa
+  const isEndPointCompleted = completedPointsCount >= totalPoints;
 
   return (
     <View style={styles.routeCard}>
@@ -71,10 +119,15 @@ export default function SessionRouteList({
             <View
               style={[
                 styles.pointNumber,
-                status === SessionStatus.Planning && styles.pointNumberPrimary,
+                (status === SessionStatus.Planning || (isSimulating && !isStartPointCompleted)) && styles.pointNumberPrimary,
+                isStartPointCompleted && styles.pointNumberCompleted,
               ]}
             >
-              <Text style={styles.pointNumberText}>1</Text>
+              {isStartPointCompleted ? (
+                <Check size={16} color="#ffffff" strokeWidth={3} />
+              ) : (
+                <Text style={styles.pointNumberText}>1</Text>
+              )}
             </View>
             <View style={styles.pointInfo}>
               <Text style={styles.pointAddress}>Điểm bắt đầu</Text>
@@ -83,33 +136,48 @@ export default function SessionRouteList({
               </Text>
             </View>
           </View>
-          <View style={styles.routeLine} />
         </View>
 
         {/* Route Points */}
-        {routePoints.map((point, index) => (
-          <View key={point.id} style={styles.routePoint}>
-            <View style={styles.pointHeader}>
-              <View style={styles.pointNumber}>
-                <Text style={styles.pointNumberText}>{index + 2}</Text>
-              </View>
-              <View style={styles.pointInfo}>
-                <Text style={styles.pointAddress}>{point.streetName}</Text>
+        {routePoints.map((point, index) => {
+          const isCompleted = getRoutePointCompleted(index);
+          return (
+            <View key={point.id} style={styles.routePoint}>
+              <View style={styles.pointHeader}>
+                <View style={[
+                  styles.pointNumber,
+                  isCompleted && styles.pointNumberCompleted,
+                ]}>
+                  {isCompleted ? (
+                    <Check size={16} color="#ffffff" strokeWidth={3} />
+                  ) : (
+                    <Text style={styles.pointNumberText}>{index + 2}</Text>
+                  )}
+                </View>
+                <View style={styles.pointInfo}>
+                  <Text style={styles.pointAddress}>{point.streetName}</Text>
+                </View>
               </View>
             </View>
-
-            {index < routePoints.length - 1 && <View style={styles.routeLine} />}
-          </View>
-        ))}
+          );
+        })}
 
         {/* Ending Point */}
         {sessionDetail?.displayEndLocationName && (
           <View style={styles.routePoint}>
             <View style={styles.pointHeader}>
-              <View style={[styles.pointNumber, styles.pointNumberPrimary]}>
-                <Text style={styles.pointNumberText}>
-                  {routePoints.length + 2}
-                </Text>
+              <View style={[
+                styles.pointNumber,
+                (!isSimulating || isEndPointCompleted) && styles.pointNumberPrimary,
+                isEndPointCompleted && styles.pointNumberCompleted,
+              ]}>
+                {isEndPointCompleted ? (
+                  <Check size={16} color="#ffffff" strokeWidth={3} />
+                ) : (
+                  <Text style={styles.pointNumberText}>
+                    {routePoints.length + 2}
+                  </Text>
+                )}
               </View>
               <View style={styles.pointInfo}>
                 <Text style={styles.pointAddress}>Điểm kết thúc</Text>
@@ -189,6 +257,9 @@ const styles = StyleSheet.create({
   pointNumberPrimary: {
     backgroundColor: AppColors.primary,
   },
+  pointNumberCompleted: {
+    backgroundColor: "#10b981",
+  },
   pointNumberText: {
     fontSize: 14,
     fontWeight: "600",
@@ -207,14 +278,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#9ca3af",
     marginTop: 2,
-  },
-  routeLine: {
-    position: "absolute",
-    left: 13,
-    top: 28,
-    bottom: -16,
-    width: 2,
-    backgroundColor: "#e5e7eb",
   },
 });
 

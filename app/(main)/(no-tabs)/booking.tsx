@@ -29,6 +29,8 @@ import { instructorVehicles } from "@/data/instructor_detail";
 import { instructorBusyTimes } from "@/data/user_packages_data";
 import { InstructorPackage } from "@/models/instructor/instructor.type";
 import { getNoviceDriverAddresses } from "@/features/user/userThunk";
+import { AlertVariant, AppAlert } from "@/components/Commons/AppAlert";
+import { ROUTES } from "@/constants/routes";
 
 export default function BookingScreen() {
   const router = useRouter();
@@ -65,6 +67,12 @@ export default function BookingScreen() {
   const [isCreatingSession, setIsCreatingSession] = useState(false);
 
   const [userCoins, setUserCoins] = useState(500);
+
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    message: string;
+    variant: AlertVariant;
+  } | null>(null);
 
 
   const [isTrackingExpanded, setIsTrackingExpanded] = useState(false);
@@ -337,21 +345,17 @@ export default function BookingScreen() {
 
       // API returns boolean: true = success, false = failed
       if (success === true) {
-        Alert.alert(
-          "Thành công",
-          "Đặt lịch thành công!",
-          [
-            {
-              text: "OK",
-              onPress: () => router.replace("/(main)/(no-tabs)/my-packages"),
-            },
-          ]
-        );
+        setAlertConfig({
+          visible: true,
+          message: "Đặt lịch thành công!",
+          variant: AlertVariant.Success,
+        });
       } else {
-        Alert.alert(
-          "Lỗi",
-          "Không thể tạo lịch học. Vui lòng thử lại."
-        );
+        setAlertConfig({
+          visible: true,
+          message: "Không thể tạo lịch học. Vui lòng thử lại.",
+          variant: AlertVariant.Error,
+        });
       }
     } catch (error: any) {
       console.error("Failed to create session:", error);
@@ -621,6 +625,25 @@ export default function BookingScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      {alertConfig?.visible && (
+        <AppAlert
+          visible={alertConfig.visible}
+          title={alertConfig.variant === AlertVariant.Success ? "Thành công" : "Thông báo"}
+          message={alertConfig.message}
+          variant={alertConfig.variant}
+          primaryButton={{
+            label: "OK",
+            onPress: () => {
+              router.replace(ROUTES.MY_PACKAGES);
+            },
+          }}
+          onDismiss={() => {
+            // Chỉ đóng popup, điều hướng đã được xử lý trong nút OK
+            setAlertConfig(null);
+          }}
+        />
+      )}
     </View>
   );
 }

@@ -4,12 +4,6 @@ export default function NoTabsLayout() {
     return (
         <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen
-                name="detail"
-                options={{
-                    presentation: 'modal',
-                }}
-            />
-            <Stack.Screen
                 name="instructor-detail"
                 options={{
                     presentation: 'card',
@@ -46,13 +40,6 @@ export default function NoTabsLayout() {
             />
             <Stack.Screen
                 name="deposit"
-                options={{
-                    presentation: 'card',
-                    animation: 'slide_from_right',
-                }}
-            />
-            <Stack.Screen
-                name="cancel-booking"
                 options={{
                     presentation: 'card',
                     animation: 'slide_from_right',

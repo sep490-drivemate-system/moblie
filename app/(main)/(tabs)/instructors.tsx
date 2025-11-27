@@ -10,7 +10,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Image } from "react-native";
 import { LucideUsers, Search, X, Star } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
@@ -26,12 +26,15 @@ import HeaderList from "@/components/Commons/HeaderList";
 import SearchBar from "@/components/Commons/SearchBar";
 import TabFilter from "@/components/Commons/TabFilter";
 import { ROUTES } from "@/constants/routes";
+import { UserRole } from "@/models/enum/UserRole.enum";
+import { RootState } from "@/lib/redux/store";
 
 
 function InstructorsScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const instructorState = useAppSelector((state) => state.instructor);
+  const userRole = useAppSelector((state: RootState) => state.auth.user?.role ?? null);
 
   // Initialize ViewModel
   const instructorViewModel = useMemo(
@@ -60,9 +63,14 @@ function InstructorsScreen() {
   const totalPages = Math.ceil(pagination.totalItems / pagination.itemsPerPage);
   const hasMorePages = pagination.currentPage < totalPages;
 
-  useEffect(() => {
-    instructorViewModel.fetchInstructors();
-  }, []);
+  // Chỉ fetch instructors khi tab được focus và user là NoviceDriver
+  useFocusEffect(
+    React.useCallback(() => {
+      if (userRole === UserRole.NoviceDriver) {
+        instructorViewModel.fetchInstructors();
+      }
+    }, [userRole, instructorViewModel])
+  );
 
   // Sync localSearchQuery với searchQuery từ Redux khi component mount
   useEffect(() => {
