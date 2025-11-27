@@ -19,9 +19,13 @@ import {
   ExternalLink,
 } from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { getInstructorPolicy } from "@/features/auth/authThunk";
+import { Policy } from "@/models/policy/policy";
 
 export default function TermsAndConditionsScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -32,6 +36,10 @@ export default function TermsAndConditionsScreen() {
       style?: "default" | "cancel" | "destructive";
     }>,
   });
+  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [policyAccepted, setPolicyAccepted] = useState<{
+    [id: string]: boolean;
+  }>({});
 
   // Terms acceptance states
   const [termsAccepted, setTermsAccepted] = useState({
@@ -50,6 +58,22 @@ export default function TermsAndConditionsScreen() {
       loadUserData();
     }, [])
   );
+
+  useEffect(() => {
+    const getPolicies = async () => {
+      const response = await dispatch(
+        getInstructorPolicy({ type: 2 })
+      ).unwrap();
+      console.log(response.value);
+      setPolicies(response.value!);
+      const initial = response.value!.reduce((acc: any, p: Policy) => {
+        acc[p.id] = false;
+        return acc;
+      }, {});
+      setPolicyAccepted(initial);
+    };
+    getPolicies();
+  }, []);
 
   const loadUserData = async () => {
     try {
@@ -104,46 +128,10 @@ export default function TermsAndConditionsScreen() {
     setShowAlert(true);
   };
 
-  const handleTermsToggle = (term: keyof typeof termsAccepted) => {
-    const newTermsAccepted = {
-      ...termsAccepted,
-      [term]: !termsAccepted[term],
-    };
-    setTermsAccepted(newTermsAccepted);
-
-    // Save terms temporarily
-    AsyncStorage.setItem(
-      "terms_and_conditions_data",
-      JSON.stringify(newTermsAccepted)
-    );
-  };
-
-  const handleLinkPress = async (url: string) => {
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        showCustomAlert("Lỗi", "Không thể mở liên kết", [
-          {
-            text: "OK",
-            onPress: () => setShowAlert(false),
-          },
-        ]);
-      }
-    } catch (error) {
-      showCustomAlert("Lỗi", "Không thể mở liên kết", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-    }
-  };
-
   // Check if all terms are accepted
   const isFormComplete = () => {
-    return Object.values(termsAccepted).every((value) => value === true);
+    if (policies.length === 0) return false;
+    return Object.values(policyAccepted).every((v) => v);
   };
 
   const handleGoBack = () => {
@@ -166,7 +154,7 @@ export default function TermsAndConditionsScreen() {
       // Save data to AsyncStorage
       await AsyncStorage.setItem(
         "terms_and_conditions_data",
-        JSON.stringify(termsAccepted)
+        JSON.stringify(policyAccepted)
       );
 
       // Navigate to next page
@@ -179,6 +167,14 @@ export default function TermsAndConditionsScreen() {
         },
       ]);
     }
+  };
+
+  const handlePolicyToggle = (id: string) => {
+    const newStates = {
+      ...policyAccepted,
+      [id]: !policyAccepted[id],
+    };
+    setPolicyAccepted(newStates);
   };
 
   return (
@@ -220,117 +216,26 @@ export default function TermsAndConditionsScreen() {
 
           {/* Terms List */}
           <View style={styles.termsContainer}>
-            <View style={styles.termItem}>
+            {policies.map((policy) => (
               <TouchableOpacity
-                style={styles.checkboxContainer}
-                onPress={() => handleTermsToggle("privacyNotice")}
+                key={policy.id}
+                activeOpacity={1}
+                onPress={() => handlePolicyToggle(policy.id)}
+                style={{ flexDirection: "row", gap: 10 }}
               >
                 <View
                   style={[
                     styles.checkbox,
-                    termsAccepted.privacyNotice && styles.checkedBox,
+                    policyAccepted[policy.id] && styles.checkedBox,
                   ]}
                 >
-                  {termsAccepted.privacyNotice && (
+                  {policyAccepted[policy.id] && (
                     <Check color="#FFFFFF" size={16} />
                   )}
                 </View>
+                <Text style={styles.linkText}>{policy.detail}</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.linkContainer}
-                onPress={() =>
-                  handleLinkPress("https://drivemate.com/privacy-notice")
-                }
-              >
-                <Text style={styles.linkText}>Thông báo Bảo mật</Text>
-                <ExternalLink color="#70E000" size={16} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.termItem}>
-              <TouchableOpacity
-                style={styles.checkboxContainer}
-                onPress={() => handleTermsToggle("termsOfUse")}
-              >
-                <View
-                  style={[
-                    styles.checkbox,
-                    termsAccepted.termsOfUse && styles.checkedBox,
-                  ]}
-                >
-                  {termsAccepted.termsOfUse && (
-                    <Check color="#FFFFFF" size={16} />
-                  )}
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.linkContainer}
-                onPress={() =>
-                  handleLinkPress("https://drivemate.com/terms-of-use")
-                }
-              >
-                <Text style={styles.linkText}>
-                  Điều Khoản Sử Dụng dành cho Vận tải, Giao thông, Thương mại
-                </Text>
-                <ExternalLink color="#70E000" size={16} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.termItem}>
-              <TouchableOpacity
-                style={styles.checkboxContainer}
-                onPress={() => handleTermsToggle("instructorTerms")}
-              >
-                <View
-                  style={[
-                    styles.checkbox,
-                    termsAccepted.instructorTerms && styles.checkedBox,
-                  ]}
-                >
-                  {termsAccepted.instructorTerms && (
-                    <Check color="#FFFFFF" size={16} />
-                  )}
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.linkContainer}
-                onPress={() =>
-                  handleLinkPress("https://drivemate.com/instructor-terms")
-                }
-              >
-                <Text style={styles.linkText}>
-                  Điều khoản dịch vụ dành cho đối tác người hướng dẫn
-                </Text>
-                <ExternalLink color="#70E000" size={16} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.termItem}>
-              <TouchableOpacity
-                style={styles.checkboxContainer}
-                onPress={() => handleTermsToggle("codeOfConduct")}
-              >
-                <View
-                  style={[
-                    styles.checkbox,
-                    termsAccepted.codeOfConduct && styles.checkedBox,
-                  ]}
-                >
-                  {termsAccepted.codeOfConduct && (
-                    <Check color="#FFFFFF" size={16} />
-                  )}
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.linkContainer}
-                onPress={() =>
-                  handleLinkPress("https://drivemate.com/code-of-conduct")
-                }
-              >
-                <Text style={styles.linkText}>Bộ quy tắc ứng xử</Text>
-                <ExternalLink color="#70E000" size={16} />
-              </TouchableOpacity>
-            </View>
+            ))}
           </View>
 
           {/* Buttons */}
@@ -452,6 +357,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   termsContainer: {
+    flex: 1,
+    gap: 20,
     paddingHorizontal: 20,
     marginBottom: 30,
   },

@@ -8,6 +8,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Edit2Icon, Trash2 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
@@ -114,24 +115,6 @@ export default function FormScreen() {
     }
   };
 
-  // BYPASS: Temporary function to skip healthcare certificate validation
-  const handleNextBypass = async () => {
-    console.log("Bypassing healthcare certificate form validation");
-    // Navigate to next step in onboarding flow
-    // router.push("/(onboarding)/emergency-contact");
-    await authViewModel.submitRegisterInstructor();
-    if (authState.isSuccess) {
-      router.push("/(onboarding)/waiting-confirm");
-    } else {
-      showCustomAlert("Lỗi", authState.errorMessage || "Không thể tiếp tục", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-    }
-  };
-
   const handleNext = async () => {
     // Validation for image
     if (!tempImageUri) {
@@ -153,8 +136,11 @@ export default function FormScreen() {
     console.log("📋 Register Instructor Form Data:");
     console.log("=====================================");
     Object.entries(formData).forEach(([key, value]) => {
-      if (value instanceof File || (value && typeof value === 'object' && value.uri)) {
-        console.log(`${key}: [File] ${value.name || value.uri || 'N/A'}`);
+      if (
+        value instanceof File ||
+        (value && typeof value === "object" && value.uri)
+      ) {
+        console.log(`${key}: [File] ${value.name || value.uri || "N/A"}`);
       } else if (value === null || value === undefined) {
         console.log(`${key}: null/undefined`);
       } else {
@@ -163,13 +149,24 @@ export default function FormScreen() {
     });
     console.log("=====================================");
 
-    // All validations passed, navigate to next page
-    // router.push("/(onboarding)/emergency-contact");
-    await authViewModel.submitRegisterInstructor();
-    if (authState.isSuccess) {
-      router.push("/(onboarding)/waiting-confirm");
-    } else {
-      showCustomAlert("Lỗi", authState.errorMessage || "Không thể tiếp tục", [
+    try {
+      const result = await authViewModel.submitRegisterInstructor();
+      if (authState.isSuccess) {
+        await AsyncStorage.setItem(
+          "registered_instructor_id",
+          result.value as string
+        );
+        router.push("/(onboarding)/waiting-confirm");
+      } else {
+        showCustomAlert("Lỗi", authState.errorMessage || "Không thể tiếp tục", [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]);
+      }
+    } catch (error) {
+      showCustomAlert("Lỗi", (error as string) || "Không thể tiếp tục", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -234,6 +231,17 @@ export default function FormScreen() {
       ]
     );
   };
+
+  if (authState.isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#70E000" />
+        <Text style={{ marginTop: 16, fontSize: 16, color: "#92929D" }}>
+          Đang xử lý...
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
