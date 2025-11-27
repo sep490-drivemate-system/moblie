@@ -1,8 +1,17 @@
 import { BaseViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { ISignInRequest } from "@/models/auth/signin";
-import { ISignUpRequest } from "@/models/auth/signup";
+import {
+  IRegisterInstructorRequest,
+  ISignUpRequest,
+} from "@/models/auth/signup";
 import { IForgotPasswordRequest } from "@/models/auth/forgotPassword";
-import { signIn, signUp, verifyEmail, verify } from "@/features/auth/authThunk";
+import {
+  signIn,
+  signUp,
+  verifyEmail,
+  verify,
+  registerInstructor,
+} from "@/features/auth/authThunk";
 import { signInSchema, signUpSchema } from "@/validations/authValidation";
 import { ValidationError } from "yup";
 import {
@@ -25,6 +34,7 @@ import {
   setSentOtp,
   setEnteredOtp,
   resetOtpVerification,
+  updateRegisterInstructorFormData,
 } from "@/features/auth/authSlice";
 import { getRoleFromToken } from "@/lib/jwt/tokenUtils";
 import { UserRole } from "@/models/enum/UserRole.enum";
@@ -113,7 +123,6 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     }
   }
 
-
   async checkAuthStatus(): Promise<void> {
     await this.executeAsync(
       async () => {
@@ -128,8 +137,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
           this.dispatch(setAuthenticated(true));
         }
       },
-      () => { },
-      () => { },
+      () => {},
+      () => {},
       {
         setLoading,
         setError,
@@ -138,7 +147,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     );
   }
 
-  handleGoogleLogin = async () => { };
+  handleGoogleLogin = async () => {};
 
   async handleSignOut(): Promise<void> {
     await AsyncStorage.removeItem(
@@ -175,8 +184,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
           );
         }
       },
-      () => { },
-      () => { },
+      () => {},
+      () => {},
       {
         setLoading,
         setError,
@@ -336,9 +345,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         this.dispatch(setRegisterFormError({ field: "phone", error }));
       }
     }
-
   }
-
 
   handleRegisterInputChange(field: keyof ISignUpRequest, value: string): void {
     this.updateRegisterFormData(field, value);
@@ -349,35 +356,35 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   }
 
   handleRegister = async (): Promise<void> => {
-    this.navigate(ROUTES.OTP);
-    // const registerFormData = this.getCurrentState().registerFormData;
+    // this.navigate(ROUTES.OTP);
+    const registerFormData = this.getCurrentState().registerFormData;
 
-    // try {
-    //   const result = await this.dispatch(
-    //     verify({
-    //       email: registerFormData.email,
-    //       phoneNumber: registerFormData.phone,
-    //     })
-    //   ).unwrap();
+    try {
+      const result = await this.dispatch(
+        verify({
+          email: registerFormData.email,
+          phoneNumber: registerFormData.phone,
+        })
+      ).unwrap();
 
-    //   if (result?.value) {
-    //     this.dispatch(setSentOtp(result.value));
+      if (result?.value) {
+        this.dispatch(setSentOtp(result.value));
 
-    //     if (this.router) {
-    //       this.navigate(ROUTES.OTP);
-    //     } else if (this.navigationCallback) {
-    //       this.navigationCallback(ROUTES.OTP);
-    //     }
-    //   }
-    // } catch (error) {
-    //   const message =
-    //     typeof error === "string"
-    //       ? error
-    //       : (error as { message?: string })?.message ||
-    //       this.getCurrentState().errorMessage ||
-    //       "Không thể gửi mã OTP, vui lòng thử lại.";
-    //   this.dispatch(setError(message));
-    // }
+        if (this.router) {
+          this.navigate(ROUTES.OTP);
+        } else if (this.navigationCallback) {
+          this.navigationCallback(ROUTES.OTP);
+        }
+      }
+    } catch (error) {
+      const message =
+        typeof error === "string"
+          ? error
+          : (error as { message?: string })?.message ||
+          this.getCurrentState().errorMessage ||
+          "Không thể gửi mã OTP, vui lòng thử lại.";
+      this.dispatch(setError(message));
+    }
   };
 
   handleResetRegisterForm(): void {
@@ -463,11 +470,14 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     }
   }
 
-  async handleVerifyEmail(email: string): Promise<{ success: boolean; message: string }> {
+  async handleVerifyEmail(
+    email: string
+  ): Promise<{ success: boolean; message: string }> {
     try {
       const result = await this.executeAsync<IVerifyEmailResponse>(
         async () => {
-          return (await this.dispatch(verifyEmail({ email })).unwrap()).value as IVerifyEmailResponse;
+          return (await this.dispatch(verifyEmail({ email })).unwrap())
+            .value as IVerifyEmailResponse;
         },
         (response) => {
           console.log("response line 521", response);
@@ -486,10 +496,12 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       }
       return { success: false, message: "Có lỗi xảy ra" };
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : "Có lỗi xảy ra" };
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Có lỗi xảy ra",
+      };
     }
   }
-
 
   // Method to update entered OTP
   updateEnteredOtp(otp: string): void {
@@ -518,5 +530,75 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   // Get OTP verification state
   getOtpVerificationState() {
     return this.getCurrentState().otpVerification;
+  }
+
+  updateRegisterInstructorFormData(
+    field: keyof IRegisterInstructorRequest,
+    value: string | boolean | File | null
+  ): void {
+    this.dispatch(updateRegisterInstructorFormData({ field, value }));
+  }
+
+  private buildRegisterInstructorFormData(): FormData {
+    const data = this.getCurrentState().registerInstructorFormData;
+    const formData = new FormData();
+
+    const textFields: Array<
+      | "FullName"
+      | "RawPassword"
+      | "Email"
+      | "PhoneNumber"
+      | "BirthDate"
+      | "Gender"
+      | "DrivingLicenseTier"
+      | "TeachingTier"
+    > = [
+      "FullName",
+      "RawPassword",
+      "Email",
+      "PhoneNumber",
+      "BirthDate",
+      "Gender",
+      "DrivingLicenseTier",
+      "TeachingTier",
+    ];
+
+    textFields.forEach((field) => {
+      const value = data[field];
+      if (value !== undefined && value !== null) {
+        formData.append(field, String(value));
+      }
+    });
+
+    const fileFields: Array<
+      | "Avatar"
+      | "DrivingLicenseFront"
+      | "DrivingLicenseBack"
+      | "TeachingLicenseFront"
+      | "HealthCheckup"
+      | "PersonalProfile"
+    > = [
+      "Avatar",
+      "DrivingLicenseFront",
+      "DrivingLicenseBack",
+      "TeachingLicenseFront",
+      "HealthCheckup",
+      "PersonalProfile",
+    ];
+
+    fileFields.forEach((field) => {
+      const value = data[field];
+      if (value) {
+        formData.append(field, value);
+      }
+    });
+
+    return formData;
+  }
+
+  async submitRegisterInstructor() {
+    const formData = this.buildRegisterInstructorFormData();
+    const result = await this.dispatch(registerInstructor(formData)).unwrap();
+    return result;
   }
 }

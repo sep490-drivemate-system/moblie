@@ -4,7 +4,7 @@ const ID_API_URL = process.env.EXPO_PUBLIC_FPT_AI_ID_API_URL as string;
 const API_KEY = process.env.EXPO_PUBLIC_FPT_AI_API_KEY as string;
 const LICENSE_API_URL = process.env.EXPO_PUBLIC_FPT_AI_DLC_API_URL as string;
 
-export const convertImageFile = (imageUri: string): File => {
+export const convertImageFile = (imageUri: string) => {
   const filename = imageUri.split("/").pop() || "image.jpg";
   const match = /\.(\w+)$/.exec(filename);
   const type = match ? `image/${match[1]}` : "image/jpeg";

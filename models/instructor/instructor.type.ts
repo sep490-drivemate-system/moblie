@@ -83,3 +83,25 @@ export interface IInstructor {
 export type Instructor = IInstructor & {
   price: number;
 };
+
+export interface InstructorApplicant {
+  applicationId: string;
+  instructorId: string;
+  fullname: string;
+  email: string;
+  phone:string;
+  gender: string;
+  birthDate: string;
+  submitDate: string;
+  dateUntilAutoRejection: string;
+  avatar: string;
+  drivingLicenseFront: string;
+  drivingLicenseBack: string;
+  teachingLicenseFront: string;
+  teachingLicenseTier: number;
+  drivingLicenseTier: number;
+  healthCheckup: string;
+  personalProfile: string;
+  applicationStatus: number;
+  trackingHistories: string[];
+}

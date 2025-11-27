@@ -166,28 +166,33 @@ export default function FormScreen() {
       // Load temp images if exist
       const tempFront = await AsyncStorage.getItem("temp_id_front");
       const tempBack = await AsyncStorage.getItem("temp_id_back");
-      
+
       if (tempFront) {
         setTempFrontImageUri(tempFront);
-        
+
         // Only call upload API if the image has changed
         if (lastProcessedFrontImageRef.current !== tempFront) {
           lastProcessedFrontImageRef.current = tempFront;
           setIsExtractingOCR(true);
           try {
             const response = await uploadImage(tempFront);
-            if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
+            if (
+              response &&
+              response.data &&
+              Array.isArray(response.data) &&
+              response.data.length > 0
+            ) {
               const ocrData = response.data[0];
               console.log("OCR response", response);
-              
+
               // Prepare updated form data
               const updated: typeof formData = { ...formData };
-              
+
               // Extract and set FullName
               if (ocrData.name) {
                 updated.fullname = ocrData.name;
               }
-              
+
               // Extract and set Gender (convert NAM -> Male, NỮ -> Female)
               if (ocrData.sex) {
                 const sexUpper = ocrData.sex.toUpperCase();
@@ -197,18 +202,18 @@ export default function FormScreen() {
                   updated.gender = "Female";
                 }
               }
-              
+
               // Extract and set BirthDate (format is already DD/MM/YYYY)
               if (ocrData.dob) {
                 updated.birthDate = ocrData.dob;
               }
-              
+
               // Update form data state
               setFormData(updated);
-              
+
               // Save to AsyncStorage
               AsyncStorage.setItem("id_card_data", JSON.stringify(updated));
-              
+
               // Sync to ViewModel after state update (not in render phase)
               syncFormDataToViewModel(updated);
             }
@@ -222,7 +227,7 @@ export default function FormScreen() {
         // Reset the ref if no front image
         lastProcessedFrontImageRef.current = null;
       }
-      
+
       if (tempBack) {
         setTempBackImageUri(tempBack);
         console.log("tempBack", tempBack);
@@ -241,10 +246,6 @@ export default function FormScreen() {
       loadUserData();
     }, [loadUserData])
   );
-
-  const handleBack = () => {
-    router.back();
-  };
 
   const handleImagePress = (type: "front" | "back") => {
     if (
@@ -317,48 +318,11 @@ export default function FormScreen() {
     AsyncStorage.setItem("id_card_data", JSON.stringify(newFormData));
   };
 
-  // Check if all fields are filled
-  const isFormComplete = () => {
-    return (
-      (tempFrontImageUri || frontImageUri) &&
-      (tempBackImageUri || backImageUri) &&
-      formData.fullname.trim() !== "" &&
-      formData.gender.trim() !== "" &&
-      formData.birthDate.trim() !== ""
-    );
-  };
-
   const handleGoBack = () => {
     router.back();
   };
 
-  // BYPASS: Temporary function to skip to next step
-  const handleNextBypass = () => {
-    router.push("/(onboarding)/(personal-identification)/(license)/form");
-  };
-
   const handleNext = () => {
-    // Validation
-    // if (!tempFrontImageUri && !frontImageUri) {
-    //   showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt trước thẻ căn cước", [
-    //     {
-    //       text: "OK",
-    //       onPress: () => setShowAlert(false),
-    //     },
-    //   ]);
-    //   return;
-    // }
-
-    // if (!tempBackImageUri && !backImageUri) {
-    //   showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt sau thẻ căn cước", [
-    //     {
-    //       text: "OK",
-    //       onPress: () => setShowAlert(false),
-    //     },
-    //   ]);
-    //   return;
-    // }
-
     if (!formData.fullname.trim()) {
       showCustomAlert("Lỗi", "Vui lòng nhập họ và tên", [
         {
@@ -511,7 +475,7 @@ export default function FormScreen() {
             {/* Front Image */}
             <View style={styles.imageContainer}>
               <Text style={styles.imageLabel}>
-                Ảnh mặt trước <Text style={styles.required}>*</Text>
+                Ảnh mặt trước
                 {isExtractingOCR && (
                   <Text style={styles.ocrStatus}>
                     {" "}
@@ -569,9 +533,7 @@ export default function FormScreen() {
 
             {/* Back Image */}
             <View style={styles.imageContainer}>
-              <Text style={styles.imageLabel}>
-                Ảnh mặt sau <Text style={styles.required}>*</Text>
-              </Text>
+              <Text style={styles.imageLabel}>Ảnh mặt sau</Text>
               <View style={styles.imageUploadArea}>
                 {tempBackImageUri || backImageUri ? (
                   <TouchableOpacity
@@ -644,7 +606,11 @@ export default function FormScreen() {
                     !formData.gender && styles.placeholderText,
                   ]}
                 >
-                  {formData.gender === "Male" ? "Nam" : formData.gender === "Female" ? "Nữ" : "Chọn giới tính"}
+                  {formData.gender === "Male"
+                    ? "Nam"
+                    : formData.gender === "Female"
+                    ? "Nữ"
+                    : "Chọn giới tính"}
                 </Text>
                 <ChevronDown
                   color="#92929D"

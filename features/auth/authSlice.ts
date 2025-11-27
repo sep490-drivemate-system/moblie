@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { UserRole } from "@/models/enum/UserRole.enum";
-import { signIn, signUp, verify } from "./authThunk";
+import { signIn, signUp, verify, registerInstructor } from "./authThunk";
 import { BaseState } from "@/models/generic/baseState";
 import { ISignInRequest } from "@/models/auth/signin";
 import { IRegisterInstructorRequest, ISignUpRequest } from "@/models/auth/signup";
@@ -272,6 +272,20 @@ const authSlice = createSlice({
         state.isLoading = false;
         // rejectWithValue trả về string message
         state.errorMessage = (action.payload as string) || null;
+      })
+      .addCase(registerInstructor.pending, (state) => {
+        state.isLoading = true;
+        state.isSuccess = false;
+        state.errorMessage = null;
+      })
+      .addCase(registerInstructor.fulfilled, (state) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+      })
+      .addCase(registerInstructor.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = false;
+        state.errorMessage = action.payload as string || null;
       });
   },
 });
