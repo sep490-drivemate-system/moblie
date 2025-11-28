@@ -26,7 +26,6 @@ import {
 
 export type SessionStatusFilter = SessionStatus | "all";
 
-export type NormalizedSession = IBookingSession;
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
     [SessionStatus.Planning]: "Lên lộ trình",
@@ -37,67 +36,48 @@ const STATUS_LABELS: Record<SessionStatus, string> = {
     [SessionStatus.Cancelled]: "Đã hủy",
 };
 
-const STATUS_COLORS: Record<SessionStatus, string> = {
-    [SessionStatus.Planning]: "#facc15",
-    [SessionStatus.Upcoming]: "#facc15",
-    [SessionStatus.InProgress]: "#22c55e",
-    [SessionStatus.Completed]: "#94a3b8",
-    [SessionStatus.Reschedule]: "#3b82f6",
-    [SessionStatus.Cancelled]: "#ef4444",
-};
-
 export class SessionViewModel extends BaseViewModel<SessionState> {
-    private cache: NormalizedSession[] = [];
     private initialized = false;
 
     constructor(dispatch: AppDispatch, getCurrentState: () => SessionState) {
         super(dispatch, getCurrentState);
     }
 
-    private normalizeStatus(status?: SessionStatus | "all"): SessionStatus | undefined {
-        if (!status || status === "all") {
-            return undefined;
-        }
-        return status;
-    }
 
-    private getCurrentSelectedStatus(): SessionStatus | "all" {
-        return this.getCurrentState().selectedStatus ?? "all";
+
+    private getCurrentSelectedStatus(): SessionStatus | "" {
+        return this.getCurrentState().selectedStatus ?? "" as SessionStatus | "";
     }
 
     async initialize(): Promise<void> {
         if (this.initialized) return;
         this.initialized = true;
-        await this.loadSessions(this.getCurrentSelectedStatus());
+        await this.getBookingSessions();
     }
 
-    async changeStatus(status: SessionStatus | "all"): Promise<void> {
-        this.dispatch(setSelectedStatus(status));
-        await this.loadSessions(status);
+    async changeStatus(status: SessionStatus | ""): Promise<void> {
+        this.dispatch(setSelectedStatus(status as SessionStatus | ""));
+        await this.getBookingSessions();
     }
 
     async refreshSessions(): Promise<void> {
         this.dispatch(setIsRefreshing(true));
         try {
-            await this.loadSessions(this.getCurrentSelectedStatus());
+            await this.getBookingSessions();
         } finally {
             this.dispatch(setIsRefreshing(false));
         }
     }
 
-    async loadSessions(status?: SessionStatus | "all"): Promise<IBookingSession[]> {
-        const effectiveStatus = status ?? this.getCurrentSelectedStatus();
-        const apiStatus = this.normalizeStatus(effectiveStatus);
-
+    async getBookingSessions(): Promise<IBookingSession[]> {
         const sessions = await this.executeAsync<IBookingSession[]>(
             async () => {
-                const result = await this.dispatch(getAllSessions(apiStatus ? { status: apiStatus } : undefined)).unwrap();
+                const result = await this.dispatch(getAllSessions()).unwrap();
                 return result?.value ?? [];
             },
             (sessions) => {
-                this.cache = sessions;
                 this.dispatch(setSessions(sessions));
-                this.dispatch(setStatusCount({ status: effectiveStatus, count: sessions.length }));
+                this.dispatch(setStatusCount({ status: this.getCurrentSelectedStatus() as SessionStatus | "", count: sessions.length }));
             },
             undefined,
             {
@@ -114,6 +94,50 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
         if (status === "all") return "Tất cả";
         return STATUS_LABELS[status] ?? "Không xác định";
     }
+
+    formatDate = (dateString: string) => {
+        const [year, month, day] = dateString.split("-");
+        return `${day}/${month}/${year}`;
+    }
+
+
+    getStatusColor(status: SessionStatus): string {
+        switch (status) {
+            case SessionStatus.Planning:
+                return "#3b82f6";
+            case SessionStatus.Upcoming:
+                return "#10b981";
+            case SessionStatus.InProgress:
+                return "#10b981";
+            case SessionStatus.Completed:
+                return "#6b7280";
+            case SessionStatus.Reschedule:
+                return "#f59e0b";
+            case SessionStatus.Cancelled:
+                return "#9ca3af";
+            default:
+                return "#6b7280";
+        }
+    };
+
+    getStatusText(status: SessionStatus): string {
+        switch (status) {
+            case SessionStatus.Planning:
+                return "Lên lộ trình";
+            case SessionStatus.Upcoming:
+                return "Sắp diễn ra";
+            case SessionStatus.InProgress:
+                return "Đang diễn ra";
+            case SessionStatus.Completed:
+                return "Hoàn thành";
+            case SessionStatus.Reschedule:
+                return "Đổi lịch";
+            case SessionStatus.Cancelled:
+                return "Đã hủy";
+            default:
+                return "Không xác định";
+        }
+    };
 
     getStatusIcon(status: SessionStatus): LucideIcon {
         switch (status) {
@@ -132,15 +156,5 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
             default:
                 return Clock;
         }
-    }
-
-    getStatusColor(status: SessionStatusFilter): string {
-        if (status === "all") return "#64748b";
-        return STATUS_COLORS[status] ?? "#94a3b8";
-    }
-
-    formatDate = (dateString: string) => {
-        const [year, month, day] = dateString.split("-");
-        return `${day}/${month}/${year}`;
     };
 }

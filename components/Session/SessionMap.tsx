@@ -191,7 +191,6 @@ export default function SessionMap({
     () => [
       { label: "Điểm bắt đầu", color: "green" },
       { label: "Điểm lộ trình", color: "blue" },
-      { label: "Điểm chỉnh sửa", color: "#f97316" },
       ...(hasDistinctEndPoint ? [{ label: "Điểm kết thúc", color: "red" }] : []),
     ],
     [hasDistinctEndPoint]
@@ -246,6 +245,7 @@ export default function SessionMap({
 
       <View style={styles.mapContainer}>
         <MapView
+          showsTraffic={true}
           ref={finalMapRef}
           provider={PROVIDER_GOOGLE}
           style={styles.map}
@@ -370,8 +370,12 @@ export default function SessionMap({
             </View>
           ))}
           <View style={styles.legendItem}>
-            <View style={styles.legendLine} />
+            <View style={styles.legendLinePlanning} />
             <Text style={styles.legendText}>Lộ trình đề xuất</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={styles.legendLineCompleted} />
+            <Text style={styles.legendText}>Lộ trình đã đi</Text>
           </View>
         </View>
 
@@ -540,7 +544,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.1)",
   },
-  legendLine: {
+  legendLinePlanning: {
+    width: 30,
+    height: 3,
+    backgroundColor: AppColors.yellow,
+    borderRadius: 2,
+  },
+  legendLineCompleted: {
     width: 30,
     height: 3,
     backgroundColor: AppColors.primary,

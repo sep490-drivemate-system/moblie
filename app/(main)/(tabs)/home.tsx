@@ -5,7 +5,7 @@ import { drivingLicenses, listCar, popularPackages } from "@/data/home_data";
 import { instructorsData } from "@/data/instructors_data";
 import { LicenseType } from "@/models/license/license";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronRight, MessageSquareMore, Wallet } from "lucide-react-native";
 import {
   FlatList,
@@ -28,10 +28,14 @@ export default function HomeScreen() {
   const [walletState, walletViewModel] = useViewModel(WalletViewModel, (state) => state.wallet);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const hasFetchedBalanceRef = useRef(false);
+
   useEffect(() => {
-    if (walletState.balance === 0) {
-      walletViewModel.getWalletBalance();
+    if (hasFetchedBalanceRef.current || walletState.balance !== 0) {
+      return;
     }
+    hasFetchedBalanceRef.current = true;
+    walletViewModel.getWalletBalance();
   }, [walletState.balance, walletViewModel]);
 
   const handleRefresh = async () => {
@@ -57,6 +61,7 @@ export default function HomeScreen() {
       <Text style={styles.drivingLicenseItemText}>{item.name}</Text>
     </TouchableOpacity>
   );
+  
   return (
     <ScrollView
       style={[styles.container, { paddingBottom: tabBarHeight + 16 }]}

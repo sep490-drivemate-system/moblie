@@ -8,6 +8,7 @@ import bookingReducer from "@/features/booking/bookingSlice";
 import walletReducer from "@/features/wallet/walletSlice";
 import userReducer from "@/features/user/userSlice";
 import packageReducer from "@/features/package/packageSlice";
+import sessionReducer from "@/features/session/sessionSlice";
 
 export const store = configureStore({
   reducer: {
@@ -20,6 +21,7 @@ export const store = configureStore({
     wallet: walletReducer,
     user: userReducer,
     package: packageReducer,
+    session: sessionReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

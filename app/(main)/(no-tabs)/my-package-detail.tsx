@@ -16,7 +16,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { IUserInfo, submitFeedback, IFeedbackRequest, cancelBooking } from "@/features/booking/bookingThunk";
+import { IUserInfo, submitFeedback, IFeedbackRequest } from "@/features/booking/bookingThunk";
 import { ArrowLeft, Star, MessageSquare } from "lucide-react-native";
 import SessionsList from "@/components/Session/Sessions";
 import CancelPackageModal from "@/components/Modal/CancelPackageModal";
@@ -83,9 +83,6 @@ export default function PackageDetailScreen() {
   ]);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [isProcessingCancel, setIsProcessingCancel] = useState(false);
-  const [localStatus, setLocalStatus] = useState<string>(packageData?.status || "paid");
-  const [cancelDateStr, setCancelDateStr] = useState<string | null>(null);
 
   const handleBookNewSession = () => {
 
@@ -158,64 +155,64 @@ export default function PackageDetailScreen() {
     }
   };
 
-  const handleConfirmCancel = async () => {
-    if (!packageData) return;
+  // const handleConfirmCancel = async () => {
+  //   if (!packageData) return;
 
-    setIsProcessingCancel(true);
+  //   setIsProcessingCancel(true);
 
-    try {
-      // Gọi API hủy gói
-      const result = await dispatch(cancelBooking({ bookingId: packageData.id })).unwrap();
-      if (!result) {
-        Alert.alert("Lỗi", "Không thể hủy gói học");
-        return;
-      }
+  //   try {
+  //     // Gọi API hủy gói
+  //     const result = await dispatch(cancelBooking({ bookingId: packageData.id })).unwrap();
+  //     if (!result) {
+  //       Alert.alert("Lỗi", "Không thể hủy gói học");
+  //       return;
+  //     }
 
-      // Tính toán thông tin hoàn tiền
-      const info = computeRefund({
-        status: localStatus,
-        purchaseDate: packageData.purchaseDate,
-        price: packageData.price,
-        totalHours: packageData.totalHours,
-        usedHours: packageData.usedHours,
-      });
+  //     // Tính toán thông tin hoàn tiền
+  //     const info = computeRefund({
+  //       status: localStatus,
+  //       purchaseDate: packageData.purchaseDate,
+  //       price: packageData.price,
+  //       totalHours: packageData.totalHours,
+  //       usedHours: packageData.usedHours,
+  //     });
 
-      setIsProcessingCancel(false);
-      setShowCancelModal(false);
+  //     setIsProcessingCancel(false);
+  //     setShowCancelModal(false);
 
-      // Hiển thị thông báo dựa trên kết quả tính toán hoàn tiền
-      if (info.eligible) {
-        Alert.alert(
-          "Hủy gói thành công",
-          `Số tiền hoàn: ${info.amount.toLocaleString("vi-VN")}₫\n${info.reason}`,
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                router.replace("/(main)/(no-tabs)/my-packages");
-              },
-            },
-          ]
-        );
-      } else {
-        Alert.alert(
-          "Hủy gói thành công",
-          info.reason,
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                router.replace("/(main)/(no-tabs)/my-packages");
-              },
-            },
-          ]
-        );
-      }
-    } catch (error) {
-      setIsProcessingCancel(false);
-      Alert.alert("Lỗi", error as string || "Không thể hủy gói học");
-    }
-  };
+  //     // Hiển thị thông báo dựa trên kết quả tính toán hoàn tiền
+  //     if (info.eligible) {
+  //       Alert.alert(
+  //         "Hủy gói thành công",
+  //         `Số tiền hoàn: ${info.amount.toLocaleString("vi-VN")}₫\n${info.reason}`,
+  //         [
+  //           {
+  //             text: "OK",
+  //             onPress: () => {
+  //               router.replace("/(main)/(no-tabs)/my-packages");
+  //             },
+  //           },
+  //         ]
+  //       );
+  //     } else {
+  //       Alert.alert(
+  //         "Hủy gói thành công",
+  //         info.reason,
+  //         [
+  //           {
+  //             text: "OK",
+  //             onPress: () => {
+  //               router.replace("/(main)/(no-tabs)/my-packages");
+  //             },
+  //           },
+  //         ]
+  //       );
+  //     }
+  //   } catch (error) {
+  //     setIsProcessingCancel(false);
+  //     Alert.alert("Lỗi", error as string || "Không thể hủy gói học");
+  //   }
+  // };
 
   return (
     <View style={styles.container}>
@@ -228,7 +225,7 @@ export default function PackageDetailScreen() {
           <View style={styles.instructorCard}>
             <View style={styles.instructorSection}>
               <Image
-                source={{ uri: instructorInfo.avatarUrl || "https://via.placeholder.com/60" }}
+                source={{ uri: instructorInfo.avatarUrl }}
                 style={styles.instructorAvatar}
               />
               <View style={styles.instructorInfo}>
@@ -386,7 +383,6 @@ export default function PackageDetailScreen() {
             <TouchableOpacity
               style={[styles.cancelButton, { flex: 1 }]}
               onPress={() => {
-                setCancelDateStr(new Date().toISOString());
                 setShowCancelModal(true);
               }}
             >
@@ -400,7 +396,7 @@ export default function PackageDetailScreen() {
 
 
       {/* Cancel Modal */}
-      <CancelPackageModal
+      {/* <CancelPackageModal
         visible={showCancelModal}
         packageData={packageData}
         localStatus={localStatus}
@@ -409,7 +405,7 @@ export default function PackageDetailScreen() {
         onClose={() => setShowCancelModal(false)}
         onConfirm={handleConfirmCancel}
         getStatusText={(status) => packageDetailViewModel.getStatusText(status)}
-      />
+      /> */}
 
       {/* Feedback Modal */}
       <Modal
@@ -425,7 +421,7 @@ export default function PackageDetailScreen() {
           <View style={styles.feedbackModalBackdrop}>
             <TouchableWithoutFeedback onPress={() => { }}>
               <View style={styles.feedbackModalContent}>
-                <Text style={styles.feedbackModalTitle}>Đánh giá gói học</Text>
+                <Text style={styles.feedbackModalTitle}>Đánh giá gói thuê</Text>
 
                 {/* Instructor Rating */}
                 <View style={styles.ratingSection}>
@@ -523,51 +519,6 @@ export default function PackageDetailScreen() {
   );
 }
 
-function daysSince(dateStr: string): number {
-  const start = new Date(dateStr).getTime();
-  const now = Date.now();
-  return Math.floor((now - start) / (1000 * 60 * 60 * 24));
-}
-
-function computeRefund(pkg: {
-  status: string;
-  purchaseDate: string;
-  price?: number;
-  totalHours: number;
-  usedHours: number;
-}): { eligible: boolean; amount: number; reason: string } {
-  if (pkg.status !== "paid" && pkg.status !== "in_progress") {
-    return {
-      eligible: false,
-      amount: 0,
-      reason: "Gói không ở trạng thái đã thanh toán",
-    };
-  }
-  const days = daysSince(pkg.purchaseDate);
-  const price = typeof pkg.price === "number" ? pkg.price : 0;
-  if (days >= 30) {
-    return {
-      eligible: false,
-      amount: 0,
-      reason: "Đã quá 30 ngày kể từ ngày mua",
-    };
-  }
-  if (pkg.usedHours === 0) {
-    return {
-      eligible: true,
-      amount: price,
-      reason: "Hoàn 100% vì chưa sử dụng giờ nào",
-    };
-  }
-  const unusedHours = Math.max(pkg.totalHours - pkg.usedHours, 0);
-  const perHour = pkg.totalHours > 0 ? price / pkg.totalHours : 0;
-  const refund = Math.max(Math.floor(perHour * unusedHours), 0);
-  return {
-    eligible: refund > 0,
-    amount: refund,
-    reason: "Hoàn theo số giờ chưa sử dụng (< 30 ngày)",
-  };
-}
 
 //
 

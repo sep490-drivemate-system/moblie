@@ -40,6 +40,7 @@ export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const role = useAppSelector((s) => s.auth.user?.role ?? null);
+  
   const authViewModel = useMemo(
     () => new AuthViewModel(dispatch, () => authState),
     [dispatch, authState]

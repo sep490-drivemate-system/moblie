@@ -10,8 +10,6 @@ export type TabKey =
     | 'overview'
     | 'schedule'
     | 'mycar'
-    | 'notifications'
-    | 'map'
     | 'packages';
 
 export interface TabConfigItem {
@@ -32,8 +30,6 @@ export class TabsViewModel {
         overview: { key: 'overview', routeName: 'overview', title: 'Overview', icon: 'gauge' },
         schedule: { key: 'schedule', routeName: 'schedule', title: 'Schedule', icon: 'calendarDays' },
         mycar: { key: 'mycar', routeName: 'mycar', title: 'My Car', icon: 'car' },
-        notifications: { key: 'notifications', routeName: 'notifications', title: 'Notifications', icon: 'bell' },
-        map: { key: 'map', routeName: 'map', title: 'Map', icon: 'map' },
         packages: { key: 'packages', routeName: 'packages', title: 'Gói', icon: 'package' },
     };
 
@@ -49,7 +45,6 @@ export class TabsViewModel {
                 this.allTabs.packages,
                 this.allTabs.instructors,
                 this.allTabs.cars,
-                this.allTabs.notifications,
                 this.allTabs.profile,
             ];
         }
@@ -60,16 +55,12 @@ export class TabsViewModel {
                 this.allTabs.schedule,
                 this.allTabs.mycar,
                 this.allTabs.rental,
-                this.allTabs.notifications,
                 this.allTabs.profile,
             ];
         }
 
-        // Default/fallback: show a compact set
         return [
             this.allTabs.home,
-            this.allTabs.map,
-            this.allTabs.profile,
         ];
     }
 

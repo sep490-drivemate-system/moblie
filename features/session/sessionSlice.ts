@@ -5,9 +5,9 @@ import { SessionStatus } from "@/models/session/session.enum";
 
 export interface SessionState extends BaseState {
     sessions: IBookingSession[];
-    selectedStatus: SessionStatus | "all";
+    selectedStatus: SessionStatus | "";
     isRefreshing: boolean;
-    statusCounts: Record<SessionStatus | "all", number>;
+    statusCounts: Record<SessionStatus | "", number>;
 }
 
 const initialState: SessionState = {
@@ -15,10 +15,10 @@ const initialState: SessionState = {
     errorMessage: null,
     isSuccess: false,
     sessions: [],
-    selectedStatus: "all",
+    selectedStatus: "",
     isRefreshing: false,
     statusCounts: {
-        all: 0,
+        "": 0,
         [SessionStatus.Planning]: 0,
         [SessionStatus.Upcoming]: 0,
         [SessionStatus.InProgress]: 0,
@@ -34,15 +34,15 @@ const sessionSlice = createSlice({
     reducers: {
         setSessions: (state, action: PayloadAction<IBookingSession[]>) => {
             state.sessions = action.payload;
-        },
+        },        
         clearSessions: (state) => {
             state.sessions = [];
         },
-        setSelectedStatus: (state, action: PayloadAction<SessionStatus | "all">) => {
+        setSelectedStatus: (state, action: PayloadAction<SessionStatus | "">) => {
             state.selectedStatus = action.payload;
         },
-        setStatusCount: (state, action: PayloadAction<{ status: SessionStatus | "all"; count: number }>) => {
-            state.statusCounts[action.payload.status] = action.payload.count;
+        setStatusCount: (state, action: PayloadAction<{ status: SessionStatus | ""; count: number }>) => {
+            state.statusCounts[action.payload.status as SessionStatus | ""] = action.payload.count;
         },
         setIsRefreshing: (state, action: PayloadAction<boolean>) => {
             state.isRefreshing = action.payload;

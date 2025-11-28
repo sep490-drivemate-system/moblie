@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -28,18 +28,17 @@ import TabFilter from "@/components/Commons/TabFilter";
 import { ROUTES } from "@/constants/routes";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import { RootState } from "@/lib/redux/store";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 
 
 function InstructorsScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const instructorState = useAppSelector((state) => state.instructor);
   const userRole = useAppSelector((state: RootState) => state.auth.user?.role ?? null);
 
-  // Initialize ViewModel
-  const instructorViewModel = useMemo(
-    () => new InstructorViewModel(dispatch, () => instructorState),
-    [dispatch, instructorState]
+  const [instructorState, instructorViewModel] = useViewModel(
+    InstructorViewModel,
+    (state) => state.instructor
   );
 
   // Get data from Redux state
@@ -158,20 +157,12 @@ function InstructorsScreen() {
     }
   };
 
-  const handleInstructorPress = (instructor: IInstructors) => {
-    router.push({
-      pathname: "/instructor-detail",
-      params: {
-        instructorId: instructor.id,
-        instructorData: JSON.stringify(instructor)
-      },
-    });
-  };
+
 
   const renderInstructorCard = ({ item }: { item: IInstructors }) => (
     <TouchableOpacity
       style={styles.instructorCard}
-      onPress={() => handleInstructorPress(item)}
+      onPress={() => instructorViewModel.handleInstructorPress(item)}
       activeOpacity={0.7}
     >
       <View style={styles.cardContent}>

@@ -5,16 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  StatusBar,
   Dimensions,
-  Image,
   ActivityIndicator,
   RefreshControl,
-  Modal,
-  TextInput,
-  Alert,
-  Keyboard,
-  TouchableWithoutFeedback,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -24,9 +17,7 @@ import {
   MapPin,
   CheckCircle,
   AlertCircle,
-  Eye,
   X,
-  Check,
   FileText,
   Navigation,
   List,
@@ -39,15 +30,9 @@ import { AppColors } from "@/constants/Colors";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import {
   getAllSessions,
-  cancelSession,
-  rescheduleSession,
-  ICancelSessionRequest,
-  IRescheduleSessionRequest
 } from "@/features/booking/bookingThunk";
 import { ROUTES } from "@/constants/routes";
 import HeaderList from "@/components/Commons/HeaderList";
-
-const { width } = Dimensions.get("window");
 
 export default function RentalScreen() {
   const router = useRouter();
@@ -63,16 +48,6 @@ export default function RentalScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal states
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<IBookingSession | null>(null);
-  const [cancelNote, setCancelNote] = useState("");
-  const [rescheduleNote, setRescheduleNote] = useState("");
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [isRescheduling, setIsRescheduling] = useState(false);
-  const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
-  const [selectedRescheduleReasons, setSelectedRescheduleReasons] = useState<string[]>([]);
 
   // Fetch sessions from API
   const fetchSessions = useCallback(async (status?: SessionStatus) => {
@@ -113,60 +88,6 @@ export default function RentalScreen() {
     }, [fetchSessions])
   );
 
-
-  // const toggleRescheduleReason = (reason: string) => {
-  //   setSelectedRescheduleReasons(prev =>
-  //     prev.includes(reason)
-  //       ? prev.filter(r => r !== reason)
-  //       : [...prev, reason]
-  //   );
-  // };
-
-  // Handle cancel session
-  const handleCancelSession = async () => {
-    if (!selectedSession?.id) {
-      Alert.alert("Lỗi", "Không tìm thấy thông tin buổi tập lái");
-      return;
-    }
-
-    if (!cancelNote.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập lý do hủy thuê xe");
-      return;
-    }
-
-    try {
-      setIsCancelling(true);
-
-      const cancelData: ICancelSessionRequest = {
-        note: cancelNote.trim()
-      };
-
-      await dispatch(cancelSession({ sessionId: selectedSession.id, cancelData })).unwrap();
-
-      setShowCancelModal(false);
-      setCancelNote("");
-      setSelectedReasons([]);
-      setSelectedSession(null);
-
-      Alert.alert(
-        "Thành công",
-        "Đã hủy thuê xe thành công",
-        [
-          {
-            text: "OK",
-            onPress: () => fetchSessions() // Refresh data
-          }
-        ]
-      );
-    } catch (error) {
-      console.error("Error cancelling session:", error);
-      Alert.alert("Lỗi", error as string || "Không thể hủy thuê xe");
-    } finally {
-      setIsCancelling(false);
-    }
-  };
-
-  // Handle reschedule session
   // const handleRescheduleSession = async () => {
   //   if (!selectedSession?.id) {
   //     Alert.alert("Lỗi", "Không tìm thấy thông tin buổi tập lái");
@@ -283,14 +204,6 @@ export default function RentalScreen() {
       default:
         return Clock;
     }
-  };
-
-
-  const handleViewRoute = (sessionId: string) => {
-    router.push({
-      pathname: "/(main)/(no-tabs)/route-notification",
-      params: { routeId: sessionId },
-    });
   };
 
   const formatDate = (dateString: string) => {

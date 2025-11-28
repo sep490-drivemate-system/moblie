@@ -41,7 +41,6 @@ import { UserRole } from "@/models/enum/UserRole.enum";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootState } from "@/lib/redux/store";
 import { IVerifyEmailResponse } from "@/models/auth/verifyEmail";
-import { GenericResponse } from "@/models/generic/genericResponse";
 import { ROUTES } from "@/constants/routes";
 
 type AuthState = RootState["auth"];
@@ -137,8 +136,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
           this.dispatch(setAuthenticated(true));
         }
       },
-      () => {},
-      () => {},
+      () => { },
+      () => { },
       {
         setLoading,
         setError,
@@ -147,7 +146,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     );
   }
 
-  handleGoogleLogin = async () => {};
+  handleGoogleLogin = async () => { };
 
   async handleSignOut(): Promise<void> {
     await AsyncStorage.removeItem(
@@ -184,8 +183,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
           );
         }
       },
-      () => {},
-      () => {},
+      () => { },
+      () => { },
       {
         setLoading,
         setError,
@@ -553,15 +552,15 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       | "DrivingLicenseTier"
       | "TeachingTier"
     > = [
-      "FullName",
-      "RawPassword",
-      "Email",
-      "PhoneNumber",
-      "BirthDate",
-      "Gender",
-      "DrivingLicenseTier",
-      "TeachingTier",
-    ];
+        "FullName",
+        "RawPassword",
+        "Email",
+        "PhoneNumber",
+        "BirthDate",
+        "Gender",
+        "DrivingLicenseTier",
+        "TeachingTier",
+      ];
 
     textFields.forEach((field) => {
       const value = data[field];
@@ -578,13 +577,13 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       | "HealthCheckup"
       | "PersonalProfile"
     > = [
-      "Avatar",
-      "DrivingLicenseFront",
-      "DrivingLicenseBack",
-      "TeachingLicenseFront",
-      "HealthCheckup",
-      "PersonalProfile",
-    ];
+        "Avatar",
+        "DrivingLicenseFront",
+        "DrivingLicenseBack",
+        "TeachingLicenseFront",
+        "HealthCheckup",
+        "PersonalProfile",
+      ];
 
     fileFields.forEach((field) => {
       const value = data[field];

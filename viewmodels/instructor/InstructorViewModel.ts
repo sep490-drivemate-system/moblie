@@ -20,6 +20,8 @@ import {
 } from "@/features/instructor/instructorSlice";
 import { IInstructors, GetInstructorsParams } from "@/models/instructor/instructor.type";
 import { FilterState, SortType } from "@/models/instructor/instructor-filter.type";
+import { ROUTES } from "@/constants/routes";
+import { useRouter } from "expo-router";
 
 type InstructorState = RootState["instructor"];
 
@@ -30,24 +32,24 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
     await this.executeAsync(
       async () => {
         const currentState = this.getCurrentState();
-        
+
         // Build params từ state hoặc override bằng params truyền vào
         const requestParams: GetInstructorsParams = {
           searchKey: params?.searchKey ?? currentState.searchQuery,
           pageNumber: params?.pageNumber ?? currentState.pagination.currentPage,
           pageSize: params?.pageSize ?? currentState.pagination.itemsPerPage,
         };
-        
+
         const result = await this.dispatch(getListInstructors(requestParams)).unwrap();
-        
+
         // Extract data từ GenericResponse
         const paginatedData = (result as any).value || result;
-        
+
         // Update instructors
         this.dispatch(setAllInstructors(paginatedData.pageContent));
         this.dispatch(setFilteredInstructors(paginatedData.pageContent));
         this.dispatch(setDisplayedInstructors(paginatedData.pageContent));
-        
+
         // Update pagination info
         this.dispatch(setPagination({
           currentPage: paginatedData.currentPage,
@@ -69,7 +71,15 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
     );
   }
 
-  // Load page cụ thể (replace data)
+  handleInstructorPress = (instructor: IInstructors) => {
+    useRouter().push({
+      pathname: ROUTES.NO_TABS + ROUTES.INSTRUCTOR_DETAIL as any,
+      params: {
+        instructorId: instructor.id,
+        instructorData: JSON.stringify(instructor),
+      },
+    });
+  }
   async loadPage(pageNumber: number): Promise<void> {
     await this.fetchInstructors({ pageNumber });
   }
@@ -165,9 +175,9 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
     this.dispatch(setIsRefreshing(true));
     const currentState = this.getCurrentState();
     // Giữ lại search query hiện tại, reset về page 1
-    await this.fetchInstructors({ 
+    await this.fetchInstructors({
       searchKey: currentState.searchQuery,
-      pageNumber: 1 
+      pageNumber: 1
     });
     this.dispatch(setIsRefreshing(false));
   }

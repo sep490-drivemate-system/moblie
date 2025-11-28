@@ -9,7 +9,6 @@ import {
     setSuccess,
 } from '@/features/home/homeSlice';
 
-// Sử dụng Redux state type
 type HomeState = RootState['home'];
 
 export class HomeViewModel extends BaseViewModel<HomeState> {
@@ -20,7 +19,6 @@ export class HomeViewModel extends BaseViewModel<HomeState> {
                 // Giả lập API call để lấy thông tin user
                 const token = await AsyncStorage.getItem(process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token');
                 if (token) {
-                    // Trong thực tế, bạn sẽ gọi API để lấy thông tin user
                     this.dispatch(setUserInfo({
                         name: 'John Doe',
                         email: 'john@example.com'
