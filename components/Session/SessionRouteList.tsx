@@ -3,12 +3,13 @@ import { View, Text, StyleSheet } from "react-native";
 import { Check } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { ISessionRoutes } from "@/models/route/route";
-import { ISessionDetailResponse, SessionStatus } from "@/models/booking/booking";
+import { SessionStatus } from "@/models/booking/booking";
 import SessionActions from "./SessionActions";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { SessionViewModel } from "@/viewmodels/session/SessionViewModel";
 
 interface SessionRouteListProps {
   routePoints: ISessionRoutes[];
-  sessionDetail: ISessionDetailResponse | null;
   status: SessionStatus;
   sessionId: string | string[] | undefined;
   displaySession: {
@@ -30,8 +31,25 @@ interface SessionRouteListProps {
   } | null;
 }
 
-const getStatusDisplay = (status?: SessionStatus) => {
-  switch (status) {
+const parseSessionStatus = (status: string | SessionStatus | undefined): SessionStatus | undefined => {
+  if (!status) return undefined;
+  if (typeof status === 'number') return status as SessionStatus;
+
+  const statusMap: Record<string, SessionStatus> = {
+    'Planning': SessionStatus.Planning,
+    'Upcoming': SessionStatus.Upcoming,
+    'InProgress': SessionStatus.InProgress,
+    'Completed': SessionStatus.Completed,
+    'Reschedule': SessionStatus.Reschedule,
+    'Cancelled': SessionStatus.Cancelled,
+  };
+
+  return statusMap[status] ?? undefined;
+};
+
+const getStatusDisplay = (status?: SessionStatus | string) => {
+  const parsedStatus = parseSessionStatus(status);
+  switch (parsedStatus) {
     case SessionStatus.Planning:
       return { text: "Lên lộ trình", color: "#3b82f6" };
     case SessionStatus.Upcoming:
@@ -51,7 +69,6 @@ const getStatusDisplay = (status?: SessionStatus) => {
 
 export default function SessionRouteList({
   routePoints,
-  sessionDetail,
   status,
   sessionId,
   displaySession,
@@ -59,48 +76,37 @@ export default function SessionRouteList({
   showRouteCard,
   isSimulating = false,
   simulationProgress = 0,
-  currentPosition = null,
 }: SessionRouteListProps) {
   if (!showRouteCard) {
     return null;
   }
 
+
+  const [sessionState,] = useViewModel(SessionViewModel, (state) => state.session);
   const statusDisplay = getStatusDisplay(status);
 
-  // Tính toán điểm nào đã đi qua dựa trên simulationProgress
-  // Tổng số điểm = 1 (điểm bắt đầu) + routePoints.length + 1 (điểm kết thúc)
-  const totalPoints = 1 + routePoints.length + (sessionDetail?.displayEndLocationName ? 1 : 0);
+  const totalPoints = 1 + routePoints.length + (sessionState.sessionDetail?.displayEndLocationName ? 1 : 0);
 
-  // Lưu lại số điểm đã đi qua tối đa để giữ dấu tích sau khi simulation kết thúc
   const maxCompletedPointsRef = useRef(0);
 
-  // Tính số điểm đã đi qua dựa trên progress (0-100)
   const currentCompletedPoints = Math.floor((simulationProgress / 100) * totalPoints);
 
-  // Cập nhật số điểm đã đi qua tối đa khi simulation đang chạy hoặc progress tăng
   useEffect(() => {
     if (isSimulating || currentCompletedPoints > maxCompletedPointsRef.current) {
       maxCompletedPointsRef.current = Math.max(maxCompletedPointsRef.current, currentCompletedPoints);
     }
   }, [isSimulating, currentCompletedPoints]);
 
-  // Sử dụng số điểm đã đi qua tối đa để hiển thị dấu tích (giữ lại sau khi simulation kết thúc)
-  // Khi bắt đầu simulation, điểm bắt đầu ngay lập tức có tích (ít nhất = 1)
   const completedPointsCount = isSimulating
-    ? Math.max(1, currentCompletedPoints) // Đảm bảo ít nhất 1 điểm (điểm bắt đầu) khi đang simulation
+    ? Math.max(1, currentCompletedPoints)
     : maxCompletedPointsRef.current;
 
-  // Kiểm tra điểm bắt đầu đã đi qua chưa
-  // Điểm bắt đầu có tích ngay khi bắt đầu simulation hoặc đã đi qua
   const isStartPointCompleted = isSimulating || completedPointsCount > 0;
 
-  // Kiểm tra các route points đã đi qua
   const getRoutePointCompleted = (index: number) => {
-    // Điểm bắt đầu = 0, routePoints bắt đầu từ 1
     return completedPointsCount > index + 1;
   };
 
-  // Kiểm tra điểm kết thúc đã đi qua chưa
   const isEndPointCompleted = completedPointsCount >= totalPoints;
 
   return (
@@ -113,7 +119,6 @@ export default function SessionRouteList({
       </View>
 
       <View style={styles.routePointsSection}>
-        {/* Starting Point */}
         <View style={styles.routePoint}>
           <View style={styles.pointHeader}>
             <View
@@ -132,7 +137,7 @@ export default function SessionRouteList({
             <View style={styles.pointInfo}>
               <Text style={styles.pointAddress}>Điểm bắt đầu</Text>
               <Text style={styles.pointCoords}>
-                {sessionDetail?.displayStartLocationName}
+                {sessionState.sessionDetail?.displayStartLocationName}
               </Text>
             </View>
           </View>
@@ -163,7 +168,7 @@ export default function SessionRouteList({
         })}
 
         {/* Ending Point */}
-        {sessionDetail?.displayEndLocationName && (
+        {sessionState.sessionDetail?.displayEndLocationName && (
           <View style={styles.routePoint}>
             <View style={styles.pointHeader}>
               <View style={[
@@ -182,7 +187,7 @@ export default function SessionRouteList({
               <View style={styles.pointInfo}>
                 <Text style={styles.pointAddress}>Điểm kết thúc</Text>
                 <Text style={styles.pointCoords}>
-                  {sessionDetail?.displayEndLocationName}
+                  {sessionState.sessionDetail?.displayEndLocationName}
                 </Text>
               </View>
             </View>

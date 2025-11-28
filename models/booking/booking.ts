@@ -167,10 +167,6 @@ export interface RouteSegment {
   difficulty: "easy" | "medium" | "hard";
   coordinates: Array<{ latitude: number; longitude: number }>;
 }
-
-
-
-// API Response types for booking sessions
 export interface IBookingSession {
   id: string;
   packageName: string;

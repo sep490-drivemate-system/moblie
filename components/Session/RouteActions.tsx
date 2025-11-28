@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet, TouchableOpacity, Text, Alert } from "react-native";
 import { AppColors } from "@/constants/Colors";
+import { AppAlert } from "../Commons/AppAlert";
 
 interface RouteActionsProps {
   onAccept: () => void;
@@ -33,24 +34,8 @@ export default function RouteActions({
         <Text style={styles.rejectButtonText}>Không đồng ý</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.acceptButton}
-        onPress={() => {
-          Alert.alert(
-            "Xác nhận lộ trình",
-            "Bạn đồng ý với lộ trình mà người hướng dẫn đưa ra?",
-            [
-              { text: "Hủy", style: "cancel" },
-              {
-                text: "Đồng ý",
-                onPress: onAccept,
-              },
-            ]
-          );
-        }}
-      >
-        <Text style={styles.acceptButtonText}>Đồng ý lộ trình</Text>
-      </TouchableOpacity>
+      <AppAlert visible={true} message="Bạn đồng ý với lộ trình mà người hướng dẫn đưa ra?" primaryButton={{ label: "Đồng ý", onPress: onAccept }} secondaryButton={{ label: "Hủy", variant: "secondary", onPress: () => { } }} onDismiss={() => { }} closable={false} />
+
     </View>
   );
 }

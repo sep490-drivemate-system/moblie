@@ -11,6 +11,13 @@ export default function NoTabsLayout() {
                 }}
             />
             <Stack.Screen
+                name="notifications"
+                options={{
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                }}
+            />
+            <Stack.Screen
                 name="car-detail"
                 options={{
                     presentation: 'card',

@@ -287,7 +287,6 @@ export const updateSessionStatus = createThunk<
   { buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}?status=${payload.status}` }
 );
 
-// Cancel a session
 export const cancelSession = createAsyncThunk<
   GenericResponse<boolean>,
   { sessionId: string; cancelData: ICancelSessionRequest },
@@ -302,8 +301,6 @@ export const cancelSession = createAsyncThunk<
         url,
         cancelData
       );
-
-      console.log("✅ Session cancelled successfully:", response.data);
       return response.data;
     } catch (err) {
       const error = err as any;

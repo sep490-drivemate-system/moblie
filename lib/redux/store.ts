@@ -9,6 +9,8 @@ import walletReducer from "@/features/wallet/walletSlice";
 import userReducer from "@/features/user/userSlice";
 import packageReducer from "@/features/package/packageSlice";
 import sessionReducer from "@/features/session/sessionSlice";
+import chatReducer from "@/features/chat/chatSlice";
+import notificationReducer from "@/features/notification/notificationSlice";
 
 export const store = configureStore({
   reducer: {
@@ -22,6 +24,8 @@ export const store = configureStore({
     user: userReducer,
     package: packageReducer,
     session: sessionReducer,
+    chat: chatReducer,
+    notification: notificationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

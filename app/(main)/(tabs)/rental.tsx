@@ -33,6 +33,9 @@ import {
 } from "@/features/booking/bookingThunk";
 import { ROUTES } from "@/constants/routes";
 import HeaderList from "@/components/Commons/HeaderList";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { SessionViewModel } from "@/viewmodels/session/SessionViewModel";
+import { RootState } from "@/lib/redux/store";
 
 export default function RentalScreen() {
   const router = useRouter();
@@ -48,44 +51,37 @@ export default function RentalScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [, sessionViewModel] = useViewModel<RootState["session"], SessionViewModel>(SessionViewModel, (state) => state.session);
 
-  // Fetch sessions from API
-  const fetchSessions = useCallback(async (status?: SessionStatus) => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // Helper function to parse status from string to enum
+  const parseSessionStatus = (status: string | SessionStatus | undefined): SessionStatus | undefined => {
+    if (!status) return undefined;
+    if (typeof status === 'number') return status as SessionStatus;
 
-      const result = await dispatch(getAllSessions(status ? { status } : undefined)).unwrap();
+    const statusMap: Record<string, SessionStatus> = {
+      'Planning': SessionStatus.Planning,
+      'Upcoming': SessionStatus.Upcoming,
+      'InProgress': SessionStatus.InProgress,
+      'Completed': SessionStatus.Completed,
+      'Reschedule': SessionStatus.Reschedule,
+      'Cancelled': SessionStatus.Cancelled,
+    };
 
-      const sessionsData = (result as any).value || result;
-      const normalizedSessions = Array.isArray(sessionsData)
-        ? sessionsData.map((s: any) => ({
-          ...s,
-          status: typeof s.status === 'string' ? parseInt(s.status) : s.status
-        }))
-        : [];
-      // Đảm bảo sessions luôn là một mảng
-      setSessions(Array.isArray(normalizedSessions) ? normalizedSessions : []);
-    } catch (err: any) {
-      console.log('Failed to fetch sessions:', err);
-      setError(err.message || 'Không thể tải dữ liệu');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [dispatch]);
+    return statusMap[status] ?? undefined;
+  };
 
   // Refresh sessions
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await fetchSessions();
+    await sessionViewModel.getAllSessions();
     setIsRefreshing(false);
-  }, [fetchSessions]);
+  }, [sessionViewModel]);
 
   // Fetch sessions only when tab is focused (lazy loading)
   useFocusEffect(
     useCallback(() => {
-      fetchSessions();
-    }, [fetchSessions])
+      sessionViewModel.getAllSessions().then((sessions) => setSessions(sessions));
+    }, [sessionViewModel])
   );
 
   // const handleRescheduleSession = async () => {
@@ -141,16 +137,14 @@ export default function RentalScreen() {
       return sessions;
     }
     return sessions.filter((session) => {
-      // Convert status to number if it's a string
-      const sessionStatus = typeof session.status === 'string'
-        ? parseInt(session.status)
-        : session.status;
+      const sessionStatus = parseSessionStatus(session.status);
       return sessionStatus === selectedTab;
     });
   };
 
-  const getStatusColor = (status: SessionStatus) => {
-    switch (status) {
+  const getStatusColor = (status: SessionStatus | string) => {
+    const parsedStatus = parseSessionStatus(status);
+    switch (parsedStatus) {
       case SessionStatus.Planning:
         return "#3b82f6";
       case SessionStatus.Upcoming:
@@ -168,8 +162,9 @@ export default function RentalScreen() {
     }
   };
 
-  const getStatusText = (status: SessionStatus) => {
-    switch (status) {
+  const getStatusText = (status: SessionStatus | string) => {
+    const parsedStatus = parseSessionStatus(status);
+    switch (parsedStatus) {
       case SessionStatus.Planning:
         return "Lên lộ trình";
       case SessionStatus.Upcoming:
@@ -187,8 +182,9 @@ export default function RentalScreen() {
     }
   };
 
-  const getStatusIcon = (status: SessionStatus) => {
-    switch (status) {
+  const getStatusIcon = (status: SessionStatus | string) => {
+    const parsedStatus = parseSessionStatus(status);
+    switch (parsedStatus) {
       case SessionStatus.Planning:
         return Navigation;
       case SessionStatus.Upcoming:
@@ -436,11 +432,7 @@ export default function RentalScreen() {
           </View>
         ) : (
           filteredSessions.map((session) => {
-            // Convert status to number if it's a string
-            const sessionStatus = typeof session.status === 'string'
-              ? parseInt(session.status)
-              : session.status;
-            const StatusIcon = getStatusIcon(sessionStatus);
+            const StatusIcon = getStatusIcon(session.status);
             return (
               <View key={session.id} style={styles.bookingCard}>
                 <LinearGradient
@@ -464,22 +456,22 @@ export default function RentalScreen() {
                         styles.statusBadge,
                         {
                           backgroundColor:
-                            getStatusColor(sessionStatus) + "15",
+                            getStatusColor(session.status) + "15",
                         },
                       ]}
                     >
                       <StatusIcon
                         size={16}
-                        color={getStatusColor(sessionStatus)}
+                        color={getStatusColor(session.status)}
                         strokeWidth={2}
                       />
                       <Text
                         style={[
                           styles.statusText,
-                          { color: getStatusColor(sessionStatus) },
+                          { color: getStatusColor(session.status) },
                         ]}
                       >
-                        {getStatusText(sessionStatus)}
+                        {getStatusText(session.status)}
                       </Text>
                     </View>
                   </View>
@@ -533,14 +525,6 @@ export default function RentalScreen() {
                         pathname: ROUTES.DRIVING_SESSION_DETAIL,
                         params: {
                           sessionId: session.id,
-                          status: session.status,
-                          displayStartLocationName: session.displayStartLocationName,
-                          startingLatitude: session.startingLatitude,
-                          startingLongtitude: session.startingLongtitude,
-                          duration: session.duration,
-                          displayEndLocationName: session.displayEndLocationName,
-                          endingLatitude: session.endingLatitude,
-                          endingLongtitude: session.endingLongtitude,
 
                         },
                       })}

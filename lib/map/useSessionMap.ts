@@ -3,7 +3,7 @@ import { Alert } from "react-native";
 import MapView from "react-native-maps";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { addSessionLog } from "@/features/booking/bookingThunk";
-import { ISessionDetailResponse } from "@/models/booking/booking";
+import { ISessionDetailDTO } from "@/models/session/session.type";
 import { ISessionRoutes } from "@/models/route/route";
 import { parseCoordinateValue, decodePolyline, calculateHeading } from "@/lib/map/mapUtils";
 
@@ -24,7 +24,7 @@ interface SelectedRoutePoint {
 
 interface UseSessionMapOptions {
     sessionId: string | string[] | undefined;
-    sessionDetail: ISessionDetailResponse | null;
+    sessionDetail: ISessionDetailDTO | null;
     routesData: ISessionRoutes[] | null;
     pickupDetails: { lat?: number | string | null; long?: number | string | null };
     dropoffDetails: { lat?: number | string | null; long?: number | string | null };

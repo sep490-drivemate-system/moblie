@@ -15,7 +15,11 @@ export const getUserById = createThunk<
     `/${USER_PATH}`,
     {
         buildUrl: (payload) => {
-            return `${USER_PATH}/${payload.id}`
+            // Đảm bảo URL đúng format và có id hợp lệ
+            if (!payload.id || payload.id.trim() === "") {
+                throw new Error("User ID is required");
+            }
+            return `/${USER_PATH}/${payload.id}`;
         }
     }
 );

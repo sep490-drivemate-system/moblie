@@ -5,6 +5,8 @@ import { BaseState } from "@/models/generic/baseState";
 import { ISignInRequest } from "@/models/auth/signin";
 import { IRegisterInstructorRequest, ISignUpRequest } from "@/models/auth/signup";
 import { IForgotPasswordRequest } from "@/models/auth/forgotPassword";
+import { IUserInfo } from "@/models/user/user.type";
+import { getUserById } from "../user/userThunk";
 
 interface RegisterFormErrors {
   email?: string;
@@ -19,6 +21,7 @@ interface AuthState extends BaseState {
   user: {
     role?: UserRole;
   } | null;
+  userInfo: IUserInfo | null;
   formData: ISignInRequest;
   registerFormData: ISignUpRequest;
   registerFormErrors: RegisterFormErrors;
@@ -35,7 +38,7 @@ interface AuthState extends BaseState {
 const initialState: AuthState = {
   isAuthenticated: true,
   user: null,
-
+  userInfo: null,
   formData: {
     emailOrPhone: "",
     password: "",
@@ -281,6 +284,9 @@ const authSlice = createSlice({
       .addCase(registerInstructor.fulfilled, (state) => {
         state.isLoading = false;
         state.isSuccess = true;
+      })
+      .addCase(getUserById.fulfilled, (state, action) => {
+        state.userInfo = action.payload.value ?? null as unknown as IUserInfo;
       })
       .addCase(registerInstructor.rejected, (state, action) => {
         state.isLoading = false;

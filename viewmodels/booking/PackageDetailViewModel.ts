@@ -8,6 +8,7 @@ import { ROUTES } from "@/constants/routes";
 
 export type PackageDetailData = {
     id: string;
+    bookingId?: string;
     instructorId?: string;
     instructorAvatar?: string;
     packageName: string;
@@ -17,6 +18,7 @@ export type PackageDetailData = {
     purchaseDate: string;
     price?: number;
     status: string;
+    cancelDate?: string | null;
     carId?: string;
     carPrice?: number;
     roadTypes?: string[];
@@ -43,6 +45,7 @@ export class PackageDetailViewModel {
             const packageDataFromParams = JSON.parse(rawPackageData);
             return {
                 id: packageDataFromParams.id,
+                bookingId: packageDataFromParams.id,
                 instructorId: packageDataFromParams.instructorId,
                 instructorAvatar:
                     packageDataFromParams.avatarInstructor ||
@@ -59,6 +62,7 @@ export class PackageDetailViewModel {
                 price: packageDataFromParams.price,
                 status:
                     packageDataFromParams.bookingStatus === 1 ? "paid" : "in_progress",
+                cancelDate: packageDataFromParams.cancelDate || null,
                 carId: packageDataFromParams.carId,
                 carPrice: packageDataFromParams.carPrice,
                 roadTypes: packageDataFromParams.roadTypes || [],

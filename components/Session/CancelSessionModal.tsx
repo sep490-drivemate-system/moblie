@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,30 +9,80 @@ import {
   ActivityIndicator,
   Keyboard,
   TouchableWithoutFeedback,
+  Alert,
 } from "react-native";
 import { AppColors } from "@/constants/Colors";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { SessionViewModel } from "@/viewmodels/session/SessionViewModel";
 
 interface CancelSessionModalProps {
   visible: boolean;
-  cancelNote: string;
-  selectedReasons: string[];
-  isCancelling: boolean;
-  canCancel: boolean;
+  sessionId?: string | null;
   onClose: () => void;
-  onNoteChange: (text: string) => void;
-  onToggleReason: (reason: string) => void;
-  onConfirm: () => void;
+  onCancelled?: () => void;
 }
 
 export default function CancelSessionModal({
   visible,
-  cancelNote,
-  isCancelling,
-  canCancel,
+  sessionId,
   onClose,
-  onNoteChange,
-  onConfirm,
+  onCancelled,
 }: CancelSessionModalProps) {
+  const [, sessionViewModel] = useViewModel(
+    SessionViewModel,
+    (state) => state.session
+  );
+  const [note, setNote] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!visible) {
+      setNote("");
+      setIsSubmitting(false);
+      setErrorMessage(null);
+    }
+  }, [visible]);
+
+  const handleConfirm = async () => {
+    if (!sessionId) {
+      Alert.alert("Lỗi", "Không tìm thấy thông tin buổi tập");
+      return;
+    }
+
+    if (!note.trim()) {
+      setErrorMessage("Vui lòng nhập lý do hủy buổi tập lái");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const success = await sessionViewModel.handleCancelSession(
+        sessionId,
+        note.trim()
+      );
+
+      if (success) {
+        Alert.alert("Thành công", "Đã hủy buổi tập lái thành công", [
+          {
+            text: "OK",
+            onPress: () => {
+              onClose();
+              onCancelled?.();
+            },
+          },
+        ]);
+      } else {
+        Alert.alert("Lỗi", "Không thể hủy buổi tập. Vui lòng thử lại.");
+      }
+    } catch (error) {
+      console.error("Error cancelling session:", error);
+      Alert.alert("Lỗi", "Không thể hủy buổi tập lái");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -53,46 +103,26 @@ export default function CancelSessionModal({
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Xác nhận hủy buổi tập</Text>
 
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>Thời điểm hủy</Text>
-                <Text style={styles.modalValue}>
-                  {new Date().toLocaleString("vi-VN")}
-                </Text>
+              <View style={{ gap: 8 }}>
+                <Text style={styles.modalSectionTitle}>Lý do hủy *</Text>
+                <TextInput
+                  style={styles.noteInput}
+                  multiline
+                  numberOfLines={4}
+                  placeholder="Mô tả lý do bạn muốn hủy buổi tập..."
+                  placeholderTextColor="#94a3b8"
+                  value={note}
+                  onChangeText={(text) => {
+                    setNote(text);
+                    if (errorMessage) {
+                      setErrorMessage(null);
+                    }
+                  }}
+                />
+                {errorMessage && (
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                )}
               </View>
-
-              {canCancel ? (
-                <View
-                  style={[styles.noticeBadge, { backgroundColor: "#dcfce7" }]}
-                >
-                  <Text style={[styles.noticeText, { color: "#16a34a" }]}>
-                    Có thể hủy: Trước ít nhất 12 giờ.
-                  </Text>
-                </View>
-              ) : (
-                <View
-                  style={[styles.noticeBadge, { backgroundColor: "#fee2e2" }]}
-                >
-                  <Text style={[styles.noticeText, { color: "#dc2626" }]}>
-                    Không thể hủy: Còn dưới 12 giờ trước giờ bắt đầu.
-                  </Text>
-                </View>
-              )}
-
-              <Text style={styles.modalSectionTitle}>Lý do hủy lịch</Text>
-
-
-
-              <Text style={styles.modalSectionTitle}>Ghi chú chi tiết</Text>
-              <TextInput
-                style={styles.noteInput}
-                placeholder="Nhập lý do chi tiết để hủy buổi tập lái..."
-                placeholderTextColor="#9ca3af"
-                value={cancelNote}
-                onChangeText={onNoteChange}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
 
               <View style={styles.modalActions}>
                 <TouchableOpacity
@@ -105,13 +135,13 @@ export default function CancelSessionModal({
                 <TouchableOpacity
                   style={[
                     styles.modalConfirmBtn,
-                    (!cancelNote.trim() || isCancelling) && { opacity: 0.5 },
+                    isSubmitting && { opacity: 0.8 },
                   ]}
-                  disabled={!cancelNote.trim() || isCancelling}
-                  onPress={onConfirm}
+                  disabled={isSubmitting}
+                  onPress={handleConfirm}
                 >
-                  {isCancelling ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                  {isSubmitting ? (
+                    <ActivityIndicator color={AppColors.white} />
                   ) : (
                     <Text style={styles.modalConfirmBtnText}>
                       Xác nhận hủy
@@ -258,6 +288,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     minHeight: 80,
     marginBottom: 16,
+  },
+  errorText: {
+    color: AppColors.error,
+    fontSize: 12,
+    fontWeight: "600",
   },
 });
 

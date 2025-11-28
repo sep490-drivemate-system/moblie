@@ -1,4 +1,5 @@
 import { LicenseTier } from "../car/car";
+import { UserRole } from "../enum/UserRole.enum";
 
 export interface IUserInfo {
     userId: string;
@@ -8,7 +9,7 @@ export interface IUserInfo {
     fullName: string;
     licenseTier: LicenseTier;
     birthDate: string;
-    role: number;
+    role: UserRole;
     instructor: any | null;
     noviceDriver: any | null;
 }

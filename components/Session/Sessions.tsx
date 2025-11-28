@@ -210,26 +210,10 @@ export default function SessionsList({
         return sessions.filter((session) => session.statusKey === selectedStatus);
     }, [sessions, selectedStatus]);
 
-    const handleSessionPress = (session: IBookingSession) => {
-        router.push({
-            pathname: ROUTES.DRIVING_SESSION_DETAIL,
-            params: { sessionId: session.id },
-        });
-    };
+
 
     const content = (
         <View style={[styles.wrapper, style]}>
-            {showHeader && (
-                <View style={styles.header}>
-                    <View>
-                        <Text style={styles.sectionTitle}>{title}</Text>
-                        <Text style={styles.sectionSubtitle}>
-                            Tổng cộng {sessions.length} buổi
-                        </Text>
-                    </View>
-                </View>
-            )}
-
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -376,18 +360,19 @@ export default function SessionsList({
 
                                 <View style={styles.sessionFooter}>
                                     <TouchableOpacity
-                                        onPress={() => handleSessionPress(session)}
+                                        onPress={() => router.push({
+                                            pathname: ROUTES.DRIVING_SESSION_DETAIL,
+                                            params: { sessionId: session.id },
+                                        })}
                                         style={styles.viewDetailButton}
                                     >
                                         <Text style={styles.viewDetailText}>Chi tiết</Text>
                                     </TouchableOpacity>
                                 </View>
-
                             </View>
                         );
                     })}
-                </View>
-            )}
+                </View>)}
         </View>
     );
 

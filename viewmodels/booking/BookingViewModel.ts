@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { getMyPackages } from "@/features/booking/bookingThunk";
+import { cancelPackageBooking, getMyPackages } from "@/features/booking/bookingThunk";
 import { buyPackage } from "@/features/instructor/instructorThunk";
 import { BookingStatus } from "@/models/package/user-package";
 import { IBuyPackageRequest, IMyPackgesResponse } from "@/models/package/package";
@@ -10,6 +10,22 @@ import { router } from "expo-router";
 import { IInstructorPackages } from "@/models/instructor/instructor.type";
 import { ROUTES } from "@/constants/routes";
 import { BaseViewModel } from "../shared/BaseViewModel";
+
+type RefundComputationInput = {
+    status: string | BookingStatus;
+    purchaseDate: string;
+    price?: number;
+    totalHours: number;
+    usedHours: number;
+};
+
+type RefundDisplay = {
+    text: string;
+    color: string;
+    reason: string;
+    isEligible: boolean;
+    amount: number;
+};
 
 type StatusOption = {
     key: BookingStatus;
@@ -53,7 +69,10 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
         if (status === BookingStatus.All) {
             return packages;
         }
-        return packages.filter((pkg) => pkg.bookingStatus === status);
+        return packages.filter((pkg) => {
+            const pkgStatus = this.parseBookingStatus(pkg.bookingStatus as any);
+            return pkgStatus === status;
+        });
     }
 
     calculateStatusCounts(packages: IMyPackgesResponse[]): Record<number, number> {
@@ -67,16 +86,18 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
         };
 
         packages.forEach((pkg) => {
-            if (counts[pkg.bookingStatus] !== undefined) {
-                counts[pkg.bookingStatus] += 1;
+            const pkgStatus = this.parseBookingStatus(pkg.bookingStatus as any);
+            if (counts[pkgStatus] !== undefined) {
+                counts[pkgStatus] += 1;
             }
         });
 
         return counts;
     }
 
-    getStatusColor(status: BookingStatus): string {
-        switch (status) {
+    getStatusColor(status: BookingStatus | string): string {
+        const parsedStatus = this.parseBookingStatus(status);
+        switch (parsedStatus) {
             case BookingStatus.Purchased:
                 return AppColors.yellow;
             case BookingStatus.InUse:
@@ -92,8 +113,26 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
         }
     }
 
-    getStatusText(status: BookingStatus): string {
-        switch (status) {
+    // Convert string status from API to BookingStatus enum
+    private parseBookingStatus(status: string | BookingStatus): BookingStatus {
+        if (typeof status === 'number') {
+            return status as BookingStatus;
+        }
+        
+        const statusMap: Record<string, BookingStatus> = {
+            'Purchased': BookingStatus.Purchased,
+            'InUse': BookingStatus.InUse,
+            'Used': BookingStatus.Used,
+            'CancellationWithRefund': BookingStatus.CancellationWithRefund,
+            'CancellationWithoutRefund': BookingStatus.CancellationWithoutRefund,
+        };
+        
+        return statusMap[status] ?? BookingStatus.Purchased;
+    }
+
+    getStatusText(status: BookingStatus | string): string {
+        const parsedStatus = this.parseBookingStatus(status);
+        switch (parsedStatus) {
             case BookingStatus.Purchased:
                 return "Đã mua";
             case BookingStatus.InUse:
@@ -161,5 +200,103 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
                 vehicleId: selectedVehicleId || "",
             },
         });
+    }
+
+    private daysSince(dateStr: string): number {
+        const timestamp = new Date(dateStr).getTime();
+        if (Number.isNaN(timestamp)) {
+            return 0;
+        }
+        const diff = Date.now() - timestamp;
+        return Math.floor(diff / (1000 * 60 * 60 * 24));
+    }
+
+    private computeRefundAmount(info: RefundComputationInput): {
+        eligible: boolean;
+        amount: number;
+        reason: string;
+    } {
+        const days = this.daysSince(info.purchaseDate);
+        const price = typeof info.price === "number" ? info.price : 0;
+
+        if (days >= 30) {
+            return {
+                eligible: false,
+                amount: 0,
+                reason: "Đã quá 30 ngày kể từ ngày mua gói",
+            };
+        }
+
+        if (info.usedHours <= 0) {
+            return {
+                eligible: true,
+                amount: price,
+                reason: "Hoàn 100% vì chưa sử dụng giờ nào",
+            };
+        }
+
+        if (info.totalHours <= 0) {
+            return {
+                eligible: false,
+                amount: 0,
+                reason: "Không xác định được tổng số giờ của gói",
+            };
+        }
+
+        const unusedHours = Math.max(info.totalHours - info.usedHours, 0);
+        const perHour = price / info.totalHours;
+        const refundAmount = Math.max(Math.floor(perHour * unusedHours), 0);
+
+        if (refundAmount <= 0) {
+            return {
+                eligible: false,
+                amount: 0,
+                reason: "Không còn giờ chưa sử dụng để hoàn tiền",
+            };
+        }
+
+        return {
+            eligible: true,
+            amount: refundAmount,
+            reason: "Hoàn theo số giờ chưa sử dụng (< 30 ngày)",
+        };
+    }
+
+    renderRefundInfo(info: RefundComputationInput): RefundDisplay {
+        const evaluation = this.computeRefundAmount(info);
+
+        if (!evaluation.eligible) {
+            return {
+                text: `Không đủ điều kiện hoàn tiền (${evaluation.reason})`,
+                color: AppColors.error,
+                reason: evaluation.reason,
+                isEligible: false,
+                amount: 0,
+            };
+        }
+
+        return {
+            text: `Số tiền dự kiến hoàn: ${evaluation.amount.toLocaleString("vi-VN")}₫`,
+            color: AppColors.primary,
+            reason: evaluation.reason,
+            isEligible: true,
+            amount: evaluation.amount,
+        };
+    }
+
+    async cancelPackageBooking(bookingId: string | undefined | null): Promise<boolean> {
+        if (!bookingId) {
+            console.warn("⚠️ Không có bookingId để hủy gói");
+            return false;
+        }
+
+        try {
+            await this.dispatch(cancelPackageBooking({ bookingId })).unwrap();
+            await this.dispatch(getMyPackages(undefined));
+            return true;
+        } catch (error) {
+            console.error("❌ Không thể hủy gói:", error);
+            return false;
+        }
     }
 }

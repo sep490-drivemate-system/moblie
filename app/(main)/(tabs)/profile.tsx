@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ScrollView,
   View,
@@ -30,20 +30,25 @@ import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { useMemo } from "react";
 import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { RootState } from "@/lib/redux/store";
+import { setUserInfo } from "@/features/home/homeSlice";
+import { IUserInfo } from "@/models/user/user.type";
 
 export default function ProfileScreen() {
   const [walletState] = useViewModel(WalletViewModel, (state) => state.wallet);
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  const authState = useAppSelector((state) => state.auth);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const role = useAppSelector((s) => s.auth.user?.role ?? null);
-  
-  const authViewModel = useMemo(
-    () => new AuthViewModel(dispatch, () => authState),
-    [dispatch, authState]
-  );
+  const [authState, authViewModel] = useViewModel<RootState["auth"], AuthViewModel>(AuthViewModel, (state) => state.auth);
+
+  useEffect(() => {
+    // Chỉ fetch user info nếu đã đăng nhập
+    if (authState.isAuthenticated) {
+      authViewModel.fetchUserInfo().catch((error) => {
+        console.error("Error fetching user info:", error);
+      });
+    }
+  }, [authState.isAuthenticated]);
 
   return (
     <View style={styles.container}>
@@ -56,7 +61,7 @@ export default function ProfileScreen() {
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
                 <Image
-                  source={{ uri: mockUserProfile.avatar }}
+                  source={{ uri: authState.userInfo?.avatarUrl ?? "" }}
                   style={styles.avatarImage}
                   resizeMode="cover"
                 />
@@ -64,9 +69,9 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{mockUserProfile.name}</Text>
-              <Text style={styles.userEmail}>{mockUserProfile.email}</Text>
-              <Text style={styles.userPhone}>{mockUserProfile.phone}</Text>
+              <Text style={styles.userName}>{authState.userInfo?.fullName}</Text>
+              <Text style={styles.userEmail}>{authState.userInfo?.email}</Text>
+              <Text style={styles.userPhone}>{authState.userInfo?.phone}</Text>
             </View>
           </View>
 
@@ -145,28 +150,32 @@ export default function ProfileScreen() {
             <Text style={styles.menuTitle}>Tổng quát</Text>
           </View>
           <View style={styles.menuItemsContainer}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() =>
-                router.push(
-                  ROUTES.MAIN_NO_TABS_SERVICE_PACKAGE_SERVICE_PACKAGE_MANAGEMENT
-                )
-              }
-            >
-              <View style={styles.menuItemLeft}>
-                <Package2 size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Quản lý gói dịch vụ</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
-            >
-              <View style={styles.menuItemLeft}>
-                <Package2 size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Gói dịch vụ đã mua</Text>
-              </View>
-            </TouchableOpacity>
+            {authState.userInfo?.role as UserRole === UserRole.Instructor && (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() =>
+                  router.push(
+                    ROUTES.MAIN_NO_TABS_SERVICE_PACKAGE_SERVICE_PACKAGE_MANAGEMENT
+                  )
+                }
+              >
+                <View style={styles.menuItemLeft}>
+                  <Package2 size={20} color="#70E000" />
+                  <Text style={styles.menuItemText}>Quản lý gói dịch vụ</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+            {authState.userInfo?.role as UserRole === UserRole.NoviceDriver && (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Package2 size={20} color="#70E000" />
+                  <Text style={styles.menuItemText}>Quản lý gói đã mua</Text>
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 

@@ -2,12 +2,15 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { BaseState } from "@/models/generic/baseState";
 import { IBookingSession } from "@/models/booking/booking";
 import { SessionStatus } from "@/models/session/session.enum";
+import { ISessionDetailDTO } from "@/models/session/session.type";
+import { getSessionDetail } from "./sessionThunk";
 
 export interface SessionState extends BaseState {
     sessions: IBookingSession[];
     selectedStatus: SessionStatus | "";
     isRefreshing: boolean;
     statusCounts: Record<SessionStatus | "", number>;
+    sessionDetail: ISessionDetailDTO | null;
 }
 
 const initialState: SessionState = {
@@ -26,6 +29,7 @@ const initialState: SessionState = {
         [SessionStatus.Reschedule]: 0,
         [SessionStatus.Cancelled]: 0,
     },
+    sessionDetail: null,
 };
 
 const sessionSlice = createSlice({
@@ -34,7 +38,7 @@ const sessionSlice = createSlice({
     reducers: {
         setSessions: (state, action: PayloadAction<IBookingSession[]>) => {
             state.sessions = action.payload;
-        },        
+        },
         clearSessions: (state) => {
             state.sessions = [];
         },
@@ -59,7 +63,17 @@ const sessionSlice = createSlice({
         setSuccess: (state, action: PayloadAction<boolean>) => {
             state.isSuccess = action.payload;
         },
-    }
+
+        setSessionDetail: (state, action: PayloadAction<ISessionDetailDTO | null>) => {
+            state.sessionDetail = action.payload;
+        },
+    },
+    extraReducers: (builder) => {
+        builder
+            .addCase(getSessionDetail.fulfilled, (state, action) => {
+                state.sessionDetail = action.payload.value ?? null;
+            })
+    },
 });
 
 export const {
@@ -71,6 +85,7 @@ export const {
     setError,
     setSuccess,
     setStatusCount,
+    setSessionDetail,
 } = sessionSlice.actions;
 
 export default sessionSlice.reducer;

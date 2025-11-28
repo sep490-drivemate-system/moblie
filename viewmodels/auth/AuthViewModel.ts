@@ -36,18 +36,37 @@ import {
   resetOtpVerification,
   updateRegisterInstructorFormData,
 } from "@/features/auth/authSlice";
-import { getRoleFromToken } from "@/lib/jwt/tokenUtils";
+import { getRoleFromToken, getUserIdFromToken } from "@/lib/jwt/tokenUtils";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootState } from "@/lib/redux/store";
 import { IVerifyEmailResponse } from "@/models/auth/verifyEmail";
 import { ROUTES } from "@/constants/routes";
+import { IUserInfo } from "@/models/user/user.type";
+import { getUserById } from "@/features/user/userThunk";
 
 type AuthState = RootState["auth"];
 
 export class AuthViewModel extends BaseViewModel<AuthState> {
   getRegisterFormData(): ISignUpRequest {
     return this.getCurrentState().registerFormData;
+  }
+  getUserInfo(): IUserInfo | null {
+    return this.getCurrentState().userInfo;
+  }
+  async fetchUserInfo(): Promise<IUserInfo | null> {
+    const userId = await getUserIdFromToken();
+    // Không gọi API nếu userId rỗng hoặc không hợp lệ (ví dụ sau khi logout)
+    if (!userId || userId.trim() === "") {
+      return null;
+    }
+    try {
+      const response = await this.dispatch(getUserById({ id: userId as unknown as string })).unwrap();
+      return response.value as IUserInfo;
+    } catch (error) {
+      console.error("Error fetching user info:", error);
+      return null;
+    }
   }
 
   getErrorMessage(): string | null {

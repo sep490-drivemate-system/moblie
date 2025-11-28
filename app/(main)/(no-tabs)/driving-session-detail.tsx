@@ -14,10 +14,7 @@ import { userPackagesData } from "@/data/user_packages_data";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import {
   getSessionRoutes,
-  cancelSession,
   getAllSessions,
-  ICancelSessionRequest,
-  getSessionDetail,
   saveSessionRoutes,
   updateSessionStatus,
 } from "@/features/booking/bookingThunk";
@@ -33,38 +30,26 @@ import { useSessionMap } from "@/lib/map/useSessionMap";
 import SessionMap from "@/components/Session/SessionMap";
 import { parseCoordinateValue } from "@/lib/map/mapUtils";
 import { AlertVariant, AppAlert } from "@/components/Commons/AppAlert";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { SessionViewModel } from "@/viewmodels/session/SessionViewModel";
+import { ISessionDetailDTO } from "@/models/session/session.type";
 
 export default function DrivingSessionDetailScreen() {
+  const params = useLocalSearchParams();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const params = useLocalSearchParams();
   const sessionId = params.sessionId;
-  const status = params.status;
-  const displayStartLocationName = params.displayStartLocationName;
-  const startingLatitude = params.startingLatitude;
-  const startingLongtitude = params.startingLongtitude;
-  const duration = params.duration;
-  const displayEndLocationName = params.displayEndLocationName;
-  const endingLatitude = params.endingLatitude;
-  const endingLongtitude = params.endingLongtitude;
-
-  // Debug log removed - params object is recreated on each render causing multiple logs
-  // If debugging is needed, use sessionId specifically: useEffect(() => { console.log("sessionId:", sessionId); }, [sessionId]);
+  const [sessionState, sessionViewModel] = useViewModel(SessionViewModel, (state) => state.session);
 
 
   const allSessions = userPackagesData.flatMap((p) => p.sessions || []);
+
   const localSession = allSessions.find((s) => s.id === sessionId);
   const [remoteSession, setRemoteSession] = useState<IBookingSession | null>(null);
-  const [isLoadingSession, setIsLoadingSession] = useState(false);
-  const [sessionError, setSessionError] = useState<string | null>(null);
   const session = remoteSession ?? localSession ?? null;
   const sessionLocationData = session as any;
-
-  const [sessionDetail, setSessionDetail] = useState<ISessionDetailResponse | null>(null);
   const [routesData, setRoutesData] = useState<ISessionRoutes[] | null>(null);
-  const [isLoadingRoutes, setIsLoadingRoutes] = useState(false);
 
-  // Goong API Keys
   const GOONG_API_KEY = process.env.EXPO_PUBLIC_GOONG_API_KEY;
 
   const userRole = useAppSelector((state: RootState) => state.auth.user?.role ?? null);
@@ -74,14 +59,19 @@ export default function DrivingSessionDetailScreen() {
   const normalizeParamValue = (value: string | string[] | undefined) =>
     Array.isArray(value) ? value[0] : value;
 
+  // Extract values from params or sessionDetail
+  const startingLatitude = normalizeParamValue(params.startingLatitude as string | string[] | undefined);
+  const startingLongtitude = normalizeParamValue(params.startingLongtitude as string | string[] | undefined);
+  const displayStartLocationName = normalizeParamValue(params.displayStartLocationName as string | string[] | undefined);
+  const endingLatitude = normalizeParamValue(params.endingLatitude as string | string[] | undefined);
+  const endingLongtitude = normalizeParamValue(params.endingLongtitude as string | string[] | undefined);
+  const displayEndLocationName = normalizeParamValue(params.displayEndLocationName as string | string[] | undefined);
+  const duration = normalizeParamValue(params.duration as string | string[] | undefined);
+
 
 
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
-
   // New states for API calls
-  const [cancelNote, setCancelNote] = useState("");
-  const [isCancelling, setIsCancelling] = useState(false);
   const [isSavingRoutes, setIsSavingRoutes] = useState(false);
 
   // Alert state
@@ -91,106 +81,28 @@ export default function DrivingSessionDetailScreen() {
   const [alertVariant, setAlertVariant] = useState<AlertVariant>(AlertVariant.Info);
   const [alertPrimaryButton, setAlertPrimaryButton] = useState<{ label: string; onPress?: () => void } | undefined>(undefined);
 
-  const parseSessionStartDate = () => {
-    if (!displaySession) return null;
-    const datePart = new Date(displaySession.date);
-    const [hh, mm] = String(displaySession.startTime || "00:00").split(":");
-    const start = new Date(datePart);
-    start.setHours(Number(hh), Number(mm || 0), 0, 0);
-    return start;
-  };
-
-  const canCancelNow = () => {
-    const start = parseSessionStartDate();
-    if (!start) return false;
-    const now = new Date();
-    const diffHours = (start.getTime() - now.getTime()) / (1000 * 60 * 60);
-    return diffHours >= 12;
-  };
-
-  const toggleReason = (reason: string) => {
-    setSelectedReasons((prev) =>
-      prev.includes(reason)
-        ? prev.filter((r) => r !== reason)
-        : [...prev, reason]
-    );
-  };
-
-
-  // Handle cancel session
-  const handleCancelSession = async () => {
-    if (!sessionId || typeof sessionId !== 'string') {
-      Alert.alert("Lỗi", "Không tìm thấy thông tin buổi tập lái");
-      return;
-    }
-
-    if (!cancelNote.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập lý do hủy buổi tập lái");
-      return;
-    }
-
-    try {
-      setIsCancelling(true);
-
-      const cancelData: ICancelSessionRequest = {
-        note: cancelNote.trim()
-      };
-
-      await dispatch(cancelSession({ sessionId, cancelData })).unwrap();
-
-      setShowCancelModal(false);
-      setCancelNote("");
-      setSelectedReasons([]);
-
-      Alert.alert(
-        "Thành công",
-        "Đã hủy buổi tập lái thành công",
-        [
-          {
-            text: "OK",
-            onPress: () => router.back()
-          }
-        ]
-      );
-    } catch (error) {
-      console.error("Error cancelling session:", error);
-      Alert.alert("Lỗi", error as string || "Không thể hủy buổi tập lái");
-    } finally {
-      setIsCancelling(false);
-    }
-  };
-
-
   const displaySession = useMemo(() => {
     if (session) {
       return {
         ...session,
-        date: displayStartLocationName || (session as any).date,
-        startTime: startingLongtitude || (session as any).startTime,
-        endTime: displayEndLocationName || (session as any).endTime,
-        location: endingLatitude || (session as any).location,
-        instructorName: endingLongtitude || (session as any).instructorName,
-        duration: duration || (session as any).duration,
+        date: sessionState.sessionDetail?.startTime ? new Date(sessionState.sessionDetail.startTime).toISOString().split('T')[0] : (session as any).date,
+        startTime: sessionState.sessionDetail?.startTime || (session as any).startTime,
+        endTime: sessionState.sessionDetail?.endTime || (session as any).endTime,
+        location: sessionState.sessionDetail?.displayStartLocationName || (session as any).location,
+        instructorName: (session as any).instructorName,
+        duration: sessionState.sessionDetail ? undefined : (session as any).duration,
       };
     }
 
-    if (
-      displayStartLocationName ||
-      startingLongtitude ||
-      displayEndLocationName ||
-      endingLatitude ||
-      endingLongtitude ||
-      duration
-    ) {
+    if (sessionState.sessionDetail) {
       return {
         id: sessionId || "temp-session",
-        date: displayStartLocationName || new Date().toISOString(),
-        startTime: startingLongtitude || "--:--",
-        endTime: displayEndLocationName || "--:--",
-        location:
-          endingLatitude || sessionLocationData?.displayStartLocationName || "",
-        instructorName: endingLongtitude || "",
-        duration: duration ?? 0,
+        date: sessionState.sessionDetail.startTime ? new Date(sessionState.sessionDetail.startTime).toISOString().split('T')[0] : new Date().toISOString(),
+        startTime: sessionState.sessionDetail.startTime || "--:--",
+        endTime: sessionState.sessionDetail.endTime || "--:--",
+        location: sessionState.sessionDetail.displayStartLocationName || "",
+        instructorName: "",
+        duration: undefined,
         vehicleName: sessionLocationData?.vehicleName || "",
       } as any;
     }
@@ -198,180 +110,79 @@ export default function DrivingSessionDetailScreen() {
     return null;
   }, [
     session,
-    displayStartLocationName,
-    startingLongtitude,
-    displayEndLocationName,
-    endingLatitude,
-    endingLongtitude,
-    duration,
+    sessionState.sessionDetail,
     sessionId,
     sessionLocationData?.vehicleName,
   ]);
 
   useEffect(() => {
-    if (!sessionId || typeof sessionId !== "string") return;
-    if (localSession) return;
+    sessionViewModel.getSessionDetail(sessionId as string);
 
-    let isMounted = true;
+  }, [sessionId, sessionViewModel]);
 
-    const fetchSessionDetail = async () => {
-      try {
-        setIsLoadingSession(true);
-        setSessionError(null);
-        const response = await dispatch(getAllSessions(undefined)).unwrap();
-        const allSessionsResult = (response?.value ?? []) as IBookingSession[];
-        if (!isMounted) return;
-
-        const found = allSessionsResult.find(
-          (item) => item.id === sessionId
-        );
-
-        if (found) {
-          setRemoteSession(found);
-        } else {
-          setSessionError("Chưa thiết lập lộ trình.");
-        }
-      } catch (error) {
-        console.error("❌ Error fetching session detail:", error);
-        if (isMounted) {
-          setSessionError("Không thể tải thông tin buổi tập.");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingSession(false);
-        }
+  const routesFromSessionDetail = useMemo(() => {
+    if (sessionState.sessionDetail?.routeDetails !== undefined && sessionState.sessionDetail.routeDetails !== null) {
+      if (sessionState.sessionDetail.routeDetails.length > 0) {
+        return sessionState.sessionDetail.routeDetails.map((route, index) => ({
+          id: `route-${index}`,
+          sessionId: sessionId as string,
+          textInstruction: route.textInstruction,
+          streetName: route.streetName,
+          latitudeStart: route.latitudeStart,
+          longitudeStart: route.longitudeStart,
+        })) as ISessionRoutes[];
+      } else {
+        return [];
       }
-    };
-
-    fetchSessionDetail();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [sessionId, localSession, dispatch]);
+    }
+    return null;
+  }, [sessionState.sessionDetail?.routeDetails, sessionId]);
 
   useEffect(() => {
     if (!sessionId || typeof sessionId !== "string") return;
 
-    let isMounted = true;
+    if (routesFromSessionDetail !== null) {
+      setRoutesData(routesFromSessionDetail);
+      return;
+    }
 
-    const fetchSessionDetailInfo = async () => {
-      try {
-        const response = await dispatch(getSessionDetail({ sessionId })).unwrap();
-        if (!isMounted) return;
-
-        // Handle different response structures
-        let sessionDetailData: ISessionDetailResponse | null = null;
-        if (response) {
-          // Check if response has value property (GenericResponse structure)
-          if ((response as any)?.value) {
-            sessionDetailData = (response as any).value;
-          } else if ((response as any)?.isSuccess && (response as any)?.value) {
-            sessionDetailData = (response as any).value;
-          } else if ((response as any)?.startingLatitude !== undefined) {
-            // Direct ISessionDetailResponse
-            sessionDetailData = response as unknown as ISessionDetailResponse;
-          }
-        }
-
-        if (sessionDetailData) {
-          setSessionDetail(sessionDetailData);
-        }
-      } catch (error) {
-        console.error("Error fetching session detail info:", error);
-        // Don't set to null, keep existing data if any
-      }
-    };
-
-    fetchSessionDetailInfo();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [sessionId, dispatch]);
-
-  // Fetch session routes
-  useEffect(() => {
-    if (!sessionId || typeof sessionId !== "string") return;
-
-    let isMounted = true;
-
-    const fetchSessionRoutes = async () => {
-      try {
-        setIsLoadingRoutes(true);
-        const response = await dispatch(getSessionRoutes({ sessionId })).unwrap();
-        if (!isMounted) return;
-
-        // Handle different response structures
-        let routes: ISessionRoutes[] | null = null;
-        if (Array.isArray(response)) {
-          routes = response;
-        } else if (response?.value && Array.isArray(response.value)) {
-          routes = response.value;
-        } else if ((response as any)?.isSuccess && (response as any)?.value && Array.isArray((response as any).value)) {
-          routes = (response as any).value;
-        }
-
-        if (routes && routes.length > 0) {
-          setRoutesData(routes);
-        } else {
-          setRoutesData(null);
-        }
-      } catch (error) {
-        console.error("Error fetching session routes:", error);
-        if (isMounted) {
-          setRoutesData(null);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingRoutes(false);
-        }
-      }
-    };
-
-    fetchSessionRoutes();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [sessionId, dispatch]);
+  }, [sessionId, dispatch, routesFromSessionDetail]);
 
   const pickupDetails = useMemo(() => {
-    // Ưu tiên lấy từ params, nếu không có thì lấy từ sessionDetail
-    const lat = normalizeParamValue(startingLatitude) ||
-      (sessionDetail?.startingLatitude ? String(sessionDetail.startingLatitude) : null);
-    const long = normalizeParamValue(startingLongtitude) ||
-      (sessionDetail?.startingLongtitude ? String(sessionDetail.startingLongtitude) : null);
+    const lat = startingLatitude ||
+      (sessionState.sessionDetail?.startingLatitude ? String(sessionState.sessionDetail.startingLatitude) : null);
+    const long = startingLongtitude ||
+      (sessionState.sessionDetail?.startingLongtitude ? String(sessionState.sessionDetail.startingLongtitude) : null);
 
     return {
       name:
         displayStartLocationName ||
-        sessionDetail?.displayStartLocationName ||
+        sessionState.sessionDetail?.displayStartLocationName ||
         sessionLocationData?.displayStartLocationName ||
         "",
       lat: lat,
       long: long,
     };
-  }, [displayStartLocationName, sessionDetail, sessionLocationData, startingLatitude, startingLongtitude]);
+  }, [displayStartLocationName, sessionState.sessionDetail, sessionLocationData, startingLatitude, startingLongtitude]);
   const dropoffDetails = useMemo(() => {
     return {
-      lat: normalizeParamValue(startingLatitude),
-      long: normalizeParamValue(startingLongtitude),
+      lat: startingLatitude,
+      long: startingLongtitude,
     };
   }, [startingLatitude, startingLongtitude]);
   const endDetails = useMemo(() => {
-    const sessionEndLat = parseCoordinateValue(sessionDetail?.endingLatitude as any);
-    const sessionEndLong = parseCoordinateValue(sessionDetail?.endingLongtitude as any);
-    const paramEndLat = parseCoordinateValue(endingLatitude as any);
-    const paramEndLong = parseCoordinateValue(endingLongtitude as any);
+    const sessionEndLat = sessionState.sessionDetail?.endingLatitude ? parseCoordinateValue(sessionState.sessionDetail.endingLatitude as any) : null;
+    const sessionEndLong = sessionState.sessionDetail?.endingLongtitude ? parseCoordinateValue(sessionState.sessionDetail.endingLongtitude as any) : null;
+    const paramEndLat = endingLatitude ? parseCoordinateValue(endingLatitude as any) : null;
+    const paramEndLong = endingLongtitude ? parseCoordinateValue(endingLongtitude as any) : null;
 
     return {
       lat: sessionEndLat ?? paramEndLat ?? null,
       long: sessionEndLong ?? paramEndLong ?? null,
     };
   }, [
-    sessionDetail?.endingLatitude,
-    sessionDetail?.endingLongtitude,
+    sessionState.sessionDetail?.endingLatitude,
+    sessionState.sessionDetail?.endingLongtitude,
     endingLatitude,
     endingLongtitude,
   ]);
@@ -381,14 +192,12 @@ export default function DrivingSessionDetailScreen() {
   }, []);
 
   const effectiveRoutesData = routesData ?? fallbackRoutesData;
-  // Ensure routePoints is always an array
   const routePoints = Array.isArray(effectiveRoutesData) ? effectiveRoutesData : [];
 
   const durationFromParams = duration ? Number(duration) : null;
   const allowedDurationMinutes = useMemo(() => {
     const normalizeDuration = (value: number | null | undefined) => {
       if (typeof value === "number" && !Number.isNaN(value) && value > 0) {
-        // duration hiện đang tính theo giờ -> đổi sang phút
         return value * 60;
       }
       return null;
@@ -399,27 +208,15 @@ export default function DrivingSessionDetailScreen() {
       return fromParams;
     }
 
-    const detailDuration = normalizeDuration(
-      Number((displaySession as any)?.duration)
-    );
+    const sessionDuration = (session as any)?.duration;
+    const detailDuration = normalizeDuration(Number(sessionDuration));
     if (detailDuration !== null) {
       return detailDuration;
     }
 
     return null;
-  }, [durationFromParams, displaySession]);
+  }, [durationFromParams, session]);
 
-  const FALLBACK_START_COORDS = useMemo(
-    () => ({
-      latitude: 10.823099,
-      longitude: 106.629664,
-    }),
-    []
-  );
-  const [stableMapStartLat, setStableMapStartLat] = useState<number | null>(null);
-  const [stableMapStartLong, setStableMapStartLong] = useState<number | null>(null);
-
-  // Lấy tọa độ bắt đầu: ưu tiên từ pickupDetails, nếu không có thì lấy từ route đầu tiên
   const rawMapStartLat = useMemo(() => {
     const fromPickup = parseCoordinateValue(pickupDetails.lat as any);
     if (fromPickup !== null) return fromPickup;
@@ -438,60 +235,51 @@ export default function DrivingSessionDetailScreen() {
     return null;
   }, [pickupDetails.long, routesData]);
 
+
+  const parseSessionStatus = (status: string | SessionStatus | undefined): SessionStatus | undefined => {
+    if (!status) return undefined;
+    if (typeof status === 'number') return status as SessionStatus;
+
+    const statusMap: Record<string, SessionStatus> = {
+      'Planning': SessionStatus.Planning,
+      'Upcoming': SessionStatus.Upcoming,
+      'InProgress': SessionStatus.InProgress,
+      'Completed': SessionStatus.Completed,
+      'Reschedule': SessionStatus.Reschedule,
+      'Cancelled': SessionStatus.Cancelled,
+    };
+
+    return statusMap[status] ?? undefined;
+  };
+
   useEffect(() => {
-    if (typeof rawMapStartLat === "number") {
-      setStableMapStartLat(rawMapStartLat);
-    }
-    if (typeof rawMapStartLong === "number") {
-      setStableMapStartLong(rawMapStartLong);
-    }
-  }, [rawMapStartLat, rawMapStartLong]);
-
-  const mapStartLat =
-    rawMapStartLat ?? stableMapStartLat ?? FALLBACK_START_COORDS.latitude;
-  const mapStartLong =
-    rawMapStartLong ?? stableMapStartLong ?? FALLBACK_START_COORDS.longitude;
-
-  const hasValidStartCoords =
-    typeof rawMapStartLat === "number" && typeof rawMapStartLong === "number";
-
-  const [localStatus, setLocalStatus] = useState<SessionStatus | undefined>(
-    (sessionDetail?.status ?? session?.status) as SessionStatus | undefined
-  );
-
-  // Cập nhật localStatus khi sessionDetail thay đổi
-  useEffect(() => {
-    if (sessionDetail?.status) {
-      setLocalStatus(sessionDetail.status as SessionStatus);
+    if (sessionState.sessionDetail?.status) {
+      parseSessionStatus(sessionState.sessionDetail.status);
     } else if (session?.status) {
-      setLocalStatus(session.status as SessionStatus);
+      parseSessionStatus(session.status);
     }
-  }, [sessionDetail?.status, session?.status]);
+  }, [sessionState.sessionDetail?.status, session?.status]);
 
-  const currentSessionStatus = localStatus ?? (sessionDetail?.status ??
-    session?.status) as SessionStatus | undefined;
+  const currentSessionStatus = parseSessionStatus(sessionState.sessionDetail?.status ?? session?.status);
   const isPlanningStatus = currentSessionStatus === SessionStatus.Planning;
   const isUpcomingStatus = currentSessionStatus === SessionStatus.Upcoming;
   const isInProgressStatus = currentSessionStatus === SessionStatus.InProgress;
 
   const allowInstructorRoutePlanning =
-    Boolean(isInstructor && isPlanningStatus && hasValidStartCoords);
+    Boolean(isInstructor && isPlanningStatus);
   const allowNoviceApproval = Boolean(isNoviceDriver && isPlanningStatus);
 
-  // Hiển thị map cho instructor khi planning hoặc cho novice driver khi cần xem route để chấp nhận/từ chối
   const shouldShowMapForPlanning = allowInstructorRoutePlanning ||
     (allowNoviceApproval && Boolean(routesData && routesData.length > 0));
   const sessionStatusForMap =
     (currentSessionStatus ?? SessionStatus.Planning) as SessionStatus;
 
-  // Xử lý khi simulation hoàn thành: cập nhật status thành Completed và hiển thị thông báo
   const handleSimulationComplete = useCallback(async () => {
     if (!sessionId || typeof sessionId !== "string") {
       return;
     }
 
     try {
-      // Cập nhật status thành Completed
       await dispatch(
         updateSessionStatus({
           sessionId,
@@ -499,13 +287,8 @@ export default function DrivingSessionDetailScreen() {
         })
       ).unwrap();
 
-      // Cập nhật local status
-      setLocalStatus(SessionStatus.Completed);
+      await sessionViewModel.getSessionDetail(sessionId);
 
-      // Refresh session detail
-      await dispatch(getSessionDetail({ sessionId })).unwrap();
-
-      // Hiển thị thông báo hoàn thành
       setAlertTitle("Hoàn thành");
       setAlertMessage("Đã hoàn thành buổi tập lái này!");
       setAlertVariant(AlertVariant.Success);
@@ -516,7 +299,6 @@ export default function DrivingSessionDetailScreen() {
       setAlertVisible(true);
     } catch (error) {
       console.error("Error updating session status to Completed:", error);
-      // Vẫn hiển thị thông báo dù có lỗi
       setAlertTitle("Hoàn thành");
       setAlertMessage("Đã hoàn thành buổi tập lái này!");
       setAlertVariant(AlertVariant.Success);
@@ -542,7 +324,7 @@ export default function DrivingSessionDetailScreen() {
     stopSimulation,
   } = useSessionMap({
     sessionId,
-    sessionDetail,
+    sessionDetail: sessionState.sessionDetail,
     routesData,
     pickupDetails,
     dropoffDetails,
@@ -553,7 +335,6 @@ export default function DrivingSessionDetailScreen() {
     onSimulationComplete: handleSimulationComplete,
   });
 
-  // Kiểm tra nếu instructor đã có route và đang chờ chấp nhận
   const hasExistingRoutes = Boolean(routesData && routesData.length > 0);
   const isInstructorWaitingApproval = Boolean(
     isInstructor &&
@@ -592,12 +373,7 @@ export default function DrivingSessionDetailScreen() {
         longitudeStart: point.longitude,
       }));
 
-      await dispatch(
-        saveSessionRoutes({
-          sessionId,
-          body: payload,
-        })
-      ).unwrap();
+      await sessionViewModel.saveSessionRoutes(sessionId as string, payload);
 
       setAlertTitle("Thành công");
       setAlertMessage("Đã lưu lộ trình buổi tập.");
@@ -629,13 +405,11 @@ export default function DrivingSessionDetailScreen() {
   const canShowSimulationControls =
     isInstructor && (isInProgressStatus || isUpcomingStatus) && effectiveRouteSegments.length > 0;
 
-  // Xử lý khi bắt đầu simulation: cập nhật status thành InProgress
   const handleStartSimulation = useCallback(async () => {
     if (!sessionId || typeof sessionId !== "string") {
       return;
     }
 
-    // Nếu status chưa phải InProgress, cập nhật nó
     if (currentSessionStatus !== SessionStatus.InProgress) {
       try {
         await dispatch(
@@ -645,14 +419,9 @@ export default function DrivingSessionDetailScreen() {
           })
         ).unwrap();
 
-        // Cập nhật local status ngay lập tức
-        setLocalStatus(SessionStatus.InProgress);
-
-        // Refresh session detail
-        await dispatch(getSessionDetail({ sessionId })).unwrap();
+        await sessionViewModel.getSessionDetail(sessionId);
       } catch (error) {
         console.error("Error updating session status:", error);
-        // Vẫn cho phép bắt đầu simulation dù có lỗi
       }
     }
 
@@ -687,7 +456,7 @@ export default function DrivingSessionDetailScreen() {
       ).unwrap();
 
       // Refresh session detail để cập nhật trạng thái mới
-      await dispatch(getSessionDetail({ sessionId })).unwrap();
+      await sessionViewModel.getSessionDetail(sessionId);
 
       setAlertTitle("Thành công");
       setAlertMessage("Đã chấp nhận lộ trình thành công");
@@ -726,7 +495,7 @@ export default function DrivingSessionDetailScreen() {
       // TODO: Gọi API từ chối lộ trình
       Alert.alert("Thông báo", "Đã từ chối lộ trình");
       // Refresh session detail
-      const response = await dispatch(getSessionDetail({ sessionId })).unwrap();
+      await sessionViewModel.getSessionDetail(sessionId);
       // Có thể cần reload lại trang hoặc cập nhật state
     } catch (error) {
       console.error("Error rejecting route:", error);
@@ -742,15 +511,10 @@ export default function DrivingSessionDetailScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <SessionRouteList
           routePoints={routePoints}
-          sessionDetail={sessionDetail}
-          status={localStatus ?? (sessionDetail?.status as SessionStatus)}
+          status={sessionState.sessionDetail?.status as SessionStatus}
           sessionId={sessionId}
           displaySession={displaySession}
-          onCancelPress={() => {
-            setCancelNote("");
-            setSelectedReasons([]);
-            setShowCancelModal(true);
-          }}
+          onCancelPress={() => setShowCancelModal(true)}
           showRouteCard
           isSimulating={isSimulating}
           simulationProgress={simulationProgress}
@@ -758,8 +522,6 @@ export default function DrivingSessionDetailScreen() {
         />
 
         <SessionMap
-          mapStartLat={mapStartLat}
-          mapStartLong={mapStartLong}
           status={sessionStatusForMap}
           endDetails={endDetails}
           routePoints={routePoints}
@@ -796,18 +558,9 @@ export default function DrivingSessionDetailScreen() {
 
       <CancelSessionModal
         visible={showCancelModal}
-        cancelNote={cancelNote}
-        selectedReasons={selectedReasons}
-        isCancelling={isCancelling}
-        canCancel={canCancelNow()}
-        onClose={() => {
-          setShowCancelModal(false);
-          setCancelNote("");
-          setSelectedReasons([]);
-        }}
-        onNoteChange={setCancelNote}
-        onToggleReason={toggleReason}
-        onConfirm={handleCancelSession}
+        sessionId={typeof sessionId === "string" ? sessionId : null}
+        onClose={() => setShowCancelModal(false)}
+        onCancelled={() => router.back()}
       />
 
       <AppAlert

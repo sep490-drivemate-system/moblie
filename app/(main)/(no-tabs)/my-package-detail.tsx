@@ -20,7 +20,6 @@ import { IUserInfo, submitFeedback, IFeedbackRequest } from "@/features/booking/
 import { ArrowLeft, Star, MessageSquare } from "lucide-react-native";
 import SessionsList from "@/components/Session/Sessions";
 import CancelPackageModal from "@/components/Modal/CancelPackageModal";
-import { userPackagesData } from "@/data/user_packages_data";
 import { AppColors } from "@/constants/Colors";
 import { PackageDetailData, usePackageDetailViewModel } from "@/viewmodels/booking/PackageDetailViewModel";
 import { useAppDispatch } from "@/lib/redux/hooks";
@@ -155,7 +154,7 @@ export default function PackageDetailScreen() {
     }
   };
 
-  // const handleConfirmCancel = async () => {
+
   //   if (!packageData) return;
 
   //   setIsProcessingCancel(true);
@@ -395,19 +394,17 @@ export default function PackageDetailScreen() {
 
 
 
-      {/* Cancel Modal */}
-      {/* <CancelPackageModal
+      <CancelPackageModal
         visible={showCancelModal}
         packageData={packageData}
-        localStatus={localStatus}
-        cancelDateStr={cancelDateStr}
-        isProcessingCancel={isProcessingCancel}
         onClose={() => setShowCancelModal(false)}
-        onConfirm={handleConfirmCancel}
+        onCancelled={() => {
+          setShowCancelModal(false);
+          router.replace(ROUTES.MY_PACKAGES);
+        }}
         getStatusText={(status) => packageDetailViewModel.getStatusText(status)}
-      /> */}
+      />
 
-      {/* Feedback Modal */}
       <Modal
         visible={showFeedbackModal}
         transparent

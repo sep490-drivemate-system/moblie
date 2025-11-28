@@ -65,7 +65,6 @@ interface AlertButton {
     onPress?: (event: GestureResponderEvent) => void;
     variant?: ButtonVariant;
 }
-
 interface AppAlertProps {
     visible: boolean;
     title?: string;

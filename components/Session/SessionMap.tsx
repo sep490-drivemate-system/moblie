@@ -16,10 +16,10 @@ import { SelectedRoutePoint } from "@/lib/map/useSessionMap";
 import { parseCoordinateValue } from "@/lib/map/mapUtils";
 import { MapViewModel } from "@/viewmodels/map/MapViewModel";
 import { Car } from "lucide-react-native";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { SessionViewModel } from "@/viewmodels/session/SessionViewModel";
 
 interface SessionMapProps {
-  mapStartLat: number | null;
-  mapStartLong: number | null;
   status?: SessionStatus;
   endDetails: { lat: number | null; long: number | null };
   routePoints: ISessionRoutes[];
@@ -60,9 +60,9 @@ interface SessionMapProps {
   isInstructorWaitingApproval?: boolean;
 }
 
+
+
 export default function SessionMap({
-  mapStartLat,
-  mapStartLong,
   status,
   endDetails,
   routePoints,
@@ -96,14 +96,6 @@ export default function SessionMap({
     []
   );
 
-  const isPlaceholderCoords =
-    typeof mapStartLat !== "number" || typeof mapStartLong !== "number";
-  const effectiveMapLat = isPlaceholderCoords
-    ? FALLBACK_COORDS.latitude
-    : (mapStartLat as number);
-  const effectiveMapLong = isPlaceholderCoords
-    ? FALLBACK_COORDS.longitude
-    : (mapStartLong as number);
 
   const internalMapRef = useRef<MapView>(null);
   const finalMapRef = mapRef ?? internalMapRef;
@@ -117,13 +109,33 @@ export default function SessionMap({
     [mapViewModel, setSelectedRoutePoints]
   );
 
+  const [sessionState,] = useViewModel(SessionViewModel, (state) => state.session);
+
+  const endingCoordinates = useMemo(() => {
+    const lat = sessionState?.sessionDetail?.endingLatitude;
+    const long = sessionState?.sessionDetail?.endingLongtitude;
+    if (typeof lat === 'number' && typeof long === 'number' && !isNaN(lat) && !isNaN(long)) {
+      return { latitude: lat, longitude: long };
+    }
+    return null;
+  }, [sessionState?.sessionDetail?.endingLatitude, sessionState?.sessionDetail?.endingLongtitude]);
+
+  const startingCoordinates = useMemo(() => {
+    const lat = sessionState?.sessionDetail?.startingLatitude;
+    const long = sessionState?.sessionDetail?.startingLongtitude;
+    if (typeof lat === 'number' && typeof long === 'number' && !isNaN(lat) && !isNaN(long)) {
+      return { latitude: lat, longitude: long };
+    }
+    return null;
+  }, [sessionState?.sessionDetail?.startingLatitude, sessionState?.sessionDetail?.startingLongtitude]);
+
   const allowDirectMapPress = enableMapPress;
   const hasEndPoint =
-    typeof endDetails.lat === "number" && typeof endDetails.long === "number";
+    endingCoordinates !== null ||
+    (typeof endDetails.lat === "number" && typeof endDetails.long === "number");
   const hasDistinctEndPoint =
     hasEndPoint &&
-    (endDetails.lat !== effectiveMapLat || endDetails.long !== effectiveMapLong);
-  // Hiển thị route nếu: có route segments, hoặc có existing routes và đang chờ chấp nhận
+    endingCoordinates !== null;
   const shouldRenderRoute =
     routeSegments.length > 0 ||
     (hasExistingRoutes && isInstructorWaitingApproval) ||
@@ -249,25 +261,34 @@ export default function SessionMap({
           ref={finalMapRef}
           provider={PROVIDER_GOOGLE}
           style={styles.map}
+          showsUserLocation={false}
+          showsMyLocationButton={false}
           initialRegion={{
-            latitude: effectiveMapLat,
-            longitude: effectiveMapLong,
+            latitude: sessionState.sessionDetail?.startingLatitude as number,
+            longitude: sessionState.sessionDetail?.startingLongtitude as number,
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
           }}
-          showsUserLocation={false}
-          showsMyLocationButton={false}
           mapType="standard"
           onPress={allowDirectMapPress ? onMapPress : undefined}
         >
+          {startingCoordinates && (
           <Marker
-            coordinate={{
-              latitude: effectiveMapLat,
-              longitude: effectiveMapLong,
-            }}
+              coordinate={startingCoordinates}
             title="Điểm bắt đầu"
+              description={sessionState?.sessionDetail?.displayStartLocationName || "Điểm bắt đầu"}
             pinColor="green"
           />
+          )}
+
+          {endingCoordinates && (
+            <Marker
+              coordinate={endingCoordinates}
+              title="Điểm kết thúc"
+              description={sessionState?.sessionDetail?.displayEndLocationName || "Điểm kết thúc"}
+              pinColor="red"
+            />
+          )}
 
           {routePoints.map((point, index) => {
             const markerLat = parseCoordinateValue(point.latitudeStart as any);
@@ -284,7 +305,7 @@ export default function SessionMap({
                 }}
                 title={`Điểm ${index + 2}`}
                 description={point.streetName}
-                pinColor={index === routePoints.length - 1 ? "red" : "blue"}
+                pinColor="blue"
               />
             );
           })}
@@ -309,13 +330,14 @@ export default function SessionMap({
             />
           ))}
 
-          {hasDistinctEndPoint && (
+          {/* Fallback: Hiển thị endDetails nếu không có trong sessionState */}
+          {!endingCoordinates && hasEndPoint && typeof endDetails.lat === "number" && typeof endDetails.long === "number" && (
             <Marker
               coordinate={{
-                latitude: endDetails.lat as number,
-                longitude: endDetails.long as number,
+                latitude: endDetails.lat,
+                longitude: endDetails.long,
               }}
-              title="Điểm trả"
+              title="Điểm kết thúc"
               pinColor="red"
             />
           )}
@@ -346,15 +368,6 @@ export default function SessionMap({
             </Marker>
           )}
         </MapView>
-        {isPlaceholderCoords && (
-          <View style={styles.placeholderOverlay} pointerEvents="none">
-            <ActivityIndicator size="small" color={AppColors.primary} />
-            <Text style={styles.placeholderText}>
-              Đang tải tọa độ chính xác...
-            </Text>
-          </View>
-        )}
-
         <View style={styles.legendContainer}>
           {legendItems.map((item) => (
             <View key={item.label} style={styles.legendItem}>

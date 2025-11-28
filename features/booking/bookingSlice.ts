@@ -29,6 +29,7 @@ import {
 
     updateSessionStatus,
     submitFeedback,
+    cancelPackageBooking,
 } from './bookingThunk';
 import {
     getInstructorSchedule,
@@ -346,6 +347,22 @@ const bookingSlice = createSlice({
                 state.isSubmittingFeedback = false;
                 state.isSuccess = false;
                 state.errorMessage = action.payload || 'Không thể gửi phản hồi';
+            });
+
+        // Cancel package booking
+        builder
+            .addCase(cancelPackageBooking.pending, (state) => {
+                state.isCancellingBooking = true;
+                state.errorMessage = null;
+            })
+            .addCase(cancelPackageBooking.fulfilled, (state) => {
+                state.isCancellingBooking = false;
+                state.isSuccess = true;
+            })
+            .addCase(cancelPackageBooking.rejected, (state, action) => {
+                state.isCancellingBooking = false;
+                state.isSuccess = false;
+                state.errorMessage = action.error.message || 'Không thể hủy gói học';
             });
 
     },

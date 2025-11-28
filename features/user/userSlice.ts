@@ -2,11 +2,13 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { BaseState } from "@/models/generic/baseState";
 import { IBookingSession } from "@/models/booking/booking";
 import { SessionStatus } from "@/models/session/session.enum";
+import { getUserById } from "./userThunk";
+import { IUserInfo } from "@/models/user/user.type";
 
-export interface SessionState extends BaseState {
+export interface UserState extends BaseState {
 }
 
-const initialState: SessionState = {
+const initialState: UserState = {
     isLoading: false,
     errorMessage: null,
     isSuccess: false,
@@ -28,7 +30,7 @@ const userSlice = createSlice({
         setSuccess: (state, action: PayloadAction<boolean>) => {
             state.isSuccess = action.payload;
         },
-    }
+    },
 });
 
 export const {

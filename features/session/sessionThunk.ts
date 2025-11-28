@@ -2,6 +2,7 @@ import { HttpMethod } from "@/models/enum/HttpMethods";
 import { createThunk } from "../genericCreateThunk";
 import { GenericResponse } from "@/models/generic/genericResponse";
 import { IRescheduleSessionRequest } from "../booking/bookingThunk";
+import { ISessionDetailDTO } from "@/models/session/session.type";
 
 const SESSION_PATH = "session";
 export const cancelSession = createThunk<
@@ -22,4 +23,15 @@ export const rescheduleSession = createThunk<
     "rescheduleSession",
     `/${SESSION_PATH}`,
     { buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}/reschedule` }
+);
+
+
+export const getSessionDetail = createThunk<
+    ISessionDetailDTO,
+    { sessionId: string }
+>(
+    HttpMethod.GET,
+    "getSessionDetail",
+    `/${SESSION_PATH}`,
+    { buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}` }
 );

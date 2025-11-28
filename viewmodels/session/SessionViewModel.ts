@@ -1,7 +1,7 @@
 import { AppDispatch } from "@/lib/redux/store";
 import { IBookingSession } from "@/models/booking/booking";
 import { SessionStatus } from "@/models/session/session.enum";
-import { getAllSessions } from "@/features/booking/bookingThunk";
+import { getAllSessions, cancelSession as cancelSessionThunk, ICancelSessionRequest } from "@/features/booking/bookingThunk";
 import { BaseViewModel } from "../shared/BaseViewModel";
 import {
     SessionState,
@@ -12,6 +12,7 @@ import {
     setSelectedStatus,
     setIsRefreshing,
     setStatusCount,
+    setSessionDetail,
 } from "@/features/session/sessionSlice";
 import {
     Clock,
@@ -23,7 +24,10 @@ import {
     X,
     LucideIcon,
 } from "lucide-react-native";
-
+import { ISessionDetailDTO, IRouteDetailDTO } from "@/models/session/session.type";
+import { getSessionDetail } from "@/features/session/sessionThunk";
+import { saveSessionRoutes } from "@/features/booking/bookingThunk";
+import { ISessionRouteItem } from "@/models/route/route";
 export type SessionStatusFilter = SessionStatus | "all";
 
 
@@ -60,6 +64,60 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
         await this.getBookingSessions();
     }
 
+    // Convert string status from API to SessionStatus enum
+    private parseSessionStatus(status: string | SessionStatus): SessionStatus {
+        if (typeof status === 'number') {
+            return status as SessionStatus;
+        }
+
+        const statusMap: Record<string, SessionStatus> = {
+            'Planning': SessionStatus.Planning,
+            'Upcoming': SessionStatus.Upcoming,
+            'InProgress': SessionStatus.InProgress,
+            'Completed': SessionStatus.Completed,
+            'Reschedule': SessionStatus.Reschedule,
+            'Cancelled': SessionStatus.Cancelled,
+        };
+
+        return statusMap[status] ?? SessionStatus.Planning;
+    }
+
+
+    async getAllSessions(status?: SessionStatus): Promise<IBookingSession[]> {
+        const result = await this.dispatch(getAllSessions(status ? { status } : undefined)).unwrap();
+        return result?.value ?? [];
+    }
+    async getSessionDetail(sessionId: string): Promise<ISessionDetailDTO> {
+        const sessionDetail = await this.executeAsync<ISessionDetailDTO>(
+            async () => {
+                const result = await this.dispatch(getSessionDetail({ sessionId })).unwrap();
+                const detail = result?.value ?? {} as ISessionDetailDTO;
+                if (detail.status && typeof detail.status === 'string') {
+                    detail.status = this.parseSessionStatus(detail.status) as any;
+                }
+                return detail;
+            },
+            (sessionDetail) => {
+                if (sessionDetail.status && typeof sessionDetail.status === 'string') {
+                    sessionDetail.status = this.parseSessionStatus(sessionDetail.status) as any;
+                }
+                this.dispatch(setSessionDetail(sessionDetail));
+            },
+        );
+        return sessionDetail ?? {} as ISessionDetailDTO;
+    }
+
+    async saveSessionRoutes(sessionId: string, routes: ISessionRouteItem[]): Promise<boolean> {
+        const result = await this.executeAsync<boolean>(
+            async () => {
+                const response = await this.dispatch(saveSessionRoutes({ sessionId, body: routes })).unwrap();
+                return response?.value ?? false;
+            },
+        );
+        return result ?? false;
+    }
+
+
     async refreshSessions(): Promise<void> {
         this.dispatch(setIsRefreshing(true));
         try {
@@ -89,10 +147,39 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
 
         return sessions ?? [];
     }
+    async handleCancelSession(sessionId: string, note: string): Promise<boolean> {
+        if (!sessionId) {
+            console.warn("⚠️ Không có sessionId để hủy buổi tập");
+            return false;
+        }
+
+        const payload: ICancelSessionRequest = {
+            note: note,
+        };
+
+        const result = await this.executeAsync<boolean>(
+            async () => {
+                const response = await this.dispatch(
+                    cancelSessionThunk({ sessionId, cancelData: payload })
+                ).unwrap();
+
+                if (typeof response === "boolean") {
+                    return response;
+                }
+
+                return (response as any)?.value ?? false;
+            },
+            async () => {
+                await this.getBookingSessions();
+            }
+        );
+        return result ?? false;
+    }
 
     getStatusLabel(status: SessionStatusFilter): string {
         if (status === "all") return "Tất cả";
-        return STATUS_LABELS[status] ?? "Không xác định";
+        const parsedStatus = typeof status === 'string' ? this.parseSessionStatus(status) : status;
+        return STATUS_LABELS[parsedStatus] ?? "Không xác định";
     }
 
     formatDate = (dateString: string) => {
@@ -101,8 +188,9 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
     }
 
 
-    getStatusColor(status: SessionStatus): string {
-        switch (status) {
+    getStatusColor(status: SessionStatus | string): string {
+        const parsedStatus = this.parseSessionStatus(status);
+        switch (parsedStatus) {
             case SessionStatus.Planning:
                 return "#3b82f6";
             case SessionStatus.Upcoming:
@@ -120,8 +208,9 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
         }
     };
 
-    getStatusText(status: SessionStatus): string {
-        switch (status) {
+    getStatusText(status: SessionStatus | string): string {
+        const parsedStatus = this.parseSessionStatus(status);
+        switch (parsedStatus) {
             case SessionStatus.Planning:
                 return "Lên lộ trình";
             case SessionStatus.Upcoming:
@@ -139,8 +228,9 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
         }
     };
 
-    getStatusIcon(status: SessionStatus): LucideIcon {
-        switch (status) {
+    getStatusIcon(status: SessionStatus | string): LucideIcon {
+        const parsedStatus = this.parseSessionStatus(status);
+        switch (parsedStatus) {
             case SessionStatus.Planning:
                 return Navigation;
             case SessionStatus.Upcoming:

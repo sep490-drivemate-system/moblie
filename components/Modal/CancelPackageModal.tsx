@@ -1,129 +1,76 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Modal,
   Pressable,
+  Alert,
 } from "react-native";
 import { AppColors } from "@/constants/Colors";
-import { PackageDetailData } from "@/viewmodels/booking/PackageDetailViewModel";
+import {
+  PackageDetailData,
+  usePackageDetailViewModel,
+} from "@/viewmodels/booking/PackageDetailViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { BookingViewModel } from "@/viewmodels/booking/BookingViewModel";
 
 interface CancelPackageModalProps {
   visible: boolean;
   packageData: PackageDetailData | null;
-  localStatus: string;
-  cancelDateStr: string | null;
-  isProcessingCancel: boolean;
   onClose: () => void;
-  onConfirm: () => void;
   getStatusText: (status: string) => string;
-}
-
-function daysSince(dateStr: string): number {
-  const start = new Date(dateStr).getTime();
-  const now = Date.now();
-  return Math.floor((now - start) / (1000 * 60 * 60 * 24));
-}
-
-function computeRefund(pkg: {
-  status: string;
-  purchaseDate: string;
-  price?: number;
-  totalHours: number;
-  usedHours: number;
-}): { eligible: boolean; amount: number; reason: string } {
-  if (pkg.status !== "paid" && pkg.status !== "in_progress") {
-    return {
-      eligible: false,
-      amount: 0,
-      reason: "Gói không ở trạng thái đã thanh toán",
-    };
-  }
-
-  const days = daysSince(pkg.purchaseDate);
-  const price = typeof pkg.price === "number" ? pkg.price : 0;
-
-  // TH1: Chưa đi (< 30 ngày) -> hoàn 100% số tiền mua gói
-  if (pkg.usedHours === 0 && days < 30) {
-    return {
-      eligible: true,
-      amount: price,
-      reason: "Hoàn 100% vì chưa sử dụng giờ nào và mua dưới 30 ngày",
-    };
-  }
-
-  // TH2: Chưa đi (>30 ngày) -> không hoàn lại
-  if (pkg.usedHours === 0 && days >= 30) {
-    return {
-      eligible: false,
-      amount: 0,
-      reason: "Không hoàn tiền vì đã quá 30 ngày kể từ ngày mua",
-    };
-  }
-
-  // TH3: Đã đi được một phần && < 30 ngày -> tính theo công thức
-  if (pkg.usedHours > 0 && days < 30) {
-    const refund = (price / pkg.totalHours) * (pkg.totalHours - pkg.usedHours);
-    return {
-      eligible: true,
-      amount: Math.max(0, refund),
-      reason: `Hoàn theo số giờ chưa sử dụng: ${pkg.totalHours - pkg.usedHours}/${pkg.totalHours} giờ`,
-    };
-  }
-
-  // Đã đi được một phần && >= 30 ngày -> không hoàn
-  if (pkg.usedHours > 0 && days >= 30) {
-    return {
-      eligible: false,
-      amount: 0,
-      reason: "Không hoàn tiền vì đã quá 30 ngày kể từ ngày mua",
-    };
-  }
-
-  // Trường hợp mặc định
-  return {
-    eligible: false,
-    amount: 0,
-    reason: "Không đủ điều kiện hoàn tiền",
-  };
-}
-
-function renderRefundInfo(pkg: any, styles: any) {
-  const info = computeRefund(pkg);
-  if (!info.eligible) {
-    return (
-      <Text style={[styles.modalText, { fontWeight: "700", color: "#ef4444" }]}>
-        Không đủ điều kiện hoàn tiền ({info.reason})
-      </Text>
-    );
-  }
-  return (
-    <View style={{ gap: 4 }}>
-      <Text
-        style={[
-          styles.modalText,
-          { fontWeight: "800", color: AppColors.primary },
-        ]}
-      >
-        Số tiền dự kiến hoàn: {info.amount.toLocaleString("vi-VN")}₫
-      </Text>
-      <Text style={styles.modalSubText}>{info.reason}</Text>
-    </View>
-  );
+  onCancelled?: () => void;
 }
 
 export default function CancelPackageModal({
   visible,
   packageData,
-  localStatus,
-  cancelDateStr,
-  isProcessingCancel,
   onClose,
-  onConfirm,
   getStatusText,
+  onCancelled,
 }: CancelPackageModalProps) {
   if (!packageData) return null;
+
+  const [bookingState, bookingViewModel] = useViewModel(
+    BookingViewModel,
+    (state) => state.booking
+  );
+  const packageDetailViewModel = usePackageDetailViewModel();
+  const isProcessingCancel = bookingState.isCancellingBooking;
+
+  const refundEvaluation = useMemo(() => {
+    if (!packageData) return null;
+    return packageDetailViewModel.computeRefund({
+      status: packageData.status,
+      purchaseDate: packageData.purchaseDate,
+      price: packageData.price,
+      totalHours: packageData.totalHours,
+      usedHours: packageData.usedHours,
+    });
+  }, [packageData, packageDetailViewModel]);
+
+  const refundInfo = useMemo(() => {
+    if (!refundEvaluation) return null;
+    return packageDetailViewModel.renderRefundInfo(refundEvaluation);
+  }, [refundEvaluation, packageDetailViewModel]);
+
+  const handleConfirmCancel = async () => {
+    const success = await bookingViewModel.cancelPackageBooking(packageData?.id);
+    if (success) {
+      Alert.alert("Thành công", "Bạn đã hủy gói thành công", [
+        {
+          text: "OK",
+          onPress: () => {
+            onClose();
+            onCancelled?.();
+          },
+        },
+      ]);
+    } else {
+      Alert.alert("Lỗi", "Không thể hủy gói. Vui lòng thử lại sau.");
+    }
+  };
 
   return (
     <Modal
@@ -140,7 +87,7 @@ export default function CancelPackageModal({
               Gói: {packageData.packageName}
             </Text>
             <Text style={styles.modalText}>
-              Trạng thái: {getStatusText(localStatus)}
+              Trạng thái: {getStatusText(packageData.status)}
             </Text>
             <Text style={styles.modalText}>
               Ngày mua:{" "}
@@ -149,17 +96,26 @@ export default function CancelPackageModal({
                 { day: "2-digit", month: "2-digit", year: "numeric" }
               )}
             </Text>
-            {cancelDateStr && (
+            {packageData.cancelDate && (
               <Text style={styles.modalText}>
                 Ngày hủy:{" "}
-                {new Date(cancelDateStr).toLocaleDateString("vi-VN", {
+                {new Date(packageData.cancelDate).toLocaleDateString("vi-VN", {
                   day: "2-digit",
                   month: "2-digit",
                   year: "numeric",
                 })}
               </Text>
             )}
-            {renderRefundInfo({ ...packageData, status: localStatus }, styles)}
+            {refundInfo && (
+              <View style={styles.refundInfo}>
+                <Text style={[styles.modalText, { color: refundInfo.color }]}>
+                  {refundInfo.text}
+                </Text>
+                {refundInfo.reason && (
+                  <Text style={styles.modalSubText}>{refundInfo.reason}</Text>
+                )}
+              </View>
+            )}
             <View style={styles.modalNoteBox}>
               <Text style={styles.modalNoteTitle}>
                 Lưu ý chính sách hoàn tiền
@@ -171,7 +127,9 @@ export default function CancelPackageModal({
                 - Chưa đi và mua trên 30 ngày: không hoàn tiền.
               </Text>
               <Text style={styles.modalSubText}>
-                - Đã đi được một phần và mua dưới 30 ngày: số tiền hoàn = (tổng tiền mua gói / tổng số giờ của gói) × (tổng số giờ của gói - tổng số giờ đã đi được).
+                - Đã đi được một phần và mua dưới 30 ngày: số tiền hoàn = (tổng
+                tiền mua gói / tổng số giờ của gói) × (tổng số giờ của gói -
+                tổng số giờ đã đi được).
               </Text>
             </View>
           </View>
@@ -186,7 +144,7 @@ export default function CancelPackageModal({
             <Pressable
               disabled={isProcessingCancel}
               style={[styles.modalButton, styles.modalConfirm]}
-              onPress={onConfirm}
+              onPress={handleConfirmCancel}
             >
               <Text style={styles.modalConfirmText}>
                 {isProcessingCancel ? "Đang xử lý..." : "Xác nhận hủy"}
@@ -266,6 +224,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     color: "#111827",
+  },
+  refundInfo: {
+    paddingVertical: 6,
   },
 });
 
