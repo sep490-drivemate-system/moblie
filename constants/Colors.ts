@@ -4,7 +4,7 @@ const tintColorDark = '#fff';
 // App Theme Colors
 export const AppColors = {
   // Primary Colors
-  primary: '#1AD562',
+  primary: '#22C55E',
   primaryDark: '#5568d3',
   primaryLight: '#8b9cff',
 

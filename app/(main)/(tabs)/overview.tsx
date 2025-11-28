@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Dimensions,
   StatusBar,
+  Modal,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { PieChart, BarChart } from "react-native-chart-kit";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,10 +20,17 @@ import {
   TrendingUp,
   Calendar,
   Navigation,
+  Filter,
+  ChevronDown,
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 
 const { width: screenWidth } = Dimensions.get("window");
+const CURRENT_YEAR = new Date().getFullYear();
+const CURRENT_MONTH = new Date().getMonth() + 1;
+const YEAR_OPTIONS = Array.from({ length: 10 }, (_, idx) => CURRENT_YEAR - idx);
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, idx) => idx + 1);
+const WEEK_OPTIONS = [1, 2, 3, 4];
 
 interface KPIProps {
   title: string;
@@ -72,6 +81,77 @@ const KPI: React.FC<KPIProps> = ({
   );
 };
 
+type DropdownOption<T> = {
+  label: string;
+  value: T;
+};
+
+interface DropdownFieldProps<T> {
+  label: string;
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (value: T) => void;
+}
+
+function DropdownField<T extends string | number>({
+  label,
+  value,
+  options,
+  onChange,
+}: DropdownFieldProps<T>) {
+  const [open, setOpen] = useState(false);
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  return (
+    <View style={styles.selectorBlock}>
+      <Text style={styles.selectorLabel}>{label}</Text>
+      <View>
+        <TouchableOpacity
+          style={styles.dropdownDisplay}
+          onPress={() => setOpen((prev) => !prev)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.dropdownValueText}>
+            {selectedOption ? selectedOption.label : "Chọn giá trị"}
+          </Text>
+          <ChevronDown
+            size={16}
+            color={AppColors.textPrimary}
+            style={{
+              transform: [{ rotate: open ? "180deg" : "0deg" }],
+            }}
+          />
+        </TouchableOpacity>
+        {open && (
+          <View style={styles.dropdownList}>
+            <ScrollView nestedScrollEnabled>
+              {options.map((option) => (
+                <TouchableOpacity
+                  key={`${label}-${option.value}`}
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownOptionText,
+                      option.value === value && styles.dropdownOptionTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
 const COLORS = [
   AppColors.primary,
   AppColors.blue,
@@ -87,13 +167,79 @@ const packageData = [
   { name: "Gói Sơ Cấp (20h)", hours: 20, buyers: 30, sessions: 90 },
 ];
 
-const sessionsByType = [
-  { period: "10-01", completed: 8, cancelled: 1, rescheduled: 2 },
-  { period: "10-08", completed: 12, cancelled: 0, rescheduled: 1 },
-  { period: "10-15", completed: 10, cancelled: 2, rescheduled: 3 },
-  { period: "10-22", completed: 14, cancelled: 1, rescheduled: 0 },
-  { period: "10-29", completed: 20, cancelled: 3, rescheduled: 2 },
+const activityData = {
+  week: [
+    {
+      period: "Tuần 1 (03-09/02)",
+      completed: 18,
+      cancelled: 2,
+      rescheduled: 3,
+    },
+    {
+      period: "Tuần 2 (10-16/02)",
+      completed: 15,
+      cancelled: 1,
+      rescheduled: 4,
+    },
+    {
+      period: "Tuần 3 (17-23/02)",
+      completed: 20,
+      cancelled: 3,
+      rescheduled: 2,
+    },
+    {
+      period: "Tuần 4 (24-01/03)",
+      completed: 16,
+      cancelled: 2,
+      rescheduled: 1,
+    },
+  ],
+  month: [
+    { period: "01/2025", completed: 42, cancelled: 5, rescheduled: 8 },
+    { period: "02/2025", completed: 55, cancelled: 6, rescheduled: 10 },
+    { period: "03/2025", completed: 60, cancelled: 7, rescheduled: 9 },
+    { period: "04/2025", completed: 70, cancelled: 8, rescheduled: 12 },
+  ],
+  year: [
+    { period: "2022", completed: 420, cancelled: 40, rescheduled: 60 },
+    { period: "2023", completed: 510, cancelled: 50, rescheduled: 70 },
+    { period: "2024", completed: 575, cancelled: 65, rescheduled: 82 },
+    { period: "2025", completed: 610, cancelled: 55, rescheduled: 75 },
+  ],
+};
+
+const chartTitleByViewMode = {
+  week: "Buổi Tập Lái Theo Tuần",
+  month: "Buổi Tập Lái Theo Tháng",
+  year: "Buổi Tập Lái Theo Năm",
+};
+
+const VIEW_MODE_OPTIONS: DropdownOption<"year" | "month" | "week">[] = [
+  { label: "Năm", value: "year" },
+  { label: "Tháng", value: "month" },
+  { label: "Tuần", value: "week" },
 ];
+
+const YEAR_OPTION_ITEMS: DropdownOption<number>[] = YEAR_OPTIONS.map(
+  (year) => ({
+    label: `${year}`,
+    value: year,
+  })
+);
+
+const MONTH_OPTION_ITEMS: DropdownOption<number>[] = MONTH_OPTIONS.map(
+  (month) => ({
+    label: `Tháng ${month}`,
+    value: month,
+  })
+);
+
+const WEEK_OPTION_ITEMS: DropdownOption<number>[] = WEEK_OPTIONS.map(
+  (week) => ({
+    label: `Tuần ${week}`,
+    value: week,
+  })
+);
 
 const students = [
   {
@@ -130,6 +276,11 @@ const students = [
 
 export default function OverviewScreen() {
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"year" | "month" | "week">("year");
+  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+  const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
+  const [selectedWeek, setSelectedWeek] = useState(1);
 
   const totalPackages = packageData.length;
   const totalSessions = students.reduce((s, st) => s + st.sessions, 0);
@@ -140,7 +291,38 @@ export default function OverviewScreen() {
   const commissionRate = 0.15;
   const commission = Math.round(grossRevenue * commissionRate);
   const netRevenue = grossRevenue - commission;
-  const penaltyFees = 450000;
+  const activeSessions = activityData[viewMode];
+
+  const getActiveFilterLabel = () => {
+    if (viewMode === "year") {
+      return `Năm ${selectedYear}`;
+    }
+    if (viewMode === "month") {
+      return `Tháng ${selectedMonth}/${selectedYear}`;
+    }
+    return `Tuần ${selectedWeek} · Tháng ${selectedMonth}/${selectedYear}`;
+  };
+
+  const handleViewModeChange = (mode: "year" | "month" | "week") => {
+    setViewMode(mode);
+    if (mode === "year") {
+      setSelectedMonth(CURRENT_MONTH);
+      setSelectedWeek(1);
+    }
+    if (mode === "month") {
+      setSelectedWeek(1);
+    }
+  };
+
+  const handleApplyFilter = () => {
+    console.log("Applying filters", {
+      viewMode,
+      selectedYear,
+      selectedMonth,
+      selectedWeek,
+    });
+    setIsFilterOpen(false);
+  };
 
   const pieData = packageData.map((p) => ({
     name: p.name.split(" ")[0] + "...",
@@ -150,25 +332,19 @@ export default function OverviewScreen() {
     legendFontSize: 12,
   }));
 
-  // Format date from mm-dd to dd/mm
-  const formatDateLabel = (dateString: string) => {
-    const [month, day] = dateString.split("-");
-    return `${day}/${month}`;
-  };
-
   const barData = {
-    labels: sessionsByType.map((s) => formatDateLabel(s.period)),
+    labels: activeSessions.map((s) => s.period),
     datasets: [
       {
-        data: sessionsByType.map((s) => s.completed),
+        data: activeSessions.map((s) => s.completed),
         color: (opacity = 1) => AppColors.primary,
       },
       {
-        data: sessionsByType.map((s) => s.rescheduled),
+        data: activeSessions.map((s) => s.rescheduled),
         color: (opacity = 1) => AppColors.primaryLight || AppColors.primary,
       },
       {
-        data: sessionsByType.map((s) => s.cancelled),
+        data: activeSessions.map((s) => s.cancelled),
         color: (opacity = 1) => AppColors.primaryDark || AppColors.primary,
       },
     ],
@@ -218,6 +394,30 @@ export default function OverviewScreen() {
         <View style={styles.headerCurve} />
       </LinearGradient>
 
+      <View style={styles.filterWrapper}>
+        <View style={styles.filterSummaryRow}>
+          <Text style={styles.filterSummaryLabel}>Đang xem theo:</Text>
+          <Text style={styles.filterSummaryText}>{getActiveFilterLabel()}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={() => setIsFilterOpen((prev) => !prev)}
+          activeOpacity={0.85}
+        >
+          <Filter size={18} color={AppColors.primary} />
+          <Text style={styles.filterButtonText}>
+            Bộ lọc {isFilterOpen ? "(Mở)" : "(Đóng)"}
+          </Text>
+          <ChevronDown
+            size={18}
+            color={AppColors.primary}
+            style={{
+              transform: [{ rotate: isFilterOpen ? "180deg" : "0deg" }],
+            }}
+          />
+        </TouchableOpacity>
+      </View>
+
       {/* KPI Cards */}
       <View style={styles.kpiGrid}>
         <KPI
@@ -246,14 +446,6 @@ export default function OverviewScreen() {
           icon={<TrendingUp size={24} color={AppColors.textWhite} />}
           color={[AppColors.success, AppColors.success]}
           delay={200}
-        />
-        <KPI
-          title="Tổng phí phạt"
-          value={`${(penaltyFees / 1000).toLocaleString("vi-VN")}K VNĐ`}
-          sub="Phí hủy/dời lịch"
-          icon={<DollarSign size={24} color={AppColors.textWhite} />}
-          color={[AppColors.error, AppColors.error]}
-          delay={300}
         />
       </View>
 
@@ -319,7 +511,9 @@ export default function OverviewScreen() {
         <View style={[styles.chartCard, styles.barChartCard]}>
           <View style={styles.chartHeader}>
             <TrendingUp size={20} color={AppColors.primary} />
-            <Text style={styles.chartTitle}>Buổi Tập Lái Theo Tuần</Text>
+            <Text style={styles.chartTitle}>
+              {chartTitleByViewMode[viewMode]}
+            </Text>
           </View>
           <View style={styles.barChartContainer}>
             <BarChart
@@ -347,7 +541,7 @@ export default function OverviewScreen() {
                 Hoàn thành
               </Text>
               <Text style={[styles.statValue, { color: AppColors.success }]}>
-                {sessionsByType.reduce((s, r) => s + r.completed, 0)}
+                {activeSessions.reduce((s, r) => s + r.completed, 0)}
               </Text>
             </View>
             <View
@@ -362,7 +556,7 @@ export default function OverviewScreen() {
                 Dời lịch
               </Text>
               <Text style={[styles.statValue, { color: AppColors.yellow }]}>
-                {sessionsByType.reduce((s, r) => s + r.rescheduled, 0)}
+                {activeSessions.reduce((s, r) => s + r.rescheduled, 0)}
               </Text>
             </View>
             <View
@@ -377,7 +571,7 @@ export default function OverviewScreen() {
                 Hủy
               </Text>
               <Text style={[styles.statValue, { color: AppColors.error }]}>
-                {sessionsByType.reduce((s, r) => s + r.cancelled, 0)}
+                {activeSessions.reduce((s, r) => s + r.cancelled, 0)}
               </Text>
             </View>
           </View>
@@ -424,45 +618,6 @@ export default function OverviewScreen() {
             </View>
           </View>
         </LinearGradient>
-      </View>
-
-      {/* Cancel fee section */}
-      <View style={styles.revenueSection}>
-        <View style={styles.penaltyCard}>
-          <Text style={styles.penaltyTitle}>Phí Phạt</Text>
-          <Text style={styles.penaltySubtitle}>Tổng phí đã trừ</Text>
-          <Text style={styles.penaltyValue}>
-            {penaltyFees.toLocaleString("vi-VN")} VNĐ
-          </Text>
-          <View style={styles.penaltyList}>
-            {[
-              {
-                date: "05/10/2025",
-                session: "#D1021",
-                reason: "Tự hủy",
-                amount: 100000,
-              },
-              {
-                date: "18/10/2025",
-                session: "#D1040",
-                reason: "Dời lịch",
-                amount: 50000,
-              },
-            ].map((item, idx) => (
-              <View key={idx} style={styles.penaltyItem}>
-                <View>
-                  <Text style={styles.penaltyItemDate}>
-                    {item.date} — {item.session}
-                  </Text>
-                  <Text style={styles.penaltyItemReason}>{item.reason}</Text>
-                </View>
-                <Text style={styles.penaltyItemAmount}>
-                  {item.amount.toLocaleString("vi-VN")} VNĐ
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
       </View>
 
       {/* Novice driver Table */}
@@ -624,6 +779,69 @@ export default function OverviewScreen() {
           </ScrollView>
         </View>
       </View>
+
+      <Modal
+        visible={isFilterOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setIsFilterOpen(false)}
+      >
+        <View style={styles.filterModalWrapper}>
+          <TouchableWithoutFeedback onPress={() => setIsFilterOpen(false)}>
+            <View style={styles.filterModalBackdrop} />
+          </TouchableWithoutFeedback>
+          <View style={styles.filterModalCard}>
+            <Text style={styles.filterModalTitle}>Bộ lọc dữ liệu</Text>
+
+            <DropdownField
+              label="Xem theo"
+              value={viewMode}
+              options={VIEW_MODE_OPTIONS}
+              onChange={(mode) => handleViewModeChange(mode)}
+            />
+
+            <DropdownField
+              label="Năm"
+              value={selectedYear}
+              options={YEAR_OPTION_ITEMS}
+              onChange={(year) => setSelectedYear(year)}
+            />
+
+            {(viewMode === "month" || viewMode === "week") && (
+              <DropdownField
+                label="Tháng"
+                value={selectedMonth}
+                options={MONTH_OPTION_ITEMS}
+                onChange={(month) => setSelectedMonth(month)}
+              />
+            )}
+
+            {viewMode === "week" && (
+              <DropdownField
+                label="Tuần (Thứ 2 - Chủ nhật)"
+                value={selectedWeek}
+                options={WEEK_OPTION_ITEMS}
+                onChange={(week) => setSelectedWeek(week)}
+              />
+            )}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalActionButton, styles.closeButton]}
+                onPress={() => setIsFilterOpen(false)}
+              >
+                <Text style={styles.closeButtonText}>Đóng</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalActionButton, styles.applyButton]}
+                onPress={handleApplyFilter}
+              >
+                <Text style={styles.applyButtonText}>Áp dụng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -692,16 +910,51 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
+  },
+  filterWrapper: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  filterSummaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flex: 1,
+  },
+  filterSummaryLabel: {
+    fontSize: 13,
+    color: AppColors.gray600,
+    fontWeight: "500",
+  },
+  filterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: AppColors.border,
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: "#ffffff",
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: AppColors.primary,
+    marginHorizontal: 8,
+  },
+  filterSummaryText: {
+    fontSize: 14,
+    color: AppColors.primary,
+    fontWeight: "600",
   },
   kpiGrid: {
     flexDirection: "row",
@@ -898,60 +1151,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: AppColors.textPrimary,
   },
-  penaltyCard: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: AppColors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  penaltyTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: AppColors.textPrimary,
-    marginBottom: 8,
-  },
-  penaltySubtitle: {
-    fontSize: 14,
-    color: AppColors.gray600,
-    marginBottom: 16,
-  },
-  penaltyValue: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: AppColors.error,
-    marginBottom: 24,
-  },
-  penaltyList: {
-    gap: 12,
-  },
-  penaltyItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 12,
-    backgroundColor: AppColors.gray50,
-    borderRadius: 8,
-  },
-  penaltyItemDate: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: AppColors.textPrimary,
-  },
-  penaltyItemReason: {
-    fontSize: 12,
-    color: AppColors.gray600,
-  },
-  penaltyItemAmount: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: AppColors.error,
-  },
   studentTableSession: {
     paddingHorizontal: 16,
   },
@@ -1092,6 +1291,112 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColors.gray500,
     textAlign: "center",
+  },
+  filterModalWrapper: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterModalBackdrop: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  filterModalCard: {
+    width: "88%",
+    maxWidth: 380,
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  filterModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: AppColors.textPrimary,
+    marginBottom: 16,
+  },
+  selectorBlock: {
+    marginBottom: 16,
+  },
+  selectorLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: AppColors.textPrimary,
+    marginBottom: 8,
+  },
+  dropdownDisplay: {
+    borderWidth: 1,
+    borderColor: AppColors.border,
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dropdownValueText: {
+    fontSize: 14,
+    color: AppColors.textPrimary,
+    fontWeight: "500",
+  },
+  dropdownList: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    maxHeight: 200,
+  },
+  dropdownOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  dropdownOptionText: {
+    fontSize: 14,
+    color: AppColors.textPrimary,
+  },
+  dropdownOptionTextActive: {
+    color: AppColors.primary,
+    fontWeight: "600",
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  modalActionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeButton: {
+    borderWidth: 1,
+    borderColor: AppColors.border,
+    backgroundColor: "#ffffff",
+  },
+  applyButton: {
+    backgroundColor: AppColors.primary,
+  },
+  closeButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: AppColors.textPrimary,
+  },
+  applyButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#ffffff",
   },
   completedBadge: {
     backgroundColor: `${AppColors.success}33`,

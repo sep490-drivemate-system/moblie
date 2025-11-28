@@ -21,7 +21,7 @@ import {
   IdCard,
   Package2,
 } from "lucide-react-native";
-import { ROUTES } from '@/constants/routes';
+import { ROUTES } from "@/constants/routes";
 import { useRouter } from "expo-router";
 import { mockUserProfile } from "@/data/profile-screen";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
@@ -31,9 +31,8 @@ import { useMemo } from "react";
 import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 
-
 export default function ProfileScreen() {
-  const [walletState,] = useViewModel(WalletViewModel, (state) => state.wallet);
+  const [walletState] = useViewModel(WalletViewModel, (state) => state.wallet);
   const router = useRouter();
   const dispatch = useAppDispatch();
   const authState = useAppSelector((state) => state.auth);
@@ -107,10 +106,24 @@ export default function ProfileScreen() {
                 <Text style={styles.menuItemText}>Thông tin tài khoản</Text>
               </View>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() =>
+                router.push(
+                  "/(main)/(no-tabs)/identification-document-management-instructor"
+                )
+              }
+            >
+              <View style={styles.menuItemLeft}>
+                <IdCard size={20} color="#70E000" />
+                <Text style={styles.menuItemText}>Giấy tờ tùy thân Instr</Text>
+              </View>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
                 <IdCard size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Giấy tờ tùy thân</Text>
+                <Text style={styles.menuItemText}>Giấy tờ tùy thân Novi</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity
@@ -132,39 +145,26 @@ export default function ProfileScreen() {
             <Text style={styles.menuTitle}>Tổng quát</Text>
           </View>
           <View style={styles.menuItemsContainer}>
-            {role === UserRole.Instructor && (
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() =>
-                  router.push(
-                    ROUTES.MAIN_NO_TABS_SERVICE_PACKAGE_SERVICE_PACKAGE_MANAGEMENT
-                  )
-                }
-              >
-                <View style={styles.menuItemLeft}>
-                  <Package2 size={20} color="#70E000" />
-                  <Text style={styles.menuItemText}>Gói thuê</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-            {role === UserRole.NoviceDriver && (
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() =>
-                  router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)
-                }
-              >
-                <View style={styles.menuItemLeft}>
-                  <Package2 size={20} color="#70E000" />
-                  <Text style={styles.menuItemText}>Gói đã mua</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() =>
+                router.push(
+                  ROUTES.MAIN_NO_TABS_SERVICE_PACKAGE_SERVICE_PACKAGE_MANAGEMENT
+                )
+              }
+            >
               <View style={styles.menuItemLeft}>
-                <Star size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Đánh giá</Text>
+                <Package2 size={20} color="#70E000" />
+                <Text style={styles.menuItemText}>Quản lý gói dịch vụ</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
+            >
+              <View style={styles.menuItemLeft}>
+                <Package2 size={20} color="#70E000" />
+                <Text style={styles.menuItemText}>Gói dịch vụ đã mua</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -187,7 +187,10 @@ export default function ProfileScreen() {
                 <Text style={styles.menuItemText}>Thông tin về DriveMate</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => setShowLogoutModal(true)}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => setShowLogoutModal(true)}
+            >
               <View style={styles.menuItemLeft}>
                 <LogOut size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Đăng xuất</Text>
@@ -228,10 +231,10 @@ export default function ProfileScreen() {
                 style={[styles.modalButton, styles.logoutButton]}
                 onPress={async () => {
                   setIsLoggingOut(true);
-                  await authViewModel.handleSignOut()
+                  await authViewModel.handleSignOut();
                   setIsLoggingOut(false);
                   setShowLogoutModal(false);
-                  router.push(ROUTES.MAIN_NO_TABS_INTRO as any)
+                  router.push(ROUTES.MAIN_NO_TABS_INTRO as any);
                 }}
                 disabled={isLoggingOut}
                 activeOpacity={0.7}
