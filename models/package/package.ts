@@ -25,9 +25,8 @@ export interface IBuyPackageRequest {
 }
 
 export interface IBuyPackageResponse {
-  id: string
+  id: string;
 }
-
 
 export interface IMyPackgesResponse {
   id: string;
@@ -42,4 +41,26 @@ export interface IMyPackgesResponse {
   instructorId: string;
   roadTypes: string[];
   drivingSkills: string[];
+}
+
+export interface DrivingSkill {
+  id: string;
+  display_name: string;
+}
+
+export type RoadType = {
+  id: string;
+  name: string;
+  description: string | null;
+};
+
+export interface CreatePackageForm {
+  name: string;
+  description: string;
+  duration: number;
+  roadTypes: string[];
+  drivingSkills: string[];
+  price: number;
+  allowNoviceCar: boolean;
+  packageCars: string[];
 }
