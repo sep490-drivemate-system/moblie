@@ -1,27 +1,21 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  RefreshControl,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { AppColors } from "@/constants/Colors";
-
-const DUMMY_SERVICE_PACKAGES = [
-  {
-    id: 1,
-    title: "Gói miền Tây",
-    skills: ["Lùi xe", "Đỗ xe", "Quan sát"],
-    roadTypes: ["Đường trơn trượt", "Đường đông dân cư"],
-    duration: "1:30",
-    carOption: "Có thể đi xe của khách hàng hoặc của tôi",
-    price: 150000,
-  },
-];
+import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { PackageViewModel } from "@/viewmodels/package/PackageViewModel";
+import { RootState } from "@/lib/redux/store";
+import { IInstructorPackages } from "@/models/instructor/instructor.type";
 
 const formatCurrencyVND = (value: number | string) => {
   const digitsOnly = String(value).replace(/\D/g, "");
@@ -29,9 +23,28 @@ const formatCurrencyVND = (value: number | string) => {
   return digitsOnly.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
+const getCarOptionLabel = (isRentalCar: boolean) =>
+  isRentalCar
+    ? "Có thể đi xe của khách hàng hoặc của tôi"
+    : "Chỉ đi xe của bạn";
+
+const formatDuration = (duration: number) => {
+  if (!duration && duration !== 0) return "0h";
+  const wholeHours = Math.floor(duration);
+  const remainingMinutes = Math.round((duration - wholeHours) * 60);
+  if (remainingMinutes > 0) {
+    return `${wholeHours}giờ ${remainingMinutes}phút`;
+  }
+  return `${duration}giờ`;
+};
+
 function ServicePackageManagementScreen() {
   const router = useRouter();
-  const [packages, setPackages] = useState(DUMMY_SERVICE_PACKAGES);
+  const [packages, setPackages] = useState<IInstructorPackages[]>([]);
+  const [packageState, packageViewModel] = useViewModel(
+    PackageViewModel,
+    (state: RootState) => state.package
+  );
 
   const handleAdd = () => {
     router.push({
@@ -40,13 +53,30 @@ function ServicePackageManagementScreen() {
     });
   };
 
-  const handleDelete = (itemId: number) => {
-    setPackages(packages.filter((item) => item.id !== itemId));
+  const handleDelete = (itemId: string) => {
+    setPackages((prev) => prev.filter((item) => item.id !== itemId));
   };
 
   const handleDetail = (item: any) => {
     router.push("/(main)/(no-tabs)/(service-package)/service-package-detail");
   };
+
+  const getPackages = useCallback(async () => {
+    const userId = await getUserIdFromToken();
+    if (!userId) return;
+    const packages = await packageViewModel.refreshPackages(userId as string);
+    setPackages(packages);
+  }, [packageViewModel]);
+
+  useEffect(() => {
+    getPackages();
+  }, [getPackages]);
+
+  useFocusEffect(
+    useCallback(() => {
+      getPackages();
+    }, [getPackages])
+  );
 
   return (
     <View style={styles.container}>
@@ -86,6 +116,12 @@ function ServicePackageManagementScreen() {
       </LinearGradient>
 
       <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={packageState.isRefreshing}
+            onRefresh={getPackages}
+          />
+        }
         style={styles.scrollContent}
         contentContainerStyle={styles.scrollContentContainer}
         showsVerticalScrollIndicator={false}
@@ -131,13 +167,13 @@ function ServicePackageManagementScreen() {
               <View style={styles.cardHeader}>
                 <View style={styles.titleSection}>
                   <View style={styles.titleDot} />
-                  <Text style={styles.cardTitle}>{item.title}</Text>
+                  <Text style={styles.cardTitle}>{item.name}</Text>
                 </View>
               </View>
               <View style={styles.priceContainer}>
                 <Text style={styles.priceLabel}>Giá</Text>
                 <Text style={styles.cardPrice}>
-                  {formatCurrencyVND((item as any).price)} VNĐ
+                  {formatCurrencyVND(item.price)} VNĐ
                 </Text>
               </View>
               <View style={styles.cardInfoSection}>
@@ -146,14 +182,18 @@ function ServicePackageManagementScreen() {
                     <View style={styles.infoDot} />
                     <Text style={styles.infoLabel}>Thời lượng</Text>
                   </View>
-                  <Text style={styles.infoValue}>{item.duration}h</Text>
+                  <Text style={styles.infoValue}>
+                    {formatDuration(item.duration)}
+                  </Text>
                 </View>
                 <View style={styles.infoBlock}>
                   <View style={styles.infoLabelRow}>
                     <View style={styles.infoDot} />
                     <Text style={styles.infoLabel}>Kỹ năng</Text>
                   </View>
-                  <Text style={styles.infoValue}>{item.skills.join(", ")}</Text>
+                  <Text style={styles.infoValue}>
+                    {item.drivingSkills.join(", ")}
+                  </Text>
                 </View>
                 <View style={styles.infoBlock}>
                   <View style={styles.infoLabelRow}>
@@ -169,7 +209,9 @@ function ServicePackageManagementScreen() {
                     <View style={styles.infoDot} />
                     <Text style={styles.infoLabel}>Xe</Text>
                   </View>
-                  <Text style={styles.infoValue}>{item.carOption}</Text>
+                  <Text style={styles.infoValue}>
+                    {getCarOptionLabel(item.isRentalCar)}
+                  </Text>
                 </View>
               </View>
               <View style={styles.cardActionRow}>

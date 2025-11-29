@@ -17,6 +17,7 @@ import {
   getInstructorPackages,
   getRoadTypes,
 } from "@/features/package/packageThunk";
+import { setIsRefreshing } from "@/features/package/packageSlice";
 import {
   CreatePackageForm,
   DrivingSkill,
@@ -31,7 +32,7 @@ export class PackageViewModel extends BaseViewModel<RootState["package"]> {
     super(dispatch, getCurrentState);
   }
 
-  getPackages = async (
+  getPackagesByInstructorId = async (
     instructorId: string
   ): Promise<IInstructorPackages[]> => {
     return (
@@ -42,6 +43,17 @@ export class PackageViewModel extends BaseViewModel<RootState["package"]> {
         return (response as any).value || response;
       })) ?? []
     );
+  };
+
+  refreshPackages = async (
+    instructorId: string
+  ): Promise<IInstructorPackages[]> => {
+    this.dispatch(setIsRefreshing(true));
+    try {
+      return await this.getPackagesByInstructorId(instructorId);
+    } finally {
+      this.dispatch(setIsRefreshing(false));
+    }
   };
 
   getDrivingSkills = async (): Promise<DrivingSkill[]> => {
