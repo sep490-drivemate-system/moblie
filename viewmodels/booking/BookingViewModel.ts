@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { cancelPackageBooking, getMyPackages } from "@/features/booking/bookingThunk";
-import { buyPackage } from "@/features/instructor/instructorThunk";
+import { buyPackage } from "@/features/booking/bookingThunk";
 import { BookingStatus } from "@/models/package/user-package";
 import { IBuyPackageRequest, IMyPackgesResponse } from "@/models/package/package";
 import { AppColors } from "@/constants/Colors";
@@ -118,7 +118,7 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
         if (typeof status === 'number') {
             return status as BookingStatus;
         }
-        
+
         const statusMap: Record<string, BookingStatus> = {
             'Purchased': BookingStatus.Purchased,
             'InUse': BookingStatus.InUse,
@@ -126,7 +126,7 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
             'CancellationWithRefund': BookingStatus.CancellationWithRefund,
             'CancellationWithoutRefund': BookingStatus.CancellationWithoutRefund,
         };
-        
+
         return statusMap[status] ?? BookingStatus.Purchased;
     }
 
@@ -284,19 +284,12 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
         };
     }
 
-    async cancelPackageBooking(bookingId: string | undefined | null): Promise<boolean> {
-        if (!bookingId) {
-            console.warn("⚠️ Không có bookingId để hủy gói");
-            return false;
-        }
+    async cancelPackageBooking(bookingId: string): Promise<boolean> {
 
-        try {
-            await this.dispatch(cancelPackageBooking({ bookingId })).unwrap();
-            await this.dispatch(getMyPackages(undefined));
-            return true;
-        } catch (error) {
-            console.error("❌ Không thể hủy gói:", error);
-            return false;
-        }
+        const result = await this.executeAsync(async () => {
+            const response = await this.dispatch(cancelPackageBooking({ bookingId })).unwrap();
+            return (response as any).value || response;
+        });
+        return result ?? false;
     }
 }

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, StyleSheet, TouchableOpacity, Text, Alert } from "react-native";
 import { AppColors } from "@/constants/Colors";
 import { AppAlert } from "../Commons/AppAlert";
@@ -12,6 +12,8 @@ export default function RouteActions({
   onAccept,
   onReject,
 }: RouteActionsProps) {
+  const [showConfirmAccept, setShowConfirmAccept] = useState(false);
+
   return (
     <View style={styles.routeActions}>
       <TouchableOpacity
@@ -34,7 +36,31 @@ export default function RouteActions({
         <Text style={styles.rejectButtonText}>Không đồng ý</Text>
       </TouchableOpacity>
 
-      <AppAlert visible={true} message="Bạn đồng ý với lộ trình mà người hướng dẫn đưa ra?" primaryButton={{ label: "Đồng ý", onPress: onAccept }} secondaryButton={{ label: "Hủy", variant: "secondary", onPress: () => { } }} onDismiss={() => { }} closable={false} />
+      <TouchableOpacity
+        style={styles.acceptButton}
+        onPress={() => setShowConfirmAccept(true)}
+      >
+        <Text style={styles.acceptButtonText}>Đồng ý</Text>
+      </TouchableOpacity>
+
+      <AppAlert
+        visible={showConfirmAccept}
+        message="Bạn đồng ý với lộ trình mà người hướng dẫn đưa ra?"
+        primaryButton={{
+          label: "Đồng ý",
+          onPress: () => {
+            setShowConfirmAccept(false);
+            onAccept();
+          },
+        }}
+        secondaryButton={{
+          label: "Hủy",
+          variant: "secondary",
+          onPress: () => setShowConfirmAccept(false),
+        }}
+        onDismiss={() => setShowConfirmAccept(false)}
+        closable={false}
+      />
 
     </View>
   );

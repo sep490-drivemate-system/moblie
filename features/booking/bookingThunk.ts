@@ -6,7 +6,7 @@ import { ISaveSessionRoutesPayload, ISessionRoutes } from "@/models/route/route"
 import axiosInstance from "@/lib/axios/axiosInstance";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { GenericResponse } from "@/models/generic/genericResponse";
-import { IMyPackgesResponse } from "@/models/package/package";
+import { IBuyPackageRequest, IBuyPackageResponse, IMyPackgesResponse } from "@/models/package/package";
 
 const BOOKING_PATH = "booking";
 const SESSION_PATH = "session";
@@ -380,4 +380,10 @@ export const cancelPackageBooking = createThunk<
   {
     buildUrl: (payload) => `/${BOOKING_PATH}/${payload.bookingId}/cancel`
   }
+);
+
+export const buyPackage = createThunk<IBuyPackageResponse, IBuyPackageRequest>(
+  HttpMethod.POST,
+  "buyPackage",
+  `/${BOOKING_PATH}/buy-package`
 );

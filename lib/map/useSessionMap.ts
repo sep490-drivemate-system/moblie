@@ -90,6 +90,7 @@ export function useSessionMap({
     const simulationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const logIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const allRouteCoordinates = useRef<Array<{ latitude: number; longitude: number }>>([]);
+    const fetchDirectionsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const mapStartLat = parseCoordinateValue(pickupDetails.lat as any);
     const mapStartLong = parseCoordinateValue(pickupDetails.long as any);
@@ -287,12 +288,28 @@ export function useSessionMap({
         [endDetails.lat, endDetails.long, goongApiKey, sessionDetail?.endingLatitude, sessionDetail?.endingLongtitude, sessionDetail?.startingLatitude, sessionDetail?.startingLongtitude]
     );
 
+    const requestDirections = useCallback(
+        (routes: ISessionRoutes[], startLat?: number, startLng?: number) => {
+            if (fetchDirectionsTimeoutRef.current) {
+                clearTimeout(fetchDirectionsTimeoutRef.current);
+            }
+            fetchDirectionsTimeoutRef.current = setTimeout(() => {
+                fetchGoongDirections(routes, startLat, startLng);
+            }, 700);
+        },
+        [fetchGoongDirections]
+    );
+
     useEffect(() => {
         const startLat = parseCoordinateValue(pickupDetails.lat as any) ?? undefined;
         const startLng = parseCoordinateValue(pickupDetails.long as any) ?? undefined;
         const dataForDirections = routesData ?? [];
 
-        fetchGoongDirections(
+        if (!dataForDirections || dataForDirections.length === 0) {
+            return;
+        }
+
+        requestDirections(
             dataForDirections as unknown as ISessionRoutes[],
             startLat,
             startLng
@@ -301,7 +318,7 @@ export function useSessionMap({
         routesData,
         pickupDetails.lat,
         pickupDetails.long,
-        fetchGoongDirections,
+        requestDirections,
     ]);
 
     useEffect(() => {
@@ -334,7 +351,7 @@ export function useSessionMap({
             longitudeStart: point.longitude,
         }));
 
-        fetchGoongDirections(
+        requestDirections(
             planningRoutes as unknown as ISessionRoutes[],
             mapStartLat as number,
             mapStartLong as number
@@ -346,8 +363,16 @@ export function useSessionMap({
         mapStartLong,
         sessionId,
         routesData,
-        fetchGoongDirections,
+        requestDirections,
     ]);
+
+    useEffect(() => {
+        return () => {
+            if (fetchDirectionsTimeoutRef.current) {
+                clearTimeout(fetchDirectionsTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const sendSessionLog = useCallback(
         async (lat: number, lng: number, heading: number, speed: number, isCompleted: boolean = false) => {

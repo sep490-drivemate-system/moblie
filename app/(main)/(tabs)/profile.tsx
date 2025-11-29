@@ -61,7 +61,7 @@ export default function ProfileScreen() {
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
                 <Image
-                  source={{ uri: authState.userInfo?.avatarUrl ?? "" }}
+                  source={{ uri: authState.userInfo?.avatarUrl ?? "https://cdn-media.sforum.vn/storage/app/media/wp-content/uploads/2024/02/anh-phong-canh-66-1.jpg" }}
                   style={styles.avatarImage}
                   resizeMode="cover"
                 />

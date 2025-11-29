@@ -15,6 +15,8 @@ export const cancelSession = createThunk<
     { buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}/cancel` }
 );
 
+
+
 export const rescheduleSession = createThunk<
     boolean,
     { sessionId: string; rescheduleData: IRescheduleSessionRequest }

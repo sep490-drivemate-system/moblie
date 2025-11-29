@@ -88,13 +88,7 @@ export default function SessionMap({
   hasExistingRoutes = false,
   isInstructorWaitingApproval = false,
 }: SessionMapProps) {
-  const FALLBACK_COORDS = useMemo(
-    () => ({
-      latitude: 10.823099,
-      longitude: 106.629664,
-    }),
-    []
-  );
+
 
 
   const internalMapRef = useRef<MapView>(null);
@@ -273,12 +267,12 @@ export default function SessionMap({
           onPress={allowDirectMapPress ? onMapPress : undefined}
         >
           {startingCoordinates && (
-          <Marker
+            <Marker
               coordinate={startingCoordinates}
-            title="Điểm bắt đầu"
+              title="Điểm bắt đầu"
               description={sessionState?.sessionDetail?.displayStartLocationName || "Điểm bắt đầu"}
-            pinColor="green"
-          />
+              pinColor="green"
+            />
           )}
 
           {endingCoordinates && (
@@ -330,7 +324,6 @@ export default function SessionMap({
             />
           ))}
 
-          {/* Fallback: Hiển thị endDetails nếu không có trong sessionState */}
           {!endingCoordinates && hasEndPoint && typeof endDetails.lat === "number" && typeof endDetails.long === "number" && (
             <Marker
               coordinate={{

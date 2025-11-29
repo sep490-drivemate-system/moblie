@@ -579,7 +579,7 @@ export default function BookingScreen() {
             onPress={handleNext}
             disabled={!canProceedToNextStep()}
           >
-            <View
+            <View 
               style={[
                 styles.continueButtonGradient,
                 {

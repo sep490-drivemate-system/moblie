@@ -1,7 +1,7 @@
 import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/HttpMethods";
-import { 
-  IInstructors, 
+import {
+  IInstructors,
   IInstructorCar,
   PaginatedInstructorsResponse,
   GetInstructorsParams,
@@ -45,11 +45,7 @@ export const getInstructorCars = createThunk<
   buildUrl: (payload) => `car/instructor/${payload.id}/cars`,
 });
 
-export const buyPackage = createThunk<IBuyPackageResponse, IBuyPackageRequest>(
-  HttpMethod.POST,
-  "buyPackage",
-  `package/buy-package`
-);
+
 
 export const getInstructorApplicant = createThunk<
   InstructorApplicant,

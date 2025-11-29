@@ -161,20 +161,13 @@ export default function InstructorDetailScreen() {
 
     setIsProcessing(true);
 
-    try {
-      await bookingVM.handleConfirmPurchase({
-        instructorId: instructor.id,
-        selectedPackage,
-        selectedVehicleId: selectedVehicle,
-      });
-      // Thanh toán thành công, đóng modal và reset trạng thái xử lý
-      setShowConfirmModal(false);
-    } catch (error) {
-      console.error("Error while confirming purchase:", error);
-    } finally {
-      // Dù thành công hay thất bại thì cũng tắt trạng thái xử lý
-      setIsProcessing(false);
-    }
+    await bookingVM.handleConfirmPurchase({
+      instructorId: instructor.id,
+      selectedPackage,
+      selectedVehicleId: selectedVehicle,
+    });
+    setShowConfirmModal(false);
+    setIsProcessing(false);
   };
 
   if (!instructor) {
