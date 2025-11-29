@@ -39,6 +39,7 @@ interface KPIProps {
   icon: React.ReactNode;
   color: string[];
   delay?: number;
+  fullWidth?: boolean;
 }
 
 const KPI: React.FC<KPIProps> = ({
@@ -48,6 +49,7 @@ const KPI: React.FC<KPIProps> = ({
   icon,
   color,
   delay = 0,
+  fullWidth = false,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -63,6 +65,7 @@ const KPI: React.FC<KPIProps> = ({
       end={{ x: 1, y: 1 }}
       style={[
         styles.kpiCard,
+        fullWidth && styles.kpiCardFullWidth,
         {
           opacity: isVisible ? 1 : 0,
           transform: [{ translateY: isVisible ? 0 : 32 }],
@@ -430,6 +433,7 @@ export default function OverviewScreen() {
             AppColors.primaryDark || AppColors.primary,
           ]}
           delay={0}
+          fullWidth
         />
         <KPI
           title="Tổng số buổi tập lái"
@@ -438,6 +442,7 @@ export default function OverviewScreen() {
           icon={<Navigation size={24} color={AppColors.textWhite} />}
           color={[AppColors.blue, AppColors.blue]}
           delay={100}
+          fullWidth
         />
         <KPI
           title="Doanh thu ròng"
@@ -446,6 +451,7 @@ export default function OverviewScreen() {
           icon={<TrendingUp size={24} color={AppColors.textWhite} />}
           color={[AppColors.success, AppColors.success]}
           delay={200}
+          fullWidth
         />
       </View>
 
@@ -973,6 +979,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  kpiCardFullWidth: {
+    width: "100%",
   },
   kpiContent: {
     flexDirection: "row",

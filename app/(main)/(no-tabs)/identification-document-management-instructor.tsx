@@ -158,6 +158,7 @@ export default function IdentificationDocumentManagementInstructorScreen() {
               </Text>
             </View>
           </View>
+          <View style={styles.headerCurve} />
         </LinearGradient>
 
         <View style={styles.profileGrid}>
@@ -281,6 +282,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 32,
     marginBottom: 24,
     elevation: 4,
+    position: "relative",
   },
   headerContent: {
     flexDirection: "row",
@@ -310,9 +312,25 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.85)",
     lineHeight: 20,
   },
+  headerCurve: {
+    position: "absolute",
+    bottom: -25,
+    left: 0,
+    right: 0,
+    height: 50,
+    backgroundColor: AppColors.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 6,
+  },
   profileGrid: {
     paddingHorizontal: 24,
     gap: 16,
+    backgroundColor: AppColors.background,
   },
   card: {
     backgroundColor: AppColors.white,
