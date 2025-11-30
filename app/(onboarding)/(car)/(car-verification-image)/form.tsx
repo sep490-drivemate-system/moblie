@@ -1,30 +1,31 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  Image,
-  ScrollView,
-} from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  ArrowLeft,
-  MoreVertical,
-  Edit2Icon,
-  Trash2,
-} from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
+import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
+import { RootState } from "@/lib/redux/store";
+import { convertImageFile } from "@/utils/utils";
+import { AddCarViewModel } from "@/viewmodels/car/AddCarViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useRouter } from "expo-router";
+import { Edit2Icon, Trash2 } from "lucide-react-native";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function FormScreen() {
   const router = useRouter();
-  const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
-  const [backImageUri, setBackImageUri] = useState<string | null>(null);
-  const [sideImageUri, setSideImageUri] = useState<string | null>(null);
-  const [interiorImageUri, setInteriorImageUri] = useState<string | null>(null);
+  const [carState, viewModel] = useViewModel<RootState["car"], AddCarViewModel>(
+    AddCarViewModel,
+    (state) => state.car
+  );
   const [tempFrontImageUri, setTempFrontImageUri] = useState<string | null>(
     null
   );
@@ -45,16 +46,6 @@ export default function FormScreen() {
     }>,
   });
 
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      loadUserData();
-    }, [])
-  );
-
   const loadUserData = async () => {
     try {
       const tempFrontImage = await AsyncStorage.getItem(
@@ -72,16 +63,46 @@ export default function FormScreen() {
 
       if (tempFrontImage) {
         setTempFrontImageUri(tempFrontImage);
+        viewModel.updateCarRegistrationFormField(
+          "CarFrontImage",
+          convertImageFile(tempFrontImage)
+        );
+        viewModel.updateCarRegistrationFormField(
+          "ThumbnailImage",
+          convertImageFile(tempFrontImage)
+        );
       }
       if (tempBackImage) {
         setTempBackImageUri(tempBackImage);
+        viewModel.updateCarRegistrationFormField(
+          "CarBackImage",
+          convertImageFile(tempBackImage)
+        );
       }
       if (tempSideImage) {
         setTempSideImageUri(tempSideImage);
+        viewModel.updateCarRegistrationFormField(
+          "CarLeftImage",
+          convertImageFile(tempSideImage)
+        );
+        viewModel.updateCarRegistrationFormField(
+          "CarRightImage",
+          convertImageFile(tempSideImage)
+        );
       }
       if (tempInteriorImage) {
         setTempInteriorImageUri(tempInteriorImage);
+        viewModel.updateCarRegistrationFormField(
+          "InteriorImage",
+          convertImageFile(tempInteriorImage)
+        );
       }
+      const userId = await getUserIdFromToken();
+      viewModel.updateCarRegistrationFormField("InstructorId", userId);
+      viewModel.updateCarRegistrationFormField(
+        "Description",
+        "Tình trạng xe rất tốt, không có vấn đề gì"
+      );
     } catch (error) {
       console.error("Error loading user data:", error);
     }
@@ -93,10 +114,10 @@ export default function FormScreen() {
 
   const handleImagePress = (type: "front" | "back" | "side" | "interior") => {
     if (
-      (type === "front" && (tempFrontImageUri || frontImageUri)) ||
-      (type === "back" && (tempBackImageUri || backImageUri)) ||
-      (type === "side" && (tempSideImageUri || sideImageUri)) ||
-      (type === "interior" && (tempInteriorImageUri || interiorImageUri))
+      (type === "front" && tempFrontImageUri) ||
+      (type === "back" && tempBackImageUri) ||
+      (type === "side" && tempSideImageUri) ||
+      (type === "interior" && tempInteriorImageUri)
     ) {
       setShowDeleteMode(true);
     }
@@ -129,10 +150,9 @@ export default function FormScreen() {
     router.back();
   };
 
-  const handleNext = () => {
-    router.push("/(onboarding)/commitment");
+  const handleNext = async () => {
     // Validation for images
-    if (!tempFrontImageUri && !frontImageUri) {
+    if (!tempFrontImageUri) {
       showCustomAlert(
         "Lỗi",
         "Vui lòng tải lên ảnh phía trước xe trước khi tiếp tục",
@@ -146,7 +166,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!tempBackImageUri && !backImageUri) {
+    if (!tempBackImageUri) {
       showCustomAlert(
         "Lỗi",
         "Vui lòng tải lên ảnh phía sau xe trước khi tiếp tục",
@@ -160,7 +180,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!tempSideImageUri && !sideImageUri) {
+    if (!tempSideImageUri) {
       showCustomAlert(
         "Lỗi",
         "Vui lòng tải lên ảnh bên hông xe trước khi tiếp tục",
@@ -174,7 +194,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!tempInteriorImageUri && !interiorImageUri) {
+    if (!tempInteriorImageUri) {
       showCustomAlert(
         "Lỗi",
         "Vui lòng tải lên ảnh nội thất xe trước khi tiếp tục",
@@ -188,19 +208,24 @@ export default function FormScreen() {
       return;
     }
 
-    // All validations passed, navigate to commitment page
-
-  };
-
-  // Auto exit delete mode after 3 seconds
-  useEffect(() => {
-    if (showDeleteMode) {
-      const timer = setTimeout(() => {
-        setShowDeleteMode(false);
-      }, 3000);
-      return () => clearTimeout(timer);
+    try {
+      await AsyncStorage.removeItem("temp_car_verification_front");
+      await AsyncStorage.removeItem("temp_car_verification_back");
+      await AsyncStorage.removeItem("temp_car_verification_side");
+      await AsyncStorage.removeItem("temp_car_verification_interior");
+      const result = await viewModel.registerCar();
+      if (result) {
+        router.push("/(main)/(tabs)/mycar");
+      }
+    } catch (error) {
+      showCustomAlert("Lỗi", "Không thể lưu ảnh xác thực xe", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
     }
-  }, [showDeleteMode]);
+  };
 
   const handleDeleteImage = (type: "front" | "back" | "side" | "interior") => {
     const typeNames = {
@@ -229,19 +254,15 @@ export default function FormScreen() {
             try {
               if (type === "front") {
                 setTempFrontImageUri(null);
-                setFrontImageUri(null);
                 await AsyncStorage.removeItem("temp_car_verification_front");
               } else if (type === "back") {
                 setTempBackImageUri(null);
-                setBackImageUri(null);
                 await AsyncStorage.removeItem("temp_car_verification_back");
               } else if (type === "side") {
                 setTempSideImageUri(null);
-                setSideImageUri(null);
                 await AsyncStorage.removeItem("temp_car_verification_side");
               } else if (type === "interior") {
                 setTempInteriorImageUri(null);
-                setInteriorImageUri(null);
                 await AsyncStorage.removeItem("temp_car_verification_interior");
               }
               setShowDeleteMode(false);
@@ -270,11 +291,9 @@ export default function FormScreen() {
   const renderImageUpload = (
     type: "front" | "back" | "side" | "interior",
     label: string,
-    imageUri: string | null,
     tempImageUri: string | null
   ) => {
-    const currentImage = tempImageUri || imageUri;
-
+    const currentImage = tempImageUri;
     return (
       <View style={styles.imageContainer}>
         <Text style={styles.imageLabel}>
@@ -323,6 +342,37 @@ export default function FormScreen() {
     );
   };
 
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserData();
+    }, [])
+  );
+
+  // Auto exit delete mode after 3 seconds
+  useEffect(() => {
+    if (showDeleteMode) {
+      const timer = setTimeout(() => {
+        setShowDeleteMode(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showDeleteMode]);
+
+  if (carState.isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#70E000" />
+        <Text style={{ marginTop: 16, fontSize: 16, color: "#92929D" }}>
+          Đang xử lý...
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -352,28 +402,12 @@ export default function FormScreen() {
 
           {/* Image Upload Sections */}
           <View style={styles.imageSection}>
-            {renderImageUpload(
-              "front",
-              "Ảnh phía trước xe",
-              frontImageUri,
-              tempFrontImageUri
-            )}
-            {renderImageUpload(
-              "back",
-              "Ảnh phía sau xe",
-              backImageUri,
-              tempBackImageUri
-            )}
-            {renderImageUpload(
-              "side",
-              "Ảnh bên hông xe",
-              sideImageUri,
-              tempSideImageUri
-            )}
+            {renderImageUpload("front", "Ảnh phía trước xe", tempFrontImageUri)}
+            {renderImageUpload("back", "Ảnh phía sau xe", tempBackImageUri)}
+            {renderImageUpload("side", "Ảnh bên hông xe", tempSideImageUri)}
             {renderImageUpload(
               "interior",
               "Ảnh nội thất xe",
-              interiorImageUri,
               tempInteriorImageUri
             )}
           </View>

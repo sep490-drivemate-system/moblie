@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,10 +10,16 @@ import {
   TextInput,
   Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Plus, MapPin, X, Trash2, Eye } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { AppColors } from "@/constants/Colors";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { InstructorListCarViewModel } from "@/viewmodels/car/InstructorListCarViewModel";
+import { RootState } from "@/lib/redux/store";
+import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
+import { ICar } from "@/models/car/car";
+import { CarStatus } from "@/constants/enums";
 
 interface Vehicle {
   id: number;
@@ -108,7 +114,7 @@ const mockVehicles: Vehicle[] = [
 ];
 
 interface VehicleCardProps {
-  vehicle: Vehicle;
+  vehicle: ICar;
   onDetail: () => void;
   onDelete: () => void;
 }
@@ -130,7 +136,7 @@ const VehicleCard: React.FC<VehicleCardProps> = ({
         <View
           style={[
             styles.statusBadge,
-            vehicle.status === "approved"
+            vehicle.status === CarStatus.Approved
               ? styles.statusApproved
               : styles.statusPending,
           ]}
@@ -138,25 +144,23 @@ const VehicleCard: React.FC<VehicleCardProps> = ({
           <Text
             style={[
               styles.statusText,
-              vehicle.status === "approved"
+              vehicle.status === CarStatus.Approved
                 ? styles.statusTextApproved
                 : styles.statusTextPending,
             ]}
           >
-            {vehicle.status === "approved" ? "Đã Duyệt" : "Chờ Duyệt"}
+            {vehicle.status === CarStatus.Approved ? "Đã Duyệt" : "Chờ Duyệt"}
           </Text>
         </View>
       </View>
       <View style={styles.vehicleInfo}>
         <Text style={styles.vehicleBrand}>{vehicle.brand}</Text>
-        <Text style={styles.vehicleModel}>{vehicle.model}</Text>
-        <Text style={styles.vehiclePlate}>{vehicle.licensePlate}</Text>
+        <Text style={styles.vehicleModel}>{vehicle.modelName}</Text>
+        <Text style={styles.vehiclePlate}>{vehicle.license_plate}</Text>
         <View style={styles.vehicleDetails}>
-          <Text style={styles.vehicleDetailText}>
-            {vehicle.seats} chỗ • {vehicle.year}
-          </Text>
+          <Text style={styles.vehicleDetailText}>{vehicle.seatCounts} chỗ</Text>
           <Text style={styles.vehiclePrice}>
-            {vehicle.price.toLocaleString("vi-VN")} VNĐ
+            {vehicle.unitPrice.toLocaleString("vi-VN")} VNĐ
           </Text>
         </View>
       </View>
@@ -181,7 +185,7 @@ const VehicleCard: React.FC<VehicleCardProps> = ({
 };
 
 interface VehicleModalProps {
-  vehicle: Vehicle | null;
+  vehicle: ICar | null;
   visible: boolean;
   onClose: () => void;
 }
@@ -199,7 +203,7 @@ const VehicleModal: React.FC<VehicleModalProps> = ({
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {vehicle.brand} {vehicle.model}
+              {vehicle.brand} {vehicle.modelName}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <X size={24} color={AppColors.textPrimary} />
@@ -208,28 +212,28 @@ const VehicleModal: React.FC<VehicleModalProps> = ({
           <ScrollView style={styles.modalBody}>
             <View style={styles.modalSection}>
               <Text style={styles.modalLabel}>Biển số xe</Text>
-              <Text style={styles.modalValue}>{vehicle.licensePlate}</Text>
+              <Text style={styles.modalValue}>{vehicle.license_plate}</Text>
             </View>
-            <View style={styles.modalSection}>
+            {/* <View style={styles.modalSection}>
               <Text style={styles.modalLabel}>Năm sản xuất</Text>
               <Text style={styles.modalValue}>{vehicle.year}</Text>
-            </View>
+            </View> */}
             <View style={styles.modalSection}>
               <Text style={styles.modalLabel}>Nhiên liệu</Text>
-              <Text style={styles.modalValue}>{vehicle.fuelType}</Text>
+              <Text style={styles.modalValue}>{vehicle.fuel}</Text>
             </View>
-            <View style={styles.modalSection}>
+            {/* <View style={styles.modalSection}>
               <Text style={styles.modalLabel}>Hộp số</Text>
               <Text style={styles.modalValue}>{vehicle.transmission}</Text>
-            </View>
+            </View> */}
             <View style={styles.modalSection}>
               <Text style={styles.modalLabel}>Số chỗ ngồi</Text>
-              <Text style={styles.modalValue}>{vehicle.seats}</Text>
+              <Text style={styles.modalValue}>{vehicle.seatCounts}</Text>
             </View>
             <View style={styles.modalSection}>
               <Text style={styles.modalLabel}>Giá</Text>
               <Text style={styles.modalValue}>
-                {vehicle.price.toLocaleString("vi-VN")} VNĐ
+                {vehicle.unitPrice.toLocaleString("vi-VN")} VNĐ
               </Text>
             </View>
             <View style={styles.modalSection}>
@@ -237,7 +241,7 @@ const VehicleModal: React.FC<VehicleModalProps> = ({
               <View
                 style={[
                   styles.statusBadge,
-                  vehicle.status === "approved"
+                  vehicle.status === CarStatus.Approved
                     ? styles.statusApproved
                     : styles.statusPending,
                 ]}
@@ -245,241 +249,17 @@ const VehicleModal: React.FC<VehicleModalProps> = ({
                 <Text
                   style={[
                     styles.statusText,
-                    vehicle.status === "approved"
+                    vehicle.status === CarStatus.Approved
                       ? styles.statusTextApproved
                       : styles.statusTextPending,
                   ]}
                 >
-                  {vehicle.status === "approved" ? "Đã Duyệt" : "Chờ Duyệt"}
+                  {vehicle.status === CarStatus.Approved
+                    ? "Đã Duyệt"
+                    : "Chờ Duyệt"}
                 </Text>
               </View>
             </View>
-            {vehicle.approvedDate && (
-              <View style={styles.modalSection}>
-                <Text style={styles.modalLabel}>Ngày duyệt</Text>
-                <Text style={styles.modalValue}>{vehicle.approvedDate}</Text>
-              </View>
-            )}
-            <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>Tính năng</Text>
-              <View style={styles.featuresContainer}>
-                {vehicle.features.map((feature, index) => (
-                  <View key={index} style={styles.featureTag}>
-                    <Text style={styles.featureText}>{feature}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  );
-};
-
-interface AddVehicleModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onAdd: (vehicle: Omit<Vehicle, "id">) => void;
-}
-
-const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
-  visible,
-  onClose,
-  onAdd,
-}) => {
-  const [formData, setFormData] = useState({
-    brand: "",
-    model: "",
-    licensePlate: "",
-    seats: "",
-    price: "",
-    year: "",
-    fuelType: "Petrol",
-    transmission: "Manual",
-    features: [] as string[],
-  });
-
-  const handleSubmit = () => {
-    if (
-      !formData.brand ||
-      !formData.model ||
-      !formData.licensePlate ||
-      !formData.seats ||
-      !formData.price ||
-      !formData.year
-    ) {
-      Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin");
-      return;
-    }
-
-    onAdd({
-      brand: formData.brand,
-      model: formData.model,
-      licensePlate: formData.licensePlate,
-      seats: parseInt(formData.seats),
-      price: parseInt(formData.price),
-      year: parseInt(formData.year),
-      fuelType: formData.fuelType,
-      transmission: formData.transmission,
-      features: formData.features,
-      image: "",
-      status: "pending",
-      approvedDate: null,
-    });
-
-    setFormData({
-      brand: "",
-      model: "",
-      licensePlate: "",
-      seats: "",
-      price: "",
-      year: "",
-      fuelType: "Petrol",
-      transmission: "Manual",
-      features: [],
-    });
-    onClose();
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Thêm Xe Mới</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={24} color={AppColors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={styles.modalBody}>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Hãng xe *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={formData.brand}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, brand: text })
-                }
-                placeholder="VD: Toyota"
-              />
-            </View>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Model *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={formData.model}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, model: text })
-                }
-                placeholder="VD: Vios"
-              />
-            </View>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Biển số xe *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={formData.licensePlate}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, licensePlate: text })
-                }
-                placeholder="VD: 51A-123.45"
-              />
-            </View>
-            <View style={styles.formRow}>
-              <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.formLabel}>Số chỗ *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  value={formData.seats}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, seats: text })
-                  }
-                  placeholder="5"
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.formLabel}>Năm *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  value={formData.year}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, year: text })
-                  }
-                  placeholder="2024"
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Giá (VNĐ) *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={formData.price}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, price: text })
-                }
-                placeholder="150000"
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Nhiên liệu</Text>
-              <View style={styles.radioGroup}>
-                {["Petrol", "Diesel"].map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={styles.radioOption}
-                    onPress={() => setFormData({ ...formData, fuelType: type })}
-                  >
-                    <View
-                      style={[
-                        styles.radio,
-                        formData.fuelType === type && styles.radioSelected,
-                      ]}
-                    >
-                      {formData.fuelType === type && (
-                        <View style={styles.radioDot} />
-                      )}
-                    </View>
-                    <Text style={styles.radioLabel}>{type}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Hộp số</Text>
-              <View style={styles.radioGroup}>
-                {["Manual", "Automatic"].map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={styles.radioOption}
-                    onPress={() =>
-                      setFormData({ ...formData, transmission: type })
-                    }
-                  >
-                    <View
-                      style={[
-                        styles.radio,
-                        formData.transmission === type && styles.radioSelected,
-                      ]}
-                    >
-                      {formData.transmission === type && (
-                        <View style={styles.radioDot} />
-                      )}
-                    </View>
-                    <Text style={styles.radioLabel}>{type}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={handleSubmit}
-            >
-              <Text style={styles.submitButtonText}>Thêm Xe</Text>
-            </TouchableOpacity>
           </ScrollView>
         </View>
       </View>
@@ -488,40 +268,59 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
 };
 
 export default function MyCarScreen() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<ICar | null>(null);
+  const [cars, setCars] = useState<ICar[]>([]);
   const [showModal, setShowModal] = useState(false);
   const router = useRouter();
+  const [carState, viewModel] = useViewModel(
+    InstructorListCarViewModel,
+    (state: RootState) => state.car
+  );
 
   const handleGoBack = () => {
     router.back();
   };
 
-  const handleNext = () => {
-    router.push("/(onboarding)/(car)/(car-registration)/form");
-  };
-
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     Alert.alert("Xác nhận xóa", "Bạn có chắc chắn muốn xóa xe này?", [
       { text: "Hủy", style: "cancel" },
       {
         text: "Xóa",
         style: "destructive",
-        onPress: () => setVehicles(vehicles.filter((v) => v.id !== id)),
+        onPress: () => setCars(cars.filter((v) => v.id !== id)),
       },
     ]);
   };
 
-  // Add vehicle flow now navigates to onboarding form screen
-
-  const approvedCount = vehicles.filter((v) => v.status === "approved").length;
-  const pendingCount = vehicles.filter((v) => v.status === "pending").length;
+  const approvedCount = cars.filter(
+    (v) => v.status === CarStatus.Approved
+  ).length;
+  const pendingCount = cars.filter(
+    (v) => v.status === CarStatus.Pending
+  ).length;
   const averagePrice =
-    vehicles.length > 0
+    cars.length > 0
       ? Math.round(
-          vehicles.reduce((s, v) => s + v.price, 0) / vehicles.length / 1000
+          cars.reduce((s, v) => s + v.unitPrice, 0) / cars.length / 1000
         )
       : 0;
+
+  const getIntructorListCar = useCallback(async () => {
+    const userId = await getUserIdFromToken();
+    const cars = await viewModel.getCarsForInstructor(userId);
+    setCars(cars);
+    console.log(cars);
+  }, [viewModel]);
+
+  useEffect(() => {
+    getIntructorListCar();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      getIntructorListCar();
+    }, [getIntructorListCar])
+  );
 
   return (
     <View style={styles.container}>
@@ -562,7 +361,7 @@ export default function MyCarScreen() {
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Tổng Xe</Text>
-              <Text style={styles.statValue}>{vehicles.length}</Text>
+              <Text style={styles.statValue}>{cars.length}</Text>
             </View>
             <View style={[styles.statCard, styles.statCardApproved]}>
               <Text style={[styles.statLabel, styles.statLabelApproved]}>
@@ -591,7 +390,7 @@ export default function MyCarScreen() {
           </View>
         </LinearGradient>
 
-        {vehicles.length === 0 ? (
+        {cars.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
               <MapPin size={32} color={AppColors.gray500} />
@@ -612,7 +411,7 @@ export default function MyCarScreen() {
           </View>
         ) : (
           <View style={styles.vehiclesGrid}>
-            {vehicles.map((vehicle) => (
+            {cars.map((vehicle) => (
               <VehicleCard
                 key={vehicle.id}
                 vehicle={vehicle}

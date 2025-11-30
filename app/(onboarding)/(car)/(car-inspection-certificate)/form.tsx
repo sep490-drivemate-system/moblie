@@ -19,11 +19,13 @@ import {
   Trash2,
 } from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { AddCarViewModel } from "@/viewmodels/car/AddCarViewModel";
+import { RootState } from "@/lib/redux/store";
+import { convertImageFile } from "@/utils/utils";
 
 export default function FormScreen() {
   const router = useRouter();
-  const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
-  const [backImageUri, setBackImageUri] = useState<string | null>(null);
   const [tempFrontImageUri, setTempFrontImageUri] = useState<string | null>(
     null
   );
@@ -39,13 +41,12 @@ export default function FormScreen() {
       style?: "default" | "cancel" | "destructive";
     }>,
   });
+  const [_, viewModel] = useViewModel<RootState["car"], AddCarViewModel>(
+    AddCarViewModel,
+    (state) => state.car
+  );
 
   // Form data
-  const [formData, setFormData] = useState({
-    issueDate: "",
-    expiryDate: "",
-  });
-
   useEffect(() => {
     loadUserData();
   }, []);
@@ -58,26 +59,6 @@ export default function FormScreen() {
 
   const loadUserData = async () => {
     try {
-      const savedFrontImage = await AsyncStorage.getItem(
-        "car_inspection_certificate_front"
-      );
-      const savedBackImage = await AsyncStorage.getItem(
-        "car_inspection_certificate_back"
-      );
-      const savedFormData = await AsyncStorage.getItem(
-        "car_inspection_certificate_data"
-      );
-
-      if (savedFrontImage) {
-        setFrontImageUri(savedFrontImage);
-      }
-      if (savedBackImage) {
-        setBackImageUri(savedBackImage);
-      }
-      if (savedFormData) {
-        setFormData(JSON.parse(savedFormData));
-      }
-
       // Load temp images if exist
       const tempFrontImage = await AsyncStorage.getItem(
         "temp_car_inspection_certificate_front"
@@ -87,9 +68,11 @@ export default function FormScreen() {
       );
       if (tempFrontImage) {
         setTempFrontImageUri(tempFrontImage);
+        viewModel.updateCarRegistrationFormField("RegistrationFront", convertImageFile(tempFrontImage));
       }
       if (tempBackImage) {
         setTempBackImageUri(tempBackImage);
+        viewModel.updateCarRegistrationFormField("RegistrationBack", convertImageFile(tempBackImage));
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -102,8 +85,8 @@ export default function FormScreen() {
 
   const handleImagePress = (type: "front" | "back") => {
     if (
-      (type === "front" && (tempFrontImageUri || frontImageUri)) ||
-      (type === "back" && (tempBackImageUri || backImageUri))
+      (type === "front" && tempFrontImageUri) ||
+      (type === "back" && tempBackImageUri)
     ) {
       setShowDeleteMode(true);
     }
@@ -132,58 +115,13 @@ export default function FormScreen() {
     setShowAlert(true);
   };
 
-  const formatDateInput = (value: string) => {
-    // Remove all non-numeric characters
-    const numbers = value.replace(/\D/g, "");
-
-    // Format as DD/MM/YYYY
-    if (numbers.length <= 2) {
-      return numbers;
-    } else if (numbers.length <= 4) {
-      return `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
-    } else {
-      return `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(
-        4,
-        8
-      )}`;
-    }
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    // Apply date formatting for date fields
-    const formattedValue = formatDateInput(value);
-    const newFormData = {
-      ...formData,
-      [field]: formattedValue,
-    };
-    setFormData(newFormData);
-
-    // Save form data temporarily
-    AsyncStorage.setItem(
-      "car_inspection_certificate_data",
-      JSON.stringify(newFormData)
-    );
-  };
-
-  // Check if all fields are filled
-  const isFormComplete = () => {
-    return (
-      (tempFrontImageUri || frontImageUri) &&
-      (tempBackImageUri || backImageUri) &&
-      formData.issueDate.trim() !== "" &&
-      formData.expiryDate.trim() !== ""
-    );
-  };
-
   const handleGoBack = () => {
     router.back();
   };
 
   const handleNext = async () => {
-    router.push("/(onboarding)/(car)/car-price");
-
     // Validation
-    if (!tempFrontImageUri && !frontImageUri) {
+    if (!tempFrontImageUri) {
       showCustomAlert(
         "Lỗi",
         "Vui lòng tải lên ảnh mặt trước giấy đăng kiểm xe",
@@ -197,7 +135,7 @@ export default function FormScreen() {
       return;
     }
 
-    if (!tempBackImageUri && !backImageUri) {
+    if (!tempBackImageUri) {
       showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt sau giấy đăng kiểm xe", [
         {
           text: "OK",
@@ -207,53 +145,9 @@ export default function FormScreen() {
       return;
     }
 
-    if (!formData.issueDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
-    if (!formData.expiryDate.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày hết hạn", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
-    }
-
     try {
-      const currentFrontImage = tempFrontImageUri || frontImageUri;
-      const currentBackImage = tempBackImageUri || backImageUri;
-
-      // Save data to AsyncStorage
-      await AsyncStorage.setItem(
-        "car_inspection_certificate_front",
-        currentFrontImage!
-      );
-      await AsyncStorage.setItem(
-        "car_inspection_certificate_back",
-        currentBackImage!
-      );
-      await AsyncStorage.setItem(
-        "car_inspection_certificate_data",
-        JSON.stringify(formData)
-      );
-
-      // Clean up temp images
-      setFrontImageUri(currentFrontImage);
-      setBackImageUri(currentBackImage);
-      setTempFrontImageUri(null);
-      setTempBackImageUri(null);
       await AsyncStorage.removeItem("temp_car_inspection_certificate_front");
       await AsyncStorage.removeItem("temp_car_inspection_certificate_back");
-
-      // Navigate to next page
       router.push("/(onboarding)/(car)/car-price");
     } catch (error) {
       showCustomAlert("Lỗi", "Không thể lưu thông tin giấy đăng kiểm xe", [
@@ -297,21 +191,13 @@ export default function FormScreen() {
             try {
               if (type === "front") {
                 setTempFrontImageUri(null);
-                setFrontImageUri(null);
                 await AsyncStorage.removeItem(
                   "temp_car_inspection_certificate_front"
                 );
-                await AsyncStorage.removeItem(
-                  "car_inspection_certificate_front"
-                );
               } else {
                 setTempBackImageUri(null);
-                setBackImageUri(null);
                 await AsyncStorage.removeItem(
                   "temp_car_inspection_certificate_back"
-                );
-                await AsyncStorage.removeItem(
-                  "car_inspection_certificate_back"
                 );
               }
               setShowDeleteMode(false);
@@ -372,13 +258,13 @@ export default function FormScreen() {
                 Ảnh mặt trước <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.imageUploadArea}>
-                {tempFrontImageUri || frontImageUri ? (
+                {tempFrontImageUri ? (
                   <TouchableOpacity
                     style={styles.imageWrapper}
                     onPress={() => handleImagePress("front")}
                   >
                     <Image
-                      source={{ uri: (tempFrontImageUri || frontImageUri)! }}
+                      source={{ uri: tempFrontImageUri! }}
                       style={[
                         styles.uploadedImage,
                         showDeleteMode && styles.dimmedImage,
@@ -418,13 +304,13 @@ export default function FormScreen() {
                 Ảnh mặt sau <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.imageUploadArea}>
-                {tempBackImageUri || backImageUri ? (
+                {tempBackImageUri ? (
                   <TouchableOpacity
                     style={styles.imageWrapper}
                     onPress={() => handleImagePress("back")}
                   >
                     <Image
-                      source={{ uri: (tempBackImageUri || backImageUri)! }}
+                      source={{ uri: tempBackImageUri! }}
                       style={[
                         styles.uploadedImage,
                         showDeleteMode && styles.dimmedImage,
@@ -458,7 +344,6 @@ export default function FormScreen() {
               </View>
             </View>
           </View>
-
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>

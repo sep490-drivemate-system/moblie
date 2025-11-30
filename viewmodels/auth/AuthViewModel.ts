@@ -304,11 +304,31 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   }
 
   isRegisterFormValid(): boolean {
-    const errors = this.getCurrentState().registerFormErrors;
-    const formData = this.getCurrentState().registerFormData;
+    const state = this.getCurrentState();
+    const formData = state.registerFormData;
+
+    // Validate lại tất cả các field để đảm bảo errors được cập nhật đúng
+    const emailError = this.validateEmail(formData.email);
+    const passwordError = this.validatePassword(formData.password);
+    const confirmPasswordError = this.validateConfirmPassword(
+      formData.confirmPassword,
+      formData.password
+    );
+    const phoneError = this.validatePhone(formData.phone);
+
+    // Cập nhật errors vào state
+    this.dispatch(setRegisterFormError({ field: "email", error: emailError }));
+    this.dispatch(setRegisterFormError({ field: "password", error: passwordError }));
+    this.dispatch(setRegisterFormError({ field: "confirmPassword", error: confirmPasswordError }));
+    this.dispatch(setRegisterFormError({ field: "phone", error: phoneError }));
 
     // Kiểm tra xem có lỗi nào không
-    const hasErrors = Object.keys(errors).length > 0;
+    const hasErrors = !!(
+      emailError ||
+      passwordError ||
+      confirmPasswordError ||
+      phoneError
+    );
 
     // Kiểm tra acceptTerms
     const termsAccepted = formData.acceptTerms;
@@ -321,11 +341,19 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     field: keyof ISignUpRequest,
     value: string | boolean
   ): void {
+    // Get current state BEFORE dispatch to avoid stale state
+    const currentFormData = this.getCurrentState().registerFormData;
+    
+    // Create updated form data object with new value
+    const updatedFormData = {
+      ...currentFormData,
+      [field]: value,
+    };
+
     this.dispatch(updateRegisterFormData({ field, value }));
 
     // Real-time validation - only validate if field is not acceptTerms
     if (field !== "acceptTerms") {
-      const currentFormData = this.getCurrentState().registerFormData;
       let error: string | undefined;
 
       if (field === "email") {
@@ -338,9 +366,9 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         error = this.validatePassword(value as string);
         this.dispatch(setRegisterFormError({ field: "password", error }));
         // Also validate confirmPassword if it has value
-        if (currentFormData.confirmPassword) {
+        if (updatedFormData.confirmPassword) {
           const confirmError = this.validateConfirmPassword(
-            currentFormData.confirmPassword,
+            updatedFormData.confirmPassword,
             value as string
           );
           this.dispatch(
@@ -353,7 +381,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       } else if (field === "confirmPassword") {
         error = this.validateConfirmPassword(
           value as string,
-          currentFormData.password
+          updatedFormData.password
         );
         this.dispatch(
           setRegisterFormError({ field: "confirmPassword", error })

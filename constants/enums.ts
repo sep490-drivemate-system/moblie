@@ -14,3 +14,8 @@ export enum gender {
   male = "Nam",
   female = "Nữ",
 }
+
+export enum CarStatus {
+  Approved = "Approve",
+  Pending = "Pending",
+}

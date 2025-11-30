@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,11 +12,37 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import CustomAlert from "@/components/CustomAlert";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { AddCarViewModel } from "@/viewmodels/car/AddCarViewModel";
+import { RootState } from "@/lib/redux/store";
+import { useSelector } from "react-redux";
+import { updateCarRegistrationForm } from "@/features/car/carSlice";
 
 export default function CarPriceScreen() {
   const router = useRouter();
+  const [carState, viewModel] = useViewModel<RootState["car"], AddCarViewModel>(
+    AddCarViewModel,
+    (state) => state.car
+  );
   const [price, setPrice] = useState<string>("");
   const [showAlert, setShowAlert] = useState(false);
+
+  useEffect(() => {
+    loadSavedPrice();
+  }, []);
+
+  const loadSavedPrice = async () => {
+    try {
+      // Try to load from Redux first
+      const hourlyPrice = carState.carRegistrationForm.HourlyPrice;
+      if (hourlyPrice && hourlyPrice > 0) {
+        setPrice(hourlyPrice.toString());
+        return;
+      }
+    } catch (error) {
+      console.error("Error loading saved price:", error);
+    }
+  };
   const [alertConfig, setAlertConfig] = useState({
     title: "",
     message: "",
@@ -48,7 +74,7 @@ export default function CarPriceScreen() {
     router.push("/(onboarding)/(car)/(car-verification-image)/form");
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const normalized = price.replace(/\D/g, "");
     if (!normalized) {
       showCustomAlert("Lỗi", "Vui lòng nhập số tiền mong muốn cho thuê", [
@@ -59,14 +85,45 @@ export default function CarPriceScreen() {
       ]);
       return;
     }
-    // Navigate to the specified form page
-    router.push("/(onboarding)/(car)/(car-verification-image)/form");
+
+    const priceNum = parseFloat(normalized);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      showCustomAlert("Lỗi", "Số tiền không hợp lệ. Vui lòng nhập số tiền lớn hơn 0", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
+      return;
+    }
+
+    try {
+      viewModel.updateCarRegistrationFormField("HourlyPrice", priceNum);
+      // Navigate to the specified form page
+      router.push("/(onboarding)/(car)/(car-verification-image)/form");
+    } catch (error) {
+      showCustomAlert("Lỗi", "Không thể lưu giá thuê xe", [
+        {
+          text: "OK",
+          onPress: () => setShowAlert(false),
+        },
+      ]);
+    }
   };
 
-  const handlePriceChange = (value: string) => {
+  const handlePriceChange = async (value: string) => {
     // Keep only digits
     const onlyDigits = value.replace(/\D/g, "");
     setPrice(onlyDigits);
+    
+    // Save to ViewModel and Redux as user types
+    if (onlyDigits) {
+      try {
+        viewModel.updateCarRegistrationFormField("HourlyPrice", parseFloat(onlyDigits) || 0);
+      } catch (error) {
+        console.error("Error saving price:", error);
+      }
+    }
   };
 
   return (

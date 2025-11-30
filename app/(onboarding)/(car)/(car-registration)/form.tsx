@@ -1,36 +1,51 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  Image,
-  TextInput,
-  ScrollView,
-} from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  ArrowLeft,
-  MoreVertical,
-  Edit2Icon,
-  Trash2,
-  ChevronDown,
-} from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
+import { RootState } from "@/lib/redux/store";
+import { AddCarViewModel } from "@/viewmodels/car/AddCarViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { useFocusEffect, useRouter } from "expo-router";
+import { ChevronDown, Edit2Icon, Trash2 } from "lucide-react-native";
+import React, { useEffect, useState } from "react";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSelector } from "react-redux";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { convertImageFile } from "@/utils/utils";
 
 export default function FormScreen() {
   const router = useRouter();
-  const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
-  const [backImageUri, setBackImageUri] = useState<string | null>(null);
+  const carState = useSelector((state: RootState) => state.car);
+  const [_, viewModel] = useViewModel<RootState["car"], AddCarViewModel>(
+    AddCarViewModel,
+    (state) => state.car
+  );
+
+  // Use Redux state for loading
+  const isSubmittingFromRedux = carState.isLoading;
+
   const [tempFrontImageUri, setTempFrontImageUri] = useState<string | null>(
     null
   );
   const [tempBackImageUri, setTempBackImageUri] = useState<string | null>(null);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
   const [showFuelTypeDropdown, setShowFuelTypeDropdown] = useState(false);
+  const [showCarTypeDropdown, setShowCarTypeDropdown] = useState(false);
+  const [showLicenseTierDropdown, setShowLicenseTierDropdown] = useState(false);
+  const [showManufacturerDropdown, setShowManufacturerDropdown] =
+    useState(false);
+  const [manufacturers, setManufacturers] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -44,65 +59,95 @@ export default function FormScreen() {
 
   // Form data
   const [formData, setFormData] = useState({
-    ownerName: "",
     licensePlate: "",
     carBrand: "",
     carModel: "",
     carColor: "",
     seatCount: "",
-    issueDate: "",
     fuelType: "",
+    carType: "",
+    licenseTier: "",
+    year: "",
+    brandId: "",
+    hourlyPrice: "",
+    description: "",
   });
 
   const fuelTypes = ["Xăng", "Dầu", "Điện", "Hybrid"];
+  const carTypes = [
+    "Sedan",
+    "SUV",
+    "Hatchback",
+    "Coupe",
+    "Convertible",
+    "Wagon",
+    "Van",
+    "Pickup",
+    "Khác",
+  ];
+  const licenseTiers = ["B", "C1", "C", "D1", "D2", "D", "BE", "C1E", "CE", "D1E", "D2E", "DE"];
 
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      loadUserData();
-    }, [])
+  // Sync form data to Redux (similar to syncFormDataToViewModel in id-card form)
+  const syncFormDataToRedux = React.useCallback(
+    (data: typeof formData) => {
+      viewModel.updateCarRegistrationFormField(
+        "LicensePlate",
+        data.licensePlate
+      );
+      viewModel.updateCarRegistrationFormField("Model", data.carModel);
+      viewModel.updateCarRegistrationFormField("CarType", data.carType);
+      viewModel.updateCarRegistrationFormField("Year", data.year);
+      viewModel.updateCarRegistrationFormField("Color", data.carColor);
+      viewModel.updateCarRegistrationFormField("Seats", data.seatCount);
+      viewModel.updateCarRegistrationFormField("FuelType", data.fuelType);
+      viewModel.updateCarRegistrationFormField("LicenseTier", data.licenseTier);
+      if (data.brandId) {
+        viewModel.updateCarRegistrationFormField("BrandId", data.brandId);
+      }
+      if (data.description) {
+        viewModel.updateCarRegistrationFormField(
+          "Description",
+          data.description
+        );
+      }
+      if (data.hourlyPrice) {
+        viewModel.updateCarRegistrationFormField(
+          "HourlyPrice",
+          data.hourlyPrice
+        );
+      }
+    },
+    [viewModel]
   );
 
-  const loadUserData = async () => {
-    try {
-      const savedFrontImage = await AsyncStorage.getItem(
-        "car_registration_front"
-      );
-      const savedBackImage = await AsyncStorage.getItem(
-        "car_registration_back"
-      );
-      const savedFormData = await AsyncStorage.getItem("car_registration_data");
+  // const loadUserData = async () => {
+  //   try {
+  //     // Load images from AsyncStorage
+  //     const tempFrontImage = await AsyncStorage.getItem(
+  //       "temp_car_registration_front"
+  //     );
+  //     const tempBackImage = await AsyncStorage.getItem(
+  //       "temp_car_registration_back"
+  //     );
 
-      if (savedFrontImage) {
-        setFrontImageUri(savedFrontImage);
-      }
-      if (savedBackImage) {
-        setBackImageUri(savedBackImage);
-      }
-      if (savedFormData) {
-        setFormData(JSON.parse(savedFormData));
-      }
-
-      // Load temp images if exist
-      const tempFrontImage = await AsyncStorage.getItem(
-        "temp_car_registration_front"
-      );
-      const tempBackImage = await AsyncStorage.getItem(
-        "temp_car_registration_back"
-      );
-      if (tempFrontImage) {
-        setTempFrontImageUri(tempFrontImage);
-      }
-      if (tempBackImage) {
-        setTempBackImageUri(tempBackImage);
-      }
-    } catch (error) {
-      console.error("Error loading user data:", error);
-    }
-  };
+  //     if (tempFrontImage) {
+  //       setTempFrontImageUri(tempFrontImage);
+  //       viewModel.updateCarRegistrationFormField(
+  //         "RegistrationFront",
+  //         convertImageFile(tempFrontImage)
+  //       );
+  //     }
+  //     if (tempBackImage) {
+  //       setTempBackImageUri(tempBackImage);
+  //       viewModel.updateCarRegistrationFormField(
+  //         "RegistrationBack",
+  //         convertImageFile(tempBackImage)
+  //       );
+  //     }
+  //   } catch (error) {
+  //     console.error("Error loading user data:", error);
+  //   }
+  // };
 
   const handleBack = () => {
     router.back();
@@ -110,8 +155,8 @@ export default function FormScreen() {
 
   const handleImagePress = (type: "front" | "back") => {
     if (
-      (type === "front" && (tempFrontImageUri || frontImageUri)) ||
-      (type === "back" && (tempBackImageUri || backImageUri))
+      (type === "front" && tempFrontImageUri) ||
+      (type === "back" && tempBackImageUri)
     ) {
       setShowDeleteMode(true);
     }
@@ -122,6 +167,78 @@ export default function FormScreen() {
       `/(onboarding)/(car)/(car-registration)/upload-guide?type=${type}`
     );
   };
+
+  // Load form data from Redux to local state
+  useEffect(() => {
+    const reduxForm = carState.carRegistrationForm;
+    setFormData((prev) => {
+      // Check if local state has data (user is typing)
+      const hasLocalData =
+        prev.licensePlate.trim() !== "" ||
+        prev.carModel.trim() !== "" ||
+        prev.carColor.trim() !== "" ||
+        prev.seatCount.trim() !== "" ||
+        prev.fuelType.trim() !== "" ||
+        prev.carType.trim() !== "" ||
+        prev.licenseTier.trim() !== "" ||
+        prev.year.trim() !== "";
+
+      // If user is actively typing, don't overwrite with Redux data
+      if (hasLocalData) {
+        return prev;
+      }
+
+      // Load from Redux
+      return {
+        ...prev,
+        licensePlate: reduxForm.LicensePlate || "",
+        carModel: reduxForm.Model || "",
+        carColor: reduxForm.Color || "",
+        seatCount: reduxForm.Seats?.toString() || "",
+        fuelType: reduxForm.FuelType || "",
+        carType: reduxForm.CarType || "",
+        licenseTier: reduxForm.LicenseTier || "",
+        year: reduxForm.Year?.toString() || "",
+        brandId: reduxForm.BrandId || "",
+        description: reduxForm.Description || "",
+        hourlyPrice: reduxForm.HourlyPrice?.toString() || "",
+      };
+    });
+  }, [carState.carRegistrationForm]);
+
+  useEffect(() => {
+    const loadManufacturers = async () => {
+      const manufacturersList = await viewModel.getManufacturers();
+      setManufacturers(manufacturersList);
+    };
+    loadManufacturers();
+  }, []);
+
+  // Sync manufacturer name when manufacturers are loaded and brandId exists
+  useEffect(() => {
+    if (
+      manufacturers.length > 0 &&
+      carState.carRegistrationForm.BrandId &&
+      !formData.carBrand
+    ) {
+      const manufacturer = manufacturers.find(
+        (m) => m.id === carState.carRegistrationForm.BrandId
+      );
+      if (manufacturer) {
+        setFormData((prev) => ({
+          ...prev,
+          carBrand: manufacturer.name,
+          brandId: manufacturer.id,
+        }));
+      }
+    }
+  }, [manufacturers, carState.carRegistrationForm.BrandId]);
+
+  // useFocusEffect(
+  //   React.useCallback(() => {
+  //     loadUserData();
+  //   }, [])
+  // );
 
   const showCustomAlert = (
     title: string,
@@ -160,22 +277,14 @@ export default function FormScreen() {
   const handleInputChange = (field: string, value: string) => {
     // Apply date formatting for date fields
     let newFormData;
-    if (field === "issueDate") {
-      const formattedValue = formatDateInput(value);
-      newFormData = {
-        ...formData,
-        [field]: formattedValue,
-      };
-    } else {
-      newFormData = {
-        ...formData,
-        [field]: value,
-      };
-    }
+    newFormData = {
+      ...formData,
+      [field]: value,
+    };
     setFormData(newFormData);
 
-    // Save form data temporarily
-    AsyncStorage.setItem("car_registration_data", JSON.stringify(newFormData));
+    // Sync to Redux immediately
+    syncFormDataToRedux(newFormData);
   };
 
   const handleFuelTypeSelect = (fuelType: string) => {
@@ -186,8 +295,48 @@ export default function FormScreen() {
     setFormData(newFormData);
     setShowFuelTypeDropdown(false);
 
-    // Save form data temporarily
-    AsyncStorage.setItem("car_registration_data", JSON.stringify(newFormData));
+    // Sync to Redux
+    syncFormDataToRedux(newFormData);
+  };
+
+  const handleCarTypeSelect = (carType: string) => {
+    const newFormData = {
+      ...formData,
+      carType: carType,
+    };
+    setFormData(newFormData);
+    setShowCarTypeDropdown(false);
+
+    // Sync to Redux
+    syncFormDataToRedux(newFormData);
+  };
+
+  const handleLicenseTierSelect = (licenseTier: string) => {
+    const newFormData = {
+      ...formData,
+      licenseTier: licenseTier,
+    };
+    setFormData(newFormData);
+    setShowLicenseTierDropdown(false);
+
+    // Sync to Redux
+    syncFormDataToRedux(newFormData);
+  };
+
+  const handleManufacturerSelect = (manufacturer: {
+    id: string;
+    name: string;
+  }) => {
+    const newFormData = {
+      ...formData,
+      carBrand: manufacturer.name,
+      brandId: manufacturer.id,
+    };
+    setFormData(newFormData);
+    setShowManufacturerDropdown(false);
+
+    // Sync to Redux
+    syncFormDataToRedux(newFormData);
   };
 
   const handleGoBack = () => {
@@ -195,100 +344,78 @@ export default function FormScreen() {
   };
 
   const handleNext = async () => {
-    // Validation
-      router.push("/(onboarding)/(car)/(car-insurance)/form");
-    if (!tempFrontImageUri && !frontImageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt trước giấy đăng ký xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
+    // Validate all required fields
+    const errors: string[] = [];
+
+    // Check license plate
+    if (!formData.licensePlate.trim()) {
+      errors.push("Vui lòng nhập biển số xe");
     }
 
-    if (!tempBackImageUri && !backImageUri) {
-      showCustomAlert("Lỗi", "Vui lòng tải lên ảnh mặt sau giấy đăng ký xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
+    // Check car brand
+    if (!formData.carBrand.trim() || !formData.brandId) {
+      errors.push("Vui lòng chọn hãng xe");
     }
 
-    if (!formData.ownerName?.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập họ và tên trên đăng ký xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
+    // Check car model
+    if (!formData.carModel.trim()) {
+      errors.push("Vui lòng nhập tên mẫu xe");
     }
 
-    if (!formData.licensePlate?.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập biển số xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
+    // Check car color
+    if (!formData.carColor.trim()) {
+      errors.push("Vui lòng nhập màu xe");
     }
 
-    if (!formData.carBrand?.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập tên hãng xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
+    // Check seat count
+    if (!formData.seatCount.trim()) {
+      errors.push("Vui lòng nhập số chỗ ngồi");
+    } else {
+      const seats = parseInt(formData.seatCount);
+      if (isNaN(seats) || seats <= 0) {
+        errors.push("Số chỗ ngồi phải là số lớn hơn 0");
+      }
     }
 
-    if (!formData.carModel?.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập tên mẫu xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
+    // Check fuel type
+    if (!formData.fuelType.trim()) {
+      errors.push("Vui lòng chọn loại nhiên liệu");
     }
 
-    if (!formData.carColor?.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập màu xe", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
+    // Check car type
+    if (!formData.carType.trim()) {
+      errors.push("Vui lòng chọn loại xe");
     }
 
-    if (!formData.seatCount?.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập số chỗ ngồi", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
+    // Check license tier
+    if (!formData.licenseTier.trim()) {
+      errors.push("Vui lòng chọn hạng bằng lái");
     }
 
-    if (!formData.issueDate?.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng nhập ngày cấp", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
-      return;
+    // Check year
+    if (!formData.year.trim()) {
+      errors.push("Vui lòng nhập năm sản xuất");
+    } else {
+      const year = parseInt(formData.year);
+      const currentYear = new Date().getFullYear();
+      if (isNaN(year) || year < 1900 || year > currentYear) {
+        errors.push(`Năm sản xuất phải từ 1900 đến ${currentYear}`);
+      }
     }
 
-    if (!formData.fuelType?.trim()) {
-      showCustomAlert("Lỗi", "Vui lòng chọn loại nhiên liệu", [
+    // // Check front image
+    // if (!tempFrontImageUri && !carState.carRegistrationForm.RegistrationFront) {
+    //   errors.push("Vui lòng tải ảnh mặt trước giấy đăng ký xe");
+    // }
+
+    // // Check back image
+    // if (!tempBackImageUri && !carState.carRegistrationForm.RegistrationBack) {
+    //   errors.push("Vui lòng tải ảnh mặt sau giấy đăng ký xe");
+    // }
+
+    // If there are errors, show alert
+    if (errors.length > 0) {
+      showCustomAlert("Thiếu thông tin", errors.join("\n"), [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
@@ -298,26 +425,8 @@ export default function FormScreen() {
     }
 
     try {
-      const currentFrontImage = tempFrontImageUri || frontImageUri;
-      const currentBackImage = tempBackImageUri || backImageUri;
-
-      // Save data to AsyncStorage
-      await AsyncStorage.setItem("car_registration_front", currentFrontImage!);
-      await AsyncStorage.setItem("car_registration_back", currentBackImage!);
-      await AsyncStorage.setItem(
-        "car_registration_data",
-        JSON.stringify(formData)
-      );
-
-      // Clean up temp images
-      setFrontImageUri(currentFrontImage);
-      setBackImageUri(currentBackImage);
-      setTempFrontImageUri(null);
-      setTempBackImageUri(null);
       await AsyncStorage.removeItem("temp_car_registration_front");
       await AsyncStorage.removeItem("temp_car_registration_back");
-
-      // Navigate to next page
       router.push("/(onboarding)/(car)/(car-insurance)/form");
     } catch (error) {
       showCustomAlert("Lỗi", "Không thể lưu thông tin giấy đăng ký xe", [
@@ -361,14 +470,16 @@ export default function FormScreen() {
             try {
               if (type === "front") {
                 setTempFrontImageUri(null);
-                setFrontImageUri(null);
-                await AsyncStorage.removeItem("temp_car_registration_front");
-                await AsyncStorage.removeItem("car_registration_front");
+                await viewModel.updateCarRegistrationFormField(
+                  "RegistrationFront",
+                  null
+                );
               } else {
                 setTempBackImageUri(null);
-                setBackImageUri(null);
-                await AsyncStorage.removeItem("temp_car_registration_back");
-                await AsyncStorage.removeItem("car_registration_back");
+                await viewModel.updateCarRegistrationFormField(
+                  "RegistrationBack",
+                  null
+                );
               }
               setShowDeleteMode(false);
               setShowAlert(false);
@@ -394,11 +505,21 @@ export default function FormScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={
+          !showManufacturerDropdown &&
+          !showFuelTypeDropdown &&
+          !showCarTypeDropdown &&
+          !showLicenseTierDropdown
+        }
       >
         <View style={styles.content}>
           {/* Header */}
@@ -417,119 +538,108 @@ export default function FormScreen() {
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Giấy đăng ký xe</Text>
+            <Text style={styles.title}>Thông tin đăng ký xe</Text>
           </View>
 
           {/* Image Upload Sections */}
-          <View style={styles.imageSection}>
-            {/* Front Image */}
-            <View style={styles.imageContainer}>
-              <Text style={styles.imageLabel}>
-                Ảnh mặt trước <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.imageUploadArea}>
-                {tempFrontImageUri || frontImageUri ? (
+          {false && (
+            <View style={styles.imageSection}>
+              {/* Front Image */}
+              <View style={styles.imageContainer}>
+                <Text style={styles.imageLabel}>
+                  Ảnh mặt trước <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={styles.imageUploadArea}>
+                  {tempFrontImageUri ? (
+                    <TouchableOpacity
+                      style={styles.imageWrapper}
+                      onPress={() => handleImagePress("front")}
+                    >
+                      <Image
+                        source={{ uri: tempFrontImageUri! }}
+                        style={[
+                          styles.uploadedImage,
+                          showDeleteMode && styles.dimmedImage,
+                        ]}
+                      />
+                      {showDeleteMode && (
+                        <View style={styles.deleteOverlay}>
+                          <TouchableOpacity
+                            style={styles.trashButton}
+                            onPress={() => handleDeleteImage("front")}
+                          >
+                            <Trash2 color="#FFFFFF" size={24} />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.uploadPlaceholder}
+                      onPress={() => handleImageUpload("front")}
+                    >
+                      <Text style={styles.uploadText}>Tải ảnh lên</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
-                    style={styles.imageWrapper}
-                    onPress={() => handleImagePress("front")}
-                  >
-                    <Image
-                      source={{ uri: (tempFrontImageUri || frontImageUri)! }}
-                      style={[
-                        styles.uploadedImage,
-                        showDeleteMode && styles.dimmedImage,
-                      ]}
-                    />
-                    {showDeleteMode && (
-                      <View style={styles.deleteOverlay}>
-                        <TouchableOpacity
-                          style={styles.trashButton}
-                          onPress={() => handleDeleteImage("front")}
-                        >
-                          <Trash2 color="#FFFFFF" size={24} />
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.uploadPlaceholder}
+                    style={styles.editButton}
                     onPress={() => handleImageUpload("front")}
                   >
-                    <Text style={styles.uploadText}>Tải ảnh lên</Text>
+                    <Edit2Icon color="#70E000" size={16} />
                   </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => handleImageUpload("front")}
-                >
-                  <Edit2Icon color="#70E000" size={16} />
-                </TouchableOpacity>
+                </View>
               </View>
-            </View>
 
-            {/* Back Image */}
-            <View style={styles.imageContainer}>
-              <Text style={styles.imageLabel}>
-                Ảnh mặt sau <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.imageUploadArea}>
-                {tempBackImageUri || backImageUri ? (
+              {/* Back Image */}
+              <View style={styles.imageContainer}>
+                <Text style={styles.imageLabel}>
+                  Ảnh mặt sau <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={styles.imageUploadArea}>
+                  {tempBackImageUri ? (
+                    <TouchableOpacity
+                      style={styles.imageWrapper}
+                      onPress={() => handleImagePress("back")}
+                    >
+                      <Image
+                        source={{ uri: tempBackImageUri! }}
+                        style={[
+                          styles.uploadedImage,
+                          showDeleteMode && styles.dimmedImage,
+                        ]}
+                      />
+                      {showDeleteMode && (
+                        <View style={styles.deleteOverlay}>
+                          <TouchableOpacity
+                            style={styles.trashButton}
+                            onPress={() => handleDeleteImage("back")}
+                          >
+                            <Trash2 color="#FFFFFF" size={24} />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.uploadPlaceholder}
+                      onPress={() => handleImageUpload("back")}
+                    >
+                      <Text style={styles.uploadText}>Tải ảnh lên</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
-                    style={styles.imageWrapper}
-                    onPress={() => handleImagePress("back")}
-                  >
-                    <Image
-                      source={{ uri: (tempBackImageUri || backImageUri)! }}
-                      style={[
-                        styles.uploadedImage,
-                        showDeleteMode && styles.dimmedImage,
-                      ]}
-                    />
-                    {showDeleteMode && (
-                      <View style={styles.deleteOverlay}>
-                        <TouchableOpacity
-                          style={styles.trashButton}
-                          onPress={() => handleDeleteImage("back")}
-                        >
-                          <Trash2 color="#FFFFFF" size={24} />
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.uploadPlaceholder}
+                    style={styles.editButton}
                     onPress={() => handleImageUpload("back")}
                   >
-                    <Text style={styles.uploadText}>Tải ảnh lên</Text>
+                    <Edit2Icon color="#70E000" size={16} />
                   </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => handleImageUpload("back")}
-                >
-                  <Edit2Icon color="#70E000" size={16} />
-                </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
+          )}
 
           {/* Form Fields */}
           <View style={styles.formContainer}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Họ và tên trên đăng ký xe <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.ownerName}
-                onChangeText={(value) => handleInputChange("ownerName", value)}
-                placeholder="Nhập họ và tên"
-                placeholderTextColor="#92929D"
-              />
-            </View>
-
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
                 Biển số xe <Text style={styles.required}>*</Text>
@@ -550,13 +660,52 @@ export default function FormScreen() {
               <Text style={styles.label}>
                 Tên hãng xe <Text style={styles.required}>*</Text>
               </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.carBrand}
-                onChangeText={(value) => handleInputChange("carBrand", value)}
-                placeholder="Nhập tên hãng xe"
-                placeholderTextColor="#92929D"
-              />
+              <TouchableOpacity
+                activeOpacity={1}
+                style={styles.dropdownContainer}
+                onPress={() =>
+                  setShowManufacturerDropdown(!showManufacturerDropdown)
+                }
+              >
+                <Text
+                  style={[
+                    styles.dropdownText,
+                    !formData.carBrand && styles.placeholderText,
+                  ]}
+                >
+                  {formData.carBrand || "Chọn hãng xe"}
+                </Text>
+                <ChevronDown
+                  color="#92929D"
+                  size={20}
+                  style={[
+                    styles.dropdownIcon,
+                    showManufacturerDropdown && styles.dropdownIconRotated,
+                  ]}
+                />
+              </TouchableOpacity>
+              {showManufacturerDropdown && (
+                <View style={styles.dropdownList}>
+                  <ScrollView
+                    style={styles.dropdownScrollView}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                  >
+                    {manufacturers.map((manufacturer) => (
+                      <TouchableOpacity
+                        key={manufacturer.id}
+                        style={styles.dropdownItem}
+                        onPress={() => handleManufacturerSelect(manufacturer)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.dropdownItemText}>
+                          {manufacturer.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </View>
 
             <View style={styles.inputGroup}>
@@ -601,24 +750,10 @@ export default function FormScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                Ngày cấp <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.issueDate}
-                onChangeText={(value) => handleInputChange("issueDate", value)}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
                 Loại nhiên liệu <Text style={styles.required}>*</Text>
               </Text>
               <TouchableOpacity
+                activeOpacity={1}
                 style={styles.dropdownContainer}
                 onPress={() => setShowFuelTypeDropdown(!showFuelTypeDropdown)}
               >
@@ -651,6 +786,7 @@ export default function FormScreen() {
                         key={fuelType}
                         style={styles.dropdownItem}
                         onPress={() => handleFuelTypeSelect(fuelType)}
+                        activeOpacity={0.7}
                       >
                         <Text style={styles.dropdownItemText}>{fuelType}</Text>
                       </TouchableOpacity>
@@ -659,6 +795,119 @@ export default function FormScreen() {
                 </View>
               )}
             </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Loại xe <Text style={styles.required}>*</Text>
+              </Text>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={styles.dropdownContainer}
+                onPress={() => setShowCarTypeDropdown(!showCarTypeDropdown)}
+              >
+                <Text
+                  style={[
+                    styles.dropdownText,
+                    !formData.carType && styles.placeholderText,
+                  ]}
+                >
+                  {formData.carType || "Chọn loại xe"}
+                </Text>
+                <ChevronDown
+                  color="#92929D"
+                  size={20}
+                  style={[
+                    styles.dropdownIcon,
+                    showCarTypeDropdown && styles.dropdownIconRotated,
+                  ]}
+                />
+              </TouchableOpacity>
+              {showCarTypeDropdown && (
+                <View style={styles.dropdownList}>
+                  <ScrollView
+                    style={styles.dropdownScrollView}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                  >
+                    {carTypes.map((carType) => (
+                      <TouchableOpacity
+                        key={carType}
+                        style={styles.dropdownItem}
+                        onPress={() => handleCarTypeSelect(carType)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.dropdownItemText}>{carType}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Hạng bằng lái <Text style={styles.required}>*</Text>
+              </Text>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={styles.dropdownContainer}
+                onPress={() =>
+                  setShowLicenseTierDropdown(!showLicenseTierDropdown)
+                }
+              >
+                <Text
+                  style={[
+                    styles.dropdownText,
+                    !formData.licenseTier && styles.placeholderText,
+                  ]}
+                >
+                  {formData.licenseTier || "Chọn hạng bằng lái"}
+                </Text>
+                <ChevronDown
+                  color="#92929D"
+                  size={20}
+                  style={[
+                    styles.dropdownIcon,
+                    showLicenseTierDropdown && styles.dropdownIconRotated,
+                  ]}
+                />
+              </TouchableOpacity>
+              {showLicenseTierDropdown && (
+                <View style={styles.dropdownList}>
+                  <ScrollView
+                    style={styles.dropdownScrollView}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                  >
+                    {licenseTiers.map((tier) => (
+                      <TouchableOpacity
+                        key={tier}
+                        style={styles.dropdownItem}
+                        onPress={() => handleLicenseTierSelect(tier)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.dropdownItemText}>{tier}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Năm sản xuất <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={formData.year}
+                onChangeText={(value) => handleInputChange("year", value)}
+                placeholder="Nhập năm sản xuất (VD: 2020)"
+                placeholderTextColor="#92929D"
+                keyboardType="numeric"
+                maxLength={4}
+              />
+            </View>
           </View>
 
           {/* Buttons */}
@@ -666,8 +915,17 @@ export default function FormScreen() {
             <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
               <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.nextButtonText}>Kế tiếp</Text>
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                isSubmittingFromRedux && styles.nextButtonDisabled,
+              ]}
+              onPress={handleNext}
+              disabled={isSubmittingFromRedux}
+            >
+              <Text style={styles.nextButtonText}>
+                {isSubmittingFromRedux ? "Đang xử lý..." : "Kế tiếp"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -680,7 +938,7 @@ export default function FormScreen() {
         message={alertConfig.message}
         buttons={alertConfig.buttons}
       />
-    </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -962,5 +1220,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  nextButtonDisabled: {
+    opacity: 0.6,
   },
 });

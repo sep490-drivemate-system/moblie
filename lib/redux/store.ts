@@ -11,6 +11,7 @@ import packageReducer from "@/features/package/packageSlice";
 import sessionReducer from "@/features/session/sessionSlice";
 import chatReducer from "@/features/chat/chatSlice";
 import notificationReducer from "@/features/notification/notificationSlice";
+import carReducer from "@/features/car/carSlice";
 
 export const store = configureStore({
   reducer: {
@@ -26,6 +27,7 @@ export const store = configureStore({
     session: sessionReducer,
     chat: chatReducer,
     notification: notificationReducer,
+    car: carReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
