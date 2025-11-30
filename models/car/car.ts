@@ -75,4 +75,5 @@ export interface ICar {
   unitPrice: number;
   status: CarStatus;
   thumbnailUrl: string;
+  fuel: string;
 }
