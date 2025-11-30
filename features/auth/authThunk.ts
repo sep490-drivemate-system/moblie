@@ -56,8 +56,8 @@ export const registerInstructor = createThunk<string, FormData>(
 export const getInstructorPolicy = createThunk<Policy[], { type: number }>(
   HttpMethod.GET,
   `instructor-policy`,
-  `/policy`,
+  `policy`,
   {
-    buildUrl: (payload) => `/policy?policyType=${payload.type}`,
+    buildUrl: (payload) => `policy?policyType=${payload.type}`,
   }
 );

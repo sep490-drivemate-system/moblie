@@ -31,6 +31,57 @@ export default function SignUpScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
 
+  // Helper function to validate form using current state
+  const isFormValid = () => {
+    const { registerFormData, registerFormErrors } = authState;
+    
+    // Validate all fields
+    const validateEmail = (email: string) => {
+      if (!email.trim()) return "Email không được để trống";
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) return "Email không đúng định dạng";
+      return undefined;
+    };
+
+    const validatePassword = (password: string) => {
+      if (!password) return "Mật khẩu không được để trống";
+      const errors: string[] = [];
+      if (password.length < 6) errors.push("Mật khẩu phải có ít nhất 6 ký tự");
+      if (!/[A-Z]/.test(password)) errors.push("Mật khẩu phải có ít nhất 1 ký tự hoa");
+      if (!/[0-9]/.test(password)) errors.push("Mật khẩu phải có ít nhất 1 ký tự số");
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) errors.push("Mật khẩu phải có ít nhất 1 ký tự đặc biệt");
+      return errors.length > 0 ? errors.join("\n") : undefined;
+    };
+
+    const validateConfirmPassword = (confirmPassword: string, password: string) => {
+      if (!confirmPassword) return "Vui lòng nhập lại mật khẩu";
+      if (confirmPassword !== password) return "Mật khẩu nhập lại không khớp";
+      return undefined;
+    };
+
+    const validatePhone = (phone: string) => {
+      if (!phone.trim()) return "Số điện thoại không được để trống";
+      if (phone.length !== 10) return "Số điện thoại phải có đủ 10 chữ số";
+      return undefined;
+    };
+
+    const emailError = validateEmail(registerFormData.email);
+    const passwordError = validatePassword(registerFormData.password);
+    const confirmPasswordError = validateConfirmPassword(
+      registerFormData.confirmPassword,
+      registerFormData.password
+    );
+    const phoneError = validatePhone(registerFormData.phone);
+
+    // Check if there are any errors
+    const hasErrors = !!(emailError || passwordError || confirmPasswordError || phoneError);
+
+    // Check acceptTerms
+    const termsAccepted = registerFormData.acceptTerms;
+
+    return !hasErrors && termsAccepted;
+  };
+
   // Set router to ViewModel for navigation
   useEffect(() => {
     authViewModel.setRouter(router);
@@ -253,9 +304,8 @@ export default function SignUpScreen() {
                 </View>
                 {authState.registerFormErrors.password && (
                   <View style={styles.errorContainer}>
-                    {authViewModel
-                      .getRegisterFormErrors()
-                      .password?.split("\n")
+                    {authState.registerFormErrors.password
+                      ?.split("\n")
                       .map((error, index) => (
                         <Text key={index} style={styles.errorText}>
                           {error}
@@ -273,10 +323,10 @@ export default function SignUpScreen() {
                   <TextInput
                     style={[
                       styles.passwordInput,
-                      authViewModel.getRegisterFormErrors().confirmPassword &&
+                      authState.registerFormErrors.confirmPassword &&
                       styles.inputError,
                     ]}
-                    value={authViewModel.getRegisterFormData().confirmPassword}
+                    value={authState.registerFormData.confirmPassword}
                     onChangeText={(value) =>
                       authViewModel.updateRegisterFormData(
                         "confirmPassword",
@@ -298,9 +348,9 @@ export default function SignUpScreen() {
                     )}
                   </TouchableOpacity>
                 </View>
-                {authViewModel.getRegisterFormErrors().confirmPassword && (
+                {authState.registerFormErrors.confirmPassword && (
                   <Text style={styles.errorText}>
-                    {authViewModel.getRegisterFormErrors().confirmPassword}
+                    {authState.registerFormErrors.confirmPassword}
                   </Text>
                 )}
               </View>
@@ -312,10 +362,10 @@ export default function SignUpScreen() {
                 <TextInput
                   style={[
                     styles.input,
-                    authViewModel.getRegisterFormErrors().phone &&
+                    authState.registerFormErrors.phone &&
                     styles.inputError,
                   ]}
-                  value={authViewModel.getRegisterFormData().phone}
+                  value={authState.registerFormData.phone}
                   onChangeText={(value) => {
                     const numericValue = value.replace(/\D/g, "");
                     authViewModel.updateRegisterFormData("phone", numericValue);
@@ -326,9 +376,9 @@ export default function SignUpScreen() {
                   autoCorrect={false}
                   maxLength={10}
                 />
-                {authViewModel.getRegisterFormErrors().phone && (
+                {authState.registerFormErrors.phone && (
                   <Text style={styles.errorText}>
-                    {authViewModel.getRegisterFormErrors().phone}
+                    {authState.registerFormErrors.phone}
                   </Text>
                 )}
               </View>
@@ -342,18 +392,18 @@ export default function SignUpScreen() {
                 onPress={() =>
                   authViewModel.updateRegisterFormData(
                     "acceptTerms",
-                    !authViewModel.getRegisterFormData().acceptTerms as boolean
+                    !authState.registerFormData.acceptTerms as boolean
                   )
                 }
               >
                 <View
                   style={[
                     styles.checkbox,
-                    authViewModel.getRegisterFormData().acceptTerms &&
+                    authState.registerFormData.acceptTerms &&
                     styles.checkboxChecked,
                   ]}
                 >
-                  {authViewModel.getRegisterFormData().acceptTerms && (
+                  {authState.registerFormData.acceptTerms && (
                     <Text style={styles.checkmark}>✓</Text>
                   )}
                 </View>
@@ -374,16 +424,16 @@ export default function SignUpScreen() {
               <TouchableOpacity
                 style={[
                   styles.primaryButton,
-                  !authViewModel.isRegisterFormValid() &&
+                  !isFormValid() &&
                   styles.primaryButtonDisabled,
                 ]}
                 onPress={authViewModel.handleRegister}
-                disabled={!authViewModel.isRegisterFormValid()}
+                disabled={!isFormValid()}
               >
                 <Text
                   style={[
                     styles.primaryButtonText,
-                    !authViewModel.isRegisterFormValid() &&
+                    !isFormValid() &&
                     styles.primaryButtonTextDisabled,
                   ]}
                 >

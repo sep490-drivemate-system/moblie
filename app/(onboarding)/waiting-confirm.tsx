@@ -367,7 +367,7 @@ export default function WaitingConfirmScreen() {
               Chào mừng bạn đã trở thành một phần của{" "}
               <Text style={styles.drivemateText}>Drivemate</Text>
             </Text>
-            {isReviewApproved && (
+            {isReviewApproved && isTermsCompleted && (
               <TouchableOpacity
                 onPress={() => {
                   resetOnboardingData();
