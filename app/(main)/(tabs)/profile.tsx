@@ -39,7 +39,10 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [authState, authViewModel] = useViewModel<RootState["auth"], AuthViewModel>(AuthViewModel, (state) => state.auth);
+  const [authState, authViewModel] = useViewModel<
+    RootState["auth"],
+    AuthViewModel
+  >(AuthViewModel, (state) => state.auth);
 
   useEffect(() => {
     // Chỉ fetch user info nếu đã đăng nhập
@@ -61,7 +64,11 @@ export default function ProfileScreen() {
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
                 <Image
-                  source={{ uri: authState.userInfo?.avatarUrl ?? "https://cdn-media.sforum.vn/storage/app/media/wp-content/uploads/2024/02/anh-phong-canh-66-1.jpg" }}
+                  source={{
+                    uri:
+                      authState.userInfo?.avatarUrl ??
+                      "https://cdn-media.sforum.vn/storage/app/media/wp-content/uploads/2024/02/anh-phong-canh-66-1.jpg",
+                  }}
                   style={styles.avatarImage}
                   resizeMode="cover"
                 />
@@ -69,7 +76,9 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{authState.userInfo?.fullName}</Text>
+              <Text style={styles.userName}>
+                {authState.userInfo?.fullName}
+              </Text>
               <Text style={styles.userEmail}>{authState.userInfo?.email}</Text>
               <Text style={styles.userPhone}>{authState.userInfo?.phone}</Text>
             </View>
@@ -83,7 +92,7 @@ export default function ProfileScreen() {
                   <Text style={styles.walletLabel}>Số dư ví</Text>
                 </View>
                 <Text style={styles.walletBalance}>
-                  {walletState.balance.toLocaleString("vi-VN")} vnd
+                  {walletState.balance.toLocaleString("vi-VN")} VNĐ
                 </Text>
               </View>
               <TouchableOpacity
@@ -125,7 +134,15 @@ export default function ProfileScreen() {
                 <Text style={styles.menuItemText}>Giấy tờ tùy thân Instr</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() =>
+                router.push(
+                  "/(main)/(no-tabs)/identification-document-management-novice"
+                )
+              }
+            >
               <View style={styles.menuItemLeft}>
                 <IdCard size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Giấy tờ tùy thân Novi</Text>
@@ -150,7 +167,7 @@ export default function ProfileScreen() {
             <Text style={styles.menuTitle}>Tổng quát</Text>
           </View>
           <View style={styles.menuItemsContainer}>
-            {authState.userInfo?.role as UserRole === UserRole.Instructor && (
+            {(authState.userInfo?.role as UserRole) === UserRole.Instructor && (
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() =>
@@ -165,7 +182,8 @@ export default function ProfileScreen() {
                 </View>
               </TouchableOpacity>
             )}
-            {authState.userInfo?.role as UserRole === UserRole.NoviceDriver && (
+            {(authState.userInfo?.role as UserRole) ===
+              UserRole.NoviceDriver && (
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
