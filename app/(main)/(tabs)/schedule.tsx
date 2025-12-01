@@ -1,7 +1,7 @@
 import { AppColors } from "@/constants/Colors";
 import { ROUTES } from "@/constants/routes";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Calendar,
@@ -12,7 +12,7 @@ import {
   Route,
   SquarePen,
 } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ScrollView,
   StatusBar,
@@ -22,6 +22,10 @@ import {
   View,
 } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
+import { IInstructorSchedule } from "@/features/booking/bookingThunk";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
+import { getInstructorSchedule } from "@/features/schedule/scheduleThunk";
 
 type ScheduleBookingStatus =
   | "routePlanning"
@@ -338,7 +342,8 @@ interface ScheduleCalendarProps {
   selectedDate: string;
   onCurrentDateChange: (date: Date) => void;
   onSelectedDateChange: (date: string) => void;
-  bookings: BookingItem[];
+  availableDates: string[];
+  sessionDates: string[];
 }
 
 function ScheduleCalendar({
@@ -346,7 +351,8 @@ function ScheduleCalendar({
   selectedDate,
   onCurrentDateChange,
   onSelectedDateChange,
-  bookings,
+  availableDates,
+  sessionDates,
 }: ScheduleCalendarProps) {
   const handlePrevMonth = () => {
     const newDate = new Date(currentDate);
@@ -390,9 +396,8 @@ function ScheduleCalendar({
 
         const isCurrentMonth = cellDate.getMonth() === currentDate.getMonth();
         const isSelected = dateString === selectedDate;
-        const hasBookings = bookings.some(
-          (booking) => booking.date === dateString
-        );
+        const hasAvailability = availableDates.includes(dateString);
+        const hasSession = sessionDates.includes(dateString);
 
         weekDays.push(
           <TouchableOpacity
@@ -400,6 +405,10 @@ function ScheduleCalendar({
             style={[
               styles.calendarDayButton,
               !isCurrentMonth && styles.calendarDayButtonMuted,
+              hasAvailability &&
+                !hasSession &&
+                !isSelected &&
+                styles.calendarDayButtonAvailable,
               isSelected && styles.calendarDayButtonSelected,
             ]}
             activeOpacity={0.9}
@@ -415,7 +424,7 @@ function ScheduleCalendar({
               {cellDate.getDate()}
             </Text>
             <View style={styles.calendarIndicators}>
-              {hasBookings && <View style={styles.calendarIndicatorGreen} />}
+              {hasSession && <View style={styles.calendarIndicatorRed} />}
             </View>
           </TouchableOpacity>
         );
@@ -465,6 +474,10 @@ function ScheduleCalendar({
       <View style={styles.calendarLegend}>
         <View style={styles.legendItem}>
           <View style={styles.legendGreenDot} />
+          <Text style={styles.legendText}>Ngày rảnh huấn luyện</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={styles.calendarIndicatorRed} />
           <Text style={styles.legendText}>Ngày có buổi tập lái</Text>
         </View>
       </View>
@@ -546,9 +559,16 @@ function UpdateScheduleButton({ onPress, style }: UpdateScheduleButtonProps) {
 
 export default function ScheduleScreen() {
   const router = useRouter();
+  const [schedule, setSchedule] = useState<IInstructorSchedule[]>([]);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const sessionDates = useMemo(
+    () => Array.from(new Set(BOOKINGS_DATA.map((b) => b.date))),
+    []
+  );
   const tabBarHeight = useBottomTabBarHeight();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState("");
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     const today = new Date();
@@ -572,6 +592,44 @@ export default function ScheduleScreen() {
   const handleUpdateSchedule = () => {
     router.push(ROUTES.SCHEDULE_DETAIL);
   };
+
+  const fetchSchedule =  async () => {
+    const userId = await getUserIdFromToken();
+    const res = await dispatch(
+      getInstructorSchedule({ instructorId: userId })
+    ).unwrap();
+
+    const scheduleData = (res as any).value || res;
+    setSchedule(scheduleData);
+
+    // Chuyển các khoảng startTime - endTime thành danh sách ngày rảnh (YYYY-MM-DD)
+    const datesSet = new Set<string>();
+    scheduleData.forEach((slot: IInstructorSchedule) => {
+      const start = new Date(slot.startTime + "T00:00:00");
+      const end = new Date(slot.endTime + "T00:00:00");
+
+      for (
+        let d = new Date(start);
+        d.getTime() <= end.getTime();
+        d.setDate(d.getDate() + 1)
+      ) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        datesSet.add(`${year}-${month}-${day}`);
+      }
+    });
+
+    setAvailableDates(Array.from(datesSet));
+  };
+
+  useEffect(() => {
+    fetchSchedule();
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    fetchSchedule();
+  }, []));
 
   return (
     <ScrollView
@@ -616,7 +674,8 @@ export default function ScheduleScreen() {
             selectedDate={selectedDate}
             onCurrentDateChange={setCurrentDate}
             onSelectedDateChange={setSelectedDate}
-            bookings={BOOKINGS_DATA}
+            availableDates={availableDates}
+            sessionDates={sessionDates}
           />
         </View>
 
@@ -778,6 +837,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     borderColor: "transparent",
   },
+  calendarDayButtonAvailable: {
+    backgroundColor: "#DCFCE7",
+    borderColor: "#BBF7D0",
+  },
   calendarDayButtonSelected: {
     backgroundColor: "#16A34A",
     borderColor: "#16A34A",
@@ -808,6 +871,12 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: "#22C55E",
+  },
+  calendarIndicatorRed: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#EF4444",
   },
   calendarLegend: {
     flexDirection: "row",
