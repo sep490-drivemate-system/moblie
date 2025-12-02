@@ -7,6 +7,33 @@ import SessionsList, {
 
 const mapStatusToFilter = (status?: string | number): StatusFilter => {
   if (status === undefined || status === null) return "all";
+
+  // Xử lý string dạng "Completed", "Planning", "Pending", ...
+  if (typeof status === "string" && status.trim().length > 0 && isNaN(Number(status))) {
+    const normalized = status.trim().toLowerCase();
+    switch (normalized) {
+      case "planning":
+      case "pending":
+      case "pendingapproval":
+      case "pending_approval":
+        return "planning";
+      case "upcoming":
+        return "upcoming";
+      case "inprogress":
+      case "in_progress":
+        return "in_progress";
+      case "completed":
+        return "completed";
+      case "reschedule":
+        return "reschedule";
+      case "cancelled":
+      case "canceled":
+        return "cancelled";
+      default:
+        return "all";
+    }
+  }
+
   const statusNumber =
     typeof status === "string" ? parseInt(status, 10) : Number(status);
 

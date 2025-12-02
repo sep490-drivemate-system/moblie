@@ -22,6 +22,7 @@ import { useRouter } from "expo-router";
 import { ROUTES } from "@/constants/routes";
 import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { ICar } from "@/models/car/car";
 export default function HomeScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
@@ -47,21 +48,21 @@ export default function HomeScreen() {
     }
   };
 
-  const handleHeaderItemPress = async (itemId: string) => {
-    if (itemId === "3") {
-      router.push(ROUTES.CHAT_LIST);
-    }
-    if (itemId === "2") {
-      router.push(ROUTES.NOTIFICATIONS);
-    }
-  };
+  // const handleHeaderItemPress = async (itemId: string) => {
+  //   if (itemId === "3") {
+  //     router.push(ROUTES.CHAT_LIST);
+  //   }
+  //   if (itemId === "2") {
+  //     router.push(ROUTES.NOTIFICATIONS);
+  //   }
+  // };
 
   const renderDrivingLicense = ({ item }: ListRenderItemInfo<LicenseType>) => (
     <TouchableOpacity key={item.id} style={styles.drivingLicenseItem}>
       <Text style={styles.drivingLicenseItemText}>{item.name}</Text>
     </TouchableOpacity>
   );
-  
+
   return (
     <ScrollView
       style={[styles.container, { paddingBottom: tabBarHeight + 16 }]}
@@ -74,12 +75,18 @@ export default function HomeScreen() {
         <View style={styles.floatingContainer}>
           <TouchableOpacity
             style={styles.walletSection}
-            onPress={() => handleHeaderItemPress("1")}
+          //  onPress={() => handleHeaderItemPress("1")}
           >
             <Wallet size={24} color={"#70E000"} />
             <View style={styles.walletTextContainer}>
               <Text style={styles.headerItemLabel}>Ví DriveMate</Text>
-              <Text style={styles.headerItemValue}>{walletState.balance} đ</Text>
+              <Text style={styles.headerItemValue}>
+                {Intl.NumberFormat("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                  maximumFractionDigits: 0,
+                }).format(walletState.balance || 0)}
+              </Text>
             </View>
             <ChevronRight size={20} color="#92929D" />
           </TouchableOpacity>
@@ -87,7 +94,7 @@ export default function HomeScreen() {
           <View style={styles.iconGroup}>
             <TouchableOpacity
               style={styles.iconButton}
-              onPress={() => handleHeaderItemPress("2")}
+            // onPress={() => handleHeaderItemPress("2")}
             >
               <View style={styles.iconContainer}>
                 <Bell size={24} color={"#70E000"} />
@@ -99,7 +106,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               style={styles.iconButton}
-              onPress={() => handleHeaderItemPress("3")}
+            // onPress={() => handleHeaderItemPress("3")}
             >
               <View style={styles.iconContainer}>
                 <MessageSquareMore size={24} color={"#70E000"} />
@@ -147,7 +154,7 @@ export default function HomeScreen() {
             renderItem={({ item }) => <InstructorItem instructor={item} />}
           />
         </View>
-        <View style={styles.listItemContainer}>
+        {/* <View style={styles.listItemContainer}>
           <Text style={styles.listLabel}>Xe nổi bật</Text>
           <FlatList
             data={listCar}
@@ -155,9 +162,9 @@ export default function HomeScreen() {
             horizontal
             contentContainerStyle={styles.listItem}
             showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => <CarItem car={item} key={item.id} />}
+            renderItem={({ item }) => <CarItem car={item as unknown as ICar} key={item.id} />}
           />
-        </View>
+        </View> */}
 
 
       </View>

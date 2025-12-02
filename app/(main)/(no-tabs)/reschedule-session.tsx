@@ -184,14 +184,29 @@ export default function RescheduleSessionScreen() {
       const endDateTime = new Date(startDateTime);
       endDateTime.setMinutes(endDateTime.getMinutes() + (duration * 60));
 
+      // Validate: endTime must be after startTime
+      if (endDateTime <= startDateTime) {
+        Alert.alert("Lỗi", "Giờ kết thúc phải sau giờ bắt đầu.");
+        setIsRescheduling(false);
+        return;
+      }
 
-      console.log("startDateTime", startDateTime.toISOString());
-      console.log("endDateTime", endDateTime.toISOString());
+      // Validate: new time must be in the future
+      const now = new Date();
+      if (startDateTime <= now) {
+        Alert.alert("Lỗi", "Thời gian đổi lịch phải trong tương lai.");
+        setIsRescheduling(false);
+        return;
+      }
+
+      // Backend .NET thường mong đợi ISO string với Z (UTC)
       const rescheduleData: IRescheduleSessionRequest = {
         note: rescheduleNote.trim(),
-        newStartTime: formatWithTimeZone(startDateTime),
-        newEndTime: formatWithTimeZone(endDateTime),
+        newStartTime: startDateTime.toISOString(),
+        newEndTime: endDateTime.toISOString(),
       };
+
+      console.log("Reschedule request body:", JSON.stringify(rescheduleData, null, 2));
 
       const success = await sessionViewModel.rescheduleSession(
         sessionId,

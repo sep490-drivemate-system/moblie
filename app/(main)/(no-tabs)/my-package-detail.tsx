@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { IUserInfo, submitFeedback, IFeedbackRequest } from "@/features/booking/bookingThunk";
-import { ArrowLeft, Star, MessageSquare } from "lucide-react-native";
+import { ArrowLeft, Star, MessageSquare, Award, Route } from "lucide-react-native";
 import SessionsList from "@/components/Session/Sessions";
 import CancelPackageModal from "@/components/Modal/CancelPackageModal";
 import { AppColors } from "@/constants/Colors";
@@ -251,16 +251,20 @@ export default function PackageDetailScreen() {
             {/* Package Name */}
             <Text style={styles.packageName}>{packageData.packageName}</Text>
 
-            {/* Skills and Road Types */}
-            {(packageData.drivingSkills && packageData.drivingSkills.length > 0 || packageData.roadTypes && packageData.roadTypes.length > 0) && (
+            {/* Skills and Road Types (styled similar to ConfirmPurchaseModal) */}
+            {(packageData.drivingSkills && packageData.drivingSkills.length > 0) ||
+              (packageData.roadTypes && packageData.roadTypes.length > 0) ? (
               <View style={styles.skillsContainer}>
                 {packageData.drivingSkills && packageData.drivingSkills.length > 0 && (
                   <View style={styles.skillCategory}>
-                    <Text style={styles.categoryTitle}>Kỹ năng lái xe</Text>
+                    <View style={styles.skillCategoryHeader}>
+                      <Award size={16} color="#64748b" strokeWidth={2} />
+                      <Text style={styles.skillCategoryLabel}>Kỹ năng</Text>
+                    </View>
                     <View style={styles.skillsTags}>
                       {packageData.drivingSkills.map((skill: string, index: number) => (
-                        <View key={index} style={[styles.skillTag, styles.basicSkillTag]}>
-                          <Text style={[styles.skillTagText, styles.basicSkillText]}>{skill}</Text>
+                        <View key={index} style={styles.skillChip}>
+                          <Text style={styles.skillChipText}>{skill}</Text>
                         </View>
                       ))}
                     </View>
@@ -269,18 +273,21 @@ export default function PackageDetailScreen() {
 
                 {packageData.roadTypes && packageData.roadTypes.length > 0 && (
                   <View style={styles.skillCategory}>
-                    <Text style={styles.categoryTitle}>Loại đường</Text>
+                    <View style={styles.skillCategoryHeader}>
+                      <Route size={16} color="#64748b" strokeWidth={2} />
+                      <Text style={styles.skillCategoryLabel}>Loại đường</Text>
+                    </View>
                     <View style={styles.skillsTags}>
                       {packageData.roadTypes.map((road: string, index: number) => (
-                        <View key={index} style={[styles.skillTag, styles.roadTypeTag]}>
-                          <Text style={[styles.skillTagText, styles.roadTypeText]}>{road}</Text>
+                        <View key={index} style={styles.skillChip}>
+                          <Text style={styles.skillChipText}>{road}</Text>
                         </View>
                       ))}
                     </View>
                   </View>
                 )}
               </View>
-            )}
+            ) : null}
 
             {/* Hours Info */}
             <View style={styles.hoursCard}>
@@ -624,65 +631,44 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   skillsContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
     marginBottom: 16,
-  },
-  skillsTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 16,
+    gap: 12,
   },
   skillCategory: {
-    marginBottom: 16,
-  },
-  categoryTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#475569",
     marginBottom: 8,
+  },
+  skillCategoryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  skillCategoryLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1e293b",
   },
   skillsTags: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
   },
-  skillTag: {
+  skillChip: {
+    backgroundColor: "#e0f2fe",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 8,
     borderWidth: 1,
+    borderColor: "#7dd3fc",
   },
-  skillTagText: {
+  skillChipText: {
     fontSize: 12,
     fontWeight: "600",
-  },
-  basicSkillTag: {
-    backgroundColor: "#dbeafe",
-    borderColor: "#3b82f6",
-  },
-  basicSkillText: {
-    color: "#1d4ed8",
-  },
-  trafficSkillTag: {
-    backgroundColor: "#dcfce7",
-    borderColor: "#22c55e",
-  },
-  trafficSkillText: {
-    color: "#15803d",
-  },
-  parkingSkillTag: {
-    backgroundColor: "#f3e8ff",
-    borderColor: "#8b5cf6",
-  },
-  parkingSkillText: {
-    color: "#7c3aed",
-  },
-  roadTypeTag: {
-    backgroundColor: "#fed7aa",
-    borderColor: "#f97316",
-  },
-  roadTypeText: {
-    color: "#ea580c",
+    color: AppColors.primary,
   },
   priceText: {
     marginTop: 6,

@@ -256,9 +256,14 @@ export default function RentalScreen() {
                   selectedTab === SessionStatus.Planning && styles.activeTabText,
                 ]}
               >
-                Lên lộ trình ({(Array.isArray(sessions) ? sessions.filter((session) => {
-                  return session.status === SessionStatus.Planning;
-                }) : []).length})
+                Lên lộ trình (
+                {Array.isArray(sessions)
+                  ? sessions.filter(
+                    (session) =>
+                      parseSessionStatus(session.status) === SessionStatus.Planning
+                  ).length
+                  : 0}
+                )
               </Text>
             </View>
           </TouchableOpacity>
@@ -281,9 +286,14 @@ export default function RentalScreen() {
                   selectedTab === SessionStatus.Upcoming && styles.activeTabText,
                 ]}
               >
-                Sắp diễn ra ({(Array.isArray(sessions) ? sessions.filter((session) => {
-                  return session.status === SessionStatus.Upcoming;
-                }) : []).length})
+                Sắp diễn ra (
+                {Array.isArray(sessions)
+                  ? sessions.filter(
+                    (session) =>
+                      parseSessionStatus(session.status) === SessionStatus.Upcoming
+                  ).length
+                  : 0}
+                )
               </Text>
             </View>
           </TouchableOpacity>
@@ -306,9 +316,14 @@ export default function RentalScreen() {
                   selectedTab === SessionStatus.InProgress && styles.activeTabText,
                 ]}
               >
-                Đang diễn ra ({(Array.isArray(sessions) ? sessions.filter((session) => {
-                  return session.status === SessionStatus.InProgress;
-                }) : []).length})
+                Đang diễn ra (
+                {Array.isArray(sessions)
+                  ? sessions.filter(
+                    (session) =>
+                      parseSessionStatus(session.status) === SessionStatus.InProgress
+                  ).length
+                  : 0}
+                )
               </Text>
             </View>
           </TouchableOpacity>
@@ -331,9 +346,14 @@ export default function RentalScreen() {
                   selectedTab === SessionStatus.Completed && styles.activeTabText,
                 ]}
               >
-                Hoàn thành ({(Array.isArray(sessions) ? sessions.filter((session) => {
-                  return session.status === SessionStatus.Completed;
-                }) : []).length})
+                Hoàn thành (
+                {Array.isArray(sessions)
+                  ? sessions.filter(
+                    (session) =>
+                      parseSessionStatus(session.status) === SessionStatus.Completed
+                  ).length
+                  : 0}
+                )
               </Text>
             </View>
           </TouchableOpacity>
@@ -356,9 +376,14 @@ export default function RentalScreen() {
                   selectedTab === SessionStatus.Reschedule && styles.activeTabText,
                 ]}
               >
-                Đổi lịch ({(Array.isArray(sessions) ? sessions.filter((session) => {
-                  return session.status === SessionStatus.Reschedule;
-                }) : []).length})
+                Đổi lịch (
+                {Array.isArray(sessions)
+                  ? sessions.filter(
+                    (session) =>
+                      parseSessionStatus(session.status) === SessionStatus.Reschedule
+                  ).length
+                  : 0}
+                )
               </Text>
             </View>
           </TouchableOpacity>
@@ -381,9 +406,14 @@ export default function RentalScreen() {
                   selectedTab === SessionStatus.Cancelled && styles.activeTabText,
                 ]}
               >
-                Đã hủy ({(Array.isArray(sessions) ? sessions.filter((session) => {
-                  return session.status === SessionStatus.Cancelled;
-                }) : []).length})
+                Đã hủy (
+                {Array.isArray(sessions)
+                  ? sessions.filter(
+                    (session) =>
+                      parseSessionStatus(session.status) === SessionStatus.Cancelled
+                  ).length
+                  : 0}
+                )
               </Text>
             </View>
           </TouchableOpacity>

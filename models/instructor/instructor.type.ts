@@ -104,3 +104,46 @@ export interface InstructorApplicant {
   applicationStatus: number;
   trackingHistories: string[];
 }
+
+export interface IStatisticsInstructor {
+  totalRevenue: number;
+  totalDeduction: number;
+  revenueAfterDeduction: number;
+  totalFundsWithdrawn: number;
+}
+
+export interface IInstructorStatistic {
+  totalPackageCount: number;
+  totalCarCount: number;
+  totalUpcomingSessionCount: number;
+  recentPurchases: IRecentPackagePurchases[];
+  totalSessionByStatusCount: Record<string, number>;
+  totalSessionByDay: Record<string, Record<string, number>>; // Based on "from and to"
+  topPersonalPackages: ITopPersonalPackage[];
+  topPersonalCars: ITopPersonalCar[];
+}
+
+export interface IRecentPackagePurchases {
+  fullname: string;
+  phoneNumber: string;
+  avatarUrl: string;
+  packageName: string;
+  boughtTime: string; // ISO 8601 date string
+  // Navigational ids
+  noviceDriverUserId: string; // UUID as string
+  packageId: string; // UUID as string
+}
+
+export interface ITopPersonalPackage {
+  id: string; // UUID as string
+  name: string;
+  bookCount: number;
+  percentage: number;
+}
+
+export interface ITopPersonalCar {
+  id: string; // UUID as string
+  name: string;
+  bookCount: number;
+  percentage: number;
+}

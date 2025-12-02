@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   StatusBar,
   Modal,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from "react-native";
 import { PieChart, BarChart } from "react-native-chart-kit";
 import { LinearGradient } from "expo-linear-gradient";
@@ -24,6 +25,10 @@ import {
   ChevronDown,
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
+import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { StatisticTimeType } from "@/models/enum/StatisticTimeType.enum";
+import { IInstructorStatistic, IStatisticsInstructor } from "@/models/instructor/instructor.type";
 
 const { width: screenWidth } = Dimensions.get("window");
 const CURRENT_YEAR = new Date().getFullYear();
@@ -211,11 +216,7 @@ const activityData = {
   ],
 };
 
-const chartTitleByViewMode = {
-  week: "Buổi Tập Lái Theo Tuần",
-  month: "Buổi Tập Lái Theo Tháng",
-  year: "Buổi Tập Lái Theo Năm",
-};
+// Chart title will be computed dynamically with time info
 
 const VIEW_MODE_OPTIONS: DropdownOption<"year" | "month" | "week">[] = [
   { label: "Năm", value: "year" },
@@ -278,23 +279,174 @@ const students = [
 ];
 
 export default function OverviewScreen() {
+  const [walletState, walletViewModel] = useViewModel(WalletViewModel, (state) => state.wallet);
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"year" | "month" | "week">("year");
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
   const [selectedWeek, setSelectedWeek] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [statisticsData, setStatisticsData] = useState<IInstructorStatistic | null>(null);
+  const [revenueData, setRevenueData] = useState<IStatisticsInstructor | null>(null);
 
-  const totalPackages = packageData.length;
-  const totalSessions = students.reduce((s, st) => s + st.sessions, 0);
-  const totalCancelled = students.reduce((s, st) => s + st.cancelled, 0);
-  const totalRescheduled = students.reduce((s, st) => s + st.rescheduled, 0);
+  // Map viewMode to StatisticTimeType
+  const getStatisticTimeType = (): StatisticTimeType => {
+    switch (viewMode) {
+      case "week":
+        return StatisticTimeType.Weekly;
+      case "month":
+        return StatisticTimeType.Monthly;
+      case "year":
+        return StatisticTimeType.Yearly;
+      default:
+        return StatisticTimeType.Yearly;
+    }
+  };
 
-  const grossRevenue = 12000000;
-  const commissionRate = 0.15;
-  const commission = Math.round(grossRevenue * commissionRate);
-  const netRevenue = grossRevenue - commission;
-  const activeSessions = activityData[viewMode];
+  // Build filter object for API
+  const buildFilter = () => {
+    const filter: any = {
+      type: getStatisticTimeType(),
+    };
+    if (selectedYear) filter.year = selectedYear;
+    if (viewMode === "month" || viewMode === "week") {
+      if (selectedMonth) filter.month = selectedMonth;
+    }
+    if (viewMode === "week") {
+      if (selectedWeek) filter.week = selectedWeek;
+    }
+    return filter;
+  };
+
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const filter = buildFilter();
+        const [statistics, revenue] = await Promise.all([
+          walletViewModel.getStatisticsInstructor(filter),
+          walletViewModel.getStatisticOverviewPriceInstructor(),
+        ]);
+        setStatisticsData(statistics);
+        setRevenueData(revenue);
+      } catch (error) {
+        console.error("Error fetching statistics:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [viewMode, selectedYear, selectedMonth, selectedWeek]);
+
+  // Calculate derived data from API response
+  const totalPackages = statisticsData?.totalPackageCount ?? 0;
+  const totalSessions = useMemo(() => {
+    if (!statisticsData?.totalSessionByStatusCount) return 0;
+    return Object.values(statisticsData.totalSessionByStatusCount).reduce((sum, count) => sum + count, 0);
+  }, [statisticsData]);
+
+  const totalCancelled = statisticsData?.totalSessionByStatusCount?.Cancelled ?? 0;
+  const totalRescheduled = statisticsData?.totalSessionByStatusCount?.Reschedule ?? 0;
+
+  const grossRevenue = revenueData?.totalRevenue ?? 0;
+  const commission = revenueData?.totalDeduction ?? 0;
+  const netRevenue = revenueData?.revenueAfterDeduction ?? 0;
+  const commissionRate = grossRevenue > 0 ? commission / grossRevenue : 0;
+
+  // Transform API data for charts
+  const pieData = useMemo(() => {
+    if (!statisticsData?.topPersonalPackages || statisticsData.topPersonalPackages.length === 0) {
+      return [];
+    }
+    return statisticsData.topPersonalPackages.map((pkg, idx) => ({
+      name: pkg.name.length > 20 ? pkg.name.substring(0, 20) + "..." : pkg.name,
+      population: pkg.bookCount || 0,
+      color: COLORS[idx % COLORS.length],
+      legendFontColor: AppColors.textPrimary,
+      legendFontSize: 12,
+    }));
+  }, [statisticsData]);
+
+  // Transform session data for bar chart based on viewMode
+  const activeSessions = useMemo(() => {
+    // Handle both totalSessionByDay and totalSessionByday (backend typo)
+    const dayData = (statisticsData as any)?.totalSessionByDay || (statisticsData as any)?.totalSessionByday || {};
+
+    const sessions: Array<{ period: string; completed: number; cancelled: number; rescheduled: number }> = [];
+
+    if (viewMode === "year") {
+      // Hiển thị 12 tháng trong năm
+      for (let month = 1; month <= 12; month++) {
+        const monthKey = month.toString();
+        const dataItem = dayData[monthKey];
+        const completed = dataItem?.Completed ?? 0;
+        const cancelled = dataItem?.Cancelled ?? 0;
+        const rescheduled = dataItem?.Reschedule ?? 0;
+
+        sessions.push({
+          period: ` ${month}`,
+          completed,
+          cancelled,
+          rescheduled,
+        });
+      }
+    } else if (viewMode === "month") {
+      // Hiển thị tất cả các ngày trong tháng
+      const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate(); // 0 = last day of previous month, so this gets last day of selectedMonth
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayKey = day.toString();
+        const dataItem = dayData[dayKey];
+        const completed = dataItem?.Completed ?? 0;
+        const cancelled = dataItem?.Cancelled ?? 0;
+        const rescheduled = dataItem?.Reschedule ?? 0;
+
+        sessions.push({
+          period: `${day}/${selectedMonth}`,
+          completed,
+          cancelled,
+          rescheduled,
+        });
+      }
+    } else {
+      // Week view - hiển thị 7 ngày trong tuần
+      // Tính toán ngày bắt đầu của tuần (Thứ 2)
+      const today = new Date(selectedYear, selectedMonth - 1, 1); // First day of selected month
+      const firstMonday = new Date(today);
+      const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ...
+      const daysToMonday = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : 8 - dayOfWeek);
+      firstMonday.setDate(today.getDate() + daysToMonday);
+
+      // Tính tuần dựa trên selectedWeek (tuần 1, 2, 3, 4)
+      const weekStartDate = new Date(firstMonday);
+      weekStartDate.setDate(firstMonday.getDate() + (selectedWeek - 1) * 7);
+
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const currentDate = new Date(weekStartDate);
+        currentDate.setDate(weekStartDate.getDate() + dayOffset);
+        const day = currentDate.getDate();
+        const dayKey = day.toString();
+        const dataItem = dayData[dayKey];
+        const completed = dataItem?.Completed ?? 0;
+        const cancelled = dataItem?.Cancelled ?? 0;
+        const rescheduled = dataItem?.Reschedule ?? 0;
+
+        const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+        const dayName = dayNames[currentDate.getDay()];
+
+        sessions.push({
+          period: `${dayName} ${day}/${selectedMonth}`,
+          completed,
+          cancelled,
+          rescheduled,
+        });
+      }
+    }
+
+    return sessions;
+  }, [statisticsData, viewMode, selectedYear, selectedMonth, selectedWeek]);
 
   const getActiveFilterLabel = () => {
     if (viewMode === "year") {
@@ -304,6 +456,16 @@ export default function OverviewScreen() {
       return `Tháng ${selectedMonth}/${selectedYear}`;
     }
     return `Tuần ${selectedWeek} · Tháng ${selectedMonth}/${selectedYear}`;
+  };
+
+  const getChartTitle = () => {
+    if (viewMode === "year") {
+      return `Buổi Tập Lái Theo Năm ${selectedYear}`;
+    }
+    if (viewMode === "month") {
+      return `Buổi Tập Lái Theo Tháng ${selectedMonth}/${selectedYear}`;
+    }
+    return `Buổi Tập Lái Theo Tuần ${selectedWeek} - Tháng ${selectedMonth}/${selectedYear}`;
   };
 
   const handleViewModeChange = (mode: "year" | "month" | "week") => {
@@ -318,40 +480,77 @@ export default function OverviewScreen() {
   };
 
   const handleApplyFilter = () => {
-    console.log("Applying filters", {
-      viewMode,
-      selectedYear,
-      selectedMonth,
-      selectedWeek,
-    });
     setIsFilterOpen(false);
+    // useEffect will automatically refetch data when filter values change
   };
 
-  const pieData = packageData.map((p) => ({
-    name: p.name.split(" ")[0] + "...",
-    population: p.buyers,
-    color: COLORS[packageData.indexOf(p) % COLORS.length],
-    legendFontColor: AppColors.textPrimary,
-    legendFontSize: 12,
-  }));
+  // Calculate dynamic chart width based on number of data points
+  const chartWidth = useMemo(() => {
+    const baseWidth = screenWidth - 80;
+    const minBarWidth = 50; // Minimum width per bar
+    const calculatedWidth = activeSessions.length * minBarWidth;
+    return Math.max(baseWidth, calculatedWidth);
+  }, [activeSessions.length]);
 
-  const barData = {
-    labels: activeSessions.map((s) => s.period),
-    datasets: [
-      {
-        data: activeSessions.map((s) => s.completed),
-        color: (opacity = 1) => AppColors.primary,
-      },
-      {
-        data: activeSessions.map((s) => s.rescheduled),
-        color: (opacity = 1) => AppColors.primaryLight || AppColors.primary,
-      },
-      {
-        data: activeSessions.map((s) => s.cancelled),
-        color: (opacity = 1) => AppColors.primaryDark || AppColors.primary,
-      },
-    ],
-  };
+  const barData = useMemo(() => {
+    if (!activeSessions || activeSessions.length === 0) {
+      return {
+        labels: [],
+        datasets: [
+          {
+            data: [],
+            color: (opacity = 1) => AppColors.primary,
+          },
+          {
+            data: [],
+            color: (opacity = 1) => AppColors.primaryLight || AppColors.primary,
+          },
+          {
+            data: [],
+            color: (opacity = 1) => AppColors.primaryDark || AppColors.primary,
+          },
+        ],
+      };
+    }
+
+    return {
+      labels: activeSessions.map((s) => s.period),
+      datasets: [
+        {
+          data: activeSessions.map((s) => s.completed),
+          color: (opacity = 1) => AppColors.primary,
+        },
+        {
+          data: activeSessions.map((s) => s.rescheduled),
+          color: (opacity = 1) => AppColors.primaryLight || AppColors.primary,
+        },
+        {
+          data: activeSessions.map((s) => s.cancelled),
+          color: (opacity = 1) => AppColors.primaryDark || AppColors.primary,
+        },
+      ],
+    };
+  }, [activeSessions]);
+
+  // Calculate max value for y-axis scaling
+  const maxValue = useMemo(() => {
+    if (!activeSessions || activeSessions.length === 0) return 1;
+    const allValues = activeSessions.flatMap(s => [s.completed, s.cancelled, s.rescheduled]);
+    const max = Math.max(...allValues, 1);
+    // Round up to nearest integer, but if max is 1, keep it at 1
+    return max <= 1 ? 1 : Math.ceil(max);
+  }, [activeSessions]);
+
+  // Calculate segments for y-axis (number of divisions)
+  const yAxisSegments = useMemo(() => {
+    if (maxValue <= 1) {
+      return 1; // Will show 0 and 1
+    } else if (maxValue <= 5) {
+      return maxValue; // Show each integer from 0 to maxValue
+    } else {
+      return 5; // Limit to 5 segments for readability
+    }
+  }, [maxValue]);
 
   const chartConfig = {
     backgroundColor: "#ffffff",
@@ -369,6 +568,15 @@ export default function OverviewScreen() {
       stroke: AppColors.primary,
     },
   };
+
+  if (isLoading && !statisticsData && !revenueData) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color={AppColors.primary} />
+        <Text style={{ marginTop: 16, color: AppColors.gray600 }}>Đang tải dữ liệu...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -446,7 +654,7 @@ export default function OverviewScreen() {
         />
         <KPI
           title="Doanh thu ròng"
-          value={`${(netRevenue / 1000000).toLocaleString("vi-VN")}TR VNĐ`}
+          value={`${netRevenue.toLocaleString("vi-VN")} đ`}
           sub={`Hoa hồng ${commissionRate * 100}%`}
           icon={<TrendingUp size={24} color={AppColors.textWhite} />}
           color={[AppColors.success, AppColors.success]}
@@ -464,19 +672,25 @@ export default function OverviewScreen() {
             <Text style={styles.chartTitle}>Gói Dịch Vụ Được Ưa Chuộng</Text>
           </View>
           <View style={styles.pieChartContainer}>
-            <PieChart
-              data={pieData}
-              width={screenWidth - 80}
-              height={220}
-              chartConfig={chartConfig}
-              accessor="population"
-              backgroundColor="transparent"
-              paddingLeft="15"
-              absolute
-            />
+            {pieData.length > 0 ? (
+              <PieChart
+                data={pieData}
+                width={screenWidth - 80}
+                height={220}
+                chartConfig={chartConfig}
+                accessor="population"
+                backgroundColor="transparent"
+                paddingLeft="15"
+                absolute
+              />
+            ) : (
+              <View style={{ height: 220, justifyContent: "center", alignItems: "center" }}>
+                <Text style={{ color: AppColors.gray500 }}>Chưa có dữ liệu</Text>
+              </View>
+            )}
           </View>
           <View style={styles.packageList}>
-            {packageData.map((p, idx) => (
+            {(statisticsData?.topPersonalPackages ?? []).map((p, idx) => (
               <TouchableOpacity
                 key={p.name}
                 onPress={() =>
@@ -495,19 +709,17 @@ export default function OverviewScreen() {
                     ]}
                   />
                   <View style={styles.packageInfo}>
-                    <Text style={styles.packageName}>{p.name}</Text>
+                    <Text style={styles.packageName} numberOfLines={0}>
+                      {p.name}
+                    </Text>
                     <Text style={styles.packageBuyers}>
-                      {p.buyers} khách hàng
+                      {p.bookCount} lượt đặt
                     </Text>
                   </View>
                 </View>
-                <Text style={styles.packagePercentage}>
-                  {Math.round(
-                    (p.buyers / packageData.reduce((s, x) => s + x.buyers, 0)) *
-                      100
-                  )}
-                  %
-                </Text>
+                {/* <Text style={styles.packagePercentage}>
+                  {p.percentage.toFixed(0)}%
+                </Text> */}
               </TouchableOpacity>
             ))}
           </View>
@@ -518,21 +730,36 @@ export default function OverviewScreen() {
           <View style={styles.chartHeader}>
             <TrendingUp size={20} color={AppColors.primary} />
             <Text style={styles.chartTitle}>
-              {chartTitleByViewMode[viewMode]}
+              {getChartTitle()}
             </Text>
           </View>
           <View style={styles.barChartContainer}>
-            <BarChart
-              data={barData}
-              width={screenWidth - 80}
-              height={220}
-              chartConfig={chartConfig}
-              verticalLabelRotation={0}
-              showValuesOnTopOfBars
-              fromZero
-              yAxisLabel=""
-              yAxisSuffix=""
-            />
+            {activeSessions.length > 0 && barData.labels.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={true}
+                contentContainerStyle={{ paddingRight: 20 }}
+                style={{ width: "100%" }}
+              >
+                <BarChart
+                  data={barData}
+                  width={chartWidth}
+                  height={220}
+                  chartConfig={chartConfig}
+                  verticalLabelRotation={0}
+                  showValuesOnTopOfBars
+                  fromZero
+                  yAxisLabel=""
+                  yAxisSuffix=""
+                  segments={yAxisSegments}
+                  yAxisInterval={1}
+                />
+              </ScrollView>
+            ) : (
+              <View style={{ height: 220, justifyContent: "center", alignItems: "center" }}>
+                <Text style={{ color: AppColors.gray500 }}>Chưa có dữ liệu</Text>
+              </View>
+            )}
           </View>
           <View style={styles.sessionStats}>
             <View
@@ -603,7 +830,7 @@ export default function OverviewScreen() {
             <View style={styles.revenueItem}>
               <Text style={styles.revenueItemLabel}>Tổng doanh thu</Text>
               <Text style={styles.revenueItemValue}>
-                {grossRevenue.toLocaleString("vi-VN")} VNĐ
+                {grossRevenue.toLocaleString("vi-VN")} đ
               </Text>
             </View>
             <View style={styles.revenueItem}>
@@ -611,7 +838,7 @@ export default function OverviewScreen() {
               <Text
                 style={[styles.revenueItemValue, { color: AppColors.error }]}
               >
-                {commission.toLocaleString("vi-VN")} VNĐ
+                {commission.toLocaleString("vi-VN")} đ
               </Text>
             </View>
             <View style={styles.revenueItem}>
@@ -619,172 +846,13 @@ export default function OverviewScreen() {
               <Text
                 style={[styles.revenueItemValue, { color: AppColors.success }]}
               >
-                {netRevenue.toLocaleString("vi-VN")} VNĐ
+                {netRevenue.toLocaleString("vi-VN")} đ
               </Text>
             </View>
           </View>
         </LinearGradient>
       </View>
 
-      {/* Novice driver Table */}
-      <View style={styles.studentTableSession}>
-        <View style={styles.studentTableCard}>
-          <Text style={styles.studentTableTitle}>Danh Sách Khách Hàng</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={true}
-            contentContainerStyle={styles.tableScrollContainer}
-          >
-            <View style={styles.table}>
-              <View style={styles.tableHeader}>
-                <View
-                  style={[
-                    styles.tableHeaderCell,
-                    styles.tableHeaderCellStudent,
-                  ]}
-                >
-                  <Text style={styles.tableHeaderText}>Khách hàng</Text>
-                </View>
-                <View
-                  style={[
-                    styles.tableHeaderCell,
-                    styles.tableHeaderCellPackage,
-                  ]}
-                >
-                  <Text style={styles.tableHeaderText}>Gói dịch vụ</Text>
-                </View>
-                <View
-                  style={[
-                    styles.tableHeaderCell,
-                    styles.tableHeaderCellSessions,
-                  ]}
-                >
-                  <Text
-                    style={[styles.tableHeaderText, styles.tableHeaderCenter]}
-                  >
-                    Buổi tập lái
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.tableHeaderCell,
-                    styles.tableHeaderCellCompleted,
-                  ]}
-                >
-                  <Text
-                    style={[styles.tableHeaderText, styles.tableHeaderCenter]}
-                  >
-                    Hoàn thành
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.tableHeaderCell,
-                    styles.tableHeaderCellRescheduled,
-                  ]}
-                >
-                  <Text
-                    style={[styles.tableHeaderText, styles.tableHeaderCenter]}
-                  >
-                    Đã dời
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.tableHeaderCell,
-                    styles.tableHeaderCellCancelled,
-                  ]}
-                >
-                  <Text
-                    style={[styles.tableHeaderText, styles.tableHeaderCenter]}
-                  >
-                    Đã hủy
-                  </Text>
-                </View>
-              </View>
-              {students.map((s) => (
-                <View key={s.id} style={styles.tableRow}>
-                  <View
-                    style={[styles.tableRowCell, styles.tableRowCellStudent]}
-                  >
-                    <View style={styles.studentInfo}>
-                      <View style={styles.studentAvatar}>
-                        <Text style={styles.studentAvatarText}>
-                          {s.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .slice(0, 2)
-                            .join("")}
-                        </Text>
-                      </View>
-                      <View>
-                        <Text style={styles.studentName}>{s.name}</Text>
-                        <Text style={styles.studentPhone}>{s.phone}</Text>
-                      </View>
-                    </View>
-                  </View>
-                  <View
-                    style={[styles.tableRowCell, styles.tableRowCellPackage]}
-                  >
-                    <Text style={styles.tableCell}>{s.package}</Text>
-                  </View>
-                  <View
-                    style={[styles.tableRowCell, styles.tableRowCellSessions]}
-                  >
-                    <Text
-                      style={[
-                        styles.tableCell,
-                        styles.tableCellCenter,
-                        styles.tableCellBold,
-                      ]}
-                    >
-                      {s.sessions}
-                    </Text>
-                  </View>
-                  <View
-                    style={[styles.tableRowCell, styles.tableRowCellCompleted]}
-                  >
-                    <View style={styles.tableCellCenter}>
-                      <View style={styles.completedBadge}>
-                        <Text style={styles.completedBadgeText}>
-                          {s.completed}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                  <View
-                    style={[
-                      styles.tableRowCell,
-                      styles.tableRowCellRescheduled,
-                    ]}
-                  >
-                    <View style={styles.tableCellCenter}>
-                      {s.rescheduled > 0 ? (
-                        <Text style={styles.rescheduledText}>
-                          {s.rescheduled}
-                        </Text>
-                      ) : (
-                        <Text style={styles.tableCellEmpty}>-</Text>
-                      )}
-                    </View>
-                  </View>
-                  <View
-                    style={[styles.tableRowCell, styles.tableRowCellCancelled]}
-                  >
-                    <View style={styles.tableCellCenter}>
-                      {s.cancelled > 0 ? (
-                        <Text style={styles.cancelledText}>{s.cancelled}</Text>
-                      ) : (
-                        <Text style={styles.tableCellEmpty}>-</Text>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-      </View>
 
       <Modal
         visible={isFilterOpen}
@@ -1053,7 +1121,7 @@ const styles = StyleSheet.create({
   },
   packageItem: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     padding: 12,
     borderRadius: 8,
@@ -1075,11 +1143,13 @@ const styles = StyleSheet.create({
   },
   packageInfo: {
     flex: 1,
+    flexShrink: 1,
   },
   packageName: {
     fontSize: 14,
     fontWeight: "500",
     color: AppColors.textPrimary,
+    flexWrap: "wrap",
   },
   packageBuyers: {
     fontSize: 12,
@@ -1090,8 +1160,8 @@ const styles = StyleSheet.create({
     color: AppColors.gray600,
   },
   barChartContainer: {
-    alignItems: "center",
     marginVertical: 16,
+    overflow: "hidden",
   },
   sessionStats: {
     flexDirection: "row",

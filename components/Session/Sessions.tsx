@@ -66,8 +66,34 @@ const STATUS_OPTIONS: { key: StatusFilter; label: string }[] = [
 
 const mapStatusKey = (status?: SessionStatus | number | string): StatusFilter => {
     if (status === undefined || status === null) return "planning";
-    const statusNumber =
-        typeof status === "string" ? parseInt(status, 10) : Number(status);
+
+    // Nếu backend trả string như "Completed", "Planning", "Pending"...
+    if (typeof status === "string" && status.trim().length > 0 && isNaN(Number(status))) {
+        const normalized = status.trim().toLowerCase();
+        switch (normalized) {
+            case "planning":
+            case "pending":
+            case "pendingapproval":
+            case "pending_approval":
+                return "planning";
+            case "upcoming":
+                return "upcoming";
+            case "inprogress":
+            case "in_progress":
+                return "in_progress";
+            case "completed":
+                return "completed";
+            case "reschedule":
+                return "reschedule";
+            case "cancelled":
+            case "canceled":
+                return "cancelled";
+            default:
+                return "planning";
+        }
+    }
+
+    const statusNumber = Number(status);
 
     switch (statusNumber) {
         case SessionStatus.Planning:
@@ -154,10 +180,8 @@ export default function SessionsList({
 
             let result;
             if (bookingId) {
-                // Fetch sessions for specific booking
                 result = await dispatch(getBookingSessions({ bookingId })).unwrap();
             } else {
-                // Fetch all sessions
                 result = await dispatch(getAllSessions(undefined)).unwrap();
             }
 
@@ -284,7 +308,7 @@ export default function SessionsList({
                     <Text style={styles.emptyTitle}>Chưa có lịch phù hợp</Text>
                     <Text style={styles.emptySubtitle}>
                         {emptyStateText ||
-                            "Khi có buổi học tương ứng với trạng thái đã chọn, chúng sẽ xuất hiện tại đây."}
+                            "Khi có buổi thuê tương ứng với trạng thái đã chọn, chúng sẽ xuất hiện tại đây."}
                     </Text>
                 </View>
             ) : (
@@ -296,7 +320,7 @@ export default function SessionsList({
 
                         return (
                             <View key={session.id} style={styles.sessionCard}>
-                                {/* <View
+                                <View
                                     style={[
                                         styles.statusBadge,
                                         {
@@ -311,7 +335,7 @@ export default function SessionsList({
                                     >
                                         {statusConfig?.label}
                                     </Text>
-                                </View> */}
+                                </View>
 
                                 <View style={styles.sessionRow}>
                                     <Calendar size={18} color="#64748b" strokeWidth={2} />
