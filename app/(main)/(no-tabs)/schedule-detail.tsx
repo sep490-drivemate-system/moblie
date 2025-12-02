@@ -20,6 +20,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
+import { updateInstructorSchedule } from "@/features/schedule/scheduleThunk";
 
 type BookingStatus =
   | "routePlanning"
@@ -409,6 +412,7 @@ function LegendItem({ color, label }: LegendItemProps) {
 
 export default function ScheduleDetailScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [savedAvailableDates, setSavedAvailableDates] = useState<string[]>(
@@ -471,20 +475,43 @@ export default function ScheduleDetailScreen() {
     setSelectedDates(new Set());
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (selectedDates.size === 0) return;
     setIsSaving(true);
     setSuccessMessage(null);
 
-    setTimeout(() => {
+    try {
+      // Gộp các ngày rảnh mới với các ngày đã lưu để cập nhật UI
       setSavedAvailableDates((prev) => {
         const combined = new Set([...prev, ...selectedDates]);
         return Array.from(combined);
       });
+
+      // Tính from/to từ tập selectedDates (min và max)
+      const sortedDates = Array.from(selectedDates).sort();
+      const startDate = sortedDates[0];
+      const endDate = sortedDates[sortedDates.length - 1];
+
+      const userId = await getUserIdFromToken();
+      const payload = {
+        instructorId: userId,
+        startTime: startDate,
+        endTime: endDate,
+      };
+      console.log(payload);
+      const res = await dispatch(updateInstructorSchedule(payload)).unwrap();
+
+      if (res.isSuccess) {
+        router.back();
+      }
+
       setSelectedDates(new Set());
-      setIsSaving(false);
       setSuccessMessage("Đã cập nhật lịch rảnh thành công.");
-    }, 1000);
+    } catch (error) {
+      console.log("Failed to update instructor schedule:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const headerDescription =

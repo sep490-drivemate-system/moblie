@@ -28,3 +28,15 @@ export const getInstructorBookedSessions = createThunk<
         buildUrl: (payload) => `/${BOOKING_PATH}/instructor/${payload.instructorId}/upcoming-sessions`
     }
 );
+
+export const updateInstructorSchedule = createThunk<
+    boolean,
+    { instructorId: string; startTime: string; endTime: string }
+>(
+    HttpMethod.POST,
+    "updateInstructorSchedule",
+    `/${INSTRUCTOR_PATH}`,
+    {
+        buildUrl: (payload) => `/${INSTRUCTOR_PATH}/${payload.instructorId}/schedule`
+    }
+);
