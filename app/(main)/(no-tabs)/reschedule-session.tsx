@@ -14,63 +14,161 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   MapPin,
   User,
   Check,
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
-import { useAppDispatch } from "@/lib/redux/hooks";
-import { rescheduleSession, IRescheduleSessionRequest } from "@/features/booking/bookingThunk";
+import { IRescheduleSessionRequest } from "@/features/booking/bookingThunk";
+import Step1 from "@/components/Booking/Step1";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { SessionViewModel } from "@/viewmodels/session/SessionViewModel";
+import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
+
 
 export default function RescheduleSessionScreen() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
   const params = useLocalSearchParams();
+  const [, sessionViewModel] = useViewModel(
+    SessionViewModel,
+    (state) => state.session
+  );
 
   const sessionId = params.sessionId as string;
-  const initialInstructor = (params.instructorName as string) || "";
+  const paramInstructorId = params.instructorId as string | undefined;
+
   const initialDate = (params.date as string) || ""; // ISO-like string
   const initialStartTime = (params.startTime as string) || ""; // HH:mm
   const initialDuration = Number(params.duration || 2);
   const initialLocation = (params.location as string) || "";
 
-  // Debug log để kiểm tra params
-  console.log("🔍 Reschedule params:", {
-    sessionId,
-    instructorName: initialInstructor,
-    date: initialDate,
-    startTime: initialStartTime,
-    duration: params.duration,
-    parsedDuration: initialDuration,
-    location: initialLocation
-  });
 
   const [date, setDate] = useState<string>(initialDate);
   const [startTime, setStartTime] = useState<string>(initialStartTime);
-  const [duration] = useState<number>(initialDuration);
+  const [duration, setDuration] = useState<number>(initialDuration);
   const [location] = useState<string>(initialLocation);
-  const [selectedDate, setSelectedDate] = useState<string>("2025-11-06");
-  const [current, setCurrent] = useState(new Date());
-  const [customTime, setCustomTime] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<string | null>(initialDate || null);
+  const [effectiveInstructorId, setEffectiveInstructorId] = useState<string | null>(
+    paramInstructorId ?? null
+  );
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [rescheduleNote, setRescheduleNote] = useState("");
+  const [isFetchingInstructor, setIsFetchingInstructor] = useState(
+    !paramInstructorId
+  );
+
+  useEffect(() => {
+    if (effectiveInstructorId) {
+      setIsFetchingInstructor(false);
+      return;
+    }
+
+    (async () => {
+      try {
+        const userId = await getUserIdFromToken();
+        if (userId) {
+          setEffectiveInstructorId(userId);
+        }
+      } finally {
+        setIsFetchingInstructor(false);
+      }
+    })();
+  }, [effectiveInstructorId]);
+
+  const buildStartDateTime = (): Date | null => {
+    if (!startTime) return null;
+
+    // Trường hợp startTime là ISO (ví dụ: 2025-12-22T02:00:00)
+    const isoCandidate = new Date(startTime);
+    if (!Number.isNaN(isoCandidate.getTime())) {
+      return isoCandidate;
+    }
+
+    // Trường hợp startTime là HH:mm và có selected date
+    if (!date) return null;
+    const [yearStr, monthStr, dayStr] = String(date).split("-");
+    const [hourStr, minuteStr] = String(startTime).split(":");
+
+    const year = Number(yearStr);
+    const month = Number(monthStr) - 1; // JS month 0-based
+    const dayNum = Number(dayStr);
+    const hour = Number(hourStr);
+    const minute = Number(minuteStr);
+
+    if (
+      [year, month, dayNum, hour, minute].some((v) => Number.isNaN(v))
+    ) {
+      return null;
+    }
+
+    return new Date(year, month, dayNum, hour, minute, 0, 0);
+  };
+
+  const formatTimeDisplay = (value: Date | string | null): string => {
+    if (!value) return "";
+
+    // Nếu đã là Date
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) return "";
+      const hh = value.getHours().toString().padStart(2, "0");
+      const mm = value.getMinutes().toString().padStart(2, "0");
+      return `${hh}:${mm}`;
+    }
+
+    // Nếu là string, thử parse ISO
+    const asDate = new Date(value);
+    if (!Number.isNaN(asDate.getTime())) {
+      const hh = asDate.getHours().toString().padStart(2, "0");
+      const mm = asDate.getMinutes().toString().padStart(2, "0");
+      return `${hh}:${mm}`;
+    }
+
+    // Fallback: nếu đã là dạng HH:mm thì giữ nguyên
+    if (/^\d{1,2}:\d{2}$/.test(value)) {
+      return value;
+    }
+
+    return "";
+  };
+
+  const formatWithTimeZone = (value: Date): string => {
+    if (Number.isNaN(value.getTime())) return "";
+    const tzOffsetMinutes = -value.getTimezoneOffset(); // ví dụ GMT+7 => 420
+    const offsetSign = tzOffsetMinutes >= 0 ? "+" : "-";
+    const absOffset = Math.abs(tzOffsetMinutes);
+    const offsetHours = Math.floor(absOffset / 60)
+      .toString()
+      .padStart(2, "0");
+    const offsetMinutes = (absOffset % 60).toString().padStart(2, "0");
+
+    const localIso = new Date(
+      value.getTime() - value.getTimezoneOffset() * 60000
+    )
+      .toISOString()
+      .replace("Z", "");
+
+    return `${localIso}${offsetSign}${offsetHours}:${offsetMinutes}`;
+  };
+
+  const formattedStartTime = useMemo(
+    () => formatTimeDisplay(startTime || null),
+    [startTime]
+  );
 
   const computedEndTime = useMemo(() => {
-    if (!startTime || !duration) return "";
-    const [hStr, mStr] = String(startTime).split(":");
-    let h = Number(hStr || 0);
-    const m = Number(mStr || 0);
-    h = (h + duration) % 24;
-    const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
-    return `${pad(h)}:${pad(m)}`;
-  }, [startTime, duration]);
+    if (!duration) return "";
+    const startDateTime = buildStartDateTime();
+    if (!startDateTime) return "";
+
+    const end = new Date(startDateTime.getTime() + duration * 60 * 60 * 1000);
+    return formatTimeDisplay(end);
+  }, [startTime, duration, date]);
 
   const onSave = async () => {
-    if (!date || !startTime) {
-      Alert.alert("Thiếu thông tin", "Vui lòng nhập ngày và giờ bắt đầu.");
+    const startDateTime = buildStartDateTime();
+    if (!startDateTime) {
+      Alert.alert("Thiếu thông tin", "Vui lòng chọn đầy đủ ngày và giờ bắt đầu.");
       return;
     }
 
@@ -82,25 +180,29 @@ export default function RescheduleSessionScreen() {
     try {
       setIsRescheduling(true);
 
-      // Create start datetime from selected date and time
-      const startDateTime = new Date(date);
-      const [hours, minutes] = startTime.split(':').map(Number);
-      startDateTime.setHours(hours, minutes, 0, 0);
-
       // Calculate end datetime
       const endDateTime = new Date(startDateTime);
       endDateTime.setMinutes(endDateTime.getMinutes() + (duration * 60));
 
+
+      console.log("startDateTime", startDateTime.toISOString());
+      console.log("endDateTime", endDateTime.toISOString());
       const rescheduleData: IRescheduleSessionRequest = {
         note: rescheduleNote.trim(),
-        reschedule_start_time: startDateTime.toISOString(),
-        reschedule_end_time: endDateTime.toISOString()
+        newStartTime: formatWithTimeZone(startDateTime),
+        newEndTime: formatWithTimeZone(endDateTime),
       };
 
-      await dispatch(rescheduleSession({ sessionId, rescheduleData })).unwrap();
+      const success = await sessionViewModel.rescheduleSession(
+        sessionId,
+        rescheduleData
+      );
+      if (!success) {
+        throw new Error("Reschedule failed");
+      }
 
       Alert.alert(
-        "Thành công", 
+        "Thành công",
         "Đã gửi yêu cầu đổi lịch thành công. Vui lòng chờ xác nhận từ giảng viên.",
         [
           {
@@ -117,190 +219,7 @@ export default function RescheduleSessionScreen() {
     }
   };
 
-  const formatTime = (time: string) => time.replace(":", "h");
 
-  const generateTimeSlots = () => {
-    const slots: string[] = [];
-    for (let hour = 6; hour <= 22; hour++) {
-      slots.push(`${hour.toString().padStart(2, "0")}:00`);
-    }
-    return slots;
-  };
-
-  const timeSlots = useMemo(() => generateTimeSlots(), []);
-
-
-  const isTimeSlotAvailable = (time: string): boolean => {
-    // For now, all time slots are available
-    // In production, you would check against real booking data
-    return true;
-  };
-
-  const handleTimeSlotPress = (time: string) => {
-    if (isTimeSlotAvailable(time)) {
-      setStartTime(time);
-      setCustomTime("");
-    }
-  };
-
-  const handleCustomTimeSubmit = () => {
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/;
-    if (!timeRegex.test(customTime)) return;
-    if (isTimeSlotAvailable(customTime)) {
-      setStartTime(customTime);
-    }
-  };
-  useEffect(() => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    const todayString = `${year}-${month}-${day}`;
-    console.log("Setting selectedDate to:", todayString);
-    setDate(todayString);
-  }, []);
-
-  const formatSelectedDate = (dateString: string) => {
-    const [year, month, day] = dateString.split("-").map(Number);
-    const date = new Date(year, month - 1, day);
-
-    console.log("Input dateString test:", dateString);
-    console.log("Parsed date:", date);
-    console.log(
-      "Formatted date:",
-      date.toLocaleDateString("vi-VN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })
-    );
-
-    return date.toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
-  const renderCalendar = () => {
-    const current = new Date();
-    const year = current.getFullYear();
-    const month = current.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-
-    // Calculate start date of calendar grid (Monday of the week containing first day)
-    const startDate = new Date(firstDay);
-    const dayOfWeek = firstDay.getDay();
-    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    startDate.setDate(startDate.getDate() - daysToSubtract);
-
-    const days = [];
-    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-    // Header with day names
-    const headerDays = dayNames.map((day) => (
-      <View key={day} style={styles.dayHeader}>
-        <Text style={styles.dayHeaderText}>{day}</Text>
-      </View>
-    ));
-
-    // Generate calendar days
-    for (let week = 0; week < 6; week++) {
-      const weekDays = [];
-      for (let day = 0; day < 7; day++) {
-        const currentDate = new Date(startDate);
-        currentDate.setDate(startDate.getDate() + week * 7 + day);
-
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, "0");
-        const dayNum = String(currentDate.getDate()).padStart(2, "0");
-        const dateString = `${year}-${month}-${dayNum}`;
-
-        const isCurrent = currentDate.getMonth() === current.getMonth();
-        const isSelected = dateString === "2025-11-06";
-        const dayNumber = currentDate.getDate();
-
-        // For now, no special indicators for dates
-        const hasBookings = false;
-        const isBusy = false;
-
-        weekDays.push(
-          <TouchableOpacity
-            key={dateString}
-            style={[
-              styles.dayButton,
-              !isCurrent && styles.dayButtonOtherMonth,
-              isSelected && styles.dayButtonSelected,
-            ]}
-            onPress={() => {
-              console.log("Calendar day clicked - dateString:", dateString);
-              console.log("Calendar day clicked - dayNumber:", dayNumber);
-              setSelectedDate(dateString);
-            }}
-          >
-            <Text
-              style={[
-                styles.dayText,
-                !isCurrent && styles.dayTextOtherMonth,
-                isSelected && styles.dayTextSelected,
-              ]}
-            >
-              {dayNumber}
-            </Text>
-            <View style={styles.dayIndicators}>
-              {hasBookings && <View style={styles.greenDot} />}
-              {isBusy && <View style={styles.redDot} />}
-            </View>
-          </TouchableOpacity>
-        );
-      }
-      days.push(
-        <View key={week} style={styles.weekRow}>
-          {weekDays}
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.calendarContainer}>
-        <View style={styles.calendarHeader}>
-          <TouchableOpacity
-            style={styles.monthButton}
-            onPress={() => {
-              const newMonth = new Date(current);
-              newMonth.setMonth(newMonth.getMonth() - 1);
-              setCurrent(newMonth);
-            }}
-          >
-            <ChevronLeft size={20} color={"#70E000"} />
-          </TouchableOpacity>
-
-          <Text style={styles.monthTitle}>
-            {current.toLocaleDateString("vi-VN", {
-              month: "long",
-              year: "numeric",
-            })}
-          </Text>
-
-          <TouchableOpacity
-            style={styles.monthButton}
-            onPress={() => {
-              const newMonth = new Date(current);
-              newMonth.setMonth(newMonth.getMonth() + 1);
-              setCurrent(newMonth);
-            }}
-          >
-            <ChevronRight size={20} color={"#70E000"} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.dayHeaders}>{headerDays}</View>
-
-        {days}
-      </View>
-    );
-  };
 
   return (
     <View style={styles.container}>
@@ -318,127 +237,60 @@ export default function RescheduleSessionScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Thông tin buổi tập lái</Text>
-
-          <View style={styles.fieldRow}>
-            <User size={18} color="#64748b" strokeWidth={2} />
-            <Text style={styles.label}>Người hướng dẫn</Text>
-            <Text style={styles.value} numberOfLines={1}>
-              {initialInstructor}
-            </Text>
-          </View>
-
-          <View style={styles.field}>
-            <View style={styles.fieldLabelRow}>
-              <Calendar size={18} color="#64748b" strokeWidth={2} />
-              <Text style={styles.fieldLabel}>Chọn ngày thuê</Text>
-            </View>
-            {renderCalendar()}
-          </View>
-
-          <View style={styles.field}>
-            <View style={styles.fieldLabelRow}>
-              <Clock size={18} color="#64748b" strokeWidth={2} />
-              <Text style={styles.fieldLabel}>Chọn giờ bắt đầu</Text>
-            </View>
-            <View style={styles.customTimeSection}>
-              <Text style={styles.customTimeLabel}>
-                Nhập giờ bắt đầu (HH:MM):
+          {isFetchingInstructor || !effectiveInstructorId ? (
+            <View style={{ paddingVertical: 40, alignItems: "center" }}>
+              <ActivityIndicator size="small" color={AppColors.primary} />
+              <Text style={{ marginTop: 8, color: "#475569" }}>
+                Đang tải thông tin lịch
               </Text>
-              <View style={styles.customTimeInputContainer}>
-                <TextInput
-                  style={styles.customTimeInput}
-                  value={customTime}
-                  onChangeText={setCustomTime}
-                  placeholder="VD: 08:30"
-                  placeholderTextColor="#94a3b8"
-                  keyboardType="numeric"
-                  maxLength={5}
-                />
-                <TouchableOpacity
-                  style={{
-                    ...styles.customTimeButton,
-                    ...(customTime ? styles.customTimeButtonActive : {}),
-                  }}
-                  onPress={handleCustomTimeSubmit}
-                  disabled={!customTime}
-                >
-                  <Text
-                    style={{
-                      ...styles.customTimeButtonText,
-                      ...(customTime ? styles.customTimeButtonTextActive : {}),
-                    }}
-                  >
-                    OK
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {startTime ? (
-                <View style={styles.selectedTimeDisplay}>
-                  <Check size={16} color={AppColors.primary} strokeWidth={3} />
-                  <Text style={styles.selectedTimeText}>
-                    Đã chọn: {formatTime(startTime)}
-                  </Text>
-                </View>
-              ) : null}
             </View>
-            <Text style={styles.quickSlotsTitle}>Hoặc chọn nhanh:</Text>
-            <View style={styles.timeSlotsGrid}>
-              {timeSlots.map((time) => {
-                const available = isTimeSlotAvailable(time);
-                const isSelected = startTime === time;
-                return (
-                  <TouchableOpacity
-                    key={time}
-                    style={[
-                      styles.timeSlot,
-                      available
-                        ? styles.timeSlotAvailable
-                        : styles.timeSlotBusy,
-                      isSelected && styles.timeSlotSelected,
-                    ]}
-                    onPress={() => handleTimeSlotPress(time)}
-                    disabled={!available}
-                  >
-                    {isSelected && (
-                      <Check size={14} color="#ffffff" strokeWidth={3} />
-                    )}
-                    <Text
-                      style={[
-                        styles.timeSlotText,
-                        available
-                          ? styles.timeSlotTextAvailable
-                          : styles.timeSlotTextBusy,
-                        isSelected && styles.timeSlotTextSelected,
-                      ]}
-                    >
-                      {formatTime(time)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+          ) : (
+            <Step1
+              instructorId={effectiveInstructorId}
+              selectedDate={selectedDate}
+              selectedStartTime={startTime}
+              selectedEndTime={computedEndTime}
+              selectedDuration={duration}
+              onDateSelect={(d) => {
+                setSelectedDate(d);
+                setDate(d);
+              }}
+              onStartTimeSelect={(time) => {
+                setStartTime(time);
+              }}
+              onEndTimeSelect={() => {
+              }}
+              onDurationChange={(h) => {
+                setDuration(h);
+              }}
+              maxDuration={duration}
+            />
+          )}
+
+          {/* Ngày, giờ bắt đầu, giờ kết thúc (ẩn nếu chưa có giá trị) */}
+          {selectedDate && (
+            <View style={styles.fieldRow}>
+              <Calendar size={18} color="#64748b" strokeWidth={2} />
+              <Text style={styles.label}>Ngày</Text>
+              <Text style={styles.value}>{selectedDate}</Text>
             </View>
-          </View>
+          )}
 
-          <View style={styles.fieldRow}>
-            <Clock size={18} color="#64748b" strokeWidth={2} />
-            <Text style={styles.label}>Thời lượng</Text>
-            <Text style={styles.value}>{duration} giờ</Text>
-          </View>
+          {formattedStartTime && (
+            <View style={styles.fieldRow}>
+              <Clock size={18} color="#64748b" strokeWidth={2} />
+              <Text style={styles.label}>Giờ bắt đầu</Text>
+              <Text style={styles.value}>{formattedStartTime}</Text>
+            </View>
+          )}
 
-          <View style={styles.fieldRow}>
-            <Clock size={18} color="#64748b" strokeWidth={2} />
-            <Text style={styles.label}>Giờ kết thúc</Text>
-            <Text style={styles.value}>{computedEndTime || "--:--"}</Text>
-          </View>
-
-          <View style={styles.fieldRow}>
-            <MapPin size={18} color="#64748b" strokeWidth={2} />
-            <Text style={styles.label}>Địa chỉ</Text>
-            <Text style={styles.value} numberOfLines={2}>
-              {location}
-            </Text>
-          </View>
+          {computedEndTime && (
+            <View style={styles.fieldRow}>
+              <Clock size={18} color="#64748b" strokeWidth={2} />
+              <Text style={styles.label}>Giờ kết thúc</Text>
+              <Text style={styles.value}>{computedEndTime}</Text>
+            </View>
+          )}
 
           <View style={styles.field}>
             <View style={styles.fieldLabelRow}>
@@ -457,8 +309,8 @@ export default function RescheduleSessionScreen() {
           </View>
 
           <View style={styles.actions}>
-            <TouchableOpacity 
-              style={[styles.saveBtn, isRescheduling && { opacity: 0.5 }]} 
+            <TouchableOpacity
+              style={[styles.saveBtn, isRescheduling && { opacity: 0.5 }]}
               onPress={onSave}
               disabled={isRescheduling}
             >

@@ -150,12 +150,9 @@ export default function MyPackagesScreen() {
           <View style={styles.emptyState}>
             <Package size={80} color="#cbd5e1" strokeWidth={1.5} />
             <Text style={styles.emptyTitle}>Bạn chưa có gói nào</Text>
-            <Text style={styles.emptySubtitle}>
-              Khám phá và chọn gói phù hợp với bạn
-            </Text>
             <TouchableOpacity
               style={styles.exploreButton}
-              onPress={() => router.push("/(main)/(tabs)/home")}
+              onPress={() => router.push(ROUTES.PACKAGES)}
             >
               <Text style={styles.exploreButtonText}>Khám phá gói</Text>
             </TouchableOpacity>

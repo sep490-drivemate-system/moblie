@@ -73,3 +73,44 @@ export const calculateHeading = (
     const headingDegrees = (heading * 180) / Math.PI;
     return (headingDegrees + 360) % 360;
 };
+
+const encodeCoordinateComponent = (current: number, previous: number): string => {
+    let coordinate = current - previous;
+    coordinate <<= 1;
+    if (current - previous < 0) {
+        coordinate = ~coordinate;
+    }
+
+    let output = "";
+    while (coordinate >= 0x20) {
+        output += String.fromCharCode((0x20 | (coordinate & 0x1f)) + 63);
+        coordinate >>= 5;
+    }
+    output += String.fromCharCode(coordinate + 63);
+    return output;
+};
+
+export const encodePolyline = (
+    coordinates: Array<{ latitude: number; longitude: number }>
+): string => {
+    if (!Array.isArray(coordinates) || coordinates.length === 0) {
+        return "";
+    }
+
+    let previousLat = 0;
+    let previousLng = 0;
+    let result = "";
+
+    coordinates.forEach(({ latitude, longitude }) => {
+        const scaledLat = Math.round(latitude * 1e5);
+        const scaledLng = Math.round(longitude * 1e5);
+
+        result += encodeCoordinateComponent(scaledLat, previousLat);
+        result += encodeCoordinateComponent(scaledLng, previousLng);
+
+        previousLat = scaledLat;
+        previousLng = scaledLng;
+    });
+
+    return result;
+};

@@ -17,6 +17,8 @@ export interface ISessionDetailDTO {
     noviceDriverNote?: string | null;
     instructorNote?: string | null;
     status: SessionStatus;
+    polylineSesionLog?: string;
+    polylineSesionRoute?: string;
     routeDetails?: IRouteDetailDTO[] | null;
     logDetails?: ILogDetailDTO[] | null;
 }
@@ -25,6 +27,7 @@ export interface IRouteDetailDTO {
     streetName: string;
     latitudeStart: number;
     longitudeStart: number;
+    polyline?: string; // Encoded polyline from Goong API (optional)
 }
 export interface ILogDetailDTO {
     streetName: string;
@@ -32,4 +35,15 @@ export interface ILogDetailDTO {
     longitude: number;
     heading: string;
     speed: number;
+}
+export interface ISessionRouteDetai {
+    polylineSesionRoute: string;
+    routes: ISessionRoute[];
+}
+
+export interface ISessionRoute {
+    textInstruction: string;
+    streetName: string;
+    latitudeStart: number;
+    longitudeStart: number;
 }

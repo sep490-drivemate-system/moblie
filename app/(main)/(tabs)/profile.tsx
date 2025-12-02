@@ -120,7 +120,7 @@ export default function ProfileScreen() {
                 <Text style={styles.menuItemText}>Thông tin tài khoản</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.menuItem}
               activeOpacity={0.7}
               onPress={() =>
@@ -147,7 +147,7 @@ export default function ProfileScreen() {
                 <IdCard size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Giấy tờ tùy thân Novi</Text>
               </View>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() =>
@@ -184,16 +184,16 @@ export default function ProfileScreen() {
             )}
             {(authState.userInfo?.role as UserRole) ===
               UserRole.NoviceDriver && (
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
-              >
-                <View style={styles.menuItemLeft}>
-                  <Package2 size={20} color="#70E000" />
-                  <Text style={styles.menuItemText}>Quản lý gói đã mua</Text>
-                </View>
-              </TouchableOpacity>
-            )}
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
+                >
+                  <View style={styles.menuItemLeft}>
+                    <Package2 size={20} color="#70E000" />
+                    <Text style={styles.menuItemText}>Quản lý gói đã mua</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
           </View>
         </View>
 

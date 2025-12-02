@@ -1,4 +1,4 @@
-import { configureStore } from "@reduxjs/toolkit";
+import { AnyAction, combineReducers, configureStore } from "@reduxjs/toolkit";
 import authReducer from "@/features/auth/authSlice";
 import homeReducer from "@/features/home/homeSlice";
 import mapReducer from "@/features/map/mapSlice";
@@ -12,23 +12,36 @@ import sessionReducer from "@/features/session/sessionSlice";
 import chatReducer from "@/features/chat/chatSlice";
 import notificationReducer from "@/features/notification/notificationSlice";
 import carReducer from "@/features/car/carSlice";
+import { logout } from "@/features/auth/authSlice";
+
+const appReducer = combineReducers({
+  auth: authReducer,
+  home: homeReducer,
+  map: mapReducer,
+  listCar: listCarReducer,
+  instructor: instructorReducer,
+  booking: bookingReducer,
+  wallet: walletReducer,
+  user: userReducer,
+  package: packageReducer,
+  session: sessionReducer,
+  chat: chatReducer,
+  notification: notificationReducer,
+  car: carReducer,
+});
+
+const rootReducer = (
+  state: ReturnType<typeof appReducer> | undefined,
+  action: AnyAction
+) => {
+  if (action.type === logout.type) {
+    state = undefined;
+  }
+  return appReducer(state, action);
+};
 
 export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    home: homeReducer,
-    map: mapReducer,
-    listCar: listCarReducer,
-    instructor: instructorReducer,
-    booking: bookingReducer,
-    wallet: walletReducer,
-    user: userReducer,
-    package: packageReducer,
-    session: sessionReducer,
-    chat: chatReducer,
-    notification: notificationReducer,
-    car: carReducer,
-  },
+  reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, StyleSheet, TouchableOpacity, Text, Alert } from "react-native";
 import { AppColors } from "@/constants/Colors";
 import { AppAlert } from "../Commons/AppAlert";
@@ -13,6 +13,7 @@ export default function RouteActions({
   onReject,
 }: RouteActionsProps) {
   const [showConfirmAccept, setShowConfirmAccept] = useState(false);
+
 
   return (
     <View style={styles.routeActions}>
@@ -45,7 +46,8 @@ export default function RouteActions({
 
       <AppAlert
         visible={showConfirmAccept}
-        message="Bạn đồng ý với lộ trình mà người hướng dẫn đưa ra?"
+        title="Xác nhận lộ trình"
+        message="Bạn có chắc chắn muốn chấp nhận lộ trình này?"
         primaryButton={{
           label: "Đồng ý",
           onPress: () => {

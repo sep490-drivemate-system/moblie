@@ -24,7 +24,6 @@ import {
     getSessionDetail,
     getPolicies,
     createSession,
-    saveSessionRoutes,
     addSessionLog,
 
     updateSessionStatus,
@@ -280,21 +279,6 @@ const bookingSlice = createSlice({
                 state.errorMessage = action.error.message || 'Không thể tạo buổi học';
             });
 
-        // Save Session Routes
-        builder
-            .addCase(saveSessionRoutes.pending, (state) => {
-                state.isSavingRoutes = true;
-                state.errorMessage = null;
-            })
-            .addCase(saveSessionRoutes.fulfilled, (state) => {
-                state.isSavingRoutes = false;
-                state.isSuccess = true;
-            })
-            .addCase(saveSessionRoutes.rejected, (state, action) => {
-                state.isSavingRoutes = false;
-                state.isSuccess = false;
-                state.errorMessage = action.payload || 'Không thể lưu lộ trình';
-            });
 
         // Add Session Log
         builder

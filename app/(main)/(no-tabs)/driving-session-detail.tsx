@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   StatusBar,
   ScrollView,
   Alert,
@@ -13,13 +12,10 @@ import { AppColors } from "@/constants/Colors";
 import { userPackagesData } from "@/data/user_packages_data";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import {
-  getSessionRoutes,
-  getAllSessions,
-  saveSessionRoutes,
   updateSessionStatus,
 } from "@/features/booking/bookingThunk";
 import { ISessionRoutes } from "@/models/route/route";
-import { IBookingSession, SessionStatus, ISessionDetailResponse } from "@/models/booking/booking";
+import { IBookingSession, SessionStatus } from "@/models/booking/booking";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import { ROUTES } from "@/constants/routes";
 import HeaderList from "@/components/Commons/HeaderList";
@@ -28,17 +24,18 @@ import CancelSessionModal from "@/components/Session/CancelSessionModal";
 import { RootState } from "@/lib/redux/store";
 import { useSessionMap } from "@/lib/map/useSessionMap";
 import SessionMap from "@/components/Session/SessionMap";
-import { parseCoordinateValue } from "@/lib/map/mapUtils";
+import { encodePolyline, parseCoordinateValue } from "@/lib/map/mapUtils";
 import { AlertVariant, AppAlert } from "@/components/Commons/AppAlert";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { SessionViewModel } from "@/viewmodels/session/SessionViewModel";
-import { ISessionDetailDTO } from "@/models/session/session.type";
 
 export default function DrivingSessionDetailScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const sessionId = params.sessionId;
+  const instructorId = params?.instructorId as string | undefined;
+
   const [sessionState, sessionViewModel] = useViewModel(SessionViewModel, (state) => state.session);
 
 
@@ -50,8 +47,6 @@ export default function DrivingSessionDetailScreen() {
   const sessionLocationData = session as any;
   const [routesData, setRoutesData] = useState<ISessionRoutes[] | null>(null);
 
-  const GOONG_API_KEY = process.env.EXPO_PUBLIC_GOONG_API_KEY;
-
   const userRole = useAppSelector((state: RootState) => state.auth.user?.role ?? null);
   const isInstructor = userRole === UserRole.Instructor;
   const isNoviceDriver = userRole === UserRole.NoviceDriver;
@@ -59,22 +54,15 @@ export default function DrivingSessionDetailScreen() {
   const normalizeParamValue = (value: string | string[] | undefined) =>
     Array.isArray(value) ? value[0] : value;
 
-  // Extract values from params or sessionDetail
   const startingLatitude = normalizeParamValue(params.startingLatitude as string | string[] | undefined);
   const startingLongtitude = normalizeParamValue(params.startingLongtitude as string | string[] | undefined);
   const displayStartLocationName = normalizeParamValue(params.displayStartLocationName as string | string[] | undefined);
   const endingLatitude = normalizeParamValue(params.endingLatitude as string | string[] | undefined);
   const endingLongtitude = normalizeParamValue(params.endingLongtitude as string | string[] | undefined);
-  const displayEndLocationName = normalizeParamValue(params.displayEndLocationName as string | string[] | undefined);
   const duration = normalizeParamValue(params.duration as string | string[] | undefined);
 
-
-
   const [showCancelModal, setShowCancelModal] = useState(false);
-  // New states for API calls
   const [isSavingRoutes, setIsSavingRoutes] = useState(false);
-
-  // Alert state
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState<string>("");
   const [alertMessage, setAlertMessage] = useState<string>("");
@@ -85,6 +73,7 @@ export default function DrivingSessionDetailScreen() {
     if (session) {
       return {
         ...session,
+        instructorId: (session as any).instructorId,
         date: sessionState.sessionDetail?.startTime ? new Date(sessionState.sessionDetail.startTime).toISOString().split('T')[0] : (session as any).date,
         startTime: sessionState.sessionDetail?.startTime || (session as any).startTime,
         endTime: sessionState.sessionDetail?.endTime || (session as any).endTime,
@@ -97,6 +86,7 @@ export default function DrivingSessionDetailScreen() {
     if (sessionState.sessionDetail) {
       return {
         id: sessionId || "temp-session",
+        instructorId: (session as any)?.instructorId,
         date: sessionState.sessionDetail.startTime ? new Date(sessionState.sessionDetail.startTime).toISOString().split('T')[0] : new Date().toISOString(),
         startTime: sessionState.sessionDetail.startTime || "--:--",
         endTime: sessionState.sessionDetail.endTime || "--:--",
@@ -117,8 +107,8 @@ export default function DrivingSessionDetailScreen() {
 
   useEffect(() => {
     sessionViewModel.getSessionDetail(sessionId as string);
-
   }, [sessionId, sessionViewModel]);
+
 
   const routesFromSessionDetail = useMemo(() => {
     if (sessionState.sessionDetail?.routeDetails !== undefined && sessionState.sessionDetail.routeDetails !== null) {
@@ -140,13 +130,10 @@ export default function DrivingSessionDetailScreen() {
 
   useEffect(() => {
     if (!sessionId || typeof sessionId !== "string") return;
-
     if (routesFromSessionDetail !== null) {
       setRoutesData(routesFromSessionDetail);
-      return;
     }
-
-  }, [sessionId, dispatch, routesFromSessionDetail]);
+  }, [sessionId, routesFromSessionDetail]);
 
   const pickupDetails = useMemo(() => {
     const lat = startingLatitude ||
@@ -170,6 +157,7 @@ export default function DrivingSessionDetailScreen() {
       long: startingLongtitude,
     };
   }, [startingLatitude, startingLongtitude]);
+
   const endDetails = useMemo(() => {
     const sessionEndLat = sessionState.sessionDetail?.endingLatitude ? parseCoordinateValue(sessionState.sessionDetail.endingLatitude as any) : null;
     const sessionEndLong = sessionState.sessionDetail?.endingLongtitude ? parseCoordinateValue(sessionState.sessionDetail.endingLongtitude as any) : null;
@@ -187,11 +175,8 @@ export default function DrivingSessionDetailScreen() {
     endingLongtitude,
   ]);
 
-  const fallbackRoutesData = useMemo(() => {
-    return null;
-  }, []);
 
-  const effectiveRoutesData = routesData ?? fallbackRoutesData;
+  const effectiveRoutesData = routesData;
   const routePoints = Array.isArray(effectiveRoutesData) ? effectiveRoutesData : [];
 
   const durationFromParams = duration ? Number(duration) : null;
@@ -217,39 +202,25 @@ export default function DrivingSessionDetailScreen() {
     return null;
   }, [durationFromParams, session]);
 
-  const rawMapStartLat = useMemo(() => {
-    const fromPickup = parseCoordinateValue(pickupDetails.lat as any);
-    if (fromPickup !== null) return fromPickup;
-    if (routesData && routesData.length > 0) {
-      return parseCoordinateValue(routesData[0].latitudeStart as any);
-    }
-    return null;
-  }, [pickupDetails.lat, routesData]);
-
-  const rawMapStartLong = useMemo(() => {
-    const fromPickup = parseCoordinateValue(pickupDetails.long as any);
-    if (fromPickup !== null) return fromPickup;
-    if (routesData && routesData.length > 0) {
-      return parseCoordinateValue(routesData[0].longitudeStart as any);
-    }
-    return null;
-  }, [pickupDetails.long, routesData]);
-
-
   const parseSessionStatus = (status: string | SessionStatus | undefined): SessionStatus | undefined => {
     if (!status) return undefined;
-    if (typeof status === 'number') return status as SessionStatus;
+    if (typeof status === "number") return status as SessionStatus;
 
+    const normalized = String(status).trim().toLowerCase();
     const statusMap: Record<string, SessionStatus> = {
-      'Planning': SessionStatus.Planning,
-      'Upcoming': SessionStatus.Upcoming,
-      'InProgress': SessionStatus.InProgress,
-      'Completed': SessionStatus.Completed,
-      'Reschedule': SessionStatus.Reschedule,
-      'Cancelled': SessionStatus.Cancelled,
+      planning: SessionStatus.Planning,
+      pending: SessionStatus.Planning,
+      pendingapproval: SessionStatus.Planning,
+      pending_approval: SessionStatus.Planning,
+      upcoming: SessionStatus.Upcoming,
+      inprogress: SessionStatus.InProgress,
+      in_progress: SessionStatus.InProgress,
+      completed: SessionStatus.Completed,
+      reschedule: SessionStatus.Reschedule,
+      cancelled: SessionStatus.Cancelled,
     };
 
-    return statusMap[status] ?? undefined;
+    return statusMap[normalized];
   };
 
   useEffect(() => {
@@ -298,7 +269,6 @@ export default function DrivingSessionDetailScreen() {
       });
       setAlertVisible(true);
     } catch (error) {
-      console.error("Error updating session status to Completed:", error);
       setAlertTitle("Hoàn thành");
       setAlertMessage("Đã hoàn thành buổi tập lái này!");
       setAlertVariant(AlertVariant.Success);
@@ -311,11 +281,11 @@ export default function DrivingSessionDetailScreen() {
   }, [sessionId, dispatch]);
 
   const {
-    mapRef,
     selectedRoutePoints,
     setSelectedRoutePoints,
     handleMapPress,
     updateSelectedPointLocation,
+    routeSegments,
     effectiveRouteSegments,
     isSimulating,
     simulationProgress,
@@ -330,7 +300,6 @@ export default function DrivingSessionDetailScreen() {
     dropoffDetails,
     endDetails,
     shouldShowMapForPlanning,
-    goongApiKey: GOONG_API_KEY,
     maxDurationMinutes: allowedDurationMinutes ?? undefined,
     onSimulationComplete: handleSimulationComplete,
   });
@@ -343,6 +312,7 @@ export default function DrivingSessionDetailScreen() {
     selectedRoutePoints.length === 0
   );
 
+
   const handleSelectedPointDrag = useCallback(
     (
       pointId: string,
@@ -354,29 +324,42 @@ export default function DrivingSessionDetailScreen() {
   );
 
   const handleSaveRoutes = useCallback(async () => {
-    if (!sessionId || typeof sessionId !== "string") {
-      Alert.alert("Lỗi", "Không tìm thấy thông tin buổi tập.");
-      return;
-    }
-
-    if (selectedRoutePoints.length === 0) {
-      Alert.alert("Thông báo", "Vui lòng chọn ít nhất một điểm trên bản đồ.");
-      return;
-    }
-
     try {
       setIsSavingRoutes(true);
-      const payload = selectedRoutePoints.map((point, index) => ({
+
+      const combinedCoordinates = routeSegments.reduce(
+        (acc, segment, index) => {
+          if (!segment.coordinates || segment.coordinates.length === 0) {
+            return acc;
+          }
+
+          const coordsToAdd =
+            index === 0 ? segment.coordinates : segment.coordinates.slice(1);
+          return acc.concat(coordsToAdd);
+        },
+        [] as Array<{ latitude: number; longitude: number }>
+      );
+
+      const polylineSesionRoute =
+        combinedCoordinates.length > 0
+          ? encodePolyline(combinedCoordinates)
+          : "";
+
+      const routesPayload = selectedRoutePoints.map((point, index) => ({
         textInstruction: point.streetName || `Điểm ${index + 1}`,
         streetName: point.streetName || `Điểm ${index + 1}`,
         latitudeStart: point.latitude,
         longitudeStart: point.longitude,
+        polyline: polylineSesionRoute,
       }));
 
-      await sessionViewModel.saveSessionRoutes(sessionId as string, payload);
+      await sessionViewModel.saveSessionRoutes(sessionId as string, {
+        polylineSesionRoute,
+        routes: routesPayload,
+      });
 
       setAlertTitle("Thành công");
-      setAlertMessage("Đã lưu lộ trình buổi tập.");
+      setAlertMessage("Đã đề xuất lộ trình buổi tập.");
       setAlertVariant(AlertVariant.Success);
       setAlertPrimaryButton({
         label: "OK",
@@ -400,10 +383,26 @@ export default function DrivingSessionDetailScreen() {
     } finally {
       setIsSavingRoutes(false);
     }
-  }, [dispatch, selectedRoutePoints, sessionId, router]);
+  }, [routeSegments, selectedRoutePoints, sessionId, sessionViewModel, router]);
 
-  const canShowSimulationControls =
-    isInstructor && (isInProgressStatus || isUpcomingStatus) && effectiveRouteSegments.length > 0;
+  // Kiểm tra xem có routeDetails hoặc routeSegments để hiển thị nút giả lập
+  const hasRouteData = useMemo(() => {
+    const hasRouteDetails =
+      (sessionState.sessionDetail?.routeDetails?.length ?? 0) > 0;
+    const hasRouteSegments = effectiveRouteSegments.length > 0;
+    const hasSavedRoutes = (routesData?.length ?? 0) > 0;
+    return hasRouteDetails || hasRouteSegments || hasSavedRoutes;
+  }, [sessionState.sessionDetail?.routeDetails, effectiveRouteSegments.length, routesData?.length]);
+
+  const canShowSimulationControls = useMemo(() => {
+    return isInstructor && (isInProgressStatus || isUpcomingStatus) && hasRouteData;
+  }, [isInstructor, isInProgressStatus, isUpcomingStatus, hasRouteData]);
+
+  const hideDirectionsForNovice = useMemo(() => {
+    if (!isNoviceDriver) return false;
+    const isPendingStatus = currentSessionStatus === SessionStatus.Planning;
+    return isPendingStatus && !hasRouteData;
+  }, [isNoviceDriver, currentSessionStatus, hasRouteData]);
 
   const handleStartSimulation = useCallback(async () => {
     if (!sessionId || typeof sessionId !== "string") {
@@ -425,14 +424,13 @@ export default function DrivingSessionDetailScreen() {
       }
     }
 
-    // Bắt đầu simulation
     startSimulation();
-  }, [sessionId, currentSessionStatus, dispatch, startSimulation]);
+  }, [sessionId, currentSessionStatus, dispatch, startSimulation, sessionViewModel]);
 
-  const canShowRouteActions =
-    allowNoviceApproval && Boolean(routesData && routesData.length > 0);
+  const canShowRouteActions = useMemo(() => {
+    return allowNoviceApproval && Boolean(routesData && routesData.length > 0);
+  }, [allowNoviceApproval, routesData]);
 
-  // Xử lý chấp nhận lộ trình
   const handleAcceptRoute = useCallback(async () => {
     if (!sessionId || typeof sessionId !== "string") {
       setAlertTitle("Lỗi");
@@ -447,7 +445,7 @@ export default function DrivingSessionDetailScreen() {
     }
 
     try {
-      // Gọi API cập nhật trạng thái session thành Upcoming
+      // Cập nhật status thành Upcoming
       await dispatch(
         updateSessionStatus({
           sessionId,
@@ -455,20 +453,11 @@ export default function DrivingSessionDetailScreen() {
         })
       ).unwrap();
 
-      // Refresh session detail để cập nhật trạng thái mới
+      // Lấy lại thông tin session để cập nhật UI
       await sessionViewModel.getSessionDetail(sessionId);
 
-      setAlertTitle("Thành công");
-      setAlertMessage("Đã chấp nhận lộ trình thành công");
-      setAlertVariant(AlertVariant.Success);
-      setAlertPrimaryButton({
-        label: "OK",
-        onPress: () => {
-          setAlertVisible(false);
-          router.back();
-        },
-      });
-      setAlertVisible(true);
+      // Không hiển thị alert thành công, chỉ cập nhật status và quay lại
+      router.back();
     } catch (error) {
       console.error("Error accepting route:", error);
       const message =
@@ -482,9 +471,8 @@ export default function DrivingSessionDetailScreen() {
       });
       setAlertVisible(true);
     }
-  }, [sessionId, dispatch, router]);
+  }, [sessionId, dispatch, router, sessionViewModel]);
 
-  // Xử lý từ chối lộ trình
   const handleRejectRoute = useCallback(async () => {
     if (!sessionId || typeof sessionId !== "string") {
       Alert.alert("Lỗi", "Không tìm thấy thông tin buổi tập.");
@@ -492,11 +480,8 @@ export default function DrivingSessionDetailScreen() {
     }
 
     try {
-      // TODO: Gọi API từ chối lộ trình
       Alert.alert("Thông báo", "Đã từ chối lộ trình");
-      // Refresh session detail
       await sessionViewModel.getSessionDetail(sessionId);
-      // Có thể cần reload lại trang hoặc cập nhật state
     } catch (error) {
       console.error("Error rejecting route:", error);
       Alert.alert("Lỗi", "Không thể từ chối lộ trình");
@@ -507,26 +492,24 @@ export default function DrivingSessionDetailScreen() {
   return (
     <View style={styles.container}>
       <HeaderList actionReturnScreen={ROUTES.PROFILE as any} title="Chi tiết buổi tập lái" />
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <SessionRouteList
           routePoints={routePoints}
           status={sessionState.sessionDetail?.status as SessionStatus}
           sessionId={sessionId}
-          displaySession={displaySession}
+          instructorId={instructorId as string}
+          displaySession={displaySession as any}
           onCancelPress={() => setShowCancelModal(true)}
           showRouteCard
           isSimulating={isSimulating}
           simulationProgress={simulationProgress}
-          currentPosition={currentPosition}
+          hideDirections={hideDirectionsForNovice}
         />
-
         <SessionMap
           status={sessionStatusForMap}
           endDetails={endDetails}
           routePoints={routePoints}
           routeSegments={effectiveRouteSegments}
-          mapRef={mapRef}
           currentPosition={currentPosition}
           isSimulating={isSimulating}
           simulationProgress={simulationProgress}
@@ -550,15 +533,21 @@ export default function DrivingSessionDetailScreen() {
           }
           hasExistingRoutes={hasExistingRoutes}
           isInstructorWaitingApproval={isInstructorWaitingApproval}
+          hideDirections={hideDirectionsForNovice}
         />
-
-
         <View style={{ height: 24 }} />
       </ScrollView>
 
       <CancelSessionModal
         visible={showCancelModal}
         sessionId={typeof sessionId === "string" ? sessionId : null}
+        role={userRole}
+        sessionStartTime={
+          (displaySession as any)?.startTime ??
+          sessionState.sessionDetail?.startTime ??
+          null
+        }
+        sessionDurationMinutes={allowedDurationMinutes ?? null}
         onClose={() => setShowCancelModal(false)}
         onCancelled={() => router.back()}
       />

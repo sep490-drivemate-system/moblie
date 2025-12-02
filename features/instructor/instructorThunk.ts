@@ -39,7 +39,7 @@ export const getInstructorById = createThunk<IInstructors, { id: string }>(
 
 
 export const getInstructorCars = createThunk<
-  InstructorCarAPI[],
+  IInstructorCar[],
   { id: string }
 >(HttpMethod.GET, "getInstructorCars", `car/instructor/:id/cars`, {
   buildUrl: (payload) => `car/instructor/${payload.id}/cars`,

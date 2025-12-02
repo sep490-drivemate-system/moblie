@@ -22,12 +22,12 @@ export const ROUTES = {
     '/(main)/(no-tabs)/identification-document-management-instructor',
   TRANSACTION_SUCCESS: '/(main)/(no-tabs)/transaction-success',
   NOTIFICATIONS: '/(main)/(tabs)/notifications',
+  PACKAGES: '/(main)/(tabs)/packages',
 
   MAIN_NO_TABS_DEPOSIT: '/(main)/(no-tabs)/deposit',
   MAIN_NO_TABS_WITHDRAW: '/(main)/(no-tabs)/withdraw',
   MAIN_NO_TABS_SERVICE_PACKAGE_SERVICE_PACKAGE_MANAGEMENT: `/(main)/(no-tabs)/(service-package)/service-package-management`,
   MAIN_NO_TABS_MY_PACKAGES: `/(main)/(no-tabs)/my-packages`,
   MAIN_NO_TABS_INTRO: `/(onboarding)`,
-  CHAT_LIST: `/(main)/(no-tabs)/chat-list`,
   CHAT: `/(main)/(no-tabs)/chat`,
 } as const;

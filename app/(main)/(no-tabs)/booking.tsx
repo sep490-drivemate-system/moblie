@@ -12,7 +12,7 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CheckCircle } from "lucide-react-native";
-import { useAppDispatch } from "@/lib/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import {
   getPolicies,
   PolicyType,
@@ -31,15 +31,21 @@ import { InstructorPackage } from "@/models/instructor/instructor.type";
 import { getNoviceDriverAddresses } from "@/features/user/userThunk";
 import { AlertVariant, AppAlert } from "@/components/Commons/AppAlert";
 import { ROUTES } from "@/constants/routes";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { CarViewModel } from "@/viewmodels/car/CarViewModel";
+import { RootState } from "@/lib/redux/store";
+import { ICar } from "@/models/car/car";
+import { adjustWalletBalance } from "@/features/wallet/walletSlice";
 
 export default function BookingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const dispatch = useAppDispatch();
+  const walletBalance = useAppSelector((state: RootState) => state.wallet.balance);
 
   const instructorId = params.instructorId as string;
   const packageId = params.packageId as string | undefined;
-  const userPackageId = params.userPackageId as string | undefined; // This is the actual bookingId
+  const userPackageId = params.userPackageId as string | undefined;
   const vehicleId = params.vehicleId as string | undefined;
   const carPrice = params.carPrice ? parseFloat(params.carPrice as string) : undefined;
   const remainingHours = params.remainingHours ? parseFloat(params.remainingHours as string) : undefined;
@@ -66,14 +72,29 @@ export default function BookingScreen() {
   const [sessionNote, setSessionNote] = useState("");
   const [isCreatingSession, setIsCreatingSession] = useState(false);
 
-  const [userCoins, setUserCoins] = useState(500);
-
+  const [carInfo, setCarInfo] = useState<ICar | null>(null);
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     message: string;
     variant: AlertVariant;
   } | null>(null);
 
+  useEffect(() => {
+    console.log("params: ", params);
+  }, []);
+
+
+  const [, carViewModel] = useViewModel(CarViewModel, (state: RootState) => state.car);
+  useEffect(() => {
+    if (vehicleId) {
+      const fetchCarData = async () => {
+        const carData = await carViewModel.getCarById(vehicleId);
+        setCarInfo(carData || null);
+        console.log("carData: ", carData);
+      }
+      fetchCarData();
+    }
+  }, [vehicleId, carViewModel]);
 
   const [isTrackingExpanded, setIsTrackingExpanded] = useState(false);
 
@@ -88,26 +109,24 @@ export default function BookingScreen() {
 
   const maxDuration = remainingHours !== undefined ? remainingHours : (selectedPackage?.duration || 40);
 
-  const selectedVehicle =
-    vehicleId && vehicleId !== ""
-      ? instructorVehicles.find((v) => v.id === vehicleId)
-      : null;
+  // Calculate vehicle cost: prioritize carInfo.unitPrice, fallback to carPrice
+  const vehicleCost = (() => {
+    if (carInfo && carInfo.unitPrice && selectedDuration > 0) {
+      return carInfo.unitPrice * selectedDuration;
+    } else if (carPrice && vehicleId && selectedDuration > 0) {
+      return carPrice * selectedDuration;
+    }
+    return 0;
+  })();
 
   const bookingCost = (() => {
     const baseCost = selectedPackage?.basePrice || 0;
-    let vehicleCost = 0;
-
-    if (carPrice && vehicleId && selectedDuration > 0) {
-      vehicleCost = carPrice * selectedDuration;
-    } else if (selectedVehicle && selectedVehicle.price && selectedDuration > 0) {
-      vehicleCost = selectedVehicle.price * selectedDuration;
-    }
-
     return baseCost + vehicleCost;
   })();
 
 
-  // Handle map selection result
+
+
   useFocusEffect(
     React.useCallback(() => {
       const checkMapSelection = async () => {
@@ -163,7 +182,6 @@ export default function BookingScreen() {
     }, [isSameDropoff])
   );
 
-  // Fetch addresses when moving to step 2
   useEffect(() => {
     if (currentStep === 2 && addresses.length === 0) {
       fetchNoviceDriverAddresses();
@@ -222,9 +240,8 @@ export default function BookingScreen() {
         if (!isSameDropoff && !selectedDropoffId) return false;
         return true;
       case 3:
-        // Check if all policies are accepted
-        const allAccepted = Object.values(acceptedPolicies).every((v) => v === true);
-        return allAccepted && userCoins >= bookingCost;
+        const allAccepted = policies.length > 0 && policies.every((policy) => acceptedPolicies[policy.id] === true);
+        return allAccepted && walletBalance >= bookingCost;
       default:
         return false;
     }
@@ -244,14 +261,6 @@ export default function BookingScreen() {
     }
   };
 
-  const calculateEndTime = (startTime: string, duration: number): string => {
-    if (!startTime) return "00:00";
-    const [hours, minutes] = startTime.split(":").map(Number);
-    const endHours = hours + duration;
-    return `${endHours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}`;
-  };
 
   const handleConfirmBooking = async () => {
 
@@ -308,12 +317,6 @@ export default function BookingScreen() {
       // Create ISO string with local timezone (+07:00 for Vietnam)
       const isoStartTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+07:00`;
 
-
-      // Calculate vehicle cost
-      const vehicleCost = vehicleId && carPrice && selectedDuration > 0
-        ? carPrice * selectedDuration
-        : 0;
-
       // Create session request
       const sessionRequest = {
         bookingId: bookingId, // Use userPackageId if available, otherwise packageId
@@ -322,7 +325,7 @@ export default function BookingScreen() {
         startingLongtitude: pickupAddress.longitude, // Note: API typo
         displayName: pickupAddress.addressString || "",
         displayStartLocationName: pickupAddress.addressString || "",
-        priceForCar: vehicleCost,
+        priceForCar: bookingCost,
         duration: selectedDuration,
         sessionNote: sessionNote || "",
         displayEndLocationName: dropoffAddress.addressString || "",
@@ -345,6 +348,8 @@ export default function BookingScreen() {
 
       // API returns boolean: true = success, false = failed
       if (success === true) {
+        // Update wallet balance in Redux after successful booking
+        dispatch(adjustWalletBalance(-bookingCost));
         setAlertConfig({
           visible: true,
           message: "Đặt lịch thành công!",
@@ -450,12 +455,14 @@ export default function BookingScreen() {
         instructorName={instructor?.name}
         packageName={selectedPackage?.name}
         packageDuration={selectedPackage?.duration}
-        vehicleName={selectedVehicle?.name ?? null}
+        vehicleName={carInfo?.modelName ?? null}
         selectedDate={selectedDate}
         selectedStartTime={selectedStartTime}
         selectedEndTime={selectedEndTime}
         selectedDuration={selectedDuration}
         pickupLocation={pickupLocation}
+        dropoffLocation={isSameDropoff ? pickupLocation : dropoffLocation}
+        isSameDropoff={isSameDropoff}
       />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -551,9 +558,11 @@ export default function BookingScreen() {
               }));
             }}
             bookingCost={bookingCost}
+            vehicleCost={vehicleCost}
+            walletBalance={walletBalance}
             isLoading={isLoadingPolicies}
             vehicleId={vehicleId}
-            carPrice={carPrice}
+            carPrice={carInfo?.unitPrice || carPrice}
             selectedDuration={selectedDuration}
             sessionNote={sessionNote}
             onSessionNoteChange={setSessionNote}
@@ -571,7 +580,8 @@ export default function BookingScreen() {
         </TouchableOpacity>
 
         {currentStep !== 3 && (
-          <TouchableOpacity activeOpacity={1}
+          <TouchableOpacity
+            activeOpacity={canProceedToNextStep() ? 0 : 1}
             style={[
               styles.continueButton,
               !canProceedToNextStep() && styles.continueButtonDisabled,
@@ -579,7 +589,7 @@ export default function BookingScreen() {
             onPress={handleNext}
             disabled={!canProceedToNextStep()}
           >
-            <View 
+            <View
               style={[
                 styles.continueButtonGradient,
                 {
@@ -596,6 +606,7 @@ export default function BookingScreen() {
 
         {currentStep === 3 && (
           <TouchableOpacity
+            activeOpacity={(canProceedToNextStep() && !isCreatingSession) ? 0.7 : 1}
             style={[
               styles.paymentButton,
               (!canProceedToNextStep() || isCreatingSession) && styles.paymentButtonDisabled,

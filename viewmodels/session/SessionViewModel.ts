@@ -1,7 +1,7 @@
 import { AppDispatch } from "@/lib/redux/store";
 import { IBookingSession } from "@/models/booking/booking";
 import { SessionStatus } from "@/models/session/session.enum";
-import { getAllSessions, cancelSession as cancelSessionThunk, ICancelSessionRequest } from "@/features/booking/bookingThunk";
+import { getAllSessions, cancelSession as cancelSessionThunk, ICancelSessionRequest, IRescheduleSessionRequest } from "@/features/booking/bookingThunk";
 import { BaseViewModel } from "../shared/BaseViewModel";
 import {
     SessionState,
@@ -24,10 +24,9 @@ import {
     X,
     LucideIcon,
 } from "lucide-react-native";
-import { ISessionDetailDTO, IRouteDetailDTO } from "@/models/session/session.type";
-import { getSessionDetail } from "@/features/session/sessionThunk";
-import { saveSessionRoutes } from "@/features/booking/bookingThunk";
-import { ISessionRouteItem } from "@/models/route/route";
+import { ISessionDetailDTO, IRouteDetailDTO, ISessionRouteDetai } from "@/models/session/session.type";
+import { getSessionDetail, rescheduleSession } from "@/features/session/sessionThunk";
+import { saveSessionRoutes } from "@/features/session/sessionThunk";
 export type SessionStatusFilter = SessionStatus | "all";
 
 
@@ -92,9 +91,6 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
             async () => {
                 const result = await this.dispatch(getSessionDetail({ sessionId })).unwrap();
                 const detail = result?.value ?? {} as ISessionDetailDTO;
-                if (detail.status && typeof detail.status === 'string') {
-                    detail.status = this.parseSessionStatus(detail.status) as any;
-                }
                 return detail;
             },
             (sessionDetail) => {
@@ -107,7 +103,7 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
         return sessionDetail ?? {} as ISessionDetailDTO;
     }
 
-    async saveSessionRoutes(sessionId: string, routes: ISessionRouteItem[]): Promise<boolean> {
+    async saveSessionRoutes(sessionId: string, routes: ISessionRouteDetai): Promise<boolean> {
         const result = await this.executeAsync<boolean>(
             async () => {
                 const response = await this.dispatch(saveSessionRoutes({ sessionId, body: routes })).unwrap();
@@ -247,4 +243,14 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
                 return Clock;
         }
     };
+
+    async rescheduleSession(sessionId: string, rescheduleData: IRescheduleSessionRequest): Promise<boolean> {
+        const result = await this.executeAsync<boolean>(
+            async () => {
+                const response = await this.dispatch(rescheduleSession({ sessionId, rescheduleData })).unwrap();
+                return response?.value ?? false;
+            },
+        );
+        return result ?? false;
+    }
 }

@@ -2,7 +2,7 @@ import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/HttpMethods";
 import { IUserPackageAPI, IGetUserPackagesParams, BookingStatus } from "@/models/package/user-package";
 import { IBookingSession, IGetBookingSessionsParams, IGetAllSessionsParams, ISessionDetailResponse, SessionStatus } from "@/models/booking/booking";
-import { ISaveSessionRoutesPayload, ISessionRoutes } from "@/models/route/route";
+import { ISessionRoutes } from "@/models/route/route";
 import axiosInstance from "@/lib/axios/axiosInstance";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { GenericResponse } from "@/models/generic/genericResponse";
@@ -10,11 +10,8 @@ import { IBuyPackageRequest, IBuyPackageResponse, IMyPackgesResponse } from "@/m
 
 const BOOKING_PATH = "booking";
 const SESSION_PATH = "session";
-const INSTRUCTOR_PATH = "instructors";
-const NOVICE_DRIVER_PATH = "novice-driver";
 const POLICY_PATH = "policy";
 
-// API Response Interfaces
 export interface IUserInfo {
   userId: string;
   avatarUrl: string;
@@ -79,6 +76,7 @@ export interface ISessionLogRequest {
   heading: string;
   speed: number;
   isCompleted: boolean;
+  polylineSesionLog?: string | null;
 }
 
 // Cancel Session Request Interface
@@ -100,8 +98,8 @@ export interface IFeedbackRequest {
 // Reschedule Session Request Interface
 export interface IRescheduleSessionRequest {
   note: string;
-  reschedule_start_time: string;
-  reschedule_end_time: string;
+  newStartTime: string;
+  newEndTime: string;
 }
 
 export const getMyPackages = createThunk<
@@ -194,34 +192,7 @@ export const createSession = createThunk<
   `/${SESSION_PATH}`
 );
 
-export const saveSessionRoutes = createAsyncThunk<
-  GenericResponse<boolean>,
-  ISaveSessionRoutesPayload,
-  { rejectValue: string }
->(
-  "saveSessionRoutes",
-  async (payload, { rejectWithValue }) => {
-    try {
-      const url = `/${SESSION_PATH}/${payload.sessionId}/routes`;
 
-      console.log("🚀 Calling API:", url);
-      console.log("📦 Request body:", payload.body);
-
-      const response = await axiosInstance.post<GenericResponse<boolean>>(
-        url,
-        payload.body // Send only the routes array as body
-      );
-
-      console.log("✅ API Response:", response.data);
-      return response.data;
-    } catch (err) {
-      const error = err as any;
-      console.error("❌ API Error:", error.response?.data || error.message);
-      const message = error.response?.data?.message || "Không thể lưu lộ trình";
-      return rejectWithValue(message);
-    }
-  }
-);
 
 export const getSessionRoutes = createThunk<
   ISessionRoutes[],

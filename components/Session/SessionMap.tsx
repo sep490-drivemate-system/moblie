@@ -1,4 +1,4 @@
-import React, { MutableRefObject, useCallback, useMemo, useRef } from "react";
+import React, { MutableRefObject, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   Text,
@@ -13,22 +13,23 @@ import SimulationControls from "./SimulationControls";
 import RouteActions from "./RouteActions";
 import { AppColors } from "@/constants/Colors";
 import { SelectedRoutePoint } from "@/lib/map/useSessionMap";
-import { parseCoordinateValue } from "@/lib/map/mapUtils";
+import { decodePolyline, parseCoordinateValue } from "@/lib/map/mapUtils";
 import { MapViewModel } from "@/viewmodels/map/MapViewModel";
 import { Car } from "lucide-react-native";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { SessionViewModel } from "@/viewmodels/session/SessionViewModel";
 
+
 interface SessionMapProps {
-  status?: SessionStatus;
+  status: SessionStatus;
   endDetails: { lat: number | null; long: number | null };
   routePoints: ISessionRoutes[];
   routeSegments: Array<{
     coordinates: Array<{ latitude: number; longitude: number }>;
     distance: string;
     duration: string;
+    polyline?: string;
   }>;
-  mapRef: MutableRefObject<MapView | null>;
   currentPosition: {
     latitude: number;
     longitude: number;
@@ -58,16 +59,14 @@ interface SessionMapProps {
   ) => void;
   hasExistingRoutes?: boolean;
   isInstructorWaitingApproval?: boolean;
+  hideDirections?: boolean;
 }
-
-
 
 export default function SessionMap({
   status,
   endDetails,
   routePoints,
   routeSegments,
-  mapRef,
   currentPosition,
   isSimulating,
   simulationProgress,
@@ -87,14 +86,14 @@ export default function SessionMap({
   onSelectedPointDrag,
   hasExistingRoutes = false,
   isInstructorWaitingApproval = false,
+  hideDirections = false,
 }: SessionMapProps) {
 
 
 
-  const internalMapRef = useRef<MapView>(null);
-  const finalMapRef = mapRef ?? internalMapRef;
 
   const mapViewModel = useMemo(() => new MapViewModel(), []);
+  const mapRef = useRef<MapView | null>(null);
 
   const handleRemovePoint = useCallback(
     (pointId: string) => {
@@ -104,6 +103,7 @@ export default function SessionMap({
   );
 
   const [sessionState,] = useViewModel(SessionViewModel, (state) => state.session);
+
 
   const endingCoordinates = useMemo(() => {
     const lat = sessionState?.sessionDetail?.endingLatitude;
@@ -123,17 +123,68 @@ export default function SessionMap({
     return null;
   }, [sessionState?.sessionDetail?.startingLatitude, sessionState?.sessionDetail?.startingLongtitude]);
 
+  const plannedPolylineCoords = useMemo(() => {
+    const encoded = sessionState?.sessionDetail?.polylineSesionRoute;
+    return encoded ? decodePolyline(encoded) : [];
+  }, [sessionState?.sessionDetail?.polylineSesionRoute]);
+
+  const logPolylineCoords = useMemo(() => {
+    const encoded = sessionState?.sessionDetail?.polylineSesionLog;
+    return encoded ? decodePolyline(encoded) : [];
+  }, [sessionState?.sessionDetail?.polylineSesionLog]);
+
+  // Các điểm logDetails (tọa độ thực tế đã đi) dùng để hiển thị marker trên map khi đã hoàn thành
+  const logDetailPoints = useMemo(() => {
+    if (!sessionState?.sessionDetail?.logDetails || sessionState.sessionDetail.logDetails.length === 0) {
+      return [];
+    }
+    return sessionState.sessionDetail.logDetails.map((log) => ({
+      latitude: Number(log.latitude),
+      longitude: Number(log.longitude),
+      streetName: log.streetName,
+      speed: log.speed,
+      heading: log.heading,
+    }));
+  }, [sessionState?.sessionDetail?.logDetails]);
+
+  const parsedSessionDetailStatus = useMemo(() => {
+    const rawStatus = sessionState?.sessionDetail?.status;
+    if (!rawStatus) return undefined;
+    if (typeof rawStatus === "number") {
+      return rawStatus as SessionStatus;
+    }
+    const normalized = String(rawStatus).trim().toLowerCase();
+    const statusMap: Record<string, SessionStatus> = {
+      planning: SessionStatus.Planning,
+      pending: SessionStatus.Planning,
+      pendingapproval: SessionStatus.Planning,
+      pending_approval: SessionStatus.Planning,
+      upcoming: SessionStatus.Upcoming,
+      inprogress: SessionStatus.InProgress,
+      in_progress: SessionStatus.InProgress,
+      completed: SessionStatus.Completed,
+      reschedule: SessionStatus.Reschedule,
+      cancelled: SessionStatus.Cancelled,
+    };
+    return statusMap[normalized];
+  }, [sessionState?.sessionDetail?.status]);
+
   const allowDirectMapPress = enableMapPress;
+
   const hasEndPoint =
     endingCoordinates !== null ||
     (typeof endDetails.lat === "number" && typeof endDetails.long === "number");
   const hasDistinctEndPoint =
     hasEndPoint &&
     endingCoordinates !== null;
+  // Ưu tiên hiển thị polyline từ polylineSesionRoute nếu có
+  const hasPolylineSesionRoute = plannedPolylineCoords.length > 0;
   const shouldRenderRoute =
-    routeSegments.length > 0 ||
-    (hasExistingRoutes && isInstructorWaitingApproval) ||
-    !(allowDirectMapPress && selectedRoutePoints.length === 0);
+    !hideDirections &&
+    (hasPolylineSesionRoute ||
+      routeSegments.length > 0 ||
+      (hasExistingRoutes && isInstructorWaitingApproval) ||
+      !(allowDirectMapPress && selectedRoutePoints.length === 0));
 
   const getRoutePointName = useCallback(
     (point: ISessionRoutes, index: number) => {
@@ -155,8 +206,8 @@ export default function SessionMap({
     const labels: Array<{ start: string; end: string }> = [];
     let currentStart = "Điểm bắt đầu";
 
-    const basePoints = routePoints.map((point, index) => ({
-      name: getRoutePointName(point, index),
+    const basePoints = sessionState?.sessionDetail?.routeDetails?.map((point, index) => ({
+      name: point.streetName,
     }));
 
     const plannedPoints = allowDirectMapPress
@@ -166,7 +217,7 @@ export default function SessionMap({
       : [];
 
     const combinedPoints: Array<{ name: string }> = [
-      ...basePoints,
+      ...(basePoints ?? []),
       ...plannedPoints,
     ];
 
@@ -187,20 +238,72 @@ export default function SessionMap({
 
     return labels;
   }, [
-    routePoints,
+    sessionState?.sessionDetail?.routeDetails,
     getRoutePointName,
     hasDistinctEndPoint,
     selectedRoutePoints,
   ]);
 
-  const legendItems = useMemo(
-    () => [
-      { label: "Điểm bắt đầu", color: "green" },
-      { label: "Điểm lộ trình", color: "blue" },
-      ...(hasDistinctEndPoint ? [{ label: "Điểm kết thúc", color: "red" }] : []),
-    ],
-    [hasDistinctEndPoint]
-  );
+  const legendItems = useMemo(() => {
+    const items = [{ label: "Điểm bắt đầu", color: "green" }];
+    if (!hideDirections) {
+      items.push({ label: "Điểm lộ trình", color: "blue" });
+    }
+    if (hasDistinctEndPoint) {
+      items.push({ label: "Điểm kết thúc", color: "red" });
+    }
+    return items;
+  }, [hasDistinctEndPoint, hideDirections]);
+
+  // Tính toán region hợp lệ cho map
+  const mapRegion = useMemo(() => {
+    // Ưu tiên sử dụng startingCoordinates
+    if (startingCoordinates) {
+      return {
+        latitude: startingCoordinates.latitude,
+        longitude: startingCoordinates.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      };
+    }
+
+    // Nếu không có startingCoordinates, thử dùng endingCoordinates
+    if (endingCoordinates) {
+      return {
+        latitude: endingCoordinates.latitude,
+        longitude: endingCoordinates.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      };
+    }
+
+    // Nếu có routePoints, dùng điểm đầu tiên
+    if (routePoints && routePoints.length > 0) {
+      const firstPoint = routePoints[0];
+      const lat = parseCoordinateValue(firstPoint.latitudeStart as any);
+      const long = parseCoordinateValue(firstPoint.longitudeStart as any);
+      if (lat !== null && long !== null) {
+        return {
+          latitude: lat,
+          longitude: long,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        };
+      }
+    }
+
+    // Fallback: sử dụng tọa độ mặc định (Hà Nội)
+    return {
+      latitude: 21.0285,
+      longitude: 105.8542,
+      latitudeDelta: 0.05,
+      longitudeDelta: 0.05,
+    };
+  }, [startingCoordinates, endingCoordinates, routePoints]);
+
+  // Kiểm tra xem có dữ liệu hợp lệ để hiển thị map không
+  const hasValidMapData = startingCoordinates || endingCoordinates || (routePoints && routePoints.length > 0);
+
 
   return (
     <View style={styles.routeCard}>
@@ -224,6 +327,7 @@ export default function SessionMap({
           </TouchableOpacity>
         )}
       </View>
+
       {allowDirectMapPress && (
         <View style={styles.editHintContainer}>
           <Text style={styles.editHintTitle}>
@@ -250,117 +354,185 @@ export default function SessionMap({
       )}
 
       <View style={styles.mapContainer}>
-        <MapView
-          showsTraffic={true}
-          ref={finalMapRef}
-          provider={PROVIDER_GOOGLE}
-          style={styles.map}
-          showsUserLocation={false}
-          showsMyLocationButton={false}
-          initialRegion={{
-            latitude: sessionState.sessionDetail?.startingLatitude as number,
-            longitude: sessionState.sessionDetail?.startingLongtitude as number,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          }}
-          mapType="standard"
-          onPress={allowDirectMapPress ? onMapPress : undefined}
-        >
-          {startingCoordinates && (
-            <Marker
-              coordinate={startingCoordinates}
-              title="Điểm bắt đầu"
-              description={sessionState?.sessionDetail?.displayStartLocationName || "Điểm bắt đầu"}
-              pinColor="green"
-            />
-          )}
-
-          {endingCoordinates && (
-            <Marker
-              coordinate={endingCoordinates}
-              title="Điểm kết thúc"
-              description={sessionState?.sessionDetail?.displayEndLocationName || "Điểm kết thúc"}
-              pinColor="red"
-            />
-          )}
-
-          {routePoints.map((point, index) => {
-            const markerLat = parseCoordinateValue(point.latitudeStart as any);
-            const markerLong = parseCoordinateValue(point.longitudeStart as any);
-            if (markerLat === null || markerLong === null) {
-              return null;
-            }
-            return (
+        {!hasValidMapData ? (
+          <View style={styles.placeholderOverlay}>
+            <ActivityIndicator size="large" color={AppColors.primary} />
+            <Text style={styles.placeholderText}>Đang tải bản đồ...</Text>
+          </View>
+        ) : (
+          <MapView
+            ref={mapRef}
+            showsTraffic={true}
+            provider={PROVIDER_GOOGLE}
+            style={styles.map}
+            showsUserLocation={false}
+            showsMyLocationButton={false}
+            initialRegion={mapRegion}
+            region={mapRegion}
+            mapType="standard"
+            onPress={allowDirectMapPress ? onMapPress : undefined}
+          >
+            {startingCoordinates && (
               <Marker
-                key={point.id}
-                coordinate={{
-                  latitude: markerLat,
-                  longitude: markerLong,
-                }}
-                title={`Điểm ${index + 2}`}
-                description={point.streetName}
-                pinColor="blue"
+                coordinate={startingCoordinates}
+                title="Điểm bắt đầu"
+                description={sessionState?.sessionDetail?.displayStartLocationName || "Điểm bắt đầu"}
+                pinColor="green"
               />
-            );
-          })}
+            )}
 
-          {selectedRoutePoints.map((point) => (
-            <Marker
-              key={point.id}
-              coordinate={{
-                latitude: point.latitude,
-                longitude: point.longitude,
-              }}
-              title={`Điểm ${point.order + routePoints.length + 1}`}
-              description={point.streetName || "Điểm mới"}
-              pinColor="orange"
-              draggable={allowDirectMapPress}
-              onDragEnd={
-                allowDirectMapPress && onSelectedPointDrag
-                  ? (e) =>
-                    onSelectedPointDrag(point.id, e.nativeEvent.coordinate)
-                  : undefined
-              }
-            />
-          ))}
+            {endingCoordinates && (
+              <Marker
+                coordinate={endingCoordinates}
+                title="Điểm kết thúc"
+                description={sessionState?.sessionDetail?.displayEndLocationName || "Điểm kết thúc"}
+                pinColor="red"
+              />
+            )}
 
-          {!endingCoordinates && hasEndPoint && typeof endDetails.lat === "number" && typeof endDetails.long === "number" && (
-            <Marker
-              coordinate={{
-                latitude: endDetails.lat,
-                longitude: endDetails.long,
-              }}
-              title="Điểm kết thúc"
-              pinColor="red"
-            />
-          )}
+            {!hideDirections &&
+              sessionState?.sessionDetail?.routeDetails?.map((point, index) => {
+                const markerLat = parseCoordinateValue(point.latitudeStart as any);
+                const markerLong = parseCoordinateValue(point.longitudeStart as any);
+                if (markerLat === null || markerLong === null) {
+                  return null;
+                }
+                return (
+                  <Marker
+                    key={index}
+                    coordinate={{
+                      latitude: markerLat,
+                      longitude: markerLong,
+                    }}
+                    title={`Điểm ${index + 2}`}
+                    description={point.streetName}
+                    pinColor="blue"
+                  />
+                );
+              })}
 
-          {shouldRenderRoute &&
-            routeSegments.map((segment, index) => (
+            {!hideDirections &&
+              selectedRoutePoints.map((point) => (
+                <Marker
+                  key={point.id}
+                  coordinate={{
+                    latitude: point.latitude,
+                    longitude: point.longitude,
+                  }}
+                  title={`Điểm ${point.order + (sessionState?.sessionDetail?.routeDetails?.length ?? 0) + 1}`}
+                  description={point.streetName || "Điểm mới"}
+                  pinColor="orange"
+                  draggable={allowDirectMapPress}
+                  onDragEnd={
+                    allowDirectMapPress && onSelectedPointDrag
+                      ? (e) =>
+                        onSelectedPointDrag(point.id, e.nativeEvent.coordinate)
+                      : undefined
+                  }
+                />
+              ))}
+
+            {!endingCoordinates && hasEndPoint && typeof endDetails.lat === "number" && typeof endDetails.long === "number" && (
+              <Marker
+                coordinate={{
+                  latitude: endDetails.lat,
+                  longitude: endDetails.long,
+                }}
+                title="Điểm kết thúc"
+                pinColor="red"
+              />
+            )}
+
+            {/* Ưu tiên hiển thị polylineSesionRoute nếu có */}
+            {!hideDirections && plannedPolylineCoords.length > 0 && (
               <Polyline
-                key={`segment-${index}`}
-                coordinates={segment.coordinates}
+                coordinates={plannedPolylineCoords}
                 strokeColor={AppColors.primary}
                 strokeWidth={4}
               />
-            ))}
+            )}
 
-          {currentPosition && isSimulating && (
-            <Marker
-              coordinate={{
-                latitude: currentPosition.latitude,
-                longitude: currentPosition.longitude,
-              }}
-              anchor={{ x: 0.5, y: 0.5 }}
-              flat={true}
-              rotation={currentPosition.heading}
-            >
-              <View style={styles.vehicleMarker}>
-                <Car size={24} color="#fff" strokeWidth={2.5} />
-              </View>
-            </Marker>
-          )}
-        </MapView>
+            {/* Hiển thị routeSegments nếu không có polylineSesionRoute */}
+            {!hideDirections && !hasPolylineSesionRoute && shouldRenderRoute &&
+              routeSegments.map((segment, index) => {
+                if (!segment.coordinates || segment.coordinates.length === 0) {
+                  return null;
+                }
+                return (
+                  <Polyline
+                    key={`route-segment-${index}`}
+                    coordinates={segment.coordinates}
+                    strokeColor={AppColors.primary}
+                    strokeWidth={4}
+                  />
+                );
+              })}
+
+            {/* Hiển thị polyline từ routeDetails (nếu không có polylineSesionRoute) */}
+            {!hideDirections && !hasPolylineSesionRoute && sessionState?.sessionDetail?.routeDetails?.map((point, index) => {
+              if (!point.polyline) return null;
+              try {
+                const polyline = decodePolyline(point.polyline);
+                if (!polyline || polyline.length === 0) return null;
+                return (
+                  <Polyline
+                    key={`saved-route-${index}`}
+                    coordinates={polyline}
+                    strokeColor={AppColors.primary}
+                    strokeWidth={4}
+                  />
+                );
+              } catch (error) {
+                console.error(`Error decoding saved polyline for route ${index}:`, error);
+                return null;
+              }
+            })}
+
+            {!hideDirections && logPolylineCoords.length > 0 && (
+              <Polyline
+                coordinates={logPolylineCoords}
+                strokeColor={AppColors.yellow}
+                strokeWidth={4}
+                lineDashPattern={[8, 6]}
+              />
+            )}
+
+            {/* Marker cho từng điểm logDetails (chỉ hiển thị khi buổi tập đã hoàn thành) */}
+            {parsedSessionDetailStatus === SessionStatus.Completed &&
+              logDetailPoints.map((point, index) => (
+                <Marker
+                  key={`log-point-${index}`}
+                  coordinate={{
+                    latitude: point.latitude,
+                    longitude: point.longitude,
+                  }}
+                  title={point.streetName || "Nhật ký lộ trình"}
+                  description={`Tốc độ: ${point.speed} km/h • Hướng: ${point.heading}`}
+                >
+                  <View style={styles.logPointMarker}>
+                    <View style={styles.logPointInner} />
+                  </View>
+                </Marker>
+              ))}
+
+            {currentPosition && isSimulating && (
+              <Marker
+                coordinate={{
+                  latitude: currentPosition.latitude,
+                  longitude: currentPosition.longitude,
+                }}
+                anchor={{ x: 0.5, y: 0.5 }}
+                flat={true}
+                rotation={currentPosition.heading}
+              >
+                <View style={styles.vehicleMarker}>
+                  <Car size={24} color="#fff" strokeWidth={2.5} />
+                </View>
+              </Marker>
+            )}
+          </MapView>
+        )}
+
         <View style={styles.legendContainer}>
           {legendItems.map((item) => (
             <View key={item.label} style={styles.legendItem}>
@@ -375,47 +547,142 @@ export default function SessionMap({
               <Text style={styles.legendText}>{item.label}</Text>
             </View>
           ))}
-          <View style={styles.legendItem}>
-            <View style={styles.legendLinePlanning} />
-            <Text style={styles.legendText}>Lộ trình đề xuất</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={styles.legendLineCompleted} />
-            <Text style={styles.legendText}>Lộ trình đã đi</Text>
+          <View style={styles.trafficLegendContainer} pointerEvents="none">
+            <Text style={styles.trafficLegendTitle}>Hiển thị tình trạng giao thông</Text>
+            <View style={styles.trafficLegendRow}>
+              <View style={styles.trafficLegendItem}>
+                <View style={[styles.trafficLegendBadge, { backgroundColor: "#22c55e" }]} />
+                <Text style={styles.trafficLegendText}>Lưu thông tốt</Text>
+              </View>
+              <View style={styles.trafficLegendItem}>
+                <View style={[styles.trafficLegendBadge, { backgroundColor: "#eab308" }]} />
+                <Text style={styles.trafficLegendText}>Đông nhẹ</Text>
+              </View>
+              <View style={styles.trafficLegendItem}>
+                <View style={[styles.trafficLegendBadge, { backgroundColor: "#ef4444" }]} />
+                <Text style={styles.trafficLegendText}>Ùn tắc / kẹt xe</Text>
+              </View>
+              <View style={styles.trafficLegendItem}>
+                <View style={[styles.trafficLegendBadge, { backgroundColor: "#a7262a" }]} />
+                <Text style={styles.trafficLegendText}>Ùn tắc / kẹt xe nặng</Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        {shouldRenderRoute && routeSegments.length > 0 && (
-          <View style={styles.routeInfoContainer}>
-            <Text style={styles.routeInfoTitle}>Thông tin lộ trình:</Text>
-            {routeSegments.map((segment, index) => {
-              const label = segmentLabels[index];
-              return (
-                <View key={`segment-info-${index}`} style={styles.routeInfoRow}>
-                  <View style={styles.routeInfoIndex}>
-                    <Text style={styles.routeInfoIndexText}>{index + 1}</Text>
-                  </View>
-                  <View style={styles.routeInfoContent}>
-                    <Text style={styles.routeInfoLabel}>
-                      {label?.start ?? "Điểm trước"}
-                    </Text>
-                    <Text style={styles.routeInfoArrow}>↓</Text>
-                    <Text style={styles.routeInfoLabel}>
-                      {label?.end ?? "Điểm kế tiếp"}
-                    </Text>
-                    <Text style={styles.routeInfoMeta}>
-                      {segment.distance} • {segment.duration}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
+        {(() => {
+          const hasRouteDetails = sessionState?.sessionDetail?.routeDetails &&
+            sessionState.sessionDetail.routeDetails.length > 0;
+          const hasRouteSegments = shouldRenderRoute && routeSegments.length > 0;
 
+          // Chỉ hiển thị nếu có routeDetails hoặc routeSegments
+          if (!hasRouteDetails && !hasRouteSegments) {
+            return null;
+          }
+
+          return (
+            <View style={styles.routeInfoContainer}>
+              <Text style={styles.routeInfoTitle}>Thông tin lộ trình:</Text>
+
+              {/* Hiển thị routeDetails nếu có (ưu tiên) */}
+              {hasRouteDetails && sessionState?.sessionDetail?.routeDetails && (() => {
+                const routeDetails = sessionState.sessionDetail.routeDetails;
+                if (!routeDetails || routeDetails.length === 0) return null;
+
+                return (
+                  <>
+                    {/* Hiển thị điểm bắt đầu đến điểm đầu tiên trong routeDetails */}
+                    {routeDetails.length > 0 && (
+                      <View style={styles.routeInfoRow}>
+                        <View style={styles.routeInfoIndex}>
+                          <Text style={styles.routeInfoIndexText}>S</Text>
+                        </View>
+                        <View style={styles.routeInfoContent}>
+                          <Text style={styles.routeInfoLabel}>
+                            {sessionState?.sessionDetail?.displayStartLocationName || "Điểm bắt đầu"}
+                          </Text>
+                          <Text style={styles.routeInfoArrow}>↓</Text>
+                          <Text style={styles.routeInfoLabel}>
+                            {routeDetails[0]?.streetName ||
+                              routeDetails[0]?.textInstruction ||
+                              "Điểm 1"}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Hiển thị các điểm từ routeDetails */}
+                    {routeDetails.map((point, index) => {
+                      const isLast = index === routeDetails.length - 1;
+                      const nextPoint = isLast
+                        ? (hasDistinctEndPoint
+                          ? (sessionState?.sessionDetail?.displayEndLocationName || "Điểm kết thúc")
+                          : null)
+                        : (routeDetails[index + 1]?.streetName ||
+                          routeDetails[index + 1]?.textInstruction ||
+                          `Điểm ${index + 2}`);
+
+                      return (
+                        <View key={`route-detail-${index}`} style={styles.routeInfoRow}>
+                          <View style={styles.routeInfoIndex}>
+                            <Text style={styles.routeInfoIndexText}>
+                              {index + 1}
+                            </Text>
+                          </View>
+                          <View style={styles.routeInfoContent}>
+                            <Text style={styles.routeInfoLabel}>
+                              {point.streetName || point.textInstruction || `Điểm ${index + 1}`}
+                            </Text>
+                            {nextPoint && (
+                              <>
+                                <Text style={styles.routeInfoArrow}>↓</Text>
+                                <Text style={styles.routeInfoLabel}>{nextPoint}</Text>
+                              </>
+                            )}
+                            {point.textInstruction && point.textInstruction !== point.streetName && (
+                              <Text style={styles.routeInfoMeta}>
+                                {point.textInstruction}
+                              </Text>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </>
+                );
+              })()}
+
+              {/* Hiển thị routeSegments nếu có và KHÔNG có routeDetails (khi đang planning) */}
+              {hasRouteSegments && !hasRouteDetails && routeSegments.map((segment, index) => {
+                const label = segmentLabels[index];
+                return (
+                  <View key={`segment-info-${index}`} style={styles.routeInfoRow}>
+                    <View style={styles.routeInfoIndex}>
+                      <Text style={styles.routeInfoIndexText}>
+                        {index + 1}
+                      </Text>
+                    </View>
+                    <View style={styles.routeInfoContent}>
+                      <Text style={styles.routeInfoLabel}>
+                        {label?.start ?? "Điểm trước"}
+                      </Text>
+                      <Text style={styles.routeInfoArrow}>↓</Text>
+                      <Text style={styles.routeInfoLabel}>
+                        {label?.end ?? "Điểm kế tiếp"}
+                      </Text>
+                      <Text style={styles.routeInfoMeta}>
+                        {segment.distance} • {segment.duration}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          );
+        })()}
       </View>
 
-      {showPlanningList && allowDirectMapPress && selectedRoutePoints.length > 0 && (
+      {showPlanningList && selectedRoutePoints.length > 0 && (
         <View style={styles.selectedPointsContainer}>
           <Text style={styles.selectedPointsTitle}>
             Các điểm đã chọn ({selectedRoutePoints.length})
@@ -458,7 +725,6 @@ export default function SessionMap({
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   routeCard: {
     backgroundColor: AppColors.white,
@@ -567,6 +833,39 @@ const styles = StyleSheet.create({
     color: "#475569",
     fontWeight: "500",
   },
+  trafficLegendContainer: {
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: "#f1f5f9",
+  },
+  trafficLegendTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#0f172a",
+    marginBottom: 4,
+  },
+  trafficLegendRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    alignItems: "center",
+  },
+  trafficLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  trafficLegendBadge: {
+    width: 18,
+    height: 6,
+    borderRadius: 3,
+  },
+  trafficLegendText: {
+    fontSize: 11,
+    color: "#475569",
+  },
   vehicleMarker: {
     width: 40,
     height: 40,
@@ -648,6 +947,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
+  logPointMarker: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: AppColors.yellow,
+    backgroundColor: "rgba(250, 204, 21, 0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logPointInner: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: AppColors.yellow,
+  },
   selectedPointsContainer: {
     marginTop: 16,
     backgroundColor: "#f8fafc",
@@ -728,4 +1043,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-

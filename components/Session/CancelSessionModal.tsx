@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Alert,
 } from "react-native";
 import { AppColors } from "@/constants/Colors";
+import { UserRole } from "@/models/enum/UserRole.enum";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { SessionViewModel } from "@/viewmodels/session/SessionViewModel";
 
@@ -20,6 +21,9 @@ interface CancelSessionModalProps {
   sessionId?: string | null;
   onClose: () => void;
   onCancelled?: () => void;
+  role?: UserRole | null;
+  sessionStartTime?: string | null;
+  sessionDurationMinutes?: number | null;
 }
 
 export default function CancelSessionModal({
@@ -35,6 +39,78 @@ export default function CancelSessionModal({
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const { role, sessionStartTime, sessionDurationMinutes } = (arguments[0] || {}) as CancelSessionModalProps;
+
+  const { isNoviceDriver, isInstructor, isBefore24h, baseHours, compensationHours, policyText, policyDetails } =
+    useMemo(() => {
+      const isNovice = role === UserRole.NoviceDriver;
+      const isInstr = role === UserRole.Instructor;
+
+      let isBefore24 = false;
+      if (sessionStartTime) {
+        const start = new Date(sessionStartTime);
+        if (!Number.isNaN(start.getTime())) {
+          const diffMs = start.getTime() - Date.now();
+          const diffHours = diffMs / (1000 * 60 * 60);
+          isBefore24 = diffHours >= 24;
+        }
+      }
+
+      const base = sessionDurationMinutes && sessionDurationMinutes > 0
+        ? sessionDurationMinutes / 60
+        : null;
+
+      let comp: number | null = null;
+      if (isInstr && base !== null && !isBefore24) {
+        comp = base * 0.5;
+      }
+
+      let mainText = "";
+      const details: string[] = [];
+
+      if (isNovice) {
+        if (isBefore24) {
+          mainText = base
+            ? `Bạn sẽ được hoàn lại khoảng ${base} giờ luyện tập về trạng thái chưa sử dụng.`
+            : "Bạn sẽ được hoàn lại số giờ pending về trạng thái chưa sử dụng.";
+        } else {
+          mainText =
+            "Bạn sẽ không được hoàn lại số giờ đã booking cho buổi tập này.";
+        }
+        details.push(
+          "Hủy trước ≥ 24 giờ: hoàn lại số giờ pending về trạng thái chưa sử dụng.",
+          "Hủy trước < 24 giờ: không hoàn lại số giờ booking."
+        );
+      } else if (isInstr) {
+        if (isBefore24) {
+          mainText = base
+            ? `Học viên sẽ được hoàn lại khoảng ${base} giờ luyện tập theo đơn booking.`
+            : "Học viên sẽ được hoàn lại số giờ theo đơn booking.";
+        } else {
+          if (base) {
+            mainText = `Học viên sẽ được hoàn lại khoảng ${base} giờ và được đền bù thêm khoảng ${comp ?? base * 0.5} giờ luyện tập.`;
+          } else {
+            mainText =
+              "Học viên sẽ được hoàn lại số giờ đã booking và được đền bù thêm 50% số giờ theo đơn booking.";
+          }
+        }
+        details.push(
+          "Hủy < 24 giờ: hoàn lại số giờ đã booking và đền bù thêm 50% số giờ đó cho học viên.",
+          "Hủy ≥ 24 giờ: hoàn lại số giờ theo đơn booking cho học viên."
+        );
+      }
+
+      return {
+        isNoviceDriver: isNovice,
+        isInstructor: isInstr,
+        isBefore24h: isBefore24,
+        baseHours: base,
+        compensationHours: comp,
+        policyText: mainText,
+        policyDetails: details,
+      };
+    }, [role, sessionStartTime, sessionDurationMinutes]);
 
   useEffect(() => {
     if (!visible) {
@@ -104,6 +180,45 @@ export default function CancelSessionModal({
               <Text style={styles.modalTitle}>Xác nhận hủy buổi tập</Text>
 
               <View style={{ gap: 8 }}>
+                {(isNoviceDriver || isInstructor) && (
+                  <View style={{ marginBottom: 8 }}>
+                    <Text style={styles.modalSectionTitle}>
+                      Vai trò hiện tại
+                    </Text>
+                    <Text style={styles.modalValue}>
+                      {isNoviceDriver
+                        ? "Người lái mới"
+                        : "Người hướng dẫn"}
+                    </Text>
+                  </View>
+                )}
+
+                {policyText && (
+                  <View style={styles.noticeBadge}>
+                    <Text
+                      style={[
+                        styles.noticeText,
+                        { color: isBefore24h ? "#15803d" : "#b91c1c" },
+                      ]}
+                    >
+                      {policyText}
+                    </Text>
+                  </View>
+                )}
+
+                {policyDetails.length > 0 && (
+                  <View >
+                    <Text style={styles.modalSectionTitle}>
+                      Chính sách hủy áp dụng
+                    </Text>
+                    {policyDetails.map((line, idx) => (
+                      <Text key={idx} >
+                        - {line}
+                      </Text>
+                    ))}
+                  </View>
+                )}
+
                 <Text style={styles.modalSectionTitle}>Lý do hủy *</Text>
                 <TextInput
                   style={styles.noteInput}

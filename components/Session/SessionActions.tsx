@@ -1,11 +1,14 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
 import { Calendar } from "lucide-react-native";
 import { ROUTES } from "@/constants/routes";
 import { useRouter } from "expo-router";
+import { SessionStatus } from "@/models/booking/booking";
 
 interface SessionActionsProps {
+  status: SessionStatus;
   sessionId: string | string[] | undefined;
+  instructorId: string | undefined;
   displaySession: {
     instructorName?: string;
     date?: string;
@@ -17,11 +20,19 @@ interface SessionActionsProps {
 }
 
 export default function SessionActions({
+  status,
   sessionId,
+  instructorId,
   displaySession,
   onCancelPress,
 }: SessionActionsProps) {
   const router = useRouter();
+
+  // Nếu buổi tập đã hoàn thành thì không cho đổi lịch / hủy
+  if (status === SessionStatus.Completed) {
+    return null;
+  }
+
 
   return (
     <View style={styles.sessionManagementControls}>
@@ -32,6 +43,7 @@ export default function SessionActions({
             pathname: ROUTES.RESCHEDULE_SESSION as any,
             params: {
               sessionId: sessionId,
+              instructorId: instructorId,
               instructorName: displaySession?.instructorName || "",
               date: displaySession?.date || "",
               startTime: displaySession?.startTime || "",

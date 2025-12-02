@@ -29,6 +29,8 @@ type BookingSummaryCardProps = {
     selectedEndTime?: string;
     selectedDuration?: number;
     pickupLocation?: string;
+    dropoffLocation?: string;
+    isSameDropoff?: boolean;
 };
 
 const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
@@ -43,6 +45,8 @@ const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
     selectedEndTime,
     selectedDuration = 0,
     pickupLocation,
+    dropoffLocation,
+    isSameDropoff = true,
 }) => {
     const hasTimeRange =
         !!selectedStartTime && !!selectedEndTime && selectedDuration > 0;
@@ -124,11 +128,19 @@ const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
                         {pickupLocation ? (
                             <InfoRow
                                 icon={<MapPin size={16} color="#667eea" />}
-                                label="Địa điểm"
+                                label="Điểm đón (chọn từ bản đồ)"
                                 value={pickupLocation}
                                 valueNumberOfLines={2}
                             />
                         ) : null}
+                        {pickupLocation && (
+                            <InfoRow
+                                icon={<MapPin size={16} color="#f97316" />}
+                                label="Điểm thả (chọn từ bản đồ)"
+                                value={isSameDropoff ? "Giống điểm đón" : (dropoffLocation || "Chưa chọn")}
+                                valueNumberOfLines={isSameDropoff ? 1 : 2}
+                            />
+                        )}
                     </View>
                 </ScrollView>
             ) : (

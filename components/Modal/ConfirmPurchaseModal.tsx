@@ -125,7 +125,7 @@ export function ConfirmPurchaseModal({
                 <View style={styles.confirmVehicleSection}>
                   <Text style={styles.confirmSectionTitle}>Chọn xe</Text>
                   <Text style={styles.confirmVehicleSubtitle}>
-                    Bạn có xe như là ... chưa nghĩ câu hay
+                    Chọn xe để sử dụng cho gói này
                   </Text>
 
 
@@ -142,7 +142,7 @@ export function ConfirmPurchaseModal({
                       <View style={styles.confirmVehicleOptionInfo}>
                         <Text style={styles.confirmVehicleOptionName}>{vehicle.modelName}</Text>
                         <View style={styles.confirmVehicleOptionSpecs}>
-                          <Text style={styles.confirmVehicleOptionSpec}>{vehicle.seatCounts} chỗ</Text>
+                          <Text style={styles.confirmVehicleOptionSpec}>{vehicle.seatCount} chỗ</Text>
                           {vehicle.vehicleType && (
                             <>
                               <Text style={styles.confirmVehicleOptionDot}> • </Text>

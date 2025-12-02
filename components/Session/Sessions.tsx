@@ -108,6 +108,7 @@ const getStatusIcon = (statusKey: StatusFilter) => {
 
 export interface SessionsListProps {
     bookingId?: string;
+    instructorId?: string;
     title?: string;
     initialStatus?: StatusFilter;
     enableScroll?: boolean;
@@ -123,6 +124,7 @@ export interface SessionsListProps {
 
 export default function SessionsList({
     bookingId,
+    instructorId,
     title = "Danh sách buổi thuê",
     initialStatus = "all",
     enableScroll = true,
@@ -294,7 +296,7 @@ export default function SessionsList({
 
                         return (
                             <View key={session.id} style={styles.sessionCard}>
-                                <View
+                                {/* <View
                                     style={[
                                         styles.statusBadge,
                                         {
@@ -309,7 +311,7 @@ export default function SessionsList({
                                     >
                                         {statusConfig?.label}
                                     </Text>
-                                </View>
+                                </View> */}
 
                                 <View style={styles.sessionRow}>
                                     <Calendar size={18} color="#64748b" strokeWidth={2} />
@@ -362,7 +364,7 @@ export default function SessionsList({
                                     <TouchableOpacity
                                         onPress={() => router.push({
                                             pathname: ROUTES.DRIVING_SESSION_DETAIL,
-                                            params: { sessionId: session.id },
+                                            params: { sessionId: session.id, instructorId: instructorId },
                                         })}
                                         style={styles.viewDetailButton}
                                     >

@@ -1,21 +1,16 @@
 import { HttpMethod } from "@/models/enum/HttpMethods";
-import { createThunk } from "../genericCreateThunk";
-import { GenericResponse } from "@/models/generic/genericResponse";
+import { ISessionDetailDTO, ISessionRouteDetai } from "@/models/session/session.type";
 import { IRescheduleSessionRequest } from "../booking/bookingThunk";
-import { ISessionDetailDTO } from "@/models/session/session.type";
+import { createThunk } from "../genericCreateThunk";
 
 const SESSION_PATH = "session";
-export const cancelSession = createThunk<
-    boolean,
-    { sessionId: string }
->(
+
+export const cancelSession = createThunk<boolean, { sessionId: string }>(
     HttpMethod.POST,
     "cancelSession",
     `/${SESSION_PATH}`,
     { buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}/cancel` }
 );
-
-
 
 export const rescheduleSession = createThunk<
     boolean,
@@ -24,9 +19,23 @@ export const rescheduleSession = createThunk<
     HttpMethod.POST,
     "rescheduleSession",
     `/${SESSION_PATH}`,
-    { buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}/reschedule` }
+    {
+        buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}/reschedule`,
+        config: () => ({
+            headers: {
+                "Content-Type": "application/json",
+            },
+            transformRequest: [
+                (data: any) => {
+                    if (data && typeof data === "object" && "rescheduleData" in data) {
+                        return JSON.stringify((data as any).rescheduleData);
+                    }
+                    return JSON.stringify(data);
+                },
+            ],
+        }),
+    }
 );
-
 
 export const getSessionDetail = createThunk<
     ISessionDetailDTO,
@@ -36,4 +45,29 @@ export const getSessionDetail = createThunk<
     "getSessionDetail",
     `/${SESSION_PATH}`,
     { buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}` }
+);
+
+export const saveSessionRoutes = createThunk<
+    boolean,
+    { sessionId: string; body: ISessionRouteDetai }
+>(
+    HttpMethod.POST,
+    "saveSessionRoutes",
+    `/${SESSION_PATH}`,
+    {
+        buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}/routes`,
+        config: () => ({
+            headers: {
+                "Content-Type": "application/json",
+            },
+            transformRequest: [
+                (data: any) => {
+                    if (data && typeof data === "object" && "body" in data) {
+                        return JSON.stringify((data as any).body);
+                    }
+                    return JSON.stringify(data);
+                },
+            ],
+        }),
+    }
 );

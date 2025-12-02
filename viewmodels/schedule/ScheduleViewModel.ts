@@ -314,25 +314,22 @@ export const useScheduleStep1ViewModel = (
     }, [selectedEndTime]);
 
     const fetchInstructorData = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            const scheduleResult = await dispatch(
-                getInstructorSchedule({ instructorId })
-            ).unwrap();
-            const scheduleData = (scheduleResult as any).value || scheduleResult;
-            setInstructorSchedule(scheduleData);
-            scheduleViewModel.setSchedule(scheduleData);
+        setIsLoading(true);
+        const scheduleResult = await dispatch(
+            getInstructorSchedule({ instructorId })
+        ).unwrap();
+        const scheduleData = (scheduleResult as any).value || scheduleResult;
+        setInstructorSchedule(scheduleData);
+        
+        scheduleViewModel.setSchedule(scheduleData);
+        const sessionsResult = await dispatch(
+            getInstructorBookedSessions({ instructorId })
+        ).unwrap();
+        const sessionsData = (sessionsResult as any).value || sessionsResult;
+        setInstructorBookedSessions(sessionsData);
 
-            const sessionsResult = await dispatch(
-                getInstructorBookedSessions({ instructorId })
-            ).unwrap();
-            const sessionsData = (sessionsResult as any).value || sessionsResult;
-            setInstructorBookedSessions(sessionsData);
-        } catch (error) {
-            console.error("ScheduleStep1 - Failed to fetch instructor data:", error);
-        } finally {
-            setIsLoading(false);
-        }
+        setIsLoading(false);
+
     }, [dispatch, instructorId, scheduleViewModel]);
 
     useEffect(() => {

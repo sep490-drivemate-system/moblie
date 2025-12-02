@@ -41,16 +41,6 @@ export interface IRouteData {
   createdAt: string;
 }
 
-// API Request/Response for session routes
-export interface ISessionRouteItem {
-  textInstruction: string;
-  streetName: string;
-  latitudeStart: number;
-  longitudeStart: number;
-}
-
-// Response from GET session routes API
-
 
 export interface ISessionRoutes {
   id: string;
@@ -61,13 +51,3 @@ export interface ISessionRoutes {
   longitudeStart: number;
 }
 
-export interface ISaveSessionRoutesRequest {
-  sessionId: string;
-  routes: ISessionRouteItem[];
-}
-
-// Wrapper for API call with sessionId in URL
-export interface ISaveSessionRoutesPayload {
-  sessionId: string;
-  body: ISessionRouteItem[];
-}

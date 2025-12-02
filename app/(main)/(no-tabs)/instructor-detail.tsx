@@ -37,7 +37,6 @@ import { AlertVariant, AppAlert } from "@/components/Commons/AppAlert";
 import { NoviceDriverViewModel } from "@/viewmodels/driver/NoviceDriverViewModel";
 import { PackageViewModel } from "@/viewmodels/package/PackageViewModel";
 
-// Helper function to convert gender number to text
 const getGenderText = (gender: Gender): string => {
   return gender === Gender.Male ? "Nam" : "Nữ";
 };
@@ -54,9 +53,9 @@ export default function InstructorDetailScreen() {
   const [isLoadingCars, setIsLoadingCars] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<IInstructorPackages | null>(null);
-  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null); // null = own car, string = vehicle id
+  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const scaleAnim = useState(new Animated.Value(1))[0]; // Start with 1 so modal is visible
+  const scaleAnim = useState(new Animated.Value(1))[0];
   const [walletState] = useViewModel(WalletViewModel, (state) => state.wallet);
   const [showBalanceAlert, setShowBalanceAlert] = useState(false);
   const [, noviceDriverViewModel] = useViewModel(NoviceDriverViewModel, (state) => state.user);
@@ -80,7 +79,7 @@ export default function InstructorDetailScreen() {
     if (instructor && instructor.id) {
       const fetchPackages = async () => {
         setIsLoadingPackages(true);
-        const packages = await packageViewModel.getPackages(instructor.id);
+        const packages = await packageViewModel.getPackagesByInstructorId(instructor.id);
         setPackages(packages);
         setIsLoadingPackages(false);
       };
@@ -136,22 +135,17 @@ export default function InstructorDetailScreen() {
       return;
     }
 
-    // Nếu gói có thuê xe, kiểm tra hạng bằng lái so với hạng xe (qua ViewModel)
     if (selectedPackage.isRentalCar && selectedVehicle) {
       const selectedCar = cars.find((c) => String(c.id) === String(selectedVehicle));
-      console.log('selectedCar', selectedCar);
       if (selectedCar) {
         const canDrive = await noviceDriverViewModel.canDriveVehicle(selectedCar.licenseTier);
-        console.log('canDrive', canDrive);
         if (!canDrive) {
-          // Đóng modal xác nhận trước khi hiển thị cảnh báo
           setShowConfirmModal(false);
           setLicenseAlertMessage("Bạn chưa có giấy phép lái xe đủ để lái xe này. Vui lòng đăng ký lái xe để tiếp tục.");
           setShowLicenseAlert(true);
           return;
         }
       } else {
-        // Không tìm được xe tương ứng -> cũng hiển thị cảnh báo và đóng modal
         setShowConfirmModal(false);
         setLicenseAlertMessage("Bạn chưa có giấy phép lái xe đủ để lái xe này. Vui lòng đăng ký lái xe để tiếp tục.");
         setShowLicenseAlert(true);
@@ -395,10 +389,10 @@ export default function InstructorDetailScreen() {
                   <View style={styles.vehicleInfo}>
                     <Text style={styles.vehicleName}>{vehicle.modelName}</Text>
                     <Text style={styles.vehicleSpec}>
-                      {vehicle.seatCounts} chỗ {vehicle.vehicleType ? `• ${vehicle.vehicleType}` : ''}
+                      {vehicle.seatCount} chỗ {vehicle.vehicleType ? `• ${vehicle.vehicleType}` : ''}
                     </Text>
                     <Text style={styles.vehiclePrice}>
-                      {vehicle.unitPrice.toLocaleString('vi-VN')} VND / giờ
+                      {vehicle.price.toLocaleString('vi-VN')} VND / giờ
                     </Text>
                   </View>
                   <TouchableOpacity

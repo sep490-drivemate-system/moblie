@@ -19,12 +19,11 @@ export interface IInstructorCar {
   thumbnailUrl: string;
   modelName: string;
   licenseTier: LicenseTier;
-  unitPrice: number;
-  seatCounts: number;
+  price: number;
+  seatCount: number;
   vehicleType: string | null;
 }
 
-// Legacy UI type (keep for compatibility)
 export interface InstructorPackage {
   id: string;
   name: string;
@@ -89,7 +88,7 @@ export interface InstructorApplicant {
   instructorId: string;
   fullname: string;
   email: string;
-  phone:string;
+  phone: string;
   gender: string;
   birthDate: string;
   submitDate: string;

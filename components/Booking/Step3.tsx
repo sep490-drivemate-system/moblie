@@ -14,6 +14,8 @@ interface Step4Props {
   acceptedPolicies?: Record<string, boolean>;
   onPolicyAccept?: (policyId: string, accepted: boolean) => void;
   bookingCost: number;
+  vehicleCost?: number;
+  walletBalance?: number;
   isLoading?: boolean;
   vehicleId?: string | null;
   carPrice?: number;
@@ -28,6 +30,8 @@ export default function Step4({
   acceptedPolicies = {},
   onPolicyAccept,
   bookingCost,
+  vehicleCost = 0,
+  walletBalance = 0,
   isLoading = false,
   vehicleId = null,
   carPrice = 0,
@@ -53,10 +57,8 @@ export default function Step4({
     });
   };
 
-  // Calculate vehicle cost if vehicle is selected
-  const vehicleCost = vehicleId && carPrice && selectedDuration > 0
-    ? carPrice * selectedDuration
-    : 0;
+  // Calculate remaining balance after booking
+  const remainingBalance = walletBalance - bookingCost;
 
 
   return (
@@ -172,8 +174,8 @@ export default function Step4({
         )}
       </View>
 
-      {/* Payment Section - Only show if vehicle is selected */}
-      {vehicleId && vehicleCost > 0 && (
+      {/* Payment Section - Show if vehicle is selected or if there's a booking cost */}
+      {(vehicleId && vehicleCost > 0) || bookingCost > 0 ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Coins size={24} color={AppColors.primary} strokeWidth={2} />
@@ -181,18 +183,36 @@ export default function Step4({
           </View>
 
           <View style={styles.paymentCard}>
+            <View style={styles.paymentRow}>
+              <Text style={styles.paymentLabel}>Số dư hiện tại:</Text>
+              <Text style={[styles.paymentValue]}>
+                {walletBalance.toLocaleString()} vnd
+              </Text>
+            </View>
+
+            {vehicleCost > 0 && (
+              <>
+                <View style={styles.paymentDivider} />
+                <View style={styles.paymentRow}>
+                  <Text style={styles.paymentLabel}>Chi phí thuê xe:</Text>
+                  <Text style={[styles.paymentValue, styles.paymentCost]}>
+                    {vehicleCost.toLocaleString()} vnd
+                  </Text>
+                </View>
+                <Text style={styles.paymentNote}>
+                  ({carPrice?.toLocaleString()} vnd/giờ × {selectedDuration} giờ)
+                </Text>
+              </>
+            )}
 
             <View style={styles.paymentDivider} />
 
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Chi phí thuê xe:</Text>
-              <Text style={[styles.paymentValue, styles.paymentCost]}>
-                {vehicleCost.toLocaleString()} xu
+              <Text style={styles.paymentLabelBold}>Tổng chi phí:</Text>
+              <Text style={[styles.paymentValueBold, styles.paymentCost]}>
+                {bookingCost.toLocaleString()} vnd
               </Text>
             </View>
-            <Text style={styles.paymentNote}>
-              ({carPrice?.toLocaleString()} xu/giờ × {selectedDuration} giờ)
-            </Text>
 
             <View style={styles.paymentDivider} />
 
@@ -201,18 +221,19 @@ export default function Step4({
               <Text
                 style={[
                   styles.paymentValueBold,
+                  remainingBalance < 0 && styles.paymentValueError,
                 ]}
               >
-                {vehicleCost.toLocaleString()} xu
+                {remainingBalance.toLocaleString()} vnd
               </Text>
             </View>
           </View>
 
         </View>
-      )}
+      ) : null}
 
       {/* Session Note Section */}
-      <View style={styles.section}>
+      {/* <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Ghi chú buổi học</Text>
         </View>
@@ -233,7 +254,7 @@ export default function Step4({
         <Text style={styles.noteHint}>
           {sessionNote.length}/500 ký tự
         </Text>
-      </View>
+      </View> */}
     </View>
   );
 }

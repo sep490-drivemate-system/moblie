@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
   TouchableWithoutFeedback,
   ActivityIndicator,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { IUserInfo, submitFeedback, IFeedbackRequest } from "@/features/booking/bookingThunk";
 import { ArrowLeft, Star, MessageSquare } from "lucide-react-native";
 import SessionsList from "@/components/Session/Sessions";
@@ -33,6 +33,7 @@ export default function PackageDetailScreen() {
   const dispatch = useAppDispatch();
   const [instructorInfo, setInstructorInfo] = useState<IUserInfo | null>(null);
   const [isLoadingInstructor, setIsLoadingInstructor] = useState(false);
+
 
   // Feedback modal state
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -82,9 +83,17 @@ export default function PackageDetailScreen() {
   ]);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [sessionsRefreshKey, setSessionsRefreshKey] = useState(0);
+
+  // Refresh sessions list when screen is focused (e.g., when returning from session detail)
+  useFocusEffect(
+    useCallback(() => {
+      // Trigger refresh by changing the key
+      setSessionsRefreshKey(prev => prev + 1);
+    }, [])
+  );
 
   const handleBookNewSession = () => {
-
     const navigationConfig =
       packageDetailViewModel.getBookingNavigationConfig(packageData as PackageDetailData, {
         carIdFromParams,
@@ -357,7 +366,9 @@ export default function PackageDetailScreen() {
         <View style={styles.sessionsSection}>
           <Text style={styles.sectionTitle}>Lịch thuê đã đặt</Text>
           <SessionsList
+            key={sessionsRefreshKey}
             bookingId={packageData?.id}
+            instructorId={instructorInfo?.userId}
             enableScroll={false}
             showHeader={false}
             emptyStateText="Bạn chưa có lịch thuê nào cho gói này."
