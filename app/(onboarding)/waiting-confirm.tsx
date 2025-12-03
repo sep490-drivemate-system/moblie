@@ -132,7 +132,7 @@ export default function WaitingConfirmScreen() {
       setApplicationStatus(status);
       return status;
     } catch (error) {
-      console.error("Failed to fetch instructor applicant:", error);
+      console.log("Failed to fetch instructor applicant:", error);
       return null;
     }
   }, [dispatch, instructorId]);

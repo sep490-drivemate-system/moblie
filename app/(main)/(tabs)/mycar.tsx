@@ -384,7 +384,7 @@ export default function MyCarScreen() {
                 Giá Trung Bình
               </Text>
               <Text style={[styles.statValue, styles.statValuePrice]}>
-                {averagePrice.toLocaleString("vi-VN")}K VNĐ
+                {averagePrice?.toLocaleString("vi-VN")}K VNĐ
               </Text>
             </View>
           </View>
