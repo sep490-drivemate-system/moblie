@@ -45,7 +45,6 @@ export default function ProfileScreen() {
   >(AuthViewModel, (state) => state.auth);
 
   useEffect(() => {
-    // Chỉ fetch user info nếu đã đăng nhập
     if (authState.isAuthenticated) {
       authViewModel.fetchUserInfo().catch((error) => {
         console.error("Error fetching user info:", error);

@@ -4,30 +4,22 @@ import { instructorsData } from "@/data/instructors_data";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import {
-  Clock,
-  Filter,
-  MapPin,
-  Package,
-  Search,
-  X,
-  Zap
-} from "lucide-react-native";
+import { Clock, MapPin, Package, Zap } from "lucide-react-native";
 import { useState } from "react";
 import {
   Dimensions,
   FlatList,
   Image,
-  Modal,
-  Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import CustomFilter, {
+  FilterOptionType as CustomFilterOptionType,
+} from "@/components/Commons/CustomFilter";
 
 const { width } = Dimensions.get("window");
 
@@ -71,6 +63,8 @@ const filterOptions = [
     type: "roadType" as const,
   },
 ];
+
+
 
 export default function PackagesScreen() {
   const router = useRouter();
@@ -118,17 +112,13 @@ export default function PackagesScreen() {
   };
 
   // Render filter option item for FlatList
-  const renderFilterOptionItem = ({
-    item,
-  }: {
-    item: (typeof filterOptions)[0];
-  }) => {
+  const renderFilterOptionItem = ({ item }: { item: CustomFilterOptionType }) => {
     const isActive =
       item.id === "all"
         ? filterHasVehicle === null && selectedRoadTypes.length === 0
         : item.type === "vehicle"
-        ? filterHasVehicle === item.value
-        : selectedRoadTypes.length > 0;
+          ? filterHasVehicle === item.value
+          : selectedRoadTypes.length > 0;
 
     const handlePress = () => {
       if (item.id === "all") {
@@ -207,7 +197,6 @@ export default function PackagesScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* Modern Header with Gradient */}
       <LinearGradient
         colors={[
           AppColors.primary,
@@ -219,12 +208,6 @@ export default function PackagesScreen() {
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerContent}>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Danh Sách Gói</Text>
-            <Text style={styles.headerSubtitle}>
-              Tìm kiếm gói học lái xe phù hợp với bạn
-            </Text>
-          </View>
           <View style={styles.headerStats}>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>{filteredPackages.length}</Text>
@@ -235,100 +218,20 @@ export default function PackagesScreen() {
         <View style={styles.headerCurve} />
       </LinearGradient>
 
-      {/* Search and Filter Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Search size={20} color="#94a3b8" strokeWidth={2} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Tìm kiếm gói "
-            placeholderTextColor="#94a3b8"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-        <TouchableOpacity
-          activeOpacity={1}
-          style={[
-            styles.filterButton,
-            filterHasVehicle !== null && styles.filterButtonActive,
-          ]}
-          onPress={() => setShowFilter(!showFilter)}
-        >
-          <Filter
-            size={18}
-            color={filterHasVehicle !== null ? "#ffffff" : AppColors.primary}
-            strokeWidth={2}
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* Filter Options */}
-      {showFilter && (
-        <View style={styles.filterContainer}>
-          <Text style={styles.filterTitle}>Lọc theo:</Text>
-          <FlatList
-            data={filterOptions}
-            renderItem={renderFilterOptionItem}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterOptions}
-          />
-        </View>
-      )}
-
-      {/* Road Type Filter Modal */}
-      <Modal
-        visible={showRoadTypeModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowRoadTypeModal(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowRoadTypeModal(false)}
-        >
-          <Pressable
-            style={styles.modalContent}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chọn loại đường</Text>
-              <TouchableOpacity
-                onPress={() => setShowRoadTypeModal(false)}
-                style={styles.modalCloseButton}
-              >
-                <X size={24} color="#64748b" strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-
-            <FlatList
-              data={roadTypes}
-              renderItem={renderRoadTypeItem}
-              keyExtractor={(item) => item}
-              style={styles.modalScrollView}
-              contentContainerStyle={styles.roadTypesList}
-              showsVerticalScrollIndicator={false}
-            />
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={clearRoadTypeFilters}
-              >
-                <Text style={styles.clearButtonText}>Xóa tất cả</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.applyButton}
-                onPress={() => setShowRoadTypeModal(false)}
-              >
-                <Text style={styles.applyButtonText}>Áp dụng</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <CustomFilter
+        searchQuery={searchQuery}
+        onChangeSearch={setSearchQuery}
+        filterHasVehicle={filterHasVehicle}
+        showFilter={showFilter}
+        onToggleFilter={() => setShowFilter(!showFilter)}
+        filterOptions={filterOptions}
+        renderFilterOptionItem={renderFilterOptionItem}
+        showRoadTypeModal={showRoadTypeModal}
+        onCloseRoadTypeModal={() => setShowRoadTypeModal(false)}
+        roadTypes={roadTypes}
+        renderRoadTypeItem={renderRoadTypeItem}
+        onClearRoadTypeFilters={clearRoadTypeFilters}
+      />
 
       <ScrollView
         style={styles.scrollView}

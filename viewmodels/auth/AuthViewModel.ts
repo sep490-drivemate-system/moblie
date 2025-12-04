@@ -35,8 +35,14 @@ import {
   setEnteredOtp,
   resetOtpVerification,
   updateRegisterInstructorFormData,
+  setAuthChecked,
 } from "@/features/auth/authSlice";
-import { getRoleFromToken, getUserIdFromToken } from "@/lib/jwt/tokenUtils";
+import {
+  getRoleFromToken,
+  getUserIdFromToken,
+  getTokenExpiration,
+  isTokenExpired,
+} from "@/lib/jwt/tokenUtils";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootState } from "@/lib/redux/store";
@@ -56,7 +62,6 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   }
   async fetchUserInfo(): Promise<IUserInfo | null> {
     const userId = await getUserIdFromToken();
-    // Không gọi API nếu userId rỗng hoặc không hợp lệ (ví dụ sau khi logout)
     if (!userId || userId.trim() === "") {
       return null;
     }
@@ -64,7 +69,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       const response = await this.dispatch(getUserById({ id: userId as unknown as string })).unwrap();
       return response.value as IUserInfo;
     } catch (error) {
-      console.error("Error fetching user info:", error);
+      console.log("Error fetching user info:", error);
       return null;
     }
   }
@@ -147,13 +152,34 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         const token = await AsyncStorage.getItem(
           process.env.EXPO_PUBLIC_STORAGE_TOKEN || "@token"
         );
-        if (token) {
-          const roleFromToken = getRoleFromToken(token);
-          if (roleFromToken) {
-            this.dispatch(setUserRole(roleFromToken));
-          }
-          this.dispatch(setAuthenticated(true));
+        if (!token) {
+          this.dispatch(logout());
+          this.dispatch(setAuthChecked(true));
+          return;
         }
+
+        if (isTokenExpired(token)) {
+          await AsyncStorage.removeItem(
+            process.env.EXPO_PUBLIC_STORAGE_TOKEN || "@token"
+          );
+          this.dispatch(logout());
+          this.dispatch(setAuthChecked(true));
+          return;
+        }
+
+        const roleFromToken = getRoleFromToken(token);
+        if (roleFromToken) {
+          this.dispatch(setUserRole(roleFromToken));
+        }
+        this.dispatch(setAuthenticated(true));
+
+        const expiration = getTokenExpiration(token);
+        if (expiration) {
+          console.log("Token expires at:", expiration.toISOString());
+        }
+
+        // Đã kiểm tra xong token và cập nhật state
+        this.dispatch(setAuthChecked(true));
       },
       () => { },
       () => { },
@@ -343,7 +369,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
   ): void {
     // Get current state BEFORE dispatch to avoid stale state
     const currentFormData = this.getCurrentState().registerFormData;
-    
+
     // Create updated form data object with new value
     const updatedFormData = {
       ...currentFormData,

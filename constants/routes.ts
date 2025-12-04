@@ -23,6 +23,8 @@ export const ROUTES = {
   TRANSACTION_SUCCESS: '/(main)/(no-tabs)/transaction-success',
   NOTIFICATIONS: '/(main)/(tabs)/notifications',
   PACKAGES: '/(main)/(tabs)/packages',
+  INTRO: '/(onboarding)/intro',
+  
 
   MAIN_NO_TABS_DEPOSIT: '/(main)/(no-tabs)/deposit',
   MAIN_NO_TABS_WITHDRAW: '/(main)/(no-tabs)/withdraw',

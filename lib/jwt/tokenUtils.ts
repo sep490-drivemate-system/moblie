@@ -63,7 +63,6 @@ export const getUserIdFromToken = async (): Promise<string> => {
 export const isTokenExpired = (token: string): boolean => {
   const decoded = decodeToken(token);
   if (!decoded || !decoded.exp) return true;
-
   const currentTime = Date.now() / 1000;
   return decoded.exp < currentTime;
 };
@@ -72,5 +71,5 @@ export const getTokenExpiration = (token: string): Date | null => {
   const decoded = decodeToken(token);
   if (!decoded || !decoded.exp) return null;
 
-  return new Date(decoded.exp * 1000); // Convert seconds to milliseconds
+  return new Date(decoded.exp * 1000);
 };

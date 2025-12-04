@@ -16,12 +16,10 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SignalRHubUrls } from "@/lib/signalr/signalRConfig";
 import { useSignalR } from "@/lib/signalr/useSignalR";
+import { ROUTES } from "@/constants/routes";
 
 export { ErrorBoundary } from "expo-router";
 
-export const unstable_settings = {
-  initialRouteName: "(tabs)",
-};
 
 SplashScreen.preventAutoHideAsync();
 
@@ -71,7 +69,11 @@ function RootLayoutNav() {
 
   const authSelector = (state: RootState) => state.auth;
   const [authState, authViewModel] = useViewModel(AuthViewModel, authSelector);
-
+  useEffect(() => {
+    if (isMounted) {
+      authViewModel.checkAuthStatus();
+    }
+  }, [isMounted]);
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsMounted(true);
@@ -79,20 +81,24 @@ function RootLayoutNav() {
     return () => clearTimeout(timer);
   }, []);
 
-  // SETUP NAVIGATION CALLBACK
   useEffect(() => {
     authViewModel.setNavigationCallback((route: string) => {
       router.replace(route as any);
     });
   }, [authViewModel, router]);
 
-  useEffect(() => {
-    if (isMounted) {
-      authViewModel.checkAuthStatus();
-    }
-  }, [isMounted]);
 
-  if (!isMounted) {
+
+  useEffect(() => {
+    if (!isMounted) return;
+    if (!authState.hasCheckedAuth) return;
+
+    if (!authState.isAuthenticated) {
+      router.replace(ROUTES.INTRO);
+    }
+  }, [authState.isAuthenticated, authState.hasCheckedAuth, isMounted, router]);
+
+  if (!isMounted || !authState.hasCheckedAuth) {
     return <LoadingSpinner message="DriveMate..." />;
   }
 
@@ -106,6 +112,7 @@ function RootLayoutNav() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(auth)" />
       <Stack.Screen name="(onboarding)" />
       <Stack.Screen name="(main)" />
     </Stack>

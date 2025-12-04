@@ -37,82 +37,6 @@ interface Vehicle {
   features: string[];
 }
 
-const mockVehicles: Vehicle[] = [
-  {
-    id: 1,
-    brand: "Toyota",
-    model: "Vios",
-    licensePlate: "51A-123.45",
-    seats: 5,
-    price: 150000,
-    image: "image_3-guide10.png",
-    status: "approved",
-    approvedDate: "2025-01-15",
-    year: 2023,
-    fuelType: "Petrol",
-    transmission: "Manual",
-    features: ["Air Conditioning", "Power Steering", "ABS", "Airbags"],
-  },
-  {
-    id: 2,
-    brand: "Honda",
-    model: "Accord",
-    licensePlate: "51B-456.78",
-    seats: 5,
-    price: 250000,
-    image: "image_3-guide10.png",
-    status: "approved",
-    approvedDate: "2025-01-10",
-    year: 2024,
-    fuelType: "Petrol",
-    transmission: "Automatic",
-    features: [
-      "Air Conditioning",
-      "Power Steering",
-      "ABS",
-      "Airbags",
-      "Cruise Control",
-    ],
-  },
-  {
-    id: 3,
-    brand: "BMW",
-    model: "3 Series",
-    licensePlate: "51C-789.01",
-    seats: 5,
-    price: 450000,
-    image: "image_3-guide10.png",
-    status: "pending",
-    approvedDate: null,
-    year: 2024,
-    fuelType: "Diesel",
-    transmission: "Automatic",
-    features: [
-      "Air Conditioning",
-      "Power Steering",
-      "ABS",
-      "Airbags",
-      "Sunroof",
-      "Navigation",
-    ],
-  },
-  {
-    id: 4,
-    brand: "Kia",
-    model: "Cerato",
-    licensePlate: "51D-234.56",
-    seats: 5,
-    price: 180000,
-    image: "image_3-guide10.png",
-    status: "approved",
-    approvedDate: "2025-01-20",
-    year: 2023,
-    fuelType: "Petrol",
-    transmission: "Manual",
-    features: ["Air Conditioning", "Power Steering", "ABS", "Airbags"],
-  },
-];
-
 interface VehicleCardProps {
   vehicle: ICar;
   onDetail: () => void;
@@ -301,8 +225,8 @@ export default function MyCarScreen() {
   const averagePrice =
     cars.length > 0
       ? Math.round(
-          cars.reduce((s, v) => s + v.unitPrice, 0) / cars.length / 1000
-        )
+        cars.reduce((s, v) => s + v.unitPrice, 0) / cars.length / 1000
+      )
       : 0;
 
   const getIntructorListCar = useCallback(async () => {

@@ -33,13 +33,10 @@ export class TabsViewModel {
         packages: { key: 'packages', routeName: 'packages', title: 'Gói', icon: 'package' },
     };
 
-    private normalizeRole(role?: UserRole | null): UserRole {
-        return role ?? UserRole.Instructor;
-    }
 
-    getTabsForRole(role?: UserRole | null): TabConfigItem[] {
-        const normalizedRole = this.normalizeRole(role);
-        if (normalizedRole === UserRole.NoviceDriver) {
+
+    getTabsForRole(role: UserRole | null): TabConfigItem[] {
+        if (role === UserRole.NoviceDriver) {
             return [
                 this.allTabs.home,
                 this.allTabs.packages,
@@ -49,7 +46,7 @@ export class TabsViewModel {
             ];
         }
 
-        if (normalizedRole === UserRole.Instructor) {
+        if (role === UserRole.Instructor) {
             return [
                 this.allTabs.overview,
                 this.allTabs.schedule,
@@ -59,19 +56,16 @@ export class TabsViewModel {
             ];
         }
 
-        return [
-            this.allTabs.home,
-        ];
+        return [];
     }
 
-    getInitialRouteName(role?: UserRole | null): string {
+    getInitialRouteName(role: UserRole | null): string {
         const tabs = this.getTabsForRole(role);
         return tabs[0]?.routeName ?? 'home';
     }
 
     getIndexRedirectHref(role: UserRole | null): string {
-        const effectiveRole = role ?? UserRole.NoviceDriver;
-        if (effectiveRole === UserRole.Instructor) {
+        if (role === UserRole.Instructor) {
             return '/(main)/(tabs)/overview';
         }
         return '/(main)/(tabs)/home';

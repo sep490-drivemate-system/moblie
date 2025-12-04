@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isTokenExpired } from "@/lib/jwt/tokenUtils";
 const axiosInstance = axios.create({
     baseURL: process.env.EXPO_PUBLIC_API_URL,
     timeout: parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT || '30000'),
@@ -14,7 +15,14 @@ axiosInstance.interceptors.request.use(
             process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token'
         );
         if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+            // Nếu token đã hết hạn thì xóa khỏi storage và không gắn Authorization
+            if (isTokenExpired(token)) {
+                await AsyncStorage.removeItem(
+                    process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token'
+                );
+            } else {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
         }
         return config;
     },

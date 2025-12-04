@@ -42,7 +42,7 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* <View style={styles.videoContainer}>
+      <View style={styles.videoContainer}>
         <Video
           source={require("@/assets/videos/background_intro.mp4")}
           style={styles.backgroundVideo}
@@ -52,7 +52,7 @@ export default function SignInScreen() {
           resizeMode={ResizeMode.COVER}
         />
         <View style={styles.videoOverlay} />
-      </View> */}
+      </View>
 
       {/* Login Form Section */}
       <View style={styles.formSection}>
@@ -154,7 +154,7 @@ export default function SignInScreen() {
             </View>
 
             {/* Google Login Button */}
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.googleButton}
               onPress={() => authViewModel.handleGoogleLogin()}
             >
@@ -164,13 +164,13 @@ export default function SignInScreen() {
                 resizeMode="contain"
               />
               <Text style={styles.googleButtonText}>Đăng nhập với Google</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             {/* Sign Up Link */}
             <View style={styles.signUpContainer}>
               <Text style={styles.signUpText}>Chưa có tài khoản? </Text>
-              <TouchableOpacity onPress={() => router.push("/(auth)/signup")}>
-                <Text style={styles.signUpLink}>Tạo mới!</Text>
+              <TouchableOpacity onPress={() => router.replace(ROUTES.SIGNUP)}>
+                <Text style={styles.signUpLink}>Đăng ký tài khoản</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    marginTop: -20,
+    marginTop: -105,
     zIndex: 1,
     position: "relative",
   },

@@ -18,6 +18,7 @@ interface RegisterFormErrors {
 
 interface AuthState extends BaseState {
   isAuthenticated: boolean;
+  hasCheckedAuth: boolean;
   user: {
     role?: UserRole;
   } | null;
@@ -36,7 +37,8 @@ interface AuthState extends BaseState {
 }
 
 const initialState: AuthState = {
-  isAuthenticated: true,
+  isAuthenticated: false,
+  hasCheckedAuth: false,
   user: null,
   userInfo: null,
   formData: {
@@ -167,6 +169,9 @@ const authSlice = createSlice({
         emailOrPhone: "",
       };
     },
+    setAuthChecked: (state, action: PayloadAction<boolean>) => {
+      state.hasCheckedAuth = action.payload;
+    },
     setAuthenticated: (state, action: PayloadAction<boolean>) => {
       state.isAuthenticated = action.payload;
     },
@@ -175,6 +180,7 @@ const authSlice = createSlice({
     },
     logout: (state) => {
       state.isAuthenticated = false;
+      state.hasCheckedAuth = true;
       state.user = null;
       state.formData = {
         emailOrPhone: "",
@@ -306,6 +312,7 @@ export const {
   resetRegisterForm,
   updateForgotPasswordFormData,
   resetForgotPasswordForm,
+  setAuthChecked,
   setAuthenticated,
   clearError,
   logout,

@@ -5,7 +5,7 @@ import {
   IVerifyEmailRequest,
   IVerifyEmailResponse,
 } from "@/models/auth/verifyEmail";
-import { IVerifyRequest, IVerifyResponse } from "@/models/auth/verify";
+import { IVerifyRequest } from "@/models/auth/verify";
 import { HttpMethod } from "@/models/enum/HttpMethods";
 import { Policy } from "@/models/policy/policy";
 
