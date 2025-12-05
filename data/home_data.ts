@@ -1,4 +1,4 @@
-import { ICar } from "@/models/car/car";
+import { ICar, LicenseTier } from "@/models/car/car";
 import { LicenseType } from "@/models/license/license";
 import { IInstructorOption } from "@/models/package/package";
 
@@ -20,65 +20,12 @@ export const carousels = [
   },
 ];
 
-export const drivingLicenses: LicenseType[] = [
-  {
-    id: "1",
-    name: "B1",
-  },
-  {
-    id: "2",
-    name: "B",
-  },
-  {
-    id: "3",
-    name: "C1",
-  },
-  {
-    id: "4",
-    name: "C",
-  },
-  {
-    id: "5",
-    name: "D1",
-  },
-  {
-    id: "6",
-    name: "D2",
-  },
-  {
-    id: "7",
-    name: "D",
-  },
-  {
-    id: "8",
-    name: "BE",
-  },
-  {
-    id: "9",
-    name: "C1E",
-  },
-  {
-    id: "10",
-    name: "CE",
-  },
-  {
-    id: "11",
-    name: "D1E",
-  },
-  {
-    id: "12",
-    name: "D2E",
-  },
-  {
-    id: "13",
-    name: "DE",
-  },
-];
+
 
 export const listCar: ICar[] = [
   {
     id: "1",
-    name: "KIA Carnival 2024",
+    model: "KIA Carnival 2024",
     brand: "Kia",
     imageUrl:
       "https://www.bisonic.vn/wp-content/uploads/2024/03/kia-carnival-2022.jpg",
@@ -91,7 +38,7 @@ export const listCar: ICar[] = [
   },
   {
     id: "2",
-    name: "Toyota Vios 2023",
+    model: "Toyota Vios 2023",
     brand: "Toyota",
     imageUrl:
       "https://thailon-oto.com/files/toyota-vios-smart-2023-1-4ca0_1-Geb8dN2HLE.jpg",
@@ -104,7 +51,7 @@ export const listCar: ICar[] = [
   },
   {
     id: "3",
-    name: "Mazda CX-5 2024",
+    model: "Mazda CX-5 2024",
     brand: "Mazda",
     imageUrl:
       "https://hips.hearstapps.com/hmg-prod/images/2022-mazda-cx-5-2p5-turbo-signature-123-1657559083.jpg?crop=0.805xw:0.680xh;0.0977xw,0.252xh&resize=2048:*",
@@ -117,7 +64,7 @@ export const listCar: ICar[] = [
   },
   {
     id: "4",
-    name: "Hyundai Accent 2023",
+    model: "Hyundai Accent 2023",
     brand: "Hyundai",
     imageUrl:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaeslus73sARGnLf-MWwCQtKkD32DVipRlEg&s",
@@ -130,7 +77,7 @@ export const listCar: ICar[] = [
   },
   {
     id: "5",
-    name: "Honda CR-V 2024",
+    model: "Honda CR-V 2024",
     brand: "Honda",
     imageUrl: "https://hondalongbien.vn/wp-content/uploads/2020/07/ab3.jpg",
     price: 1600000,
@@ -430,6 +377,97 @@ export const popularPackages = [
     hasVehicle: false,
     rating: 4.7,
     bookingCount: 165,
+  },
+  {
+    id: "pkg_6_1",
+    instructorId: "6",
+    instructorName: "Đặng Thị Hương",
+    name: "Gói Đường Mưa Gió",
+    duration: 3,
+    basePrice: 980000,
+    roadTypes: ["Đường trơn trượt", "Đường đô thị"],
+    skills: ["Phanh gấp", "Xử lý tình huống xấu"],
+    hasVehicle: true,
+    rating: 4.6,
+    bookingCount: 132,
+  },
+  {
+    id: "pkg_7_1",
+    instructorId: "7",
+    instructorName: "Phan Minh Khôi",
+    name: "Gói Cao Tốc Chuyên Sâu",
+    duration: 4.5,
+    basePrice: 1350000,
+    roadTypes: ["Cao tốc", "Đường trường"],
+    skills: ["Kiểm soát tốc độ", "Vượt xe an toàn", "Giữ làn"],
+    hasVehicle: true,
+    rating: 5.0,
+    bookingCount: 210,
+  },
+  {
+    id: "pkg_8_1",
+    instructorId: "8",
+    instructorName: "Vũ Thị Hà",
+    name: "Gói Off-road Kiểm Soát",
+    duration: 5,
+    basePrice: 1500000,
+    roadTypes: ["Đường đèo", "Đường đang thi công"],
+    skills: ["Điều khiển off-road", "Xử lý bánh trượt", "Cứu hộ"],
+    hasVehicle: false,
+    rating: 4.8,
+    bookingCount: 118,
+  },
+  {
+    id: "pkg_9_1",
+    instructorId: "9",
+    instructorName: "Ngô Văn Hậu",
+    name: "Gói Kỹ Năng Đỗ Xe Nâng Cao",
+    duration: 2,
+    basePrice: 620000,
+    roadTypes: ["Đường khu dân cư", "Bãi đỗ xe"],
+    skills: ["Đỗ xe song song", "Đỗ sát lề", "Canh khoảng cách"],
+    hasVehicle: false,
+    rating: 4.5,
+    bookingCount: 205,
+  },
+  {
+    id: "pkg_10_1",
+    instructorId: "10",
+    instructorName: "Trịnh Gia Bảo",
+    name: "Gói Lái Xe Đường Dài",
+    duration: 6,
+    basePrice: 1650000,
+    roadTypes: ["Đường trường", "Ngoại thành"],
+    skills: ["Lập kế hoạch lộ trình", "Tiết kiệm nhiên liệu", "Xử lý mệt mỏi"],
+    hasVehicle: true,
+    rating: 4.9,
+    bookingCount: 187,
+  },
+  {
+    id: "pkg_11_1",
+    instructorId: "11",
+    instructorName: "Bùi Quang Lâm",
+    name: "Gói Lái Xe Thành Phố Giờ Cao Điểm",
+    duration: 3.5,
+    basePrice: 990000,
+    roadTypes: ["Đường nội đô", "Đường đông dân cư"],
+    skills: ["Quan sát giao lộ", "Điều khiển trong giờ cao điểm", "Xử lý va chạm nhẹ"],
+    hasVehicle: false,
+    rating: 4.4,
+    bookingCount: 142,
+  },
+  {
+    id: "pkg_12_1",
+    instructorId: "12",
+    instructorName: "Lương Mỹ Linh",
+    name: "Gói Chuẩn Bị Thi Sát Hạch",
+    duration: 2.5,
+    basePrice: 780000,
+    roadTypes: ["Đường trường", "Sân tập"],
+    skills: ["Bài thi sa hình", "Số sàn nâng cao", "Kỹ năng ghi nhớ biển báo"],
+    hasVehicle: true,
+    rating: 4.95,
+    bookingCount: 260,
   },
 ];
 

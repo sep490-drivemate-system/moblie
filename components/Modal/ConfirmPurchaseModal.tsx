@@ -165,14 +165,14 @@ export function ConfirmPurchaseModal({
                 <View style={styles.confirmPriceRow}>
                   <Text style={styles.confirmPriceLabel}>Giá gói:</Text>
                   <Text style={styles.confirmPriceValue}>
-                    {selectedPackage.price.toLocaleString("vi-VN")} VND
+                    {selectedPackage.price.toLocaleString("vi-VN")} đ
                   </Text>
                 </View>
                 <View style={styles.confirmDivider} />
                 <View style={styles.confirmPriceRow}>
                   <Text style={styles.confirmTotalLabel}>Tổng cộng:</Text>
                   <Text style={styles.confirmTotalValue}>
-                    {selectedPackage.price.toLocaleString("vi-VN")} VND
+                    {selectedPackage.price.toLocaleString("vi-VN")} đ
                   </Text>
                 </View>
               </View>

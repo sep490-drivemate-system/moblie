@@ -1,16 +1,16 @@
 import React from "react";
-import { Filter, Search, X } from "lucide-react-native";
+import { Filter, X } from "lucide-react-native";
 import {
     FlatList,
     Modal,
     Pressable,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
 import { AppColors } from "@/constants/Colors";
+import SearchBar from "@/components/Commons/SearchBar";
 
 export type FilterOptionType = { id: string; label?: string;[key: string]: any };
 
@@ -55,16 +55,12 @@ const CustomFilter: React.FC<CustomFilterProps> = ({
     return (
         <>
             <View style={styles.searchContainer}>
-                <View style={styles.searchBar}>
-                    <Search size={20} color="#94a3b8" strokeWidth={2} />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Tìm kiếm ... "
-                        placeholderTextColor="#94a3b8"
-                        value={searchQuery}
-                        onChangeText={onChangeSearch}
-                    />
-                </View>
+                <SearchBar
+                    value={searchQuery}
+                    onChangeText={onChangeSearch}
+                    placeholder="Tìm kiếm..."
+                    style={styles.searchBarWrapper}
+                />
                 <TouchableOpacity
                     activeOpacity={1}
                     style={[
@@ -116,14 +112,16 @@ const CustomFilter: React.FC<CustomFilterProps> = ({
                             </TouchableOpacity>
                         </View>
 
-                        <FlatList
-                            data={roadTypes}
-                            renderItem={({ item }) => renderRoadTypeItem({ item })}
-                            keyExtractor={(item) => item}
-                            style={styles.modalScrollView}
-                            contentContainerStyle={styles.roadTypesList}
-                            showsVerticalScrollIndicator={false}
-                        />
+                        <View style={styles.roadTypesCard}>
+                            <FlatList
+                                data={roadTypes}
+                                renderItem={({ item }) => renderRoadTypeItem({ item })}
+                                keyExtractor={(item) => item}
+                                style={styles.modalScrollView}
+                                contentContainerStyle={styles.roadTypesList}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        </View>
 
                         <View style={styles.modalFooter}>
                             <TouchableOpacity
@@ -154,25 +152,10 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         gap: 12,
     },
-    searchBar: {
+    searchBarWrapper: {
         flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#ffffff",
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    searchInput: {
-        flex: 1,
-        marginLeft: 8,
-        fontSize: 15,
-        color: "#0f172a",
+        marginHorizontal: 0,
+        marginVertical: 0,
     },
     filterButton: {
         width: 40,
@@ -188,8 +171,8 @@ const styles = StyleSheet.create({
         backgroundColor: AppColors.primary,
     },
     filterContainer: {
-        paddingHorizontal: 16,
-        paddingBottom: 8,
+        paddingHorizontal: 14,
+        paddingBottom: 7,
     },
     filterTitle: {
         fontSize: 14,
@@ -236,11 +219,26 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
+    roadTypesCard: {
+        backgroundColor: "#ffffff",
+        borderRadius: 18,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderWidth: 1.5,
+        borderColor: "#e2e8f0",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        elevation: 4,
+        marginBottom: 12,
+    },
     modalScrollView: {
         maxHeight: 320,
     },
     roadTypesList: {
         paddingBottom: 8,
+        rowGap: 10,
     },
     modalFooter: {
         flexDirection: "row",
@@ -248,6 +246,14 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginTop: 12,
         gap: 12,
+        backgroundColor: "#ffffff",
+        borderRadius: 16,
+        padding: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 6,
     },
     clearButton: {
         flex: 1,

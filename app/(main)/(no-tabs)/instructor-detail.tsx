@@ -342,7 +342,7 @@ export default function InstructorDetailScreen() {
                 <View style={styles.priceCardBottom}>
                   <View style={styles.priceInfo}>
                     <Text style={styles.priceAmount}>
-                      {pkg.price.toLocaleString('vi-VN')} VND
+                      {pkg.price.toLocaleString('vi-VN')} đ
                     </Text>
                   </View>
                   <TouchableOpacity
@@ -392,7 +392,7 @@ export default function InstructorDetailScreen() {
                       {vehicle.seatCount} chỗ {vehicle.vehicleType ? `• ${vehicle.vehicleType}` : ''}
                     </Text>
                     <Text style={styles.vehiclePrice}>
-                      {vehicle.price.toLocaleString('vi-VN')} VND / giờ
+                      {vehicle.price.toLocaleString('vi-VN')} đ / giờ
                     </Text>
                   </View>
                   <TouchableOpacity

@@ -1,3 +1,5 @@
+import { LicenseTier } from "@/models/car/car";
+import { LicenseType } from "@/models/license/license";
 import { Platform } from "react-native";
 
 const ID_API_URL = process.env.EXPO_PUBLIC_FPT_AI_ID_API_URL as string;
@@ -84,3 +86,11 @@ export const uploadImageDLC = async (imageUri: string): Promise<any> => {
     throw error;
   }
 };
+
+
+export const drivingLicenses: LicenseType[] = Object.values(LicenseTier).map(
+  (tier) => ({
+    id: tier,
+    name: tier,
+  })
+);

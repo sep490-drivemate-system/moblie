@@ -1,7 +1,7 @@
 import CarItem from "@/components/ui/car-item";
 import InstructorItem from "@/components/ui/instructor-item";
 import PackageItem from "@/components/ui/package-item";
-import { drivingLicenses, listCar, popularPackages } from "@/data/home_data";
+import { listCar, popularPackages } from "@/data/home_data";
 import { instructorsData } from "@/data/instructors_data";
 import { LicenseType } from "@/models/license/license";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -23,6 +23,7 @@ import { ROUTES } from "@/constants/routes";
 import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { ICar } from "@/models/car/car";
+import { drivingLicenses } from "@/utils/utils";
 export default function HomeScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();

@@ -1,10 +1,8 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
-import { Clock, Car, User, MapPin, Star, Zap } from "lucide-react-native";
+import { Clock, MapPin, Zap } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
-
-const { width } = Dimensions.get("window");
 
 interface Package {
   id: string;
@@ -34,188 +32,258 @@ export default function PackageItem({ package: pkg }: PackageItemProps) {
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={handlePress}>
-      <View style={styles.header}>
-        {pkg.hasVehicle ? (
-          <View style={styles.badgeWithVehicle}>
-            <Car size={12} color="#16a34a" strokeWidth={2} />
-            <Text style={styles.badgeText}>Có xe</Text>
-          </View>
-        ) : (
-          <View style={styles.badgeInstructor}>
-            <User size={12} color="#92400e" strokeWidth={2} />
-            <Text style={styles.badgeText}>Người hướng dẫn</Text>
+    <TouchableOpacity
+      style={styles.packageCard}
+      onPress={handlePress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.packageHeader}>
+        <Text style={styles.packageName} numberOfLines={2}>
+          {pkg.name}
+        </Text>
+        {pkg.bookingCount && (
+          <View style={styles.bookingCountBadge}>
+            <Text style={styles.bookingCountBadgeText}>
+              {pkg.bookingCount} lượt mua
+            </Text>
           </View>
         )}
       </View>
 
-      {/* Package name */}
-      <Text style={styles.packageName} numberOfLines={2}>
-        {pkg.name}
-      </Text>
-
-      {/* Instructor */}
-      <Text style={styles.instructorName} numberOfLines={1}>
-        {pkg.instructorName}
-      </Text>
+      {/* Instructor + badge */}
+      <View style={styles.cardHeader}>
+        <View style={styles.instructorRow}>
+          <View style={styles.instructorAvatar}>
+            <Text style={styles.instructorAvatarText}>
+              {pkg.instructorName?.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.instructorInfo}>
+            <Text style={styles.instructorName}>{pkg.instructorName}</Text>
+            {pkg.hasVehicle ? (
+              <View style={styles.badgeWithVehicle}>
+                <Text style={styles.badgeText}>Người hướng dẫn và xe</Text>
+              </View>
+            ) : (
+              <View style={styles.badgeInstructor}>
+                <Text style={styles.badgeText}>Chỉ người hướng dẫn</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
 
       {/* Details */}
-      <View style={styles.details}>
-        <View style={styles.detailRow}>
-          <Clock size={14} color="#64748b" strokeWidth={2} />
+      <View style={styles.detailsRow}>
+        <View style={styles.detailItem}>
+          <Clock size={16} color="#64748b" strokeWidth={2} />
           <Text style={styles.detailText}>{pkg.duration} giờ</Text>
         </View>
-
-        <View style={styles.detailRow}>
-          <MapPin size={14} color="#64748b" strokeWidth={2} />
+        <View style={styles.detailItem}>
+          <MapPin size={16} color="#64748b" strokeWidth={2} />
           <Text style={styles.detailText} numberOfLines={1}>
-            {pkg.roadTypes.slice(0, 2).join(", ")}
-            {pkg.roadTypes.length > 2 && " +"}
+            {pkg.roadTypes.length} loại đường
           </Text>
         </View>
-
-        <View style={styles.detailRow}>
-          <Zap size={14} color="#64748b" strokeWidth={2} />
+        <View style={styles.detailItem}>
+          <Zap size={16} color="#64748b" strokeWidth={2} />
           <Text style={styles.detailText}>{pkg.skills.length} kỹ năng</Text>
         </View>
       </View>
 
       {/* Footer */}
-      <View style={styles.footer}>
-        <View>
+      <View style={styles.cardFooter}>
+        <View style={styles.priceContainer}>
           <Text style={styles.price}>
             {pkg.basePrice.toLocaleString("vi-VN")} đ
           </Text>
         </View>
-        {pkg.bookingCount && (
-          <View style={styles.bookingCount}>
-            <Text style={styles.bookingCountText}>
-              {pkg.bookingCount}+ đặt
-            </Text>
-          </View>
-        )}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.detailButton}
+            onPress={handlePress}
+          >
+            <Text style={styles.detailButtonText}>Chi tiết</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.buyButton}
+            onPress={handlePress}
+          >
+            <Text style={styles.buyButtonText}>Mua ngay</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: width * 0.7,
+  packageCard: {
     backgroundColor: "#ffffff",
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+    width: 360,
   },
-  header: {
+  packageHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 12,
+    gap: 12,
+  },
+  packageName: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#1e293b",
+    lineHeight: 22,
+    flex: 1,
+  },
+  bookingCountBadge: {
+    backgroundColor: AppColors.primary + "20",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: AppColors.primary + "40",
+  },
+  bookingCountBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: AppColors.primary,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  instructorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 10,
+  },
+  instructorAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  instructorAvatarText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: AppColors.primary,
+  },
+  instructorInfo: {
+    flex: 1,
+  },
+  instructorName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 4,
   },
   badgeWithVehicle: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 4,
     backgroundColor: "#f0fdf4",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: "#86efac",
+    alignSelf: "flex-start",
   },
   badgeInstructor: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fef3c7",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#fcd34d",
-  },
-  badgeIcon: {
-    fontSize: 12,
-    marginRight: 4,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#1f2937",
-  },
-  rating: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     backgroundColor: "#fef3c7",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#fcd34d",
+    alignSelf: "flex-start",
   },
-  ratingText: {
+  badgeText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#92400e",
+    color: "#1f2937",
   },
-  packageName: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#1e293b",
-    marginBottom: 6,
-    minHeight: 40,
-  },
-  instructorName: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#64748b",
-    marginBottom: 12,
-  },
-  details: {
-    gap: 8,
+  detailsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
     marginBottom: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
   },
-  detailRow: {
+  detailItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    flex: 1,
+    minWidth: "30%",
   },
   detailText: {
     fontSize: 13,
     color: "#475569",
-    fontWeight: "500",
+    fontWeight: "600",
     flex: 1,
   },
-  footer: {
+  cardFooter: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "flex-end",
+    gap: 12,
   },
-  priceLabel: {
-    fontSize: 11,
-    color: "#94a3b8",
-    marginBottom: 2,
+  priceContainer: {
+    flex: 1,
   },
   price: {
     fontSize: 18,
     fontWeight: "800",
     color: AppColors.primary,
   },
-  bookingCount: {
-    backgroundColor: AppColors.primary + "15",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+  actionButtons: {
+    flexDirection: "row",
+    gap: 8,
   },
-  bookingCountText: {
-    fontSize: 11,
+  detailButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: AppColors.primary,
+    backgroundColor: "#ffffff",
+  },
+  detailButtonText: {
+    fontSize: 12,
     fontWeight: "700",
     color: AppColors.primary,
+  },
+  buyButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: AppColors.primary,
+  },
+  buyButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#ffffff",
   },
 });
 

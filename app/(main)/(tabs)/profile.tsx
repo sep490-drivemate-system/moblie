@@ -91,7 +91,7 @@ export default function ProfileScreen() {
                   <Text style={styles.walletLabel}>Số dư ví</Text>
                 </View>
                 <Text style={styles.walletBalance}>
-                  {walletState.balance.toLocaleString("vi-VN")} VNĐ
+                  {walletState.balance.toLocaleString("vi-VN")} đ
                 </Text>
               </View>
               <TouchableOpacity
