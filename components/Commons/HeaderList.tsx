@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft } from 'lucide-react-native';
 import { AppColors } from '@/constants/Colors';
 import { RelativePathString, router } from 'expo-router';
+import { ROUTES } from '@/constants/routes';
 
 export interface HeaderListProps {
     actionReturnScreen?: string;
@@ -31,16 +32,18 @@ export default function HeaderList({
             start={gradientStart}
             end={gradientEnd}
         >
-            {actionReturnScreen && (
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => router.push({
-                        pathname: actionReturnScreen as any,
-                    })}
-                >
-                    <ArrowLeft size={24} color="#ffffff" strokeWidth={2.5} />
-                </TouchableOpacity>
-            )}
+            <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => {
+                    if (actionReturnScreen === ROUTES.BACK || !actionReturnScreen || actionReturnScreen === '') {
+                        router.back();
+                    } else {
+                        router.push({ pathname: actionReturnScreen as any });
+                    }
+                }}
+            >
+                <ArrowLeft size={24} color="#ffffff" strokeWidth={2.5} />
+            </TouchableOpacity>
             <View style={styles.headerContent}>
                 <View style={styles.headerTextContainer}>
                     <Text style={styles.headerTitle}>{title}</Text>

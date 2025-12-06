@@ -2,6 +2,7 @@ export const ROUTES = {
   MAIN: '/(main)',
   NO_TABS: '/(no-tabs)',
   DEPOSIT: '/deposit',
+  BACK: '',
 
 
   SIGNIN: '/(auth)/signin',
@@ -24,7 +25,9 @@ export const ROUTES = {
   NOTIFICATIONS: '/(main)/(tabs)/notifications',
   PACKAGES: '/(main)/(tabs)/packages',
   INTRO: '/(onboarding)/intro',
-  
+  BACK_TO_WALLET: '/(main)/(no-tabs)/wallet',
+  MAIN_NO_TABS_HISTORY: '/(main)/(no-tabs)/(transaction)/transaction',
+
 
   MAIN_NO_TABS_DEPOSIT: '/(main)/(no-tabs)/deposit',
   MAIN_NO_TABS_WITHDRAW: '/(main)/(no-tabs)/withdraw',

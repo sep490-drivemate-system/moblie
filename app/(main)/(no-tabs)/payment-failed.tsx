@@ -8,7 +8,7 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { XCircle, RotateCcw, MessageCircle } from 'lucide-react-native';
 
@@ -16,10 +16,48 @@ const { width, height } = Dimensions.get('window');
 
 export default function PaymentFailedScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  // Lấy tất cả dữ liệu return từ payment gateway
+  useEffect(() => {
+    if (Object.keys(params).length > 0) {
+      console.log('=== Payment Gateway Return Data (Failed) ===');
+      console.log('All parameters:', params);
+
+      // VNPay error parameters
+      const vnpayError = {
+        responseCode: params.vnp_ResponseCode || params.responseCode,
+        message: params.vnp_ResponseMessage || params.message,
+        txnRef: params.vnp_TxnRef || params.txnRef,
+        orderInfo: params.vnp_OrderInfo || params.orderInfo,
+      };
+
+      // ZaloPay error parameters
+      const zalopayError = {
+        returncode: params.returncode,
+        returnmessage: params.returnmessage,
+        apptransid: params.apptransid,
+      };
+
+      // PayOs error parameters
+      const payosError = {
+        code: params.code,
+        desc: params.desc,
+        message: params.message,
+      };
+
+      console.log('VNPay error:', vnpayError);
+      console.log('ZaloPay error:', zalopayError);
+      console.log('PayOs error:', payosError);
+
+      // TODO: Gửi thông tin lỗi lên server để log
+      // logPaymentError(vnpayError, zalopayError, payosError);
+    }
+  }, [params]);
 
   useEffect(() => {
     // Animation sequence
@@ -84,7 +122,7 @@ export default function PaymentFailedScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#ef4444" />
-      
+
       <LinearGradient
         colors={['#ef4444', '#dc2626', '#b91c1c']}
         style={styles.gradient}
@@ -106,7 +144,7 @@ export default function PaymentFailedScreen() {
             <View style={[styles.building, { height: 115, width: 28, left: 301 }]} />
             <View style={[styles.building, { height: 88, width: 33, left: 334 }]} />
           </View>
-          
+
           {/* Car */}
           <View style={styles.carContainer}>
             <View style={styles.car}>
@@ -121,14 +159,14 @@ export default function PaymentFailedScreen() {
         {/* Failed Content */}
         <View style={styles.content}>
           {/* Error Icon */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.iconContainer,
-              { 
+              {
                 transform: [
                   { scale: scaleAnim },
                   { translateX: shakeAnim }
-                ] 
+                ]
               }
             ]}
           >
@@ -138,10 +176,10 @@ export default function PaymentFailedScreen() {
           </Animated.View>
 
           {/* Error Text */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.textContainer,
-              { 
+              {
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }]
               }
@@ -154,10 +192,10 @@ export default function PaymentFailedScreen() {
           </Animated.View>
 
           {/* Action Buttons */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.buttonContainer,
-              { 
+              {
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }]
               }

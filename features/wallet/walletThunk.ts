@@ -2,6 +2,7 @@ import { IInstructorStatistic, IStatisticsInstructor } from "@/models/instructor
 import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/HttpMethods";
 import { StatisticTimeType } from "@/models/enum/StatisticTimeType.enum";
+import { IDeposit } from "@/models/wallet/deposit.type";
 
 const WALLET_PATH = "wallet";
 
@@ -66,4 +67,13 @@ export const getStatisticsInstructor = createThunk<
             return queryString ? `${baseUrl}?${queryString}` : baseUrl;
         },
     }
+);
+
+export const createDeposit = createThunk<
+    string,
+    IDeposit
+>(
+    HttpMethod.POST,
+    "createDeposit",
+    `${WALLET_PATH}/deposit`,
 );

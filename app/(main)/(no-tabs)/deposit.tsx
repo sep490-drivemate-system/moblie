@@ -8,85 +8,87 @@ import {
   StatusBar,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Linking from "expo-linking";
 import { AppColors } from "@/constants/Colors";
+import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { RootState } from "@/lib/redux/store";
+import { IDeposit } from "@/models/wallet/deposit.type";
+import { BankType } from "@/models/wallet/bank-type.enum";
+import { ClientPlatform } from "@/models/wallet/client-platform.enum";
 import {
   ArrowLeft,
   Wallet,
   CreditCard,
-  Smartphone,
-  Building2,
   Check,
-  Star,
-  Plus,
-  CheckCircle,
-  Coins,
-  TrendingUp,
   Activity,
+  Building2,
+  Smartphone,
 } from "lucide-react-native";
+import HeaderList from "@/components/Commons/HeaderList";
+import { ROUTES } from "@/constants/routes";
 
-interface TopUpAmount {
-  value: number;
-  popular?: boolean;
-  label: string;
-}
-
-interface PaymentMethod {
-  id: string;
-  name: string;
-  icon: any;
-  color: string;
-  description: string;
-}
 
 export default function DepositScreen() {
   const router = useRouter();
-  const [selectedAmount, setSelectedAmount] = useState<TopUpAmount | null>(
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(
     null
   );
-  const [selectedPayment, setSelectedPayment] = useState<string>("vnpay");
+  const [selectedPayment, setSelectedPayment] = useState<BankType>(BankType.VNPAY);
   const [customAmount, setCustomAmount] = useState("");
   const [currentBalance] = useState(150000);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const walletSelector = (state: RootState) => state.wallet;
+  const [, walletViewModel] = useViewModel(WalletViewModel, walletSelector);
 
-  const topUpAmounts: TopUpAmount[] = [
-    { value: 100000, label: "100K" },
-    { value: 200000, label: "200K", popular: true },
-    { value: 500000, label: "500K" },
-  ];
-
-  const paymentMethods: PaymentMethod[] = [
-    {
-      id: "vnpay",
-      name: "VNPay",
-      icon: CreditCard,
-      color: "#1976D2",
-      description: "Thanh toán qua VNPay",
-    },
-    {
-      id: "zalopay",
-      name: "ZaloPay",
-      icon: Wallet,
-      color: "#0068FF",
-      description: "Ví điện tử ZaloPay",
-    },
-    {
-      id: "payos",
-      name: "PayOs",
-      icon: Smartphone,
-      color: "#D82D8B",
-      description: "Ví điện tử PayOs",
-    },
+  const topUpAmounts: number[] = [
+    100000,
+    200000,
+    500000,
+    1000000,
   ];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN").format(amount);
   };
 
+  // Helper function để lấy icon và màu cho payment method
+  const getPaymentMethodInfo = (method: string) => {
+    switch (method) {
+      case BankType.VNPAY:
+        return {
+          icon: Building2,
+          color: "#1976D2", // Blue
+          description: "Thanh toán qua VNPay",
+        };
+      case BankType.ZALOPAY:
+        return {
+          icon: Wallet,
+          color: "#0068FF", // ZaloPay blue
+          description: "Ví điện tử ZaloPay",
+        };
+      case BankType.PAYOS:
+        return {
+          icon: Smartphone,
+          color: "#D82D8B", // Pink
+          description: "Ví điện tử PayOs",
+        };
+      default:
+        return {
+          icon: CreditCard,
+          color: AppColors.primary,
+          description: "Phương thức thanh toán",
+        };
+    }
+  };
+
   const getTotalAmount = () => {
     if (selectedAmount) {
-      return selectedAmount.value;
+      return selectedAmount;
     }
     if (customAmount) {
       const amount = parseInt(customAmount.replace(/[^0-9]/g, ""));
@@ -95,7 +97,7 @@ export default function DepositScreen() {
     return 0;
   };
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     const total = getTotalAmount();
     if (total < 10000) {
       Alert.alert("Lỗi", "Số tiền nạp tối thiểu là 10.000 VNĐ");
@@ -109,254 +111,209 @@ export default function DepositScreen() {
         { text: "Hủy", style: "cancel" },
         {
           text: "Xác nhận",
-          onPress: () => {
-            // Simulate payment process
-            setTimeout(() => {
-              const success = Math.random() > 0.2; // 80% success rate
-              if (success) {
-                router.push("/(main)/(no-tabs)/payment-success");
+          onPress: async () => {
+            try {
+              setIsProcessing(true);
+
+              // ClientPlatform chỉ có Mobile = 2
+              const clientPlatform = ClientPlatform.Mobile;
+
+              // Tạo deposit payload
+              const depositPayload: IDeposit = {
+                amount: total.toString(),
+                paymentMethod: selectedPayment,
+                clientPlatform: clientPlatform,
+              };
+
+              // Gọi WalletViewModel để tạo deposit và nhận payment URL
+              const paymentUrl = await walletViewModel.deposit(depositPayload);
+
+              if (paymentUrl) {
+                // Mở payment URL trong browser
+                // Payment gateway sẽ redirect về backend sau khi thanh toán
+                // Backend sẽ verify và redirect về deep link của app
+                const canOpen = await Linking.canOpenURL(paymentUrl);
+                if (canOpen) {
+                  await Linking.openURL(paymentUrl);
+                } else {
+                  throw new Error('Cannot open payment URL');
+                }
               } else {
-                router.push("/(main)/(no-tabs)/payment-failed");
+                throw new Error('No payment URL received from server');
               }
-            }, 1500);
+            } catch (error) {
+              Alert.alert("Lỗi", "Không thể tạo yêu cầu thanh toán. Vui lòng thử lại.");
+              console.error("Payment error:", error);
+            } finally {
+              setIsProcessing(false);
+            }
           },
         },
       ]
     );
   };
 
-  const handleAmountSelect = (amount: TopUpAmount) => {
+  const handleAmountSelect = (amount: number) => {
     setSelectedAmount(amount);
     setCustomAmount("");
   };
 
   const handleCustomAmountChange = (text: string) => {
-    // Remove non-numeric characters
     const numericValue = text.replace(/[^0-9]/g, "");
-    // Format with thousand separators
     const formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     setCustomAmount(formattedValue);
     setSelectedAmount(null);
   };
 
+
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-
-      {/* Modern Header with Gradient - Notifications Style */}
-      <LinearGradient
-        colors={[
-          AppColors.primary,
-          AppColors.gradientStart,
-          AppColors.gradientEnd,
-        ]}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <HeaderList title="Nạp tiền" actionReturnScreen={ROUTES.BACK} />
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            activeOpacity={0.75}
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <ArrowLeft size={18} color={AppColors.white} />
-          </TouchableOpacity>
-
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Nạp tiền vào ví</Text>
-            <Text style={styles.headerSubtitle}>
-              Nạp tiền để thuê xe và học lái
-            </Text>
-          </View>
-
-          {/* <View style={styles.headerStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>
-                {Math.floor(currentBalance / 1000)}K
-              </Text>
-              <Text style={styles.statLabel}>VNĐ</Text>
-            </View>
-          </View> */}
-        </View>
-
-        {/* Balance Card - Notifications Style */}
         <View style={styles.balanceCardContainer}>
           <View style={styles.balanceCard}>
-            <LinearGradient
-              colors={["#ffffff", "#f8fafc"]}
-              style={styles.balanceCardGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.balanceHeader}>
-                <View style={styles.balanceIconContainer}>
-                  <Wallet
-                    size={20}
-                    color={AppColors.primary}
-                    strokeWidth={2.5}
-                  />
-                </View>
-                <TouchableOpacity style={styles.historyButton}>
-                  <Activity
-                    size={14}
-                    color={AppColors.primary}
-                    strokeWidth={2}
-                  />
-                  <Text style={styles.historyButtonText}>Lịch sử</Text>
-                </TouchableOpacity>
+            <View style={styles.balanceHeader}>
+              <View style={styles.balanceIconContainer}>
+                <Wallet size={22} color={AppColors.primary} strokeWidth={2} />
               </View>
+              <TouchableOpacity
+                style={styles.historyButton}
+                onPress={() => router.push(ROUTES.MAIN_NO_TABS_HISTORY)}
+              >
+                <Activity size={16} color={AppColors.primary} strokeWidth={2} />
+                <Text style={styles.historyButtonText}>Lịch sử</Text>
+              </TouchableOpacity>
+            </View>
 
-              <View style={styles.balanceContent}>
-                <Text style={styles.balanceLabel}>Số dư hiện tại</Text>
-                <View style={styles.balanceAmountRow}>
-                  <Text style={styles.balanceAmount}>
-                    {formatCurrency(currentBalance)}
-                  </Text>
-                  <Text style={styles.balanceUnit}>VNĐ</Text>
+            <View style={styles.balanceContent}>
+              <Text style={styles.balanceLabel}>Số dư hiện tại</Text>
+              <View style={styles.balanceAmountContainer}>
+                <Text style={styles.balanceAmount}>
+                  {formatCurrency(currentBalance)}
+                </Text>
+                <View style={styles.balanceUnitContainer}>
+                  <Text style={styles.balanceUnit}>đ</Text>
                 </View>
               </View>
-            </LinearGradient>
+            </View>
+
           </View>
         </View>
-
-        <View style={styles.headerCurve} />
-      </LinearGradient>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Quick Amount Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Chọn số tiền nạp</Text>
           <View style={styles.amountGrid}>
             {topUpAmounts.map((amount, index) => (
               <TouchableOpacity
-                activeOpacity={1}
                 key={index}
+                activeOpacity={0.7}
                 style={[
                   styles.amountCard,
-                  selectedAmount?.value === amount.value &&
-                    styles.amountCardSelected,
-                  amount.popular && styles.amountCardPopular,
+                  selectedAmount === amount && styles.amountCardSelected,
                 ]}
                 onPress={() => handleAmountSelect(amount)}
               >
-                {amount.popular && (
-                  <View style={styles.popularBadge}>
-                    <Text style={styles.popularText}>Phổ biến</Text>
-                  </View>
-                )}
-
-                <View style={styles.amountCardLeft}>
-                  <Text
-                    style={[
-                      styles.amountValue,
-                      selectedAmount?.value === amount.value &&
-                        styles.amountValueSelected,
-                    ]}
-                  >
-                    {formatCurrency(amount.value)} VNĐ
-                  </Text>
-                </View>
-
-                {/* <View style={styles.amountCardRight}>
-                  <View style={styles.coinIconContainer}>
-                    <Text style={styles.coinValue}>{amount.value / 1000}</Text>
-                    <View style={styles.coinIcon}>
-                      <Coins size={16} color="#ffffff" strokeWidth={2} />
-                    </View>
-                  </View>
-                </View> */}
-
-                {selectedAmount?.value === amount.value && (
+                <Text
+                  style={[
+                    styles.amountValue,
+                    selectedAmount === amount && styles.amountValueSelected,
+                  ]}
+                >
+                  {formatCurrency(amount)} đ
+                </Text>
+                {selectedAmount === amount && (
                   <View style={styles.selectedIndicator}>
-                    <Check size={16} color="#ffffff" strokeWidth={3} />
+                    <Check size={14} color="#ffffff" strokeWidth={3} />
                   </View>
                 )}
               </TouchableOpacity>
             ))}
           </View>
-        </View>
 
-        {/* Custom Amount */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Hoặc nhập số tiền khác</Text>
-          <View style={styles.customAmountContainer}>
-            <TextInput
-              style={[
-                styles.customAmountInput,
-                customAmount && styles.customAmountInputActive,
-              ]}
-              placeholder="Nhập số tiền (VNĐ)"
-              value={customAmount}
-              onChangeText={handleCustomAmountChange}
-              keyboardType="numeric"
-              placeholderTextColor="#9ca3af"
-            />
-            <Text style={styles.customAmountSuffix}>VNĐ</Text>
+          {/* Custom Amount Input */}
+          <View style={styles.customAmountSection}>
+            <Text style={styles.customAmountLabel}>Hoặc nhập số tiền khác</Text>
+            <View style={styles.customAmountContainer}>
+              <TextInput
+                style={[
+                  styles.customAmountInput,
+                  customAmount && styles.customAmountInputActive,
+                ]}
+                placeholder="Nhập số tiền"
+                value={customAmount}
+                onChangeText={handleCustomAmountChange}
+                keyboardType="numeric"
+                placeholderTextColor={AppColors.gray400}
+              />
+              <Text style={styles.customAmountSuffix}>VNĐ</Text>
+            </View>
+            <Text style={styles.customAmountNote}>
+              Số tiền tối thiểu: 10.000 VNĐ
+            </Text>
           </View>
-          <Text style={styles.customAmountNote}>
-            Số tiền tối thiểu: 10.000 VNĐ
-          </Text>
         </View>
 
-        {/* Payment Methods */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
           <View style={styles.paymentMethods}>
-            {paymentMethods.map((method) => (
-              <TouchableOpacity
-                activeOpacity={1}
-                key={method.id}
-                style={[
-                  styles.paymentMethod,
-                  selectedPayment === method.id && styles.paymentMethodSelected,
-                ]}
-                onPress={() => setSelectedPayment(method.id)}
-              >
-                <View style={styles.paymentMethodLeft}>
-                  <View
-                    style={[
-                      styles.paymentIcon,
-                      { backgroundColor: method.color },
-                    ]}
-                  >
-                    <method.icon size={24} color="#ffffff" />
+            {Object.values(BankType).map((method) => {
+              const methodInfo = getPaymentMethodInfo(method);
+              const IconComponent = methodInfo.icon;
+
+              return (
+                <TouchableOpacity
+                  key={method}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.paymentMethod,
+                    selectedPayment === method && styles.paymentMethodSelected,
+                  ]}
+                  onPress={() => setSelectedPayment(method)}
+                >
+                  <View style={styles.paymentMethodLeft}>
+                    <View
+                      style={[
+                        styles.paymentIcon,
+                        { backgroundColor: methodInfo.color },
+                      ]}
+                    >
+                      <IconComponent size={20} color="#ffffff" strokeWidth={2} />
+                    </View>
+                    <View style={styles.paymentInfo}>
+                      <Text style={styles.paymentName}>{method}</Text>
+                      <Text style={styles.paymentDescription}>
+                        {methodInfo.description}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.paymentInfo}>
-                    <Text style={styles.paymentName}>{method.name}</Text>
-                    <Text style={styles.paymentDescription}>
-                      {method.description}
-                    </Text>
-                  </View>
-                </View>
-                {selectedPayment === method.id && (
-                  <View style={styles.paymentSelectedIndicator}>
-                    <Check size={20} color="#10b981" strokeWidth={3} />
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
+                  {selectedPayment === method && (
+                    <View style={styles.paymentSelectedIndicator}>
+                      <Check size={18} color={AppColors.primary} strokeWidth={3} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* Summary */}
         {getTotalAmount() > 0 && (
           <View style={styles.section}>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>Tóm tắt giao dịch</Text>
+            <Text style={styles.sectionTitle}>Tóm tắt giao dịch</Text>
+            <View style={styles.summaryContent}>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Số tiền nạp:</Text>
                 <Text style={styles.summaryValue}>
-                  {formatCurrency(
-                    selectedAmount?.value ||
-                      parseInt(customAmount.replace(/[^0-9]/g, "")) ||
-                      0
-                  )}{" "}
-                  VNĐ
+                  {formatCurrency(getTotalAmount())} VNĐ
                 </Text>
               </View>
-
-              <View style={[styles.summaryRow, styles.summaryTotal]}>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryRow}>
                 <Text style={styles.summaryTotalLabel}>Tổng nhận được:</Text>
                 <Text style={styles.summaryTotalValue}>
                   {formatCurrency(getTotalAmount())} VNĐ
@@ -366,7 +323,6 @@ export default function DepositScreen() {
           </View>
         )}
 
-        {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
@@ -374,18 +330,27 @@ export default function DepositScreen() {
       {getTotalAmount() > 0 && (
         <View style={styles.paymentButtonContainer}>
           <TouchableOpacity
-            style={styles.paymentButton}
+            style={[styles.paymentButton, isProcessing && styles.paymentButtonDisabled]}
             onPress={handlePayment}
+            activeOpacity={0.8}
+            disabled={isProcessing}
           >
             <LinearGradient
-              colors={["#10b970", "#10b981"]}
+              colors={[AppColors.primary, AppColors.gradientStart]}
               style={styles.paymentButtonGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Text style={styles.paymentButtonText}>
-                Thanh toán {formatCurrency(getTotalAmount())} VNĐ
-              </Text>
+              {isProcessing ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator color={AppColors.white} size="small" />
+                  <Text style={styles.paymentButtonText}>Đang xử lý...</Text>
+                </View>
+              ) : (
+                <Text style={styles.paymentButtonText}>
+                  Thanh toán {formatCurrency(getTotalAmount())} VNĐ
+                </Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -400,433 +365,281 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 40,
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 50,
+    paddingBottom: 30,
     paddingHorizontal: 20,
     position: "relative",
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
   headerContent: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 24,
-  },
-  headerTextContainer: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#ffffff",
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: "rgba(255, 255, 255, 0.8)",
-    fontWeight: "500",
-  },
-  headerStats: {
-    alignItems: "center",
-  },
-  statItem: {
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#ffffff",
-  },
-  statLabel: {
-    fontSize: 11,
-    color: "rgba(255, 255, 255, 0.8)",
-    fontWeight: "600",
+    marginBottom: 20,
   },
   backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
+  headerTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: AppColors.white,
+  },
   headerCurve: {
     position: "absolute",
-    bottom: -25,
+    bottom: -20,
     left: 0,
     right: 0,
-    height: 50,
+    height: 40,
     backgroundColor: AppColors.background,
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
   },
   balanceCardContainer: {
-    paddingHorizontal: 16,
+    marginHorizontal: 16,
     marginBottom: 20,
   },
   balanceCard: {
-    borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  balanceCardGradient: {
+    backgroundColor: AppColors.white,
+    borderRadius: 16,
     padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   balanceHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 10,
   },
   balanceIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: `${AppColors.primary}15`,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: `${AppColors.primary}30`,
-  },
-  balanceIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
   balanceContent: {
     alignItems: "center",
-  },
-  balanceAmountRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 8,
-    marginBottom: 12,
-  },
-  balanceFooter: {
-    alignItems: "center",
-  },
-  balanceStats: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#f0fdf4",
-    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
-  },
-  balanceStatsText: {
-    fontSize: 12,
-    color: "#16a34a",
-    fontWeight: "600",
-  },
-  verifiedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#dcfce7",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-    shadowColor: "#10b981",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  verifiedText: {
-    fontSize: 11,
-    color: "#16a34a",
-    fontWeight: "700",
-  },
-
-  balanceMainSection: {
-    alignItems: "center",
-    marginBottom: 24,
   },
   balanceLabel: {
-    fontSize: 13,
-    color: "#64748b",
+    fontSize: 12,
+    color: AppColors.gray500,
     fontWeight: "600",
-    marginBottom: 8,
+    marginBottom: 12,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   balanceAmountContainer: {
     flexDirection: "row",
     alignItems: "baseline",
-    gap: 8,
+    justifyContent: "center",
+    gap: 10,
+    flexWrap: "wrap",
   },
   balanceAmount: {
-    fontSize: 36,
-    fontWeight: "900",
-    color: "#0f172a",
-    lineHeight: 40,
+    fontSize: 25,
+    fontWeight: "600",
+    color: AppColors.textPrimary,
+    letterSpacing: -0.5,
+    lineHeight: 42,
+  },
+  balanceUnitContainer: {
+    backgroundColor: `${AppColors.primary}15`,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: `${AppColors.primary}30`,
   },
   balanceUnit: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#10b981",
-  },
-
-  balanceFooterSection: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
-  },
-  equivalentContainer: {
-    flex: 1,
-  },
-  equivalentLabel: {
-    fontSize: 11,
-    color: "#94a3b8",
-    fontWeight: "500",
-    marginBottom: 2,
-  },
-  equivalentAmount: {
     fontSize: 14,
-    color: "#475569",
-    fontWeight: "600",
+    fontWeight: "700",
+    color: AppColors.primary,
+    letterSpacing: 0.5,
   },
   historyButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f1f5f9",
+    backgroundColor: AppColors.gray100,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
-    gap: 4,
+    borderRadius: 10,
+    gap: 6,
   },
   historyButtonText: {
-    fontSize: 11,
+    fontSize: 12,
     color: AppColors.primary,
     fontWeight: "600",
   },
-  curvedBottom: {
-    position: "absolute",
-    bottom: -25,
-    left: 0,
-    right: 0,
-    height: 50,
-    backgroundColor: "#f8fafc",
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-  },
   content: {
     flex: 1,
-    marginTop: -25,
-    paddingTop: 30,
-    backgroundColor: AppColors.background,
+    marginTop: -20,
+  },
+  scrollContent: {
+    paddingTop: 20,
+    paddingBottom: 20,
   },
   section: {
     marginHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
+    marginBottom: 20,
+    backgroundColor: AppColors.white,
+    borderRadius: 16,
     padding: 20,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#111827",
+    fontWeight: "700",
+    color: AppColors.textPrimary,
     marginBottom: 16,
   },
   amountGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   amountCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 12,
+    flex: 1,
+    minWidth: "45%",
+    backgroundColor: AppColors.gray50,
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 2,
-    borderColor: "#e5e7eb",
+    borderColor: AppColors.gray200,
     position: "relative",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
   },
   amountCardSelected: {
-    borderColor: "#10b981",
-    backgroundColor: "#ecfdf5",
+    borderColor: AppColors.primary,
+    backgroundColor: `${AppColors.primary}10`,
   },
   amountCardPopular: {
-    borderColor: "#3b82f6",
-    backgroundColor: "#eff6ff",
-  },
-  amountCardLeft: {
-    flex: 1,
-  },
-  amountCardRight: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  coinIconContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  coinValue: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#3b82f6",
-  },
-  coinIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#3b82f6",
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: AppColors.info,
   },
   popularBadge: {
     position: "absolute",
     top: -8,
     right: -8,
-    backgroundColor: "#3b82f6",
-    borderRadius: 12,
+    backgroundColor: AppColors.info,
+    borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    shadowColor: AppColors.info,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   popularText: {
     fontSize: 10,
-    color: "#ffffff",
-    fontWeight: "bold",
+    color: AppColors.white,
+    fontWeight: "700",
   },
   amountValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#111827",
+    fontSize: 20,
+    fontWeight: "700",
+    color: AppColors.textPrimary,
     marginBottom: 4,
   },
   amountValueSelected: {
-    color: "#10b981",
+    color: AppColors.primary,
   },
-  amountPrice: {
+  amountSubtext: {
     fontSize: 12,
-    color: "#6b7280",
-    textAlign: "center",
-  },
-  amountPriceSelected: {
-    color: "#3b82f6",
+    color: AppColors.gray500,
+    fontWeight: "500",
   },
   selectedIndicator: {
     position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: "#10b981",
-    borderRadius: 12,
-    width: 24,
-    height: 24,
+    backgroundColor: AppColors.primary,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
     alignItems: "center",
     justifyContent: "center",
   },
   customAmountContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
+    backgroundColor: AppColors.gray50,
+    borderRadius: 12,
     borderWidth: 2,
-    borderColor: "#e5e7eb",
+    borderColor: AppColors.gray200,
     paddingHorizontal: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
   },
   customAmountInput: {
     flex: 1,
     fontSize: 16,
-    color: "#111827",
-    paddingVertical: 16,
+    color: AppColors.textPrimary,
+    paddingVertical: 14,
+    fontWeight: "600",
   },
   customAmountInputActive: {
-    color: "#3b82f6",
+    color: AppColors.primary,
   },
   customAmountSuffix: {
-    fontSize: 16,
-    color: "#6b7280",
-    fontWeight: "500",
+    fontSize: 14,
+    color: AppColors.gray500,
+    fontWeight: "600",
+    marginLeft: 8,
   },
   customAmountNote: {
     fontSize: 12,
-    color: "#6b7280",
-    marginTop: 8,
+    color: AppColors.gray500,
     marginLeft: 4,
+  },
+  customAmountSection: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: AppColors.gray200,
+  },
+  customAmountLabel: {
+    fontSize: 14,
+    color: AppColors.gray600,
+    fontWeight: "600",
+    marginBottom: 12,
   },
   paymentMethods: {
     gap: 12,
   },
   paymentMethod: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    backgroundColor: AppColors.gray50,
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 2,
-    borderColor: "#e5e7eb",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: AppColors.gray200,
   },
   paymentMethodSelected: {
-    borderColor: "#10b981",
-    backgroundColor: "#ecfdf5",
+    borderColor: AppColors.primary,
+    backgroundColor: `${AppColors.primary}10`,
   },
   paymentMethodLeft: {
     flexDirection: "row",
@@ -834,47 +647,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   paymentIcon: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 16,
+    marginRight: 12,
   },
   paymentInfo: {
     flex: 1,
   },
   paymentName: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#111827",
-    marginBottom: 4,
+    fontWeight: "700",
+    color: AppColors.textPrimary,
+    marginBottom: 2,
   },
   paymentDescription: {
-    fontSize: 14,
-    color: "#6b7280",
+    fontSize: 13,
+    color: AppColors.gray500,
   },
   paymentSelectedIndicator: {
-    marginLeft: 12,
+    marginLeft: 8,
   },
-  summaryCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#111827",
-    marginBottom: 16,
+  summaryContent: {
+    backgroundColor: AppColors.gray50,
+    borderRadius: 12,
+    padding: 16,
   },
   summaryRow: {
     flexDirection: "row",
@@ -884,29 +683,28 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: "#6b7280",
+    color: AppColors.gray600,
+    fontWeight: "500",
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
+    fontWeight: "700",
+    color: AppColors.textPrimary,
   },
-  summaryTotal: {
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    paddingTop: 12,
-    marginTop: 8,
-    marginBottom: 0,
+  summaryDivider: {
+    height: 1,
+    backgroundColor: AppColors.gray200,
+    marginVertical: 8,
   },
   summaryTotalLabel: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#111827",
+    fontWeight: "700",
+    color: AppColors.textPrimary,
   },
   summaryTotalValue: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#10b981",
+    fontWeight: "800",
+    color: AppColors.primary,
   },
   bottomSpacing: {
     height: 100,
@@ -916,40 +714,43 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#ffffff",
+    backgroundColor: AppColors.white,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
     borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
+    borderTopColor: AppColors.border,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: -4,
-    },
+    shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowRadius: 8,
     elevation: 8,
   },
   paymentButton: {
-    borderRadius: 20,
+    borderRadius: 14,
     overflow: "hidden",
     shadowColor: AppColors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  paymentButtonDisabled: {
+    opacity: 0.6,
   },
   paymentButtonGradient: {
-    paddingVertical: 18,
+    paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   paymentButtonText: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#ffffff",
+    color: AppColors.white,
   },
 });

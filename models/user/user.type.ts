@@ -10,6 +10,18 @@ export interface IUserInfo {
     licenseTier: LicenseTier;
     birthDate: string;
     role: UserRole;
-    instructor: any | null;
-    noviceDriver: any | null;
+    instructor: InstructorDetailDTO | null;
+    noviceDriver: NoviceDriverDetailDTO | null;
+}
+
+export interface InstructorDetailDTO {
+    instructorId: string;
+    bio: string;
+    experienceYear: number;
+}
+
+export interface NoviceDriverDetailDTO {
+    noviceDriverId: string;
+    drivingLicense: string;
+    drivingLicenseExpirationDate: string;
 }

@@ -94,3 +94,4 @@ export const drivingLicenses: LicenseType[] = Object.values(LicenseTier).map(
     name: tier,
   })
 );
+
