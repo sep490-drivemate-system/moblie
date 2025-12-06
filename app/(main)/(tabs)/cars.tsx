@@ -1,23 +1,20 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ScrollView,
   View,
   Text,
   StyleSheet,
-  Pressable,
   StatusBar,
   TouchableOpacity,
   FlatList,
   Image,
+  ActivityIndicator,
+  Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { AppColors } from "@/constants/Colors";
-import FilterModal from "@/components/FilterModal";
-import SearchBar from "@/components/ui/searchbar";
-import { FilterType } from "@/constants/FilterOptions";
 import { RootState } from "@/lib/redux/store";
-import { ListCarViewModel } from "@/viewmodels/listCar/listCarViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import {
@@ -26,96 +23,182 @@ import {
   Star,
   Users,
   Fuel,
-  Settings,
   Search,
-  Filter,
 } from "lucide-react-native";
+import { CarViewModel } from "@/viewmodels/car/CarViewModel";
+import { ICar, PaginatedCarsResponse, GetCarsParams } from "@/models/car/car";
+import HeaderList from "@/components/Commons/HeaderList";
+import { useCallback } from "react";
+import { RefreshControl } from "react-native";
+import CarFilter, {
+  CarFilterOptionType,
+} from "@/components/Car/CarFilter";
+import FilterModal from "@/components/Car/FilterModal";
+import {
+  SEAT_OPTIONS,
+  BRAND_OPTIONS,
+  FUEL_OPTIONS,
+} from "@/constants/FilterOptions";
 
 type CarCategory = "all" | "economy" | "luxury" | "suv";
 
-interface CarWithCategory {
-  id: string;
-  name: string;
-  brand: string;
-  imageUrl: string;
-  price: number;
-  location: string;
-  rating: number;
-  seats: number;
-  type: string;
-  fuel: string;
-  totalRentalCount?: number;
-  category: CarCategory;
+enum CarFilterOption {
+  All = "all",
+  Seats = "seats",
+  Brand = "brand",
+  Fuel = "fuel",
 }
 
 export default function CarsScreen() {
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
-  const [listCarState, viewModel] = useViewModel(
-    ListCarViewModel,
-    (state: RootState) => state.listCar
+  const [carState, viewModel] = useViewModel(
+    CarViewModel,
+    (state: RootState) => state.car
   );
 
-  const [activeFilter, setActiveFilter] = useState<CarCategory>("all");
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedFilterType, setSelectedFilterType] =
-    useState<FilterType | null>(null);
-  const [selectedFilterTitle, setSelectedFilterTitle] = useState("");
-  const [query, setQuery] = useState("");
+  const [cars, setCars] = useState<ICar[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  
+  const PAGE_SIZE = 4;
+  
+  // Filter states
+  const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedFuels, setSelectedFuels] = useState<string[]>([]);
+  
+  // Modal states
+  const [showSeatsModal, setShowSeatsModal] = useState(false);
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [showFuelModal, setShowFuelModal] = useState(false);
+  
+  // Temporary states for modals
+  const [tempSelectedSeats, setTempSelectedSeats] = useState<number[]>([]);
+  const [tempSelectedBrands, setTempSelectedBrands] = useState<string[]>([]);
+  const [tempSelectedFuels, setTempSelectedFuels] = useState<string[]>([]);
 
-  // Categorize cars based on price and brand
-  const carsWithCategory: CarWithCategory[] = useMemo(() => {
-    return viewModel.filteredCars.map((car) => {
-      let category: CarCategory = "economy";
-      
-      // Luxury brands
-      if (["Mercedes", "BMW", "Audi", "Porsche", "Lexus", "Land Rover"].includes(car.brand)) {
-        category = "luxury";
+  // Categories
+  const categories: { id: CarCategory; label: string; icon: any }[] = [
+    { id: "all", label: "Tất cả", icon: Car },
+    { id: "economy", label: "Tiết kiệm", icon: Car },
+    { id: "luxury", label: "Cao cấp", icon: Car },
+    { id: "suv", label: "SUV", icon: Car },
+  ];
+
+  // Filter options
+  const filterOptions: CarFilterOptionType[] = [
+    {
+      id: CarFilterOption.All,
+      label: "Tất cả",
+      value: null,
+      type: "all" as const,
+    },
+    {
+      id: CarFilterOption.Seats,
+      label: "Số chỗ",
+      value: null,
+      type: "seats" as const,
+    },
+    {
+      id: CarFilterOption.Brand,
+      label: "Hãng xe",
+      value: null,
+      type: "brand" as const,
+    },
+    {
+      id: CarFilterOption.Fuel,
+      label: "Nhiên liệu",
+      value: null,
+      type: "fuel" as const,
+    },
+  ];
+
+  // Load cars with filters and pagination
+  const loadCars = useCallback(async (page: number, append: boolean = false) => {
+    try {
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
       }
-      // SUV/Large vehicles
-      else if (car.seats >= 7 || ["Honda CR-V", "Mazda CX-5", "Ford Ranger", "Isuzu Mu-X"].some(model => car.name.includes(model.split(' ')[0]))) {
-        category = "suv";
+
+      const params: GetCarsParams = {
+        page: page,
+        size: PAGE_SIZE,
+      };
+
+      // Add filter params - API chỉ hỗ trợ single value, lấy giá trị đầu tiên
+      if (selectedSeats.length > 0) {
+        params.seats = selectedSeats[0];
       }
-      // High-end economy
-      else if (car.price > 2000000) {
-        category = "luxury";
+
+      if (selectedBrands.length > 0) {
+        params.brand = selectedBrands[0];
       }
 
-      return { ...car, category };
-    });
-  }, [viewModel.filteredCars]);
+      if (selectedFuels.length > 0) {
+        params.fuel = selectedFuels[0];
+      }
 
-  // Calculate statistics by category
-  const stats = useMemo(() => {
-    const total = carsWithCategory.length;
-    const economy = carsWithCategory.filter((c) => c.category === "economy").length;
-    const luxury = carsWithCategory.filter((c) => c.category === "luxury").length;
-    const suv = carsWithCategory.filter((c) => c.category === "suv").length;
-    return { total, economy, luxury, suv };
-  }, [carsWithCategory]);
+      const response = await viewModel.getCars(params);
 
-  // Get filtered cars
-  const filteredCars = useMemo(() => {
-    if (activeFilter === "all") {
-      return carsWithCategory;
+      // Log để debug
+      if (response.pageContent && response.pageContent.length > 0) {
+        console.log("Sample car data:", JSON.stringify(response.pageContent[0], null, 2));
+      }
+
+      if (append) {
+        setCars((prev) => [...prev, ...(response.pageContent ?? [])]);
+      } else {
+        setCars(response.pageContent ?? []);
+      }
+
+      setTotalCount(response.totalCount ?? 0);
+      setCurrentPage(response.currentPage ?? page);
+    } catch (error) {
+      console.error("Error loading cars:", error);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
     }
-    return carsWithCategory.filter((car) => car.category === activeFilter);
-  }, [carsWithCategory, activeFilter]);
+  }, [viewModel, selectedSeats, selectedBrands, selectedFuels]);
 
-  // Handle car press
-  const handleCarPress = (car: CarWithCategory) => {
-    // Navigate to car detail page
-    router.push(`/(main)/(no-tabs)/car-detail?carId=${car.id}`);
-  };
+  const handleLoadMore = useCallback(async () => {
+    if (isLoadingMore || cars.length >= totalCount) {
+      return;
+    }
+    await loadCars(currentPage + 1, true);
+  }, [currentPage, isLoadingMore, cars.length, totalCount, loadCars]);
 
-  // Format price
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + ' VNĐ/ngày';
-  };
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    setCurrentPage(1);
+    try {
+      await loadCars(1, false);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [loadCars]);
+
+  // Load cars when filters change or on mount
+  useEffect(() => {
+    setCurrentPage(1);
+    loadCars(1, false);
+  }, [loadCars]);
+
 
   // Render car card
-  const renderCarCard = ({ item }: { item: CarWithCategory }) => (
-    <Pressable onPress={() => handleCarPress(item)}>
+  const renderCarCard = ({ item }: { item: ICar }) => (
+    <Pressable
+      onPress={() => {
+        // Navigate to car detail if needed
+        // router.push(`/car/${item.id}`);
+      }}
+    >
       <View style={styles.carCard}>
         <LinearGradient
           colors={["#ffffff", "#f8fafc"]}
@@ -123,48 +206,54 @@ export default function CarsScreen() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <Image source={{ uri: item.imageUrl }} style={styles.carImage} />
-          
+          <Image
+            source={{ uri: item.thumbnailUrl }}
+            style={styles.carImage}
+            resizeMode="cover"
+          />
+
           <View style={styles.carInfo}>
             <View style={styles.carHeader}>
               <Text style={styles.carName} numberOfLines={1}>
-                {item.name}
+                {item.modelName}
               </Text>
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryText}>
-                  {item.category === "luxury" ? "Cao cấp" : 
-                   item.category === "suv" ? "SUV" : "Phổ thông"}
-                </Text>
-              </View>
             </View>
 
             <View style={styles.carDetails}>
               <View style={styles.detailRow}>
-                <MapPin size={14} color="#6b7280" strokeWidth={2} />
-                <Text style={styles.detailText}>{item.location}</Text>
-              </View>
-              
-              <View style={styles.detailRow}>
                 <Users size={14} color="#6b7280" strokeWidth={2} />
-                <Text style={styles.detailText}>{item.seats} chỗ</Text>
+                <Text style={styles.detailText}>
+                  {item.seatCounts ?? 0} chỗ
+                </Text>
               </View>
-              
+
               <View style={styles.detailRow}>
                 <Fuel size={14} color="#6b7280" strokeWidth={2} />
-                <Text style={styles.detailText}>{item.fuel}</Text>
+                <Text style={styles.detailText} numberOfLines={1}>
+                  {item.fuel ?? "N/A"}
+                </Text>
               </View>
             </View>
 
             <View style={styles.carFooter}>
               <View style={styles.ratingContainer}>
-                <Star size={16} color="#fbbf24" fill="#fbbf24" strokeWidth={2} />
-                <Text style={styles.ratingText}>{item.rating}</Text>
+                <Star
+                  size={16}
+                  color="#fbbf24"
+                  fill="#fbbf24"
+                  strokeWidth={2}
+                />
+                <Text style={styles.ratingText}>
+                  {item.average_rating?.toFixed(1) || "0.0"}
+                </Text>
                 <Text style={styles.rentalCount}>
-                  ({item.totalRentalCount || 0} lượt thuê)
+                  ({item.booking_count || 0} lượt thuê)
                 </Text>
               </View>
-              
-              <Text style={styles.priceText}>{formatPrice(item.price)}</Text>
+
+              <Text style={styles.priceText}>
+                {item.unitPrice?.toLocaleString("vi-VN")} đ/giờ
+              </Text>
             </View>
           </View>
         </LinearGradient>
@@ -172,176 +261,303 @@ export default function CarsScreen() {
     </Pressable>
   );
 
+  // Filter handlers
+  const hasActiveFilters =
+    selectedSeats.length > 0 ||
+    selectedBrands.length > 0 ||
+    selectedFuels.length > 0;
+
+  const handleOpenSeatsModal = () => {
+    setTempSelectedSeats([...selectedSeats]);
+    setShowSeatsModal(true);
+  };
+
+  const handleOpenBrandModal = () => {
+    setTempSelectedBrands([...selectedBrands]);
+    setShowBrandModal(true);
+  };
+
+  const handleOpenFuelModal = () => {
+    setTempSelectedFuels([...selectedFuels]);
+    setShowFuelModal(true);
+  };
+
+  const handleApplySeats = () => {
+    setSelectedSeats([...tempSelectedSeats]);
+    setShowSeatsModal(false);
+  };
+
+  const handleApplyBrands = () => {
+    setSelectedBrands([...tempSelectedBrands]);
+    setShowBrandModal(false);
+  };
+
+  const handleApplyFuels = () => {
+    setSelectedFuels([...tempSelectedFuels]);
+    setShowFuelModal(false);
+  };
+
+  const handleCloseSeatsModal = () => {
+    setTempSelectedSeats([...selectedSeats]);
+    setShowSeatsModal(false);
+  };
+
+  const handleCloseBrandModal = () => {
+    setTempSelectedBrands([...selectedBrands]);
+    setShowBrandModal(false);
+  };
+
+  const handleCloseFuelModal = () => {
+    setTempSelectedFuels([...selectedFuels]);
+    setShowFuelModal(false);
+  };
+
+  const clearSeatsFilters = () => {
+    setTempSelectedSeats([]);
+  };
+
+  const clearBrandsFilters = () => {
+    setTempSelectedBrands([]);
+  };
+
+  const clearFuelsFilters = () => {
+    setTempSelectedFuels([]);
+  };
+
+  const renderFilterOptionItem = ({
+    item,
+  }: {
+    item: CarFilterOptionType;
+  }) => {
+    const isActive =
+      item.id === CarFilterOption.All
+        ? !hasActiveFilters
+        : item.type === "seats"
+        ? selectedSeats.length > 0
+        : item.type === "brand"
+        ? selectedBrands.length > 0
+        : item.type === "fuel"
+        ? selectedFuels.length > 0
+        : false;
+
+    const handlePress = () => {
+      if (item.id === CarFilterOption.All) {
+        setSelectedSeats([]);
+        setSelectedBrands([]);
+        setSelectedFuels([]);
+      } else if (item.type === "seats") {
+        handleOpenSeatsModal();
+      } else if (item.type === "brand") {
+        handleOpenBrandModal();
+      } else if (item.type === "fuel") {
+        handleOpenFuelModal();
+      }
+    };
+
+    const getCount = () => {
+      if (item.type === "seats") return selectedSeats.length;
+      if (item.type === "brand") return selectedBrands.length;
+      if (item.type === "fuel") return selectedFuels.length;
+      return 0;
+    };
+
+    const count = getCount();
+
+    return (
+      <TouchableOpacity
+        activeOpacity={1}
+        style={[styles.filterOption, isActive && styles.filterOptionActive]}
+        onPress={handlePress}
+      >
+        <Text
+          style={[
+            styles.filterOptionText,
+            isActive && styles.filterOptionTextActive,
+          ]}
+        >
+          {item.label}
+          {count > 0 && ` (${count})`}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // Render empty state
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIconContainer}>
+        <Car size={40} color={AppColors.primary} strokeWidth={2} />
+      </View>
+      <Text style={styles.emptyTitle}>Không tìm thấy xe</Text>
+      <Text style={styles.emptySubtitle}>
+        {hasActiveFilters
+          ? "Thử thay đổi bộ lọc"
+          : "Hiện tại chưa có xe nào trong hệ thống"}
+      </Text>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <HeaderList title="Danh sách xe" />
 
-      {/* Modern Header with Gradient */}
-      <LinearGradient
-        colors={[
-          AppColors.primary,
-          AppColors.gradientStart,
-          AppColors.gradientEnd,
-        ]}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Danh sách xe</Text>
-            <Text style={styles.headerSubtitle}>
-              Tìm kiếm xe phù hợp với bạn
-            </Text>
-          </View>
-          <View style={styles.headerStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>
-                {filteredCars.length}
-              </Text>
-              <Text style={styles.statLabel}>Xe</Text>
-            </View>
-          </View>
-        </View>
-        <View style={styles.headerCurve} />
-      </LinearGradient>
+      {/* Filter Component */}
+      <CarFilter
+        filterOptions={filterOptions}
+        renderFilterOptionItem={renderFilterOptionItem}
+      />
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <SearchBar
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Tìm kiếm xe..."
-        />
-      </View>
-
-      {/* Modern Tabs */}
-      <View style={styles.tabsContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsScrollContent}
-        >
-          <TouchableOpacity
-            style={[styles.tab, activeFilter === "all" && styles.activeTab]}
-            onPress={() => setActiveFilter("all")}
-          >
-            <View style={styles.tabContent}>
-              <Car
-                size={16}
-                color={activeFilter === "all" ? "#ffffff" : "#6b7280"}
-                strokeWidth={2}
-              />
+      {/* Seats Modal */}
+      <FilterModal
+        visible={showSeatsModal}
+        onClose={handleCloseSeatsModal}
+        onApply={handleApplySeats}
+        onClear={clearSeatsFilters}
+        title="Chọn số chỗ"
+        data={SEAT_OPTIONS}
+        renderItem={({ item }) => {
+          const isSelected = tempSelectedSeats.includes(item.value);
+          return (
+            <TouchableOpacity
+              style={[styles.filterPill, isSelected && styles.filterPillActive]}
+              onPress={() => {
+                setTempSelectedSeats((prev) =>
+                  prev.includes(item.value)
+                    ? prev.filter((v) => v !== item.value)
+                    : [...prev, item.value]
+                );
+              }}
+              activeOpacity={1}
+            >
               <Text
                 style={[
-                  styles.tabText,
-                  activeFilter === "all" && styles.activeTabText,
+                  styles.filterPillText,
+                  isSelected && styles.filterPillTextActive,
                 ]}
               >
-                Tất cả ({stats.total})
+                {item.label}
               </Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          );
+        }}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+      />
 
-          <TouchableOpacity
-            style={[styles.tab, activeFilter === "economy" && styles.activeTab]}
-            onPress={() => setActiveFilter("economy")}
-          >
-            <View style={styles.tabContent}>
-              <Settings
-                size={16}
-                color={activeFilter === "economy" ? "#ffffff" : "#6b7280"}
-                strokeWidth={2}
-              />
+      {/* Brand Modal */}
+      <FilterModal
+        visible={showBrandModal}
+        onClose={handleCloseBrandModal}
+        onApply={handleApplyBrands}
+        onClear={clearBrandsFilters}
+        title="Chọn hãng xe"
+        data={BRAND_OPTIONS}
+        renderItem={({ item }) => {
+          const isSelected = tempSelectedBrands.includes(item.value);
+          return (
+            <TouchableOpacity
+              style={[styles.filterPill, isSelected && styles.filterPillActive]}
+              onPress={() => {
+                setTempSelectedBrands((prev) =>
+                  prev.includes(item.value)
+                    ? prev.filter((v) => v !== item.value)
+                    : [...prev, item.value]
+                );
+              }}
+              activeOpacity={1}
+            >
               <Text
                 style={[
-                  styles.tabText,
-                  activeFilter === "economy" && styles.activeTabText,
+                  styles.filterPillText,
+                  isSelected && styles.filterPillTextActive,
                 ]}
               >
-                Phổ thông ({stats.economy})
+                {item.label}
               </Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          );
+        }}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+      />
 
-          <TouchableOpacity
-            style={[styles.tab, activeFilter === "suv" && styles.activeTab]}
-            onPress={() => setActiveFilter("suv")}
-          >
-            <View style={styles.tabContent}>
-              <Users
-                size={16}
-                color={activeFilter === "suv" ? "#ffffff" : "#6b7280"}
-                strokeWidth={2}
-              />
+      {/* Fuel Modal */}
+      <FilterModal
+        visible={showFuelModal}
+        onClose={handleCloseFuelModal}
+        onApply={handleApplyFuels}
+        onClear={clearFuelsFilters}
+        title="Chọn nhiên liệu"
+        data={FUEL_OPTIONS}
+        renderItem={({ item }) => {
+          const isSelected = tempSelectedFuels.includes(item.value);
+          return (
+            <TouchableOpacity
+              style={[styles.filterPill, isSelected && styles.filterPillActive]}
+              onPress={() => {
+                setTempSelectedFuels((prev) =>
+                  prev.includes(item.value)
+                    ? prev.filter((v) => v !== item.value)
+                    : [...prev, item.value]
+                );
+              }}
+              activeOpacity={1}
+            >
               <Text
                 style={[
-                  styles.tabText,
-                  activeFilter === "suv" && styles.activeTabText,
+                  styles.filterPillText,
+                  isSelected && styles.filterPillTextActive,
                 ]}
               >
-                SUV ({stats.suv})
+                {item.label}
               </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tab, activeFilter === "luxury" && styles.activeTab]}
-            onPress={() => setActiveFilter("luxury")}
-          >
-            <View style={styles.tabContent}>
-              <Star
-                size={16}
-                color={activeFilter === "luxury" ? "#ffffff" : "#6b7280"}
-                strokeWidth={2}
-              />
-              <Text
-                style={[
-                  styles.tabText,
-                  activeFilter === "luxury" && styles.activeTabText,
-                ]}
-              >
-                Cao cấp ({stats.luxury})
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
+            </TouchableOpacity>
+          );
+        }}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+      />
 
       {/* Cars List */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {filteredCars.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconContainer}>
-              <Car size={48} color={AppColors.primary} strokeWidth={1.5} />
-            </View>
-            <Text style={styles.emptyTitle}>Không tìm thấy xe</Text>
-            <Text style={styles.emptySubtitle}>
-              Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm để xem thêm xe.
-            </Text>
+      <View style={styles.content}>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={AppColors.primary} />
+            <Text style={styles.loadingText}>Đang tải danh sách xe...</Text>
           </View>
         ) : (
           <FlatList
-            data={filteredCars}
-            keyExtractor={(item) => item.id.toString()}
+            data={cars}
             renderItem={renderCarCard}
-            showsVerticalScrollIndicator={false}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={[
               styles.carsList,
-              { paddingBottom: tabBarHeight + 100 }
+              { paddingBottom: tabBarHeight + 20 },
             ]}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={renderEmptyState}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                colors={[AppColors.primary]}
+                tintColor={AppColors.primary}
+              />
+            }
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              isLoadingMore ? (
+                <View style={styles.loadingFooter}>
+                  <ActivityIndicator size="small" color={AppColors.primary} />
+                  <Text style={styles.loadingFooterText}>Đang tải thêm...</Text>
+                </View>
+              ) : null
+            }
           />
         )}
-      </ScrollView>
+      </View>
 
-      {modalVisible && selectedFilterType && (
-        <FilterModal
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          filterType={selectedFilterType}
-          title={selectedFilterTitle}
-        />
-      )}
     </View>
   );
 }
@@ -349,7 +565,7 @@ export default function CarsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: AppColors.white,
   },
   header: {
     paddingTop: 50,
@@ -413,20 +629,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  searchContainer: {
-    backgroundColor: "#ffffff",
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 10,
-    marginTop: -25,
-    borderRadius: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 12,
-    zIndex: 1,
-  },
   tabsContainer: {
     backgroundColor: "#ffffff",
     paddingHorizontal: 16,
@@ -482,8 +684,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 10,
     backgroundColor: AppColors.background,
   },
   emptyState: {
@@ -521,6 +721,9 @@ const styles = StyleSheet.create({
   },
   carsList: {
     paddingTop: 10,
+    paddingHorizontal: 16,
+    backgroundColor: AppColors.white,
+    flex: 1
   },
   carCard: {
     borderRadius: 20,
@@ -529,7 +732,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
-    elevation: 8,
+    elevation: 2,
     overflow: "hidden",
   },
   cardGradient: {
@@ -570,6 +773,7 @@ const styles = StyleSheet.create({
     color: AppColors.primary,
   },
   carDetails: {
+    flex: 1,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -578,7 +782,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    flex: 1,
   },
   detailText: {
     fontSize: 13,
@@ -611,5 +814,86 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: AppColors.primary,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 80,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+  loadingFooter: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 16,
+    gap: 8,
+  },
+  loadingFooterText: {
+    fontSize: 14,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  filterOption: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
+    marginRight: 0,
+    minHeight: 40,
+  },
+  filterOptionActive: {
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
+  },
+  filterOptionText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748b",
+    letterSpacing: 0.2,
+  },
+  filterOptionTextActive: {
+    color: "#ffffff",
+  },
+  filterPill: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  filterPillActive: {
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
+    shadowColor: AppColors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  filterPillText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  filterPillTextActive: {
+    color: "#ffffff",
+    fontWeight: "700",
   },
 });

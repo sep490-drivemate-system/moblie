@@ -76,4 +76,24 @@ export interface ICar {
   status: CarStatus;
   thumbnailUrl: string;
   fuel: string;
+  vehicleType: string;
+  licenseTier: LicenseTier;
+  manufacturerId: string;
+  booking_count: number;
+  average_rating: number;
+}
+
+export interface PaginatedCarsResponse {
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  pageContent: ICar[];
+}
+
+export interface GetCarsParams {
+  page?: number;
+  size?: number;
+  seats?: number;
+  brand?: string;
+  fuel?: string;
 }
