@@ -39,6 +39,7 @@ import {
   BRAND_OPTIONS,
   FUEL_OPTIONS,
 } from "@/constants/FilterOptions";
+import { ROUTES } from "@/constants/routes";
 
 type CarCategory = "all" | "economy" | "luxury" | "suv";
 
@@ -194,10 +195,12 @@ export default function CarsScreen() {
   // Render car card
   const renderCarCard = ({ item }: { item: ICar }) => (
     <Pressable
-      onPress={() => {
-        // Navigate to car detail if needed
-        // router.push(`/car/${item.id}`);
-      }}
+      // onPress={() => {
+      //   router.push({
+      //     pathname: ROUTES.MAIN_NO_TABS_CAR_DETAIL,
+      //     params: { carId: item.id },
+      //   });
+      // }}
     >
       <View style={styles.carCard}>
         <LinearGradient
@@ -723,7 +726,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingHorizontal: 16,
     backgroundColor: AppColors.white,
-    flex: 1
   },
   carCard: {
     borderRadius: 20,
