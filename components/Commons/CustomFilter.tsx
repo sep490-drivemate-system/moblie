@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { AppColors } from "@/constants/Colors";
 import SearchBar from "@/components/Commons/SearchBar";
+import { DrivingSkill, RoadType } from "@/models/package/package";
 
 export type FilterOptionType = { id: string; label?: string;[key: string]: any };
 
@@ -26,13 +27,22 @@ export interface CustomFilterProps {
     }) => React.ReactElement;
     showRoadTypeModal: boolean;
     onCloseRoadTypeModal: () => void;
-    roadTypes: string[];
-    renderRoadTypeItem: (params: { item: string }) => React.ReactElement;
+    onApplyRoadTypes?: () => void;
+    roadTypes: RoadType[];
+    renderRoadTypeItem: (params: { item: RoadType }) => React.ReactElement;
     onClearRoadTypeFilters: () => void;
+    // Driving skills modal
+    showDrivingSkillsModal?: boolean;
+    onCloseDrivingSkillsModal?: () => void;
+    onApplyDrivingSkills?: () => void;
+    drivingSkills?: DrivingSkill[];
+    renderDrivingSkillItem?: (params: { item: DrivingSkill }) => React.ReactElement;
+    onClearDrivingSkillsFilters?: () => void;
     // new customizations
     modalTitle?: string;
     clearLabel?: string;
     applyLabel?: string;
+    drivingSkillsModalTitle?: string;
 }
 
 const CustomFilter: React.FC<CustomFilterProps> = ({
@@ -45,12 +55,20 @@ const CustomFilter: React.FC<CustomFilterProps> = ({
     renderFilterOptionItem,
     showRoadTypeModal,
     onCloseRoadTypeModal,
+    onApplyRoadTypes,
     roadTypes,
     renderRoadTypeItem,
     onClearRoadTypeFilters,
+    showDrivingSkillsModal = false,
+    onCloseDrivingSkillsModal,
+    onApplyDrivingSkills,
+    drivingSkills = [],
+    renderDrivingSkillItem,
+    onClearDrivingSkillsFilters,
     modalTitle = "Chọn loại đường",
     clearLabel = "Xóa tất cả",
     applyLabel = "Áp dụng",
+    drivingSkillsModalTitle = "Chọn kỹ năng lái xe",
 }) => {
     return (
         <>
@@ -97,11 +115,8 @@ const CustomFilter: React.FC<CustomFilterProps> = ({
                 animationType="slide"
                 onRequestClose={onCloseRoadTypeModal}
             >
-                <Pressable style={styles.modalOverlay} onPress={onCloseRoadTypeModal}>
-                    <Pressable
-                        style={styles.modalContent}
-                        onPress={(e) => e.stopPropagation()}
-                    >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>{modalTitle}</Text>
                             <TouchableOpacity
@@ -116,7 +131,7 @@ const CustomFilter: React.FC<CustomFilterProps> = ({
                             <FlatList
                                 data={roadTypes}
                                 renderItem={({ item }) => renderRoadTypeItem({ item })}
-                                keyExtractor={(item) => item}
+                                keyExtractor={(item) => item.id}
                                 style={styles.modalScrollView}
                                 contentContainerStyle={styles.roadTypesList}
                                 showsVerticalScrollIndicator={false}
@@ -132,14 +147,78 @@ const CustomFilter: React.FC<CustomFilterProps> = ({
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.applyButton}
-                                onPress={onCloseRoadTypeModal}
+                                onPress={() => {
+                                    if (onApplyRoadTypes) {
+                                        onApplyRoadTypes();
+                                    } else {
+                                        onCloseRoadTypeModal();
+                                    }
+                                }}
                             >
                                 <Text style={styles.applyButtonText}>{applyLabel}</Text>
                             </TouchableOpacity>
                         </View>
-                    </Pressable>
-                </Pressable>
+                    </View>
+                </View>
             </Modal>
+
+            {showDrivingSkillsModal && onCloseDrivingSkillsModal && (
+                <Modal
+                    visible={showDrivingSkillsModal}
+                    transparent
+                    animationType="slide"
+                    onRequestClose={onCloseDrivingSkillsModal}
+                >
+                    <Pressable style={styles.modalOverlay} onPress={onCloseDrivingSkillsModal}>
+                        <Pressable
+                            style={styles.modalContent}
+                            onPress={(e) => e.stopPropagation()}
+                        >
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>{drivingSkillsModalTitle}</Text>
+                                <TouchableOpacity
+                                    onPress={onCloseDrivingSkillsModal}
+                                    style={styles.modalCloseButton}
+                                >
+                                    <X size={24} color="#64748b" strokeWidth={2} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.roadTypesCard}>
+                                <FlatList
+                                    data={drivingSkills}
+                                    renderItem={({ item }) => renderDrivingSkillItem?.({ item }) || null}
+                                    keyExtractor={(item) => item.id}
+                                    style={styles.modalScrollView}
+                                    contentContainerStyle={styles.roadTypesList}
+                                    showsVerticalScrollIndicator={false}
+                                />
+                            </View>
+
+                            <View style={styles.modalFooter}>
+                                <TouchableOpacity
+                                    style={styles.clearButton}
+                                    onPress={onClearDrivingSkillsFilters}
+                                >
+                                    <Text style={styles.clearButtonText}>{clearLabel}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.applyButton}
+                                    onPress={() => {
+                                        if (onApplyDrivingSkills) {
+                                            onApplyDrivingSkills();
+                                        } else if (onCloseDrivingSkillsModal) {
+                                            onCloseDrivingSkillsModal();
+                                        }
+                                    }}
+                                >
+                                    <Text style={styles.applyButtonText}>{applyLabel}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </Pressable>
+                    </Pressable>
+                </Modal>
+            )}
         </>
     );
 };

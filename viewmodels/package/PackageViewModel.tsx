@@ -15,12 +15,16 @@ import {
   createInstructorPackage,
   getDrivingSkills,
   getInstructorPackages,
+  getPackages,
   getRoadTypes,
 } from "@/features/package/packageThunk";
 import { setIsRefreshing } from "@/features/package/packageSlice";
 import {
   CreatePackageForm,
   DrivingSkill,
+  GetPackagesParams,
+  Package,
+  PaginatedPackagesResponse,
   RoadType,
 } from "@/models/package/package";
 
@@ -80,5 +84,26 @@ export class PackageViewModel extends BaseViewModel<RootState["package"]> {
     ).unwrap();
     console.log(response);
     return (response as any).value ?? response;
+  };
+
+  getPackages = async (
+    params?: GetPackagesParams
+  ): Promise<PaginatedPackagesResponse> => {
+    return (
+      (await this.executeAsync<PaginatedPackagesResponse>(async () => {
+        const response = await this.dispatch(getPackages(params || {})).unwrap();
+        return (response as any).value || {
+          currentPage: 1,
+          pageSize: 12,
+          totalCount: 0,
+          pageContent: [],
+        };
+      })) ?? {
+        currentPage: 1,
+        pageSize: 12,
+        totalCount: 0,
+        pageContent: [],
+      }
+    );
   };
 }

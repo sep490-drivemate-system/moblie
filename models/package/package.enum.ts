@@ -3,4 +3,5 @@ export enum PackageFilterOption {
     HasVehicle = "hasVehicle",
     InstructorOnly = "instructorOnly",
     RoadType = "roadType",
+    DrivingSkills = "drivingSkills",
 }

@@ -13,6 +13,12 @@ import {
 import HeaderList from "@/components/Commons/HeaderList";
 import { PackageFilterOption } from "@/models/package/package.enum";
 import PackageFilterList from "@/components/Package/PackageFilterList";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { PackageViewModel } from "@/viewmodels/package/PackageViewModel";
+import { RootState } from "@/lib/redux/store";
+import { useCallback, useEffect, useState } from "react";
+import { DrivingSkill, GetPackagesParams, Package, RoadType } from "@/models/package/package";
+import { ROUTES } from "@/constants/routes";
 
 // Road types list
 const roadTypes = [
@@ -53,35 +59,161 @@ const filterOptions = [
     value: null,
     type: "roadType" as const,
   },
+  {
+    id: PackageFilterOption.DrivingSkills,
+    label: "Kỹ năng lái xe",
+    value: null,
+    type: "drivingSkills" as const,
+  },
 ];
 
 
 
+const PAGE_SIZE = 4;
+
 export default function PackagesScreen() {
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
-  const handlePackagePress = (pkg: (typeof popularPackages)[0]) => {
+  const [packageState, packageViewModel] = useViewModel<RootState["package"], PackageViewModel>(PackageViewModel, (state) => state.package);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [roadTypes, setRoadTypes] = useState<RoadType[]>([]);
+  const [drivingSkills, setDrivingSkills] = useState<DrivingSkill[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [filterHasVehicle, setFilterHasVehicle] = useState<boolean | null>(null);
+  const [selectedRoadTypes, setSelectedRoadTypes] = useState<string[]>([]);
+  const [selectedDrivingSkills, setSelectedDrivingSkills] = useState<string[]>([]);
+
+  const handlePackagePress = (pkg: Package) => {
     router.push({
-      pathname: "/(main)/(no-tabs)/instructor-detail",
+      pathname: ROUTES.INSTRUCTOR_DETAIL,
       params: { instructorId: pkg.instructorId },
     });
   };
 
-  const getInstructorAvatar = (instructorId: string) => {
-    const instructor = instructorsData.find((i) => i.id === instructorId);
-    return instructor?.avatar || "https://i.pravatar.cc/150?img=1";
-  };
+  const loadPackages = useCallback(async (page: number, append: boolean = false) => {
+    try {
+      const params: GetPackagesParams = {
+        pageNumber: page,
+        pageSize: PAGE_SIZE,
+      };
+
+      if (debouncedSearchQuery) {
+        params.searchKey = debouncedSearchQuery;
+      }
+
+      if (filterHasVehicle !== null) {
+        params.allowSelfCar = filterHasVehicle;
+      }
+
+      if (selectedRoadTypes.length > 0) {
+        params.roadTypes = selectedRoadTypes;
+      }
+
+      if (selectedDrivingSkills.length > 0) {
+        params.drivingSkills = selectedDrivingSkills;
+      }
+
+      const response = await packageViewModel.getPackages(params);
+      
+      if (append) {
+        setPackages((prev) => [...prev, ...(response.pageContent ?? [])]);
+      } else {
+        setPackages(response.pageContent ?? []);
+      }
+      
+      setTotalCount(response.totalCount ?? 0);
+      setCurrentPage(response.currentPage ?? page);
+    } catch (error) {
+      console.error("Error loading packages:", error);
+    }
+  }, [packageViewModel, debouncedSearchQuery, filterHasVehicle, selectedRoadTypes, selectedDrivingSkills]);
+
+  const handleLoadMore = useCallback(async () => {
+    if (isLoadingMore || packages.length >= totalCount) {
+      return;
+    }
+    setIsLoadingMore(true);
+    try {
+      await loadPackages(currentPage + 1, true);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [currentPage, isLoadingMore, packages.length, totalCount, loadPackages]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    setCurrentPage(1);
+    try {
+      await loadPackages(1, false);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [loadPackages]);
+
+  // Debounce search query - đợi 1 giây sau khi user ngừng nhập
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 1000); // 1 giây = 1000ms
+
+    // Cleanup: nếu user tiếp tục nhập, hủy timer cũ
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  // Load road types
+  useEffect(() => {
+    const getRoadTypes = async () => {
+      const result = await packageViewModel.getRoadTypes();
+      setRoadTypes(result);
+    };
+    getRoadTypes();
+  }, [packageViewModel]);
+
+  useEffect(() => {
+    const getDrivingSkills = async () => {
+      const result = await packageViewModel.getDrivingSkills();
+      setDrivingSkills(result);
+    };
+    getDrivingSkills();
+  }, [packageViewModel]);
+
+  // Load packages when filters change or on mount
+  useEffect(() => {
+    setCurrentPage(1);
+    loadPackages(1, false);
+  }, [loadPackages]);
+
 
   return (
     <View style={styles.container}>
       <HeaderList title="Danh sách gói thuê" />
       <PackageFilterList
-        packages={popularPackages}
+        packages={packages}
         roadTypes={roadTypes}
+        drivingSkills={drivingSkills}
         filterOptions={filterOptions}
         onPackagePress={handlePackagePress}
-        getInstructorAvatar={getInstructorAvatar}
         bottomPadding={tabBarHeight + 20}
+        totalCount={totalCount}
+        onRefresh={handleRefresh}
+        onLoadMore={handleLoadMore}
+        isRefreshing={isRefreshing}
+        isLoadingMore={isLoadingMore}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        filterHasVehicle={filterHasVehicle}
+        onFilterHasVehicleChange={setFilterHasVehicle}
+        selectedRoadTypes={selectedRoadTypes}
+        onSelectedRoadTypesChange={setSelectedRoadTypes}
+        selectedDrivingSkills={selectedDrivingSkills}
+        onSelectedDrivingSkillsChange={setSelectedDrivingSkills}
       />
     </View>
   );

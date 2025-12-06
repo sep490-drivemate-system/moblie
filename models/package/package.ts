@@ -64,3 +64,36 @@ export interface CreatePackageForm {
   allowNoviceCar: boolean;
   packageCars: string[];
 }
+
+export interface Package {
+  id: string;
+  name: string;
+  instructorId: string;
+  instructorName: string;
+  instructorAvatar: string;
+  allowSelfCar: boolean;
+  duration: number;
+  roadTypes: string[];
+  skills: string[];
+  price: number;
+  carCount: number;
+  bookingCount: number;
+}
+
+// Paginated response từ backend
+export interface PaginatedPackagesResponse {
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  pageContent: Package[];
+}
+
+// Request params cho API get packages
+export interface GetPackagesParams {
+  searchKey?: string;
+  allowSelfCar?: boolean;
+  roadTypes?: string[];
+  drivingSkills?: string[];
+  pageNumber?: number;
+  pageSize?: number;
+}
