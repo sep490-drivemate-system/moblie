@@ -72,7 +72,7 @@ export interface ICar {
   modelName: string;
   license_plate: string;
   seatCounts: number;
-  unitPrice: number;
+  price: number;
   status: CarStatus;
   thumbnailUrl: string;
   fuel: string;

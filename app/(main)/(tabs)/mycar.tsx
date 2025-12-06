@@ -150,7 +150,7 @@ const VehicleCard: React.FC<VehicleCardProps> = ({
         <View style={styles.vehicleDetails}>
           <Text style={styles.vehicleDetailText}>{vehicle.seatCounts} chỗ</Text>
           <Text style={styles.vehiclePrice}>
-            {vehicle.unitPrice.toLocaleString("vi-VN")} VNĐ
+            {vehicle.price.toLocaleString("vi-VN")} VNĐ
           </Text>
         </View>
       </View>
@@ -215,7 +215,7 @@ const VehicleModal: React.FC<VehicleModalProps> = ({
             <View style={styles.modalSection}>
               <Text style={styles.modalLabel}>Giá</Text>
               <Text style={styles.modalValue}>
-                {vehicle.unitPrice.toLocaleString("vi-VN")} VNĐ
+                {vehicle.price.toLocaleString("vi-VN")} VNĐ
               </Text>
             </View>
             <View style={styles.modalSection}>
@@ -283,7 +283,7 @@ export default function MyCarScreen() {
   const averagePrice =
     cars.length > 0
       ? Math.round(
-          cars.reduce((s, v) => s + v.unitPrice, 0) / cars.length / 1000
+          cars.reduce((s, v) => s + v.price, 0) / cars.length / 1000
         )
       : 0;
 
