@@ -24,9 +24,17 @@ import {
   User,
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
-import { IInstructor, IInstructors, IInstructorPackages, IInstructorCar } from "@/models/instructor/instructor.type";
+import {
+  IInstructor,
+  IInstructors,
+  IInstructorPackages,
+  IInstructorCar,
+} from "@/models/instructor/instructor.type";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { getInstructorCars } from "@/features/instructor/instructorThunk";
+import {
+  getInstructorById,
+  getInstructorCars,
+} from "@/features/instructor/instructorThunk";
 import { Gender } from "@/models/user/gender.enum";
 import { ConfirmPurchaseModal } from "@/components/Modal/ConfirmPurchaseModal";
 import { BookingViewModel } from "@/viewmodels/booking/BookingViewModel";
@@ -44,57 +52,93 @@ const getGenderText = (gender: Gender): string => {
 export default function InstructorDetailScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [, bookingVM] = useViewModel(BookingViewModel, (state) => state.booking);
-  const { instructorData } = useLocalSearchParams();
+  const [, bookingVM] = useViewModel(
+    BookingViewModel,
+    (state) => state.booking
+  );
+  const { instructorId } = useLocalSearchParams();
   const [instructor, setInstructor] = useState<IInstructors | null>(null);
   const [packages, setPackages] = useState<IInstructorPackages[]>([]);
   const [cars, setCars] = useState<IInstructorCar[]>([]);
+  const [isLoadingInstructor, setIsLoadingInstructor] = useState(true);
   const [isLoadingPackages, setIsLoadingPackages] = useState(false);
   const [isLoadingCars, setIsLoadingCars] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<IInstructorPackages | null>(null);
+  const [selectedPackage, setSelectedPackage] =
+    useState<IInstructorPackages | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const scaleAnim = useState(new Animated.Value(1))[0];
   const [walletState] = useViewModel(WalletViewModel, (state) => state.wallet);
   const [showBalanceAlert, setShowBalanceAlert] = useState(false);
-  const [, noviceDriverViewModel] = useViewModel(NoviceDriverViewModel, (state) => state.user);
-  const [, packageViewModel] = useViewModel(PackageViewModel, (state) => state.package);
+  const [, noviceDriverViewModel] = useViewModel(
+    NoviceDriverViewModel,
+    (state) => state.user
+  );
+  const [, packageViewModel] = useViewModel(
+    PackageViewModel,
+    (state) => state.package
+  );
 
   const [showLicenseAlert, setShowLicenseAlert] = useState(false);
   const [licenseAlertMessage, setLicenseAlertMessage] = useState("");
+
+  // Fetch instructor by ID
   useEffect(() => {
-    if (instructorData && typeof instructorData === 'string') {
-      try {
-        const parsedInstructor: IInstructors = JSON.parse(instructorData);
-        setInstructor(parsedInstructor);
-
-      } catch (error) {
-        console.error('Failed to parse instructor data:', error);
-      }
+    if (instructorId) {
+      const fetchInstructor = async () => {
+        setIsLoadingInstructor(true);
+        try {
+          const result = await dispatch(
+            getInstructorById({ id: instructorId as string })
+          ).unwrap();
+          const instructorData = (result as any).value || result;
+          setInstructor(instructorData as IInstructors);
+        } catch (error) {
+          console.error("Failed to fetch instructor:", error);
+        } finally {
+          setIsLoadingInstructor(false);
+        }
+      };
+      fetchInstructor();
     }
-  }, [instructorData]);
+  }, [instructorId, dispatch]);
 
+  // Fetch packages and cars after instructor is loaded
   useEffect(() => {
     if (instructor && instructor.id) {
       const fetchPackages = async () => {
         setIsLoadingPackages(true);
-        const packages = await packageViewModel.getPackagesByInstructorId(instructor.id);
-        setPackages(packages);
-        setIsLoadingPackages(false);
+        try {
+          const packages = await packageViewModel.getPackagesByInstructorId(
+            instructor.id
+          );
+          setPackages(packages);
+        } catch (error) {
+          console.error("Failed to fetch packages:", error);
+        } finally {
+          setIsLoadingPackages(false);
+        }
       };
       fetchPackages();
 
       const fetchCars = async () => {
         setIsLoadingCars(true);
-        const carsResult = await dispatch(getInstructorCars({ id: instructor.id })).unwrap();
-        const cars = (carsResult as any).value || carsResult;
-        setCars(cars);
-        setIsLoadingCars(false);
+        try {
+          const carsResult = await dispatch(
+            getInstructorCars({ id: instructor.id })
+          ).unwrap();
+          const cars = (carsResult as any).value || carsResult;
+          setCars(cars);
+        } catch (error) {
+          console.error("Failed to fetch cars:", error);
+        } finally {
+          setIsLoadingCars(false);
+        }
       };
       fetchCars();
     }
-  }, [instructor, dispatch]);
+  }, [instructor, dispatch, packageViewModel]);
 
   useEffect(() => {
     if (showConfirmModal) {
@@ -104,8 +148,7 @@ export default function InstructorDetailScreen() {
         friction: 7,
         tension: 40,
         useNativeDriver: true,
-      }).start(() => {
-      });
+      }).start(() => {});
     } else {
       scaleAnim.setValue(0.95);
     }
@@ -119,7 +162,9 @@ export default function InstructorDetailScreen() {
 
     const isLicenseValid = await noviceDriverViewModel.getLicenseValidity();
     if (!isLicenseValid) {
-      setLicenseAlertMessage("Bạn chưa có giấy phép lái xe hoặc giấy phép lái xe đã hết hạn. Vui lòng đăng ký lái xe để tiếp tục.");
+      setLicenseAlertMessage(
+        "Bạn chưa có giấy phép lái xe hoặc giấy phép lái xe đã hết hạn. Vui lòng đăng ký lái xe để tiếp tục."
+      );
       setShowLicenseAlert(true);
       return;
     }
@@ -136,18 +181,26 @@ export default function InstructorDetailScreen() {
     }
 
     if (selectedPackage.isRentalCar && selectedVehicle) {
-      const selectedCar = cars.find((c) => String(c.id) === String(selectedVehicle));
+      const selectedCar = cars.find(
+        (c) => String(c.id) === String(selectedVehicle)
+      );
       if (selectedCar) {
-        const canDrive = await noviceDriverViewModel.canDriveVehicle(selectedCar.licenseTier);
+        const canDrive = await noviceDriverViewModel.canDriveVehicle(
+          selectedCar.licenseTier
+        );
         if (!canDrive) {
           setShowConfirmModal(false);
-          setLicenseAlertMessage("Bạn chưa có giấy phép lái xe đủ để lái xe này. Vui lòng đăng ký lái xe để tiếp tục.");
+          setLicenseAlertMessage(
+            "Bạn chưa có giấy phép lái xe đủ để lái xe này. Vui lòng đăng ký lái xe để tiếp tục."
+          );
           setShowLicenseAlert(true);
           return;
         }
       } else {
         setShowConfirmModal(false);
-        setLicenseAlertMessage("Bạn chưa có giấy phép lái xe đủ để lái xe này. Vui lòng đăng ký lái xe để tiếp tục.");
+        setLicenseAlertMessage(
+          "Bạn chưa có giấy phép lái xe đủ để lái xe này. Vui lòng đăng ký lái xe để tiếp tục."
+        );
         setShowLicenseAlert(true);
         return;
       }
@@ -164,9 +217,10 @@ export default function InstructorDetailScreen() {
     setIsProcessing(false);
   };
 
-  if (!instructor) {
+  if (isLoadingInstructor || !instructor) {
     return (
       <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={AppColors.primary} />
         <Text style={styles.loadingText}>Đang tải...</Text>
       </View>
     );
@@ -224,7 +278,9 @@ export default function InstructorDetailScreen() {
               <View style={styles.heroNameContainer}>
                 <Text style={styles.heroName}>{instructor.fullName}</Text>
                 <View style={styles.heroStatusRow}>
-                  <Text style={styles.heroStatus}>{getGenderText(instructor.gender)}</Text>
+                  <Text style={styles.heroStatus}>
+                    {getGenderText(instructor.gender)}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -238,7 +294,9 @@ export default function InstructorDetailScreen() {
                   fill="#fbbf24"
                   strokeWidth={0}
                 />
-                <Text style={styles.quickStatText}>{instructor.averageRating}</Text>
+                <Text style={styles.quickStatText}>
+                  {instructor.averageRating}
+                </Text>
               </View>
               <View style={styles.quickStatDivider} />
               <View style={styles.quickStatItem}>
@@ -258,12 +316,12 @@ export default function InstructorDetailScreen() {
           </View>
         </LinearGradient>
         {/* About & Specialties */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Giới thiệu</Text>
-          <Text style={styles.aboutText}>
-            {instructor.bio}
-          </Text>
-        </View>
+        {instructor.bio && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Giới thiệu</Text>
+            <Text style={styles.aboutText}>{instructor.bio}</Text>
+          </View>
+        )}
         {/* Packages Section */}
         <View style={styles.pricingSection}>
           <Text style={styles.sectionTitle}>Gói thuê ({packages.length})</Text>
@@ -283,7 +341,9 @@ export default function InstructorDetailScreen() {
                 <View style={styles.priceCardHeader}>
                   <View style={styles.priceCardInfo}>
                     <Text style={styles.priceCardTitle}>{pkg.name}</Text>
-                    <Text style={styles.packageDescription}>{pkg.description}</Text>
+                    <Text style={styles.packageDescription}>
+                      {pkg.description}
+                    </Text>
                     <View style={styles.packageTypeContainer}>
                       {pkg.isRentalCar ? (
                         <View style={styles.packageTypeWithVehicle}>
@@ -307,18 +367,24 @@ export default function InstructorDetailScreen() {
                 <View style={styles.packageDetails}>
                   <View style={styles.packageDetailRow}>
                     <Clock size={16} color="#64748b" strokeWidth={2} />
-                    <Text style={styles.packageDetailText}>Thời lượng sử dụng: {pkg.duration} giờ</Text>
+                    <Text style={styles.packageDetailText}>
+                      Thời lượng sử dụng: {pkg.duration} giờ
+                    </Text>
                   </View>
 
                   <View style={styles.packageRoadTypesContainer}>
                     <View style={styles.packageRoadTypesHeader}>
                       <Route size={16} color="#64748b" strokeWidth={2} />
-                      <Text style={styles.packageRoadTypesLabel}>Loại đường:</Text>
+                      <Text style={styles.packageRoadTypesLabel}>
+                        Loại đường:
+                      </Text>
                     </View>
                     <View style={styles.packageRoadTypes}>
                       {pkg.roadTypes.map((roadType: string, idx: number) => (
                         <View key={idx} style={styles.roadTypeChip}>
-                          <Text style={styles.roadTypeChipText}>{roadType}</Text>
+                          <Text style={styles.roadTypeChipText}>
+                            {roadType}
+                          </Text>
                         </View>
                       ))}
                     </View>
@@ -327,7 +393,9 @@ export default function InstructorDetailScreen() {
                   <View style={styles.packageSkillsContainer}>
                     <View style={styles.packageSkillsHeader}>
                       <Award size={16} color="#64748b" strokeWidth={2} />
-                      <Text style={styles.packageSkillsLabel}>Kỹ năng lái xe:</Text>
+                      <Text style={styles.packageSkillsLabel}>
+                        Kỹ năng lái xe:
+                      </Text>
                     </View>
                     <View style={styles.packageSkills}>
                       {pkg.drivingSkills.map((skill: string, idx: number) => (
@@ -342,7 +410,7 @@ export default function InstructorDetailScreen() {
                 <View style={styles.priceCardBottom}>
                   <View style={styles.priceInfo}>
                     <Text style={styles.priceAmount}>
-                      {pkg.price.toLocaleString('vi-VN')} đ
+                      {pkg.price.toLocaleString("vi-VN")} đ
                     </Text>
                   </View>
                   <TouchableOpacity
@@ -358,12 +426,9 @@ export default function InstructorDetailScreen() {
           )}
         </View>
 
-
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              Phương tiện ({cars.length})
-            </Text>
+            <Text style={styles.sectionTitle}>Phương tiện ({cars.length})</Text>
           </View>
 
           {isLoadingCars ? (
@@ -389,18 +454,21 @@ export default function InstructorDetailScreen() {
                   <View style={styles.vehicleInfo}>
                     <Text style={styles.vehicleName}>{vehicle.modelName}</Text>
                     <Text style={styles.vehicleSpec}>
-                      {vehicle.seatCount} chỗ {vehicle.vehicleType ? `• ${vehicle.vehicleType}` : ''}
+                      {vehicle.seatCount} chỗ{" "}
+                      {vehicle.vehicleType ? `• ${vehicle.vehicleType}` : ""}
                     </Text>
                     <Text style={styles.vehiclePrice}>
-                      {vehicle.price.toLocaleString('vi-VN')} đ / giờ
+                      {vehicle.price.toLocaleString("vi-VN")} đ / giờ
                     </Text>
                   </View>
                   <TouchableOpacity
                     style={styles.vehicleDetailButton}
-                    onPress={() => router.push({
-                      pathname: "/car-detail",
-                      params: { carId: vehicle.id }
-                    })}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/car-detail",
+                        params: { carId: vehicle.id },
+                      })
+                    }
                   >
                     <Text style={styles.vehicleDetailButtonText}>Chi tiết</Text>
                   </TouchableOpacity>
@@ -459,7 +527,6 @@ export default function InstructorDetailScreen() {
         onSelectVehicle={setSelectedVehicle}
         onConfirmPurchase={handleConfirmPurchase}
       />
-
     </View>
   );
 }
@@ -497,7 +564,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: "absolute",
-    top: 50,
+    top: 20,
     left: 20,
     width: 40,
     height: 40,
