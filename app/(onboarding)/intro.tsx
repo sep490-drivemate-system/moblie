@@ -1,19 +1,17 @@
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-} from "react-native";
+import { ResizeMode, Video } from "expo-av";
 import { useRouter } from "expo-router";
-import { Video, ResizeMode } from "expo-av";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
 
 
 export default function IntroScreen() {
   const router = useRouter();
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Video
         source={require("@/assets/videos/background_intro.mp4")}
         style={styles.backgroundVideo}
@@ -53,7 +51,7 @@ export default function IntroScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -17,9 +17,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SignalRHubUrls } from "@/lib/signalr/signalRConfig";
 import { useSignalR } from "@/lib/signalr/useSignalR";
 import { ROUTES } from "@/constants/routes";
+import { ActivityIndicator, Text, View } from "react-native";
+import { AppColors } from "@/constants/Colors";
 
 export { ErrorBoundary } from "expo-router";
-
 
 SplashScreen.preventAutoHideAsync();
 
@@ -87,8 +88,6 @@ function RootLayoutNav() {
     });
   }, [authViewModel, router]);
 
-
-
   useEffect(() => {
     if (!isMounted) return;
     if (!authState.hasCheckedAuth) return;
@@ -99,7 +98,10 @@ function RootLayoutNav() {
   }, [authState.isAuthenticated, authState.hasCheckedAuth, isMounted, router]);
 
   if (!isMounted || !authState.hasCheckedAuth) {
-    return <LoadingSpinner message="DriveMate..." />;
+    <View style={{flex: 1, justifyContent: "center", alignItems: "center"}}>
+      <ActivityIndicator size="large" color={AppColors.primary} />
+      <Text style={{fontSize: 16, fontWeight: "bold", color: AppColors.primary}}>Đang tải dữ liệu...</Text>
+    </View>
   }
 
   if (authState.isAuthenticated) {
