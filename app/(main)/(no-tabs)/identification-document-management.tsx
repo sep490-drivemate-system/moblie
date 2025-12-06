@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Image,
   ScrollView,
@@ -12,140 +12,58 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Edit2, Camera, X, Trash2 } from "lucide-react-native";
-import * as ImagePicker from "expo-image-picker";
+import {
+  ArrowLeft,
+  Edit2,
+  Camera,
+  X,
+  Trash2,
+  Eye,
+  EyeOff,
+} from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { ROUTES } from "@/constants/routes";
 import CustomAlert from "@/components/CustomAlert";
-
-type DocumentField = {
-  label: string;
-  value: string;
-};
-
-type DocumentFile = {
-  label: string;
-  imageUrl: string | null;
-};
-
-type DocumentRecord = {
-  id: string;
-  title: string;
-  description: string;
-  updatedAt: string;
-  reviewer?: string;
-  fields: DocumentField[];
-  files: DocumentFile[];
-};
-
-type UserProfile = {
-  avatar: string | null;
-  fullName: string;
-  email: string;
-  phone: string;
-  emergencyContact: {
-    name: string;
-    phone: string;
-  };
-};
-
-const mockDocumentRecords: DocumentRecord[] = [
-  {
-    id: "citizenId",
-    title: "Căn Cước Công Dân",
-    description:
-      "Thông tin nhận dạng bắt buộc để xác thực tài khoản người hướng dẫn.",
-    updatedAt: "20/10/2024 - 14:32",
-    fields: [
-      { label: "Họ và tên", value: "Nguyễn Văn An" },
-      { label: "Ngày sinh", value: "12/03/1992" },
-      { label: "Giới tính", value: "Nam" },
-    ],
-    files: [],
-  },
-  {
-    id: "legalHistory",
-    title: "Lý Lịch Tư Pháp",
-    description: "Giấy xác nhận không có tiền án tiền sự trong vòng 06 tháng.",
-    updatedAt: "18/10/2024 - 09:10",
-    fields: [],
-    files: [
-      {
-        label: "Ảnh lý lịch tư pháp",
-        imageUrl:
-          "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=600&q=80",
-      },
-    ],
-  },
-  {
-    id: "healthCertificate",
-    title: "Giấy Khám Sức Khỏe",
-    description: "Bản khám sức khỏe tổng quát đủ điều kiện lái xe.",
-    updatedAt: "05/11/2024 - 16:48",
-    fields: [],
-    files: [
-      {
-        label: "Ảnh giấy khám sức khỏe",
-        imageUrl:
-          "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=600&q=80",
-      },
-    ],
-  },
-  {
-    id: "driverLicense",
-    title: "Bằng Lái Xe",
-    description: "Bản sao bằng lái xe hiện hành của người hướng dẫn.",
-    updatedAt: "12/10/2024 - 11:05",
-    fields: [{ label: "Hạng bằng lái", value: "B2" }],
-    files: [
-      {
-        label: "Ảnh mặt trước",
-        imageUrl:
-          "https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?auto=format&fit=crop&w=600&q=80",
-      },
-      {
-        label: "Ảnh mặt sau",
-        imageUrl:
-          "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&q=80",
-      },
-    ],
-  },
-  {
-    id: "trainingCertificate",
-    title: "Chứng Chỉ Hành Nghề",
-    description:
-      "Chứng chỉ đào tạo nghiệp vụ đảm bảo chuyên môn giảng dạy lái xe.",
-    updatedAt: "25/09/2024 - 08:20",
-    fields: [{ label: "Hạng lái xe giảng dạy", value: "B2 nâng cao" }],
-    files: [
-      {
-        label: "Ảnh chứng chỉ hành nghề",
-        imageUrl:
-          "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80",
-      },
-    ],
-  },
-];
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import {
+  DocumentViewModel,
+  UserProfile,
+  DocumentRecord,
+} from "@/viewmodels/document/documentViewModel";
+import { RootState } from "@/lib/redux/store";
+import { UserRole } from "@/models/enum/UserRole.enum";
 
 export default function IdentificationDocumentManagementInstructorScreen() {
   const router = useRouter();
+  const [documentState, documentViewModel] = useViewModel<
+    RootState["document"],
+    DocumentViewModel
+  >(DocumentViewModel, (state: RootState) => state.document);
 
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    avatar:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
-    fullName: "Nguyễn Văn An",
-    email: "an.nguyen@example.com",
-    phone: "0901 234 567",
-    emergencyContact: {
-      name: "Trần Thị Bình",
-      phone: "0912 345 678",
-    },
-  });
+  // Get data from state
+  const user = documentState.user;
+  const userProfile = documentState.userProfile;
+  const documentRecords = documentState.documentRecords;
+  const isLoading = documentState.isLoading;
+
+  // Fetch data on mount
+  useEffect(() => {
+    documentViewModel.loadData().catch((error) => {
+      console.error("Error loading data:", error);
+      showCustomAlert(
+        "Lỗi",
+        documentState.errorMessage ||
+          "Không thể tải dữ liệu. Vui lòng thử lại.",
+        [{ text: "OK", onPress: () => setShowAlert(false) }]
+      );
+    });
+  }, []);
 
   // Modal states
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showEmergencyContactModal, setShowEmergencyContactModal] =
     useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -162,6 +80,10 @@ export default function IdentificationDocumentManagementInstructorScreen() {
   // Form states
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [editPasswordConfirm, setEditPasswordConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordInView, setShowPasswordInView] = useState(false);
   const [editEmergencyName, setEditEmergencyName] = useState("");
   const [editEmergencyPhone, setEditEmergencyPhone] = useState("");
 
@@ -183,17 +105,41 @@ export default function IdentificationDocumentManagementInstructorScreen() {
       {
         text: "Chụp ảnh",
         style: "default",
-        onPress: () => {
+        onPress: async () => {
           setShowAlert(false);
-          openCamera();
+          try {
+            const uri = await documentViewModel.pickImageFromCamera();
+            if (uri) {
+              documentViewModel.updateAvatar(uri);
+              showCustomAlert("Thành công", "Đã cập nhật ảnh đại diện", [
+                { text: "OK", onPress: () => setShowAlert(false) },
+              ]);
+            }
+          } catch (error: any) {
+            showCustomAlert("Lỗi", error.message || "Không thể chụp ảnh", [
+              { text: "OK", onPress: () => setShowAlert(false) },
+            ]);
+          }
         },
       },
       {
         text: "Chọn từ thư viện",
         style: "default",
-        onPress: () => {
+        onPress: async () => {
           setShowAlert(false);
-          openImageLibrary();
+          try {
+            const uri = await documentViewModel.pickImageFromLibrary();
+            if (uri) {
+              documentViewModel.updateAvatar(uri);
+              showCustomAlert("Thành công", "Đã cập nhật ảnh đại diện", [
+                { text: "OK", onPress: () => setShowAlert(false) },
+              ]);
+            }
+          } catch (error: any) {
+            showCustomAlert("Lỗi", error.message || "Không thể chọn ảnh", [
+              { text: "OK", onPress: () => setShowAlert(false) },
+            ]);
+          }
         },
       },
       {
@@ -201,7 +147,7 @@ export default function IdentificationDocumentManagementInstructorScreen() {
         style: "destructive",
         onPress: () => {
           setShowAlert(false);
-          setUserProfile((prev) => ({ ...prev, avatar: null }));
+          documentViewModel.updateAvatar(null);
           showCustomAlert("Thành công", "Đã xóa ảnh đại diện", [
             { text: "OK", onPress: () => setShowAlert(false) },
           ]);
@@ -215,142 +161,98 @@ export default function IdentificationDocumentManagementInstructorScreen() {
     ]);
   };
 
-  const openCamera = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (permissionResult.granted === false) {
-      showCustomAlert("Lỗi", "Cần quyền truy cập camera để chụp ảnh", [
-        { text: "OK", onPress: () => setShowAlert(false) },
-      ]);
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      setUserProfile((prev) => ({ ...prev, avatar: uri }));
-      showCustomAlert("Thành công", "Đã cập nhật ảnh đại diện", [
-        { text: "OK", onPress: () => setShowAlert(false) },
-      ]);
-    }
-  };
-
-  const openImageLibrary = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permissionResult.granted === false) {
-      showCustomAlert("Lỗi", "Cần quyền truy cập thư viện ảnh", [
-        { text: "OK", onPress: () => setShowAlert(false) },
-      ]);
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      setUserProfile((prev) => ({ ...prev, avatar: uri }));
-      showCustomAlert("Thành công", "Đã cập nhật ảnh đại diện", [
-        { text: "OK", onPress: () => setShowAlert(false) },
-      ]);
-    }
-  };
-
   const handleEditEmail = () => {
-    setEditEmail(userProfile.email);
-    setShowEmailModal(true);
+    if (userProfile) {
+      setEditEmail(userProfile.email);
+      setShowEmailModal(true);
+    }
   };
 
   const handleSaveEmail = () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!editEmail.trim()) {
-      showCustomAlert("Lỗi", "Email không được để trống", [
+    try {
+      documentViewModel.updateEmail(editEmail);
+      setShowEmailModal(false);
+      showCustomAlert("Thành công", "Đã cập nhật email", [
         { text: "OK", onPress: () => setShowAlert(false) },
       ]);
-      return;
-    }
-    if (!emailRegex.test(editEmail)) {
-      showCustomAlert("Lỗi", "Email không đúng định dạng", [
+    } catch (error: any) {
+      showCustomAlert("Lỗi", error.message || "Không thể cập nhật email", [
         { text: "OK", onPress: () => setShowAlert(false) },
       ]);
-      return;
     }
-    setUserProfile((prev) => ({ ...prev, email: editEmail }));
-    setShowEmailModal(false);
-    showCustomAlert("Thành công", "Đã cập nhật email", [
-      { text: "OK", onPress: () => setShowAlert(false) },
-    ]);
   };
 
   const handleEditPhone = () => {
-    setEditPhone(userProfile.phone.replace(/\s/g, ""));
-    setShowPhoneModal(true);
+    if (userProfile) {
+      setEditPhone(userProfile.phone.replace(/\s/g, ""));
+      setShowPhoneModal(true);
+    }
   };
 
   const handleSavePhone = () => {
-    const phoneDigits = editPhone.replace(/\D/g, "");
-    if (!phoneDigits || phoneDigits.length !== 10) {
-      showCustomAlert("Lỗi", "Số điện thoại phải có đủ 10 chữ số", [
+    try {
+      documentViewModel.updatePhone(editPhone);
+      setShowPhoneModal(false);
+      showCustomAlert("Thành công", "Đã cập nhật số điện thoại", [
         { text: "OK", onPress: () => setShowAlert(false) },
       ]);
-      return;
+    } catch (error: any) {
+      showCustomAlert(
+        "Lỗi",
+        error.message || "Không thể cập nhật số điện thoại",
+        [{ text: "OK", onPress: () => setShowAlert(false) }]
+      );
     }
-    const formattedPhone = phoneDigits.replace(
-      /(\d{4})(\d{3})(\d{3})/,
-      "$1 $2 $3"
-    );
-    setUserProfile((prev) => ({ ...prev, phone: formattedPhone }));
-    setShowPhoneModal(false);
-    showCustomAlert("Thành công", "Đã cập nhật số điện thoại", [
-      { text: "OK", onPress: () => setShowAlert(false) },
-    ]);
+  };
+
+  const handleEditPassword = () => {
+    setEditPassword("");
+    setEditPasswordConfirm("");
+    setShowPassword(false);
+    setShowPasswordModal(true);
+  };
+
+  const handleSavePassword = () => {
+    try {
+      documentViewModel.updatePassword(editPassword, editPasswordConfirm);
+      setShowPasswordModal(false);
+      showCustomAlert("Thành công", "Đã cập nhật mật khẩu", [
+        { text: "OK", onPress: () => setShowAlert(false) },
+      ]);
+    } catch (error: any) {
+      showCustomAlert("Lỗi", error.message || "Không thể cập nhật mật khẩu", [
+        { text: "OK", onPress: () => setShowAlert(false) },
+      ]);
+    }
   };
 
   const handleEditEmergencyContact = () => {
-    setEditEmergencyName(userProfile.emergencyContact.name);
-    setEditEmergencyPhone(
-      userProfile.emergencyContact.phone.replace(/\s/g, "")
-    );
-    setShowEmergencyContactModal(true);
+    if (userProfile) {
+      setEditEmergencyName(userProfile.emergencyContact?.name || "");
+      setEditEmergencyPhone(
+        (userProfile.emergencyContact?.phone || "").replace(/\s/g, "")
+      );
+      setShowEmergencyContactModal(true);
+    }
   };
 
   const handleSaveEmergencyContact = () => {
-    if (!editEmergencyName.trim()) {
-      showCustomAlert("Lỗi", "Tên người liên hệ không được để trống", [
+    try {
+      documentViewModel.updateEmergencyContact(
+        editEmergencyName,
+        editEmergencyPhone
+      );
+      setShowEmergencyContactModal(false);
+      showCustomAlert("Thành công", "Đã cập nhật thông tin liên hệ khẩn cấp", [
         { text: "OK", onPress: () => setShowAlert(false) },
       ]);
-      return;
+    } catch (error: any) {
+      showCustomAlert(
+        "Lỗi",
+        error.message || "Không thể cập nhật thông tin liên hệ khẩn cấp",
+        [{ text: "OK", onPress: () => setShowAlert(false) }]
+      );
     }
-    const phoneDigits = editEmergencyPhone.replace(/\D/g, "");
-    if (!phoneDigits || phoneDigits.length !== 10) {
-      showCustomAlert("Lỗi", "Số điện thoại phải có đủ 10 chữ số", [
-        { text: "OK", onPress: () => setShowAlert(false) },
-      ]);
-      return;
-    }
-    const formattedPhone = phoneDigits.replace(
-      /(\d{4})(\d{3})(\d{3})/,
-      "$1 $2 $3"
-    );
-    setUserProfile((prev) => ({
-      ...prev,
-      emergencyContact: {
-        name: editEmergencyName.trim(),
-        phone: formattedPhone,
-      },
-    }));
-    setShowEmergencyContactModal(false);
-    showCustomAlert("Thành công", "Đã cập nhật thông tin liên hệ khẩn cấp", [
-      { text: "OK", onPress: () => setShowAlert(false) },
-    ]);
   };
 
   return (
@@ -361,158 +263,252 @@ export default function IdentificationDocumentManagementInstructorScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient
-          colors={[
-            AppColors.primary,
-            AppColors.gradientStart,
-            AppColors.gradientEnd,
-          ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
-        >
-          <View style={styles.headerContent}>
-            <TouchableOpacity
-              activeOpacity={0.75}
-              style={styles.backButton}
-              onPress={() => router.push(ROUTES.PROFILE)}
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+          </View>
+        )}
+        {!isLoading && userProfile && (
+          <>
+            <LinearGradient
+              colors={[
+                AppColors.primary,
+                AppColors.gradientStart,
+                AppColors.gradientEnd,
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.header}
             >
-              <ArrowLeft size={18} color={AppColors.white} />
-            </TouchableOpacity>
-            <View style={styles.headerTextBlock}>
-              <Text style={styles.headerTitle}>Quản Lý Tài Liệu Cá Nhân</Text>
-              <Text style={styles.headerDescription}>
-                Xem lại toàn bộ tài liệu đã tải lên
-              </Text>
-            </View>
-          </View>
-          <View style={styles.headerCurve} />
-        </LinearGradient>
-
-        <View style={styles.profileGrid}>
-          <View style={[styles.card, styles.profileCard]}>
-            <View style={styles.avatarSection}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={handleEditAvatar}
-                style={styles.avatarEditButton}
-              >
-                <View style={styles.avatarContainer}>
-                  {userProfile.avatar ? (
-                    <Image
-                      source={{ uri: userProfile.avatar }}
-                      style={styles.avatarImage}
-                    />
-                  ) : (
-                    <View style={styles.avatarPlaceholder}>
-                      <Text style={styles.avatarPlaceholderText}>
-                        {userProfile.fullName.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={styles.avatarRing} />
-                  <View style={styles.avatarEditIcon}>
-                    <Camera size={16} color={AppColors.white} />
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
-            <Text style={styles.cardDescription}>
-              Thông tin được sử dụng để xác minh hồ sơ người hướng dẫn.
-            </Text>
-            <View style={styles.infoGrid}>
-              <InfoItem label="Họ và tên" value={userProfile.fullName} />
-              <EditableInfoItem
-                label="Email"
-                value={userProfile.email}
-                onEdit={handleEditEmail}
-              />
-              <EditableInfoItem
-                label="Số điện thoại"
-                value={userProfile.phone}
-                onEdit={handleEditPhone}
-              />
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Liên hệ khẩn cấp</Text>
-            <Text style={styles.cardDescription}>
-              Sử dụng trong trường hợp cần liên lạc gấp.
-            </Text>
-            <View style={styles.infoGrid}>
-              <EditableInfoItem
-                label="Tên người liên hệ"
-                value={userProfile.emergencyContact.name}
-                onEdit={handleEditEmergencyContact}
-              />
-              <EditableInfoItem
-                label="Số điện thoại"
-                value={userProfile.emergencyContact.phone}
-                onEdit={handleEditEmergencyContact}
-              />
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.documentSection}>
-          {mockDocumentRecords.map((record) => (
-            <View key={record.id} style={styles.documentCard}>
-              <View style={styles.documentHeader}>
-                <Text style={styles.documentTitle}>{record.title}</Text>
-                <Text style={styles.documentDescription}>
-                  {record.description}
-                </Text>
-              </View>
-
-              {record.files.length > 0 && (
-                <View
-                  style={[
-                    styles.fileGrid,
-                    record.id === "driverLicense" && styles.fileGridStacked,
-                  ]}
+              <View style={styles.headerContent}>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  style={styles.backButton}
+                  onPress={() => router.push(ROUTES.PROFILE)}
                 >
-                  {record.files.map((file) => (
-                    <View
-                      key={`${record.id}-${file.label}`}
-                      style={[
-                        styles.file,
-                        record.id === "driverLicense" && styles.fileFullWidth,
-                      ]}
-                    >
-                      <Text style={styles.fileLabel}>{file.label}</Text>
-                      {file.imageUrl ? (
+                  <ArrowLeft size={18} color={AppColors.white} />
+                </TouchableOpacity>
+                <View style={styles.headerTextBlock}>
+                  <Text style={styles.headerTitle}>
+                    Quản Lý Tài Liệu Cá Nhân
+                  </Text>
+                  <Text style={styles.headerDescription}>
+                    Xem lại toàn bộ tài liệu đã tải lên
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.headerCurve} />
+            </LinearGradient>
+
+            <View style={styles.profileGrid}>
+              <View style={[styles.card, styles.profileCard]}>
+                <View style={styles.avatarSection}>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={handleEditAvatar}
+                    style={styles.avatarEditButton}
+                  >
+                    <View style={styles.avatarContainer}>
+                      {userProfile?.avatar ? (
                         <Image
-                          source={{ uri: file.imageUrl }}
-                          style={styles.fileImage}
+                          source={{ uri: userProfile.avatar }}
+                          style={styles.avatarImage}
                         />
                       ) : (
-                        <View style={styles.filePlaceholder}>
-                          <Text style={styles.filePlaceholderText}>
-                            Chưa cung cấp ảnh
+                        <View style={styles.avatarPlaceholder}>
+                          <Text style={styles.avatarPlaceholderText}>
+                            {userProfile?.fullName?.charAt(0).toUpperCase() ||
+                              "U"}
                           </Text>
                         </View>
                       )}
+                      <View style={styles.avatarRing} />
+                      <View style={styles.avatarEditIcon}>
+                        <Camera size={16} color={AppColors.white} />
+                      </View>
                     </View>
-                  ))}
+                  </TouchableOpacity>
                 </View>
-              )}
+                <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
+                <Text style={styles.cardDescription}>
+                  Thông tin được sử dụng để xác minh hồ sơ người dùng.
+                </Text>
+                <View style={styles.infoGrid}>
+                  <InfoItem
+                    label="Họ và tên"
+                    value={userProfile?.fullName || ""}
+                  />
+                  <EditableInfoItem
+                    label="Email"
+                    value={userProfile?.email || ""}
+                    onEdit={handleEditEmail}
+                  />
+                  <EditableInfoItem
+                    label="Số điện thoại"
+                    value={userProfile?.phone || ""}
+                    onEdit={handleEditPhone}
+                  />
+                  <EditablePasswordItem
+                    label="Mật khẩu"
+                    value={userProfile?.password || "••••••••"}
+                    onEdit={handleEditPassword}
+                    showPassword={showPasswordInView}
+                    onToggleShowPassword={() =>
+                      setShowPasswordInView(!showPasswordInView)
+                    }
+                  />
+                </View>
+              </View>
 
-              <View style={styles.fieldGrid}>
-                {record.fields.map((field) => (
-                  <View
-                    key={`${record.id}-${field.label}`}
-                    style={styles.fieldCard}
-                  >
-                    <Text style={styles.fieldLabel}>{field.label}</Text>
-                    <Text style={styles.fieldValue}>{field.value || "—"}</Text>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Liên hệ khẩn cấp</Text>
+                <Text style={styles.cardDescription}>
+                  Sử dụng trong trường hợp cần liên lạc gấp.
+                </Text>
+                <View style={styles.infoGrid}>
+                  <EditableInfoItem
+                    label="Tên người liên hệ"
+                    value={userProfile?.emergencyContact?.name || ""}
+                    onEdit={handleEditEmergencyContact}
+                  />
+                  <EditableInfoItem
+                    label="Số điện thoại"
+                    value={userProfile?.emergencyContact?.phone || ""}
+                    onEdit={handleEditEmergencyContact}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {user?.role === UserRole.Instructor && (
+              <View style={styles.documentSection}>
+                {documentRecords.map((record) => (
+                  <View key={record.id} style={styles.documentCard}>
+                    <View style={styles.documentHeader}>
+                      <Text style={styles.documentTitle}>{record.title}</Text>
+                      <Text style={styles.documentDescription}>
+                        {record.description}
+                      </Text>
+                    </View>
+
+                    {record.files.length > 0 && (
+                      <View
+                        style={[
+                          styles.fileGrid,
+                          record.id === "driverLicense" &&
+                            styles.fileGridStacked,
+                        ]}
+                      >
+                        {record.files.map((file) => (
+                          <View
+                            key={`${record.id}-${file.label}`}
+                            style={[
+                              styles.file,
+                              record.id === "driverLicense" &&
+                                styles.fileFullWidth,
+                            ]}
+                          >
+                            <Text style={styles.fileLabel}>{file.label}</Text>
+                            {file.imageUrl ? (
+                              <Image
+                                source={{ uri: file.imageUrl }}
+                                style={styles.fileImage}
+                              />
+                            ) : (
+                              <View style={styles.filePlaceholder}>
+                                <Text style={styles.filePlaceholderText}>
+                                  Chưa cung cấp ảnh
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    <View style={styles.fieldGrid}>
+                      {record.fields.map((field) => (
+                        <View
+                          key={`${record.id}-${field.label}`}
+                          style={styles.fieldCard}
+                        >
+                          <Text style={styles.fieldLabel}>{field.label}</Text>
+                          <Text style={styles.fieldValue}>
+                            {field.value || "—"}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
                   </View>
                 ))}
               </View>
-            </View>
-          ))}
-        </View>
+            )}
+
+            {user?.role === UserRole.NoviceDriver && (
+              <View style={styles.documentSection}>
+                {documentRecords.map((record) => (
+                  <View key={record.id} style={styles.documentCard}>
+                    <View style={styles.documentHeader}>
+                      <Text style={styles.documentTitle}>{record.title}</Text>
+                      <Text style={styles.documentDescription}>
+                        {record.description}
+                      </Text>
+                    </View>
+
+                    {record.files.length > 0 && (
+                      <View
+                        style={[
+                          styles.fileGrid,
+                          record.id === "driverLicense" &&
+                            styles.fileGridStacked,
+                        ]}
+                      >
+                        {record.files.map((file) => (
+                          <View
+                            key={`${record.id}-${file.label}`}
+                            style={[
+                              styles.file,
+                              record.id === "driverLicense" &&
+                                styles.fileFullWidth,
+                            ]}
+                          >
+                            <Text style={styles.fileLabel}>{file.label}</Text>
+                            {file.imageUrl ? (
+                              <Image
+                                source={{ uri: file.imageUrl }}
+                                style={styles.fileImage}
+                              />
+                            ) : (
+                              <View style={styles.filePlaceholder}>
+                                <Text style={styles.filePlaceholderText}>
+                                  Chưa cung cấp ảnh
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    <View style={styles.fieldGrid}>
+                      {record.fields.map((field) => (
+                        <View
+                          key={`${record.id}-${field.label}`}
+                          style={styles.fieldCard}
+                        >
+                          <Text style={styles.fieldLabel}>{field.label}</Text>
+                          <Text style={styles.fieldValue}>
+                            {field.value || "—"}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
       </ScrollView>
 
       {/* Email Edit Modal */}
@@ -598,6 +594,88 @@ export default function IdentificationDocumentManagementInstructorScreen() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalSaveButton]}
                 onPress={handleSavePhone}
+              >
+                <Text style={styles.modalSaveButtonText}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Password Edit Modal */}
+      <Modal
+        visible={showPasswordModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowPasswordModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chỉnh sửa Mật khẩu</Text>
+              <TouchableOpacity
+                onPress={() => setShowPasswordModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <X size={24} color={AppColors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalLabel}>Mật khẩu mới</Text>
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Nhập mật khẩu mới"
+                placeholderTextColor={AppColors.textSecondary}
+                value={editPassword}
+                onChangeText={setEditPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.passwordToggle}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} color={AppColors.textSecondary} />
+                ) : (
+                  <Eye size={20} color={AppColors.textSecondary} />
+                )}
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.modalLabel, { marginTop: 16 }]}>
+              Xác nhận mật khẩu
+            </Text>
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Nhập lại mật khẩu"
+                placeholderTextColor={AppColors.textSecondary}
+                value={editPasswordConfirm}
+                onChangeText={setEditPasswordConfirm}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.passwordToggle}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} color={AppColors.textSecondary} />
+                ) : (
+                  <Eye size={20} color={AppColors.textSecondary} />
+                )}
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowPasswordModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSaveButton]}
+                onPress={handleSavePassword}
               >
                 <Text style={styles.modalSaveButtonText}>Lưu</Text>
               </TouchableOpacity>
@@ -705,6 +783,55 @@ function EditableInfoItem({
         </TouchableOpacity>
       </View>
       <Text style={styles.infoValue}>{value || "—"}</Text>
+    </View>
+  );
+}
+
+function EditablePasswordItem({
+  label,
+  value,
+  onEdit,
+  showPassword,
+  onToggleShowPassword,
+}: {
+  label: string;
+  value: string;
+  onEdit: () => void;
+  showPassword: boolean;
+  onToggleShowPassword: () => void;
+}) {
+  return (
+    <View style={styles.infoItem}>
+      <View style={styles.infoItemHeader}>
+        <Text style={styles.infoLabel}>{label}</Text>
+        <View style={styles.passwordItemActions}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onToggleShowPassword}
+            style={styles.passwordToggleButton}
+          >
+            {showPassword ? (
+              <EyeOff size={16} color={AppColors.textSecondary} />
+            ) : (
+              <Eye size={16} color={AppColors.textSecondary} />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onEdit}
+            style={styles.editButton}
+          >
+            <Edit2 size={14} color={AppColors.primary} />
+          </TouchableOpacity>
+        </View>
+      </View>
+      <Text style={styles.infoValue}>
+        {showPassword
+          ? value === "••••••••"
+            ? "••••••••"
+            : value
+          : "••••••••"}
+      </Text>
     </View>
   );
 }
@@ -864,6 +991,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   editButton: {
+    padding: 4,
+  },
+  passwordItemActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  passwordToggleButton: {
     padding: 4,
   },
   cardTitle: {
@@ -1046,6 +1181,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: AppColors.border,
   },
+  passwordInputContainer: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  passwordInput: {
+    flex: 1,
+    backgroundColor: AppColors.backgroundLight,
+    borderRadius: 12,
+    padding: 14,
+    paddingRight: 48,
+    fontSize: 16,
+    color: AppColors.textPrimary,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  passwordToggle: {
+    position: "absolute",
+    right: 14,
+    padding: 4,
+  },
   modalActions: {
     flexDirection: "row",
     gap: 12,
@@ -1075,5 +1231,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: AppColors.white,
+  },
+  loadingContainer: {
+    padding: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: AppColors.textSecondary,
   },
 });
