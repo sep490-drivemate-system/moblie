@@ -1,8 +1,6 @@
 import { AppColors } from "@/constants/Colors";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
-  ArrowLeft,
   Calendar,
   Check,
   ChevronLeft,
@@ -10,8 +8,8 @@ import {
   Trash2,
   X,
 } from "lucide-react-native";
+import HeaderList from "@/components/Commons/HeaderList";
 import { useMemo, useState } from "react";
-import type { ReactElement } from "react";
 import {
   ScrollView,
   StatusBar,
@@ -136,7 +134,6 @@ function AvailabilityCalendar({
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
     const dayOfWeek = firstDay.getDay();
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -149,86 +146,96 @@ function AvailabilityCalendar({
       </View>
     ));
 
-    const calendarDays: ReactElement[] = [];
-    const totalCells = 6 * 7;
-    for (let index = 0; index < totalCells; index++) {
-      const currentCellDate = new Date(startDate);
-      currentCellDate.setDate(startDate.getDate() + index);
+    const weeks = [];
+    for (let week = 0; week < 6; week++) {
+      const weekDays = [];
+      for (let day = 0; day < 7; day++) {
+        const cellDate = new Date(startDate);
+        cellDate.setDate(startDate.getDate() + week * 7 + day);
 
-      const cellYear = currentCellDate.getFullYear();
-      const cellMonth = String(currentCellDate.getMonth() + 1).padStart(2, "0");
-      const cellDay = String(currentCellDate.getDate()).padStart(2, "0");
-      const dateString = `${cellYear}-${cellMonth}-${cellDay}`;
+        const cellYear = cellDate.getFullYear();
+        const cellMonth = String(cellDate.getMonth() + 1).padStart(2, "0");
+        const cellDay = String(cellDate.getDate()).padStart(2, "0");
+        const dateString = `${cellYear}-${cellMonth}-${cellDay}`;
 
-      const isCurrentMonth = currentCellDate.getMonth() === month;
-      const isSelected = selectedDates.has(dateString);
-      const isDisabled = isDateDisabled(dateString);
-      const isBooked = bookedDates.has(dateString);
-      const isSaved = savedAvailableDates.includes(dateString);
-      const bookedStatuses = bookedDateStatusMap.get(dateString);
-      const bookedStatusLabel =
-        bookedStatuses && bookedStatuses.size > 0
-          ? Array.from(bookedStatuses)
-              .map((status) => bookingStatusToText[status])
-              .join(", ")
-          : null;
-      const isStartSelection = dateString === selectionStart;
+        const isCurrentMonth = cellDate.getMonth() === month;
+        const isSelected = selectedDates.has(dateString);
+        const isDisabled = isDateDisabled(dateString);
+        const isBooked = bookedDates.has(dateString);
+        const isSaved = savedAvailableDates.includes(dateString);
+        const bookedStatuses = bookedDateStatusMap.get(dateString);
+        const bookedStatusLabel =
+          bookedStatuses && bookedStatuses.size > 0
+            ? Array.from(bookedStatuses)
+                .map((status) => bookingStatusToText[status])
+                .join(", ")
+            : null;
+        const isStartSelection = dateString === selectionStart;
 
-      calendarDays.push(
-        <TouchableOpacity
-          key={dateString}
-          style={[
-            styles.calendarDayButton,
-            !isCurrentMonth && styles.calendarDayButtonMuted,
-            isSelected && styles.calendarDayButtonSelected,
-            isStartSelection && styles.calendarDayButtonStart,
-            isDisabled && styles.calendarDayButtonDisabled,
-          ]}
-          activeOpacity={0.85}
-          disabled={isDisabled}
-          onPress={() => handleDateClick(dateString)}
-        >
-          <Text
+        weekDays.push(
+          <TouchableOpacity
+            key={dateString}
             style={[
-              styles.calendarDayNumber,
-              !isCurrentMonth && styles.calendarDayNumberMuted,
-              (isSelected || isStartSelection) &&
-                styles.calendarDayNumberSelected,
-              isDisabled && styles.calendarDayNumberDisabled,
+              styles.calendarDayButton,
+              !isCurrentMonth && styles.calendarDayButtonMuted,
+              isSelected && styles.calendarDayButtonSelected,
+              isStartSelection && styles.calendarDayButtonStart,
+              isDisabled && styles.calendarDayButtonDisabled,
             ]}
+            activeOpacity={0.85}
+            disabled={isDisabled}
+            onPress={() => handleDateClick(dateString)}
           >
-            {currentCellDate.getDate()}
-          </Text>
-          <View style={styles.calendarIndicators}>
-            {isBooked && (
-              <View
-                style={[styles.calendarIndicatorDot, styles.indicatorBooked]}
-                accessibilityLabel={
-                  bookedStatusLabel
-                    ? `Ngày đã có khách (${bookedStatusLabel})`
-                    : "Ngày đã có khách hàng đặt lịch"
-                }
-              />
-            )}
-            {isSelected && (
-              <View
-                style={[styles.calendarIndicatorDot, styles.indicatorSelected]}
-              />
-            )}
-            {isSaved && !isSelected && (
-              <View
-                style={[styles.calendarIndicatorDot, styles.indicatorSaved]}
-              />
-            )}
-          </View>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.calendarDayNumber,
+                !isCurrentMonth && styles.calendarDayNumberMuted,
+                (isSelected || isStartSelection) &&
+                  styles.calendarDayNumberSelected,
+                isDisabled && styles.calendarDayNumberDisabled,
+              ]}
+            >
+              {cellDate.getDate()}
+            </Text>
+            <View style={styles.calendarIndicators}>
+              {isBooked && (
+                <View
+                  style={[styles.calendarIndicatorDot, styles.indicatorBooked]}
+                  accessibilityLabel={
+                    bookedStatusLabel
+                      ? `Ngày đã có khách (${bookedStatusLabel})`
+                      : "Ngày đã có khách hàng đặt lịch"
+                  }
+                />
+              )}
+              {isSelected && (
+                <View
+                  style={[
+                    styles.calendarIndicatorDot,
+                    styles.indicatorSelected,
+                  ]}
+                />
+              )}
+              {isSaved && !isSelected && (
+                <View
+                  style={[styles.calendarIndicatorDot, styles.indicatorSaved]}
+                />
+              )}
+            </View>
+          </TouchableOpacity>
+        );
+      }
+      weeks.push(
+        <View key={week} style={styles.calendarWeekRow}>
+          {weekDays}
+        </View>
       );
     }
 
-    return { headerDays, calendarDays };
+    return { headerDays, weeks };
   };
 
-  const { headerDays, calendarDays } = renderCalendar();
+  const { headerDays, weeks } = renderCalendar();
 
   return (
     <View style={styles.calendarCard}>
@@ -256,7 +263,7 @@ function AvailabilityCalendar({
       </View>
 
       <View style={styles.calendarDayHeaders}>{headerDays}</View>
-      <View style={styles.calendarGrid}>{calendarDays}</View>
+      <View>{weeks}</View>
 
       <View style={styles.calendarLegend}>
         <LegendItem color="#10B981" label="Ngày rảnh vừa chọn" />
@@ -515,40 +522,20 @@ export default function ScheduleDetailScreen() {
   };
 
   const headerDescription =
-    "Chọn những ngày bạn sẵn sàng huấn luyện cho khách hàng";
+    "Chọn những ngày bạn sẵn sàng huấn luyện cho người lái mới";
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.contentContainer]}
-      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.contentContainer}
     >
       <StatusBar barStyle="light-content" />
-      <LinearGradient
-        colors={[
-          AppColors.primary,
-          AppColors.gradientStart,
-          AppColors.gradientEnd,
-        ]}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-            style={styles.backButton}
-          >
-            <ArrowLeft size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          <View style={styles.headerTextGroup}>
-            <Text style={styles.headerTitle}>Thiết Lập Lịch Rảnh</Text>
-            <Text style={styles.headerSubtitle}>{headerDescription}</Text>
-          </View>
-        </View>
-        <View style={styles.headerCurve} />
-      </LinearGradient>
+      <HeaderList
+        title="Thiết Lập Lịch Rảnh Huấn Luyện"
+        description={headerDescription}
+        showBackButton={true}
+        onBackPress={() => router.back()}
+      />
 
       <View style={styles.contentWrapper}>
         {successMessage && (
@@ -635,58 +622,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   contentContainer: {
-    paddingBottom: 40,
-  },
-  header: {
-    paddingTop: (StatusBar.currentHeight ?? 0) + 16,
-    paddingBottom: 44,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-    marginBottom: 24,
-    position: "relative",
-  },
-  headerTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTextGroup: {
-    flex: 1,
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#FFFFFF",
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.85)",
-  },
-  headerCurve: {
-    position: "absolute",
-    bottom: -25,
-    left: 0,
-    right: 0,
-    height: 50,
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 6,
+    backgroundColor: "#ffffff",
   },
   contentWrapper: {
     paddingHorizontal: 16,
@@ -741,7 +677,7 @@ const styles = StyleSheet.create({
   },
   calendarDayHeaders: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    marginBottom: 8,
   },
   calendarDayHeader: {
     flex: 1,
@@ -753,20 +689,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#94A3B8",
   },
-  calendarGrid: {
+  calendarWeekRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    marginHorizontal: -4,
+    marginBottom: 4,
   },
   calendarDayButton: {
-    width: "14.2857%",
-    padding: 6,
-    borderRadius: 12,
+    flex: 1,
+    margin: 2,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 10,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    marginBottom: 8,
   },
   calendarDayButtonMuted: {
     borderColor: "transparent",

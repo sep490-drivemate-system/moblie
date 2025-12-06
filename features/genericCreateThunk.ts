@@ -66,13 +66,23 @@ export function createThunk<ResponseType = void, RequestType = void>(
     } catch (err) {
       const error = err as unknown as {
         response?: { data?: { message?: string } };
+        message?: string;
       };
 
       // Log error ra console để debug
       console.log(`[Thunk Error] ${method.toUpperCase()} ${url}:`, error);
 
-      // Chỉ lấy message từ backend, không dùng fallback generic message
-      const message = error.response?.data?.message || "";
+      // Lấy message từ backend response hoặc từ error object (cho Network Error)
+      let message = "";
+      if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.message) {
+        // Handle Network Error và các lỗi khác không có response
+        message = error.message;
+      } else {
+        // Fallback message cho các trường hợp không xác định
+        message = "Đã xảy ra lỗi. Vui lòng thử lại.";
+      }
 
       options?.onError?.(error, payload);
       return rejectWithValue(message);

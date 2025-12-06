@@ -14,6 +14,7 @@ import { ArrowLeft, MoreVertical, Check, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import CustomAlert from "@/components/CustomAlert";
 import { useState } from "react";
+import { AppColors } from "@/constants/Colors";
 
 export default function UploadGuideScreen() {
   const router = useRouter();
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   uploadButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -364,6 +365,6 @@ const styles = StyleSheet.create({
   uploadButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: AppColors.white,
   },
 });

@@ -26,6 +26,7 @@ import { AddCarViewModel } from "@/viewmodels/car/AddCarViewModel";
 import { convertImageFile } from "@/utils/utils";
 import { useSelector } from "react-redux";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { AppColors } from "@/constants/Colors";
 
 export default function FormScreen() {
   const router = useRouter();
@@ -410,7 +411,7 @@ export default function FormScreen() {
                     style={styles.editButton}
                     onPress={() => handleImageUpload("front")}
                   >
-                    <Edit2Icon color="#70E000" size={16} />
+                    <Edit2Icon color={AppColors.primary} size={16} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -456,7 +457,7 @@ export default function FormScreen() {
                     style={styles.editButton}
                     onPress={() => handleImageUpload("back")}
                   >
-                    <Edit2Icon color="#70E000" size={16} />
+                    <Edit2Icon color={AppColors.primary} size={16} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -544,9 +545,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "77%",
+    width: "40%",
     height: "100%",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 2,
   },
   headerButtons: {
@@ -607,12 +608,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   required: {
-    color: "#FF0000",
+    color: AppColors.red,
   },
   imageUploadArea: {
     position: "relative",
     borderWidth: 2,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderStyle: "dashed",
     borderRadius: 8,
     height: 150,
@@ -659,7 +660,7 @@ const styles = StyleSheet.create({
   },
   uploadText: {
     fontSize: 16,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
   },
   editButton: {
@@ -672,7 +673,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderWidth: 1,
   },
   formContainer: {
@@ -710,14 +711,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -725,11 +726,11 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#70E000",
+    color: AppColors.primary,
   },
   nextButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: AppColors.white,
   },
 });

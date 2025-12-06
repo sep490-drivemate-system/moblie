@@ -8,12 +8,14 @@ import {
   StatusBar,
   Image,
   ScrollView,
+  InteractionManager,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ArrowLeft, MoreVertical, Check, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import CustomAlert from "@/components/CustomAlert";
+import { AppColors } from "@/constants/Colors";
 
 export default function UploadGuideScreen() {
   const router = useRouter();
@@ -58,7 +60,10 @@ export default function UploadGuideScreen() {
         style: "default",
         onPress: () => {
           setShowAlert(false);
-          openCamera();
+          // Delay để đảm bảo modal đóng hoàn toàn trước khi mở camera
+          setTimeout(() => {
+            openCamera();
+          }, 300);
         },
       },
       {
@@ -66,7 +71,12 @@ export default function UploadGuideScreen() {
         style: "default",
         onPress: () => {
           setShowAlert(false);
-          openImageLibrary();
+          // Sử dụng InteractionManager để đảm bảo modal đóng hoàn toàn trước khi mở image picker
+          InteractionManager.runAfterInteractions(() => {
+            setTimeout(() => {
+              openImageLibrary();
+            }, 100);
+          });
         },
       },
       {
@@ -91,13 +101,13 @@ export default function UploadGuideScreen() {
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       quality: 1,
     });
-    const isCanceled = (result as any).canceled ?? (result as any).cancelled;
-    if (!isCanceled) {
-      const pickedUri = (result as any).assets?.[0]?.uri ?? (result as any).uri;
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const pickedUri = result.assets[0].uri;
       if (pickedUri) {
         const storageKey =
           resolvedType === "front"
@@ -110,35 +120,45 @@ export default function UploadGuideScreen() {
   };
 
   const openImageLibrary = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    try {
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (permissionResult.granted === false) {
-      showCustomAlert("Lỗi", "Cần quyền truy cập thư viện ảnh", [
+      if (permissionResult.granted === false) {
+        showCustomAlert("Lỗi", "Cần quyền truy cập thư viện ảnh", [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]);
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const pickedUri = result.assets[0].uri;
+        if (pickedUri) {
+          const storageKey =
+            resolvedType === "front"
+              ? "temp_car_insurance_front"
+              : "temp_car_insurance_back";
+          await AsyncStorage.setItem(storageKey, pickedUri);
+          router.back();
+        }
+      }
+    } catch (error) {
+      console.error("Error opening image library:", error);
+      showCustomAlert("Lỗi", "Không thể mở thư viện ảnh", [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
         },
       ]);
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
-    });
-    const isCanceled = (result as any).canceled ?? (result as any).cancelled;
-    if (!isCanceled) {
-      const pickedUri = (result as any).assets?.[0]?.uri ?? (result as any).uri;
-      if (pickedUri) {
-        const storageKey =
-          resolvedType === "front"
-            ? "temp_car_insurance_front"
-            : "temp_car_insurance_back";
-        await AsyncStorage.setItem(storageKey, pickedUri);
-        router.back();
-      }
     }
   };
 
@@ -149,17 +169,10 @@ export default function UploadGuideScreen() {
   };
 
   const getSampleImages = () => {
-    if (resolvedType === "front") {
-      return [
-        require("@/assets/images/image_1-guide8.png"),
-        require("@/assets/images/image_2-guide8.png"),
-      ];
-    } else {
-      return [
-        require("@/assets/images/image_2-guide8.png"),
-        require("@/assets/images/image_1-guide8.png"),
-      ];
-    }
+    return [
+      require("@/assets/images/image_1-guide8.png"),
+      require("@/assets/images/image_2-guide8.png"),
+    ];
   };
 
   return (
@@ -333,7 +346,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   requirementsContainer: {
-    flex: 1,
     marginBottom: 30,
   },
   requirementSection: {
@@ -360,7 +372,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   uploadButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -369,6 +381,6 @@ const styles = StyleSheet.create({
   uploadButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: AppColors.white,
   },
 });

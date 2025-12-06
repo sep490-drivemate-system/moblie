@@ -1,3 +1,4 @@
+import { AppColors } from "@/constants/Colors";
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from "react-native";
 
@@ -112,13 +113,13 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#000",
+    color: AppColors.black,
     marginBottom: 12,
     textAlign: "center",
   },
   modalMessage: {
     fontSize: 16,
-    color: "#92929D",
+    color: AppColors.gray400,
     textAlign: "center",
     marginBottom: 24,
     lineHeight: 22,
@@ -171,15 +172,15 @@ const styles = StyleSheet.create({
 
   // --- Button Color/Style ---
   confirmButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
   },
   cancelButton: {
     backgroundColor: "#F5F5F5",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: AppColors.gray200,
   },
   destructiveButton: {
-    backgroundColor: "#FF4444",
+    backgroundColor: AppColors.gray,
   },
 
   // --- Button Text ---
@@ -189,12 +190,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   confirmButtonText: {
-    color: "#FFFFFF",
+    color: AppColors.white,
   },
   cancelButtonText: {
-    color: "#666666",
+    color: AppColors.gray700,
   },
   destructiveButtonText: {
-    color: "#FFFFFF",
+    color: AppColors.white,
   },
 });

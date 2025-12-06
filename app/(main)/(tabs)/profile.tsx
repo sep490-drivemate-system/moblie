@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Modal,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import {
   Wallet,
@@ -111,40 +112,18 @@ export default function ProfileScreen() {
           <View style={styles.menuItemsContainer}>
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => router.push("/(main)/(no-tabs)/profile-detail")}
-              activeOpacity={0.7}
-            >
-              <View style={styles.menuItemLeft}>
-                <User size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Thông tin tài khoản</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.menuItem}
               activeOpacity={0.7}
               onPress={() =>
                 router.push(
-                  "/(main)/(no-tabs)/identification-document-management-instructor"
+                  "/(main)/(no-tabs)/identification-document-management"
                 )
               }
             >
               <View style={styles.menuItemLeft}>
                 <IdCard size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Giấy tờ tùy thân Instr</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.menuItem}
-              activeOpacity={0.7}
-              onPress={() =>
-                router.push(
-                  "/(main)/(no-tabs)/identification-document-management-novice"
-                )
-              }
-            >
-              <View style={styles.menuItemLeft}>
-                <IdCard size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Giấy tờ tùy thân Novi</Text>
+                <Text style={styles.menuItemText}>
+                  Quản lý thông tin tài khoản
+                </Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity
@@ -183,16 +162,16 @@ export default function ProfileScreen() {
             )}
             {(authState.userInfo?.role as UserRole) ===
               UserRole.NoviceDriver && (
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
-                >
-                  <View style={styles.menuItemLeft}>
-                    <Package2 size={20} color="#70E000" />
-                    <Text style={styles.menuItemText}>Quản lý gói đã mua</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Package2 size={20} color="#70E000" />
+                  <Text style={styles.menuItemText}>Quản lý gói đã mua</Text>
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -201,13 +180,66 @@ export default function ProfileScreen() {
             <Text style={styles.menuTitle}>Thông tin khác</Text>
           </View>
           <View style={styles.menuItemsContainer}>
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                Alert.alert(
+                  "Rời khỏi ứng dụng?",
+                  "Bạn có muốn mở trang điều khoản và dịch vụ trong trình duyệt?",
+                  [
+                    {
+                      text: "Hủy",
+                      style: "cancel",
+                    },
+                    {
+                      text: "Mở",
+                      onPress: async () => {
+                        const url =
+                          "http://192.168.1.207:3000/terms-and-sersvices";
+                        const supported = await Linking.canOpenURL(url);
+                        if (supported) {
+                          await Linking.openURL(url);
+                        } else {
+                          Alert.alert("Lỗi", "Không thể mở liên kết này");
+                        }
+                      },
+                    },
+                  ]
+                );
+              }}
+            >
               <View style={styles.menuItemLeft}>
                 <FileText size={20} color="#70E000" />
-                <Text style={styles.menuItemText}>Điều khoản và điều kiện</Text>
+                <Text style={styles.menuItemText}>Điều khoản và dịch vụ</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                Alert.alert(
+                  "Rời khỏi ứng dụng?",
+                  "Bạn có muốn mở trang thông tin về DriveMate trong trình duyệt?",
+                  [
+                    {
+                      text: "Hủy",
+                      style: "cancel",
+                    },
+                    {
+                      text: "Mở",
+                      onPress: async () => {
+                        const url = "http://192.168.1.207:3000/about-us";
+                        const supported = await Linking.canOpenURL(url);
+                        if (supported) {
+                          await Linking.openURL(url);
+                        } else {
+                          Alert.alert("Lỗi", "Không thể mở liên kết này");
+                        }
+                      },
+                    },
+                  ]
+                );
+              }}
+            >
               <View style={styles.menuItemLeft}>
                 <Info size={20} color="#70E000" />
                 <Text style={styles.menuItemText}>Thông tin về DriveMate</Text>

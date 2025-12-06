@@ -17,7 +17,10 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to location to show your position on the map.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to show your position on the map."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to show your position on the map.",
+        "NSCameraUsageDescription": "Ứng dụng cần dùng camera để chụp ảnh xác thực",
+        "NSPhotoLibraryUsageDescription": "Ứng dụng cần truy cập thư viện ảnh để tải lên hình ảnh",
+        "NSPhotoLibraryAddUsageDescription": "Ứng dụng cần quyền lưu ảnh vào thư viện"
       },
       "config": {
         "googleMapsApiKey": ""

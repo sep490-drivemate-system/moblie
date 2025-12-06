@@ -28,9 +28,7 @@ import { IBookingSession } from "@/models/booking/booking";
 import { SessionStatus } from "@/models/session/session.enum";
 import { AppColors } from "@/constants/Colors";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
-import {
-  getAllSessions,
-} from "@/features/booking/bookingThunk";
+import { getAllSessions } from "@/features/booking/bookingThunk";
 import { ROUTES } from "@/constants/routes";
 import HeaderList from "@/components/Commons/HeaderList";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
@@ -41,30 +39,32 @@ export default function RentalScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
-  const [selectedTab, setSelectedTab] = useState<
-    | "all"
-    | SessionStatus
-  >("all");
+  const [selectedTab, setSelectedTab] = useState<"all" | SessionStatus>("all");
 
   const [sessions, setSessions] = useState<IBookingSession[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [, sessionViewModel] = useViewModel<RootState["session"], SessionViewModel>(SessionViewModel, (state) => state.session);
+  const [, sessionViewModel] = useViewModel<
+    RootState["session"],
+    SessionViewModel
+  >(SessionViewModel, (state) => state.session);
 
   // Helper function to parse status from string to enum
-  const parseSessionStatus = (status: string | SessionStatus | undefined): SessionStatus | undefined => {
+  const parseSessionStatus = (
+    status: string | SessionStatus | undefined
+  ): SessionStatus | undefined => {
     if (!status) return undefined;
-    if (typeof status === 'number') return status as SessionStatus;
+    if (typeof status === "number") return status as SessionStatus;
 
     const statusMap: Record<string, SessionStatus> = {
-      'Planning': SessionStatus.Planning,
-      'Upcoming': SessionStatus.Upcoming,
-      'InProgress': SessionStatus.InProgress,
-      'Completed': SessionStatus.Completed,
-      'Reschedule': SessionStatus.Reschedule,
-      'Cancelled': SessionStatus.Cancelled,
+      Planning: SessionStatus.Planning,
+      Upcoming: SessionStatus.Upcoming,
+      InProgress: SessionStatus.InProgress,
+      Completed: SessionStatus.Completed,
+      Reschedule: SessionStatus.Reschedule,
+      Cancelled: SessionStatus.Cancelled,
     };
 
     return statusMap[status] ?? undefined;
@@ -80,7 +80,9 @@ export default function RentalScreen() {
   // Fetch sessions only when tab is focused (lazy loading)
   useFocusEffect(
     useCallback(() => {
-      sessionViewModel.getAllSessions().then((sessions) => setSessions(sessions));
+      sessionViewModel
+        .getAllSessions()
+        .then((sessions) => setSessions(sessions));
     }, [sessionViewModel])
   );
 
@@ -213,6 +215,7 @@ export default function RentalScreen() {
     <View style={styles.container}>
       <HeaderList
         title="Danh sách buổi huấn luyện"
+        description="Quản lý lịch trình huấn luyện và theo dõi tiến trình của người lái mới"
       />
       <View style={styles.tabsContainer}>
         <ScrollView
@@ -241,27 +244,34 @@ export default function RentalScreen() {
             </View>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, selectedTab === SessionStatus.Planning && styles.activeTab]}
+            style={[
+              styles.tab,
+              selectedTab === SessionStatus.Planning && styles.activeTab,
+            ]}
             onPress={() => setSelectedTab(SessionStatus.Planning)}
           >
             <View style={styles.tabContent}>
               <Navigation
                 size={16}
-                color={selectedTab === SessionStatus.Planning ? "#ffffff" : "#6b7280"}
+                color={
+                  selectedTab === SessionStatus.Planning ? "#ffffff" : "#6b7280"
+                }
                 strokeWidth={2}
               />
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === SessionStatus.Planning && styles.activeTabText,
+                  selectedTab === SessionStatus.Planning &&
+                    styles.activeTabText,
                 ]}
               >
                 Lên lộ trình (
                 {Array.isArray(sessions)
                   ? sessions.filter(
-                    (session) =>
-                      parseSessionStatus(session.status) === SessionStatus.Planning
-                  ).length
+                      (session) =>
+                        parseSessionStatus(session.status) ===
+                        SessionStatus.Planning
+                    ).length
                   : 0}
                 )
               </Text>
@@ -277,21 +287,25 @@ export default function RentalScreen() {
             <View style={styles.tabContent}>
               <Calendar
                 size={16}
-                color={selectedTab === SessionStatus.Upcoming ? "#ffffff" : "#6b7280"}
+                color={
+                  selectedTab === SessionStatus.Upcoming ? "#ffffff" : "#6b7280"
+                }
                 strokeWidth={2}
               />
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === SessionStatus.Upcoming && styles.activeTabText,
+                  selectedTab === SessionStatus.Upcoming &&
+                    styles.activeTabText,
                 ]}
               >
                 Sắp diễn ra (
                 {Array.isArray(sessions)
                   ? sessions.filter(
-                    (session) =>
-                      parseSessionStatus(session.status) === SessionStatus.Upcoming
-                  ).length
+                      (session) =>
+                        parseSessionStatus(session.status) ===
+                        SessionStatus.Upcoming
+                    ).length
                   : 0}
                 )
               </Text>
@@ -307,21 +321,27 @@ export default function RentalScreen() {
             <View style={styles.tabContent}>
               <PlayCircle
                 size={16}
-                color={selectedTab === SessionStatus.InProgress ? "#ffffff" : "#6b7280"}
+                color={
+                  selectedTab === SessionStatus.InProgress
+                    ? "#ffffff"
+                    : "#6b7280"
+                }
                 strokeWidth={2}
               />
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === SessionStatus.InProgress && styles.activeTabText,
+                  selectedTab === SessionStatus.InProgress &&
+                    styles.activeTabText,
                 ]}
               >
                 Đang diễn ra (
                 {Array.isArray(sessions)
                   ? sessions.filter(
-                    (session) =>
-                      parseSessionStatus(session.status) === SessionStatus.InProgress
-                  ).length
+                      (session) =>
+                        parseSessionStatus(session.status) ===
+                        SessionStatus.InProgress
+                    ).length
                   : 0}
                 )
               </Text>
@@ -337,21 +357,27 @@ export default function RentalScreen() {
             <View style={styles.tabContent}>
               <CheckCircle
                 size={16}
-                color={selectedTab === SessionStatus.Completed ? "#ffffff" : "#6b7280"}
+                color={
+                  selectedTab === SessionStatus.Completed
+                    ? "#ffffff"
+                    : "#6b7280"
+                }
                 strokeWidth={2}
               />
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === SessionStatus.Completed && styles.activeTabText,
+                  selectedTab === SessionStatus.Completed &&
+                    styles.activeTabText,
                 ]}
               >
                 Hoàn thành (
                 {Array.isArray(sessions)
                   ? sessions.filter(
-                    (session) =>
-                      parseSessionStatus(session.status) === SessionStatus.Completed
-                  ).length
+                      (session) =>
+                        parseSessionStatus(session.status) ===
+                        SessionStatus.Completed
+                    ).length
                   : 0}
                 )
               </Text>
@@ -367,21 +393,27 @@ export default function RentalScreen() {
             <View style={styles.tabContent}>
               <RefreshCw
                 size={16}
-                color={selectedTab === SessionStatus.Reschedule ? "#ffffff" : "#6b7280"}
+                color={
+                  selectedTab === SessionStatus.Reschedule
+                    ? "#ffffff"
+                    : "#6b7280"
+                }
                 strokeWidth={2}
               />
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === SessionStatus.Reschedule && styles.activeTabText,
+                  selectedTab === SessionStatus.Reschedule &&
+                    styles.activeTabText,
                 ]}
               >
                 Đổi lịch (
                 {Array.isArray(sessions)
                   ? sessions.filter(
-                    (session) =>
-                      parseSessionStatus(session.status) === SessionStatus.Reschedule
-                  ).length
+                      (session) =>
+                        parseSessionStatus(session.status) ===
+                        SessionStatus.Reschedule
+                    ).length
                   : 0}
                 )
               </Text>
@@ -397,21 +429,27 @@ export default function RentalScreen() {
             <View style={styles.tabContent}>
               <X
                 size={16}
-                color={selectedTab === SessionStatus.Cancelled ? "#ffffff" : "#6b7280"}
+                color={
+                  selectedTab === SessionStatus.Cancelled
+                    ? "#ffffff"
+                    : "#6b7280"
+                }
                 strokeWidth={2}
               />
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === SessionStatus.Cancelled && styles.activeTabText,
+                  selectedTab === SessionStatus.Cancelled &&
+                    styles.activeTabText,
                 ]}
               >
                 Đã hủy (
                 {Array.isArray(sessions)
                   ? sessions.filter(
-                    (session) =>
-                      parseSessionStatus(session.status) === SessionStatus.Cancelled
-                  ).length
+                      (session) =>
+                        parseSessionStatus(session.status) ===
+                        SessionStatus.Cancelled
+                    ).length
                   : 0}
                 )
               </Text>
@@ -446,18 +484,18 @@ export default function RentalScreen() {
               {selectedTab === "all"
                 ? "Chưa có buổi huấn luyện nào"
                 : selectedTab === SessionStatus.Planning
-                  ? "Chưa có buổi huấn luyện cần lên lộ trình"
-                  : selectedTab === SessionStatus.Upcoming
-                    ? "Chưa có buổi huấn luyện sắp diễn ra"
-                    : selectedTab === SessionStatus.InProgress
-                      ? "Chưa có buổi huấn luyện đang diễn ra"
-                      : selectedTab === SessionStatus.Completed
-                        ? "Chưa có buổi huấn luyện hoàn thành"
-                        : selectedTab === SessionStatus.Reschedule
-                          ? "Chưa có buổi huấn luyện cần đổi lịch"
-                          : selectedTab === SessionStatus.Cancelled
-                            ? "Chưa có buổi huấn luyện đã hủy"
-                            : "Chưa có buổi huấn luyện nào"}
+                ? "Chưa có buổi huấn luyện cần lên lộ trình"
+                : selectedTab === SessionStatus.Upcoming
+                ? "Chưa có buổi huấn luyện sắp diễn ra"
+                : selectedTab === SessionStatus.InProgress
+                ? "Chưa có buổi huấn luyện đang diễn ra"
+                : selectedTab === SessionStatus.Completed
+                ? "Chưa có buổi huấn luyện hoàn thành"
+                : selectedTab === SessionStatus.Reschedule
+                ? "Chưa có buổi huấn luyện cần đổi lịch"
+                : selectedTab === SessionStatus.Cancelled
+                ? "Chưa có buổi huấn luyện đã hủy"
+                : "Chưa có buổi huấn luyện nào"}
             </Text>
           </View>
         ) : (
@@ -551,13 +589,14 @@ export default function RentalScreen() {
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
                       style={[styles.actionButton, styles.routeButton]}
-                      onPress={() => router.push({
-                        pathname: ROUTES.DRIVING_SESSION_DETAIL,
-                        params: {
-                          sessionId: session.id,
-
-                        },
-                      })}
+                      onPress={() =>
+                        router.push({
+                          pathname: ROUTES.DRIVING_SESSION_DETAIL,
+                          params: {
+                            sessionId: session.id,
+                          },
+                        })
+                      }
                     >
                       <Text style={styles.routeButtonText}>Xem chi tiết</Text>
                     </TouchableOpacity>
@@ -907,7 +946,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 20,
-    marginTop: -25,
+    marginTop: -30,
     borderRadius: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -8 },

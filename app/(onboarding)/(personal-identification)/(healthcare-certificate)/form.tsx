@@ -158,7 +158,12 @@ export default function FormScreen() {
         );
         router.push("/(onboarding)/waiting-confirm");
       } else {
-        showCustomAlert("Lỗi", authState.errorMessage || "Không thể tiếp tục", [
+        // Đảm bảo errorMessage là string
+        const errorMsg =
+          typeof authState.errorMessage === "string"
+            ? authState.errorMessage
+            : "Không thể tiếp tục";
+        showCustomAlert("Lỗi", errorMsg, [
           {
             text: "OK",
             onPress: () => setShowAlert(false),
@@ -166,7 +171,18 @@ export default function FormScreen() {
         ]);
       }
     } catch (error) {
-      showCustomAlert("Lỗi", (error as string) || "Không thể tiếp tục", [
+      // Đảm bảo error được convert thành string
+      let errorMsg = "Không thể tiếp tục";
+      if (typeof error === "string") {
+        errorMsg = error;
+      } else if (error && typeof error === "object") {
+        if ("message" in error && typeof error.message === "string") {
+          errorMsg = error.message;
+        } else if ("payload" in error && typeof error.payload === "string") {
+          errorMsg = error.payload;
+        }
+      }
+      showCustomAlert("Lỗi", errorMsg, [
         {
           text: "OK",
           onPress: () => setShowAlert(false),
