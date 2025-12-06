@@ -67,10 +67,10 @@ export default function CarsScreen() {
   
   const PAGE_SIZE = 4;
   
-  // Filter states
-  const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [selectedFuels, setSelectedFuels] = useState<string[]>([]);
+  // Filter states - radio (single selection)
+  const [selectedSeats, setSelectedSeats] = useState<number | null>(null);
+  const [selectedBrands, setSelectedBrands] = useState<string | null>(null);
+  const [selectedFuels, setSelectedFuels] = useState<string | null>(null);
   
   // Modal states
   const [showSeatsModal, setShowSeatsModal] = useState(false);
@@ -78,9 +78,9 @@ export default function CarsScreen() {
   const [showFuelModal, setShowFuelModal] = useState(false);
   
   // Temporary states for modals
-  const [tempSelectedSeats, setTempSelectedSeats] = useState<number[]>([]);
-  const [tempSelectedBrands, setTempSelectedBrands] = useState<string[]>([]);
-  const [tempSelectedFuels, setTempSelectedFuels] = useState<string[]>([]);
+  const [tempSelectedSeats, setTempSelectedSeats] = useState<number | null>(null);
+  const [tempSelectedBrands, setTempSelectedBrands] = useState<string | null>(null);
+  const [tempSelectedFuels, setTempSelectedFuels] = useState<string | null>(null);
 
   // Categories
   const categories: { id: CarCategory; label: string; icon: any }[] = [
@@ -132,17 +132,17 @@ export default function CarsScreen() {
         size: PAGE_SIZE,
       };
 
-      // Add filter params - API chỉ hỗ trợ single value, lấy giá trị đầu tiên
-      if (selectedSeats.length > 0) {
-        params.seats = selectedSeats[0];
+      // Add filter params - radio selection (single value)
+      if (selectedSeats !== null) {
+        params.seats = selectedSeats;
       }
 
-      if (selectedBrands.length > 0) {
-        params.brand = selectedBrands[0];
+      if (selectedBrands !== null) {
+        params.brand = selectedBrands;
       }
 
-      if (selectedFuels.length > 0) {
-        params.fuel = selectedFuels[0];
+      if (selectedFuels !== null) {
+        params.fuel = selectedFuels;
       }
 
       const response = await viewModel.getCars(params);
@@ -266,65 +266,65 @@ export default function CarsScreen() {
 
   // Filter handlers
   const hasActiveFilters =
-    selectedSeats.length > 0 ||
-    selectedBrands.length > 0 ||
-    selectedFuels.length > 0;
+    selectedSeats !== null ||
+    selectedBrands !== null ||
+    selectedFuels !== null;
 
   const handleOpenSeatsModal = () => {
-    setTempSelectedSeats([...selectedSeats]);
+    setTempSelectedSeats(selectedSeats);
     setShowSeatsModal(true);
   };
 
   const handleOpenBrandModal = () => {
-    setTempSelectedBrands([...selectedBrands]);
+    setTempSelectedBrands(selectedBrands);
     setShowBrandModal(true);
   };
 
   const handleOpenFuelModal = () => {
-    setTempSelectedFuels([...selectedFuels]);
+    setTempSelectedFuels(selectedFuels);
     setShowFuelModal(true);
   };
 
   const handleApplySeats = () => {
-    setSelectedSeats([...tempSelectedSeats]);
+    setSelectedSeats(tempSelectedSeats);
     setShowSeatsModal(false);
   };
 
   const handleApplyBrands = () => {
-    setSelectedBrands([...tempSelectedBrands]);
+    setSelectedBrands(tempSelectedBrands);
     setShowBrandModal(false);
   };
 
   const handleApplyFuels = () => {
-    setSelectedFuels([...tempSelectedFuels]);
+    setSelectedFuels(tempSelectedFuels);
     setShowFuelModal(false);
   };
 
   const handleCloseSeatsModal = () => {
-    setTempSelectedSeats([...selectedSeats]);
+    setTempSelectedSeats(selectedSeats);
     setShowSeatsModal(false);
   };
 
   const handleCloseBrandModal = () => {
-    setTempSelectedBrands([...selectedBrands]);
+    setTempSelectedBrands(selectedBrands);
     setShowBrandModal(false);
   };
 
   const handleCloseFuelModal = () => {
-    setTempSelectedFuels([...selectedFuels]);
+    setTempSelectedFuels(selectedFuels);
     setShowFuelModal(false);
   };
 
   const clearSeatsFilters = () => {
-    setTempSelectedSeats([]);
+    setTempSelectedSeats(null);
   };
 
   const clearBrandsFilters = () => {
-    setTempSelectedBrands([]);
+    setTempSelectedBrands(null);
   };
 
   const clearFuelsFilters = () => {
-    setTempSelectedFuels([]);
+    setTempSelectedFuels(null);
   };
 
   const renderFilterOptionItem = ({
@@ -336,18 +336,18 @@ export default function CarsScreen() {
       item.id === CarFilterOption.All
         ? !hasActiveFilters
         : item.type === "seats"
-        ? selectedSeats.length > 0
+        ? selectedSeats !== null
         : item.type === "brand"
-        ? selectedBrands.length > 0
+        ? selectedBrands !== null
         : item.type === "fuel"
-        ? selectedFuels.length > 0
+        ? selectedFuels !== null
         : false;
 
     const handlePress = () => {
       if (item.id === CarFilterOption.All) {
-        setSelectedSeats([]);
-        setSelectedBrands([]);
-        setSelectedFuels([]);
+        setSelectedSeats(null);
+        setSelectedBrands(null);
+        setSelectedFuels(null);
       } else if (item.type === "seats") {
         handleOpenSeatsModal();
       } else if (item.type === "brand") {
@@ -358,9 +358,9 @@ export default function CarsScreen() {
     };
 
     const getCount = () => {
-      if (item.type === "seats") return selectedSeats.length;
-      if (item.type === "brand") return selectedBrands.length;
-      if (item.type === "fuel") return selectedFuels.length;
+      if (item.type === "seats") return selectedSeats !== null ? 1 : 0;
+      if (item.type === "brand") return selectedBrands !== null ? 1 : 0;
+      if (item.type === "fuel") return selectedFuels !== null ? 1 : 0;
       return 0;
     };
 
@@ -379,7 +379,6 @@ export default function CarsScreen() {
           ]}
         >
           {item.label}
-          {count > 0 && ` (${count})`}
         </Text>
       </TouchableOpacity>
     );
@@ -419,16 +418,13 @@ export default function CarsScreen() {
         title="Chọn số chỗ"
         data={SEAT_OPTIONS}
         renderItem={({ item }) => {
-          const isSelected = tempSelectedSeats.includes(item.value);
+          const isSelected = tempSelectedSeats === item.value;
           return (
             <TouchableOpacity
               style={[styles.filterPill, isSelected && styles.filterPillActive]}
               onPress={() => {
-                setTempSelectedSeats((prev) =>
-                  prev.includes(item.value)
-                    ? prev.filter((v) => v !== item.value)
-                    : [...prev, item.value]
-                );
+                // Radio: set value directly (if clicking same value, deselect)
+                setTempSelectedSeats(tempSelectedSeats === item.value ? null : item.value);
               }}
               activeOpacity={1}
             >
@@ -456,16 +452,13 @@ export default function CarsScreen() {
         title="Chọn hãng xe"
         data={BRAND_OPTIONS}
         renderItem={({ item }) => {
-          const isSelected = tempSelectedBrands.includes(item.value);
+          const isSelected = tempSelectedBrands === item.value;
           return (
             <TouchableOpacity
               style={[styles.filterPill, isSelected && styles.filterPillActive]}
               onPress={() => {
-                setTempSelectedBrands((prev) =>
-                  prev.includes(item.value)
-                    ? prev.filter((v) => v !== item.value)
-                    : [...prev, item.value]
-                );
+                // Radio: set value directly (if clicking same value, deselect)
+                setTempSelectedBrands(tempSelectedBrands === item.value ? null : item.value);
               }}
               activeOpacity={1}
             >
@@ -493,16 +486,13 @@ export default function CarsScreen() {
         title="Chọn nhiên liệu"
         data={FUEL_OPTIONS}
         renderItem={({ item }) => {
-          const isSelected = tempSelectedFuels.includes(item.value);
+          const isSelected = tempSelectedFuels === item.value;
           return (
             <TouchableOpacity
               style={[styles.filterPill, isSelected && styles.filterPillActive]}
               onPress={() => {
-                setTempSelectedFuels((prev) =>
-                  prev.includes(item.value)
-                    ? prev.filter((v) => v !== item.value)
-                    : [...prev, item.value]
-                );
+                // Radio: set value directly (if clicking same value, deselect)
+                setTempSelectedFuels(tempSelectedFuels === item.value ? null : item.value);
               }}
               activeOpacity={1}
             >

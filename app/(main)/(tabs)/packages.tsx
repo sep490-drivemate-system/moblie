@@ -5,6 +5,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
+  ActivityIndicator,
   StatusBar,
   StyleSheet,
   Text,
@@ -17,7 +18,12 @@ import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { PackageViewModel } from "@/viewmodels/package/PackageViewModel";
 import { RootState } from "@/lib/redux/store";
 import { useCallback, useEffect, useState } from "react";
-import { DrivingSkill, GetPackagesParams, Package, RoadType } from "@/models/package/package";
+import {
+  DrivingSkill,
+  GetPackagesParams,
+  Package,
+  RoadType,
+} from "@/models/package/package";
 import { ROUTES } from "@/constants/routes";
 
 // Road types list
@@ -32,7 +38,6 @@ const roadTypes = [
   "Đường đang thi công",
   "Đường trơn trượt",
 ];
-
 
 const filterOptions = [
   {
@@ -67,14 +72,15 @@ const filterOptions = [
   },
 ];
 
-
-
 const PAGE_SIZE = 4;
 
 export default function PackagesScreen() {
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
-  const [packageState, packageViewModel] = useViewModel<RootState["package"], PackageViewModel>(PackageViewModel, (state) => state.package);
+  const [packageState, packageViewModel] = useViewModel<
+    RootState["package"],
+    PackageViewModel
+  >(PackageViewModel, (state) => state.package);
   const [packages, setPackages] = useState<Package[]>([]);
   const [roadTypes, setRoadTypes] = useState<RoadType[]>([]);
   const [drivingSkills, setDrivingSkills] = useState<DrivingSkill[]>([]);
@@ -84,9 +90,13 @@ export default function PackagesScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [filterHasVehicle, setFilterHasVehicle] = useState<boolean | null>(null);
+  const [filterHasVehicle, setFilterHasVehicle] = useState<boolean | null>(
+    null
+  );
   const [selectedRoadTypes, setSelectedRoadTypes] = useState<string[]>([]);
-  const [selectedDrivingSkills, setSelectedDrivingSkills] = useState<string[]>([]);
+  const [selectedDrivingSkills, setSelectedDrivingSkills] = useState<string[]>(
+    []
+  );
 
   const handlePackagePress = (pkg: Package) => {
     router.push({
@@ -95,43 +105,52 @@ export default function PackagesScreen() {
     });
   };
 
-  const loadPackages = useCallback(async (page: number, append: boolean = false) => {
-    try {
-      const params: GetPackagesParams = {
-        pageNumber: page,
-        pageSize: PAGE_SIZE,
-      };
+  const loadPackages = useCallback(
+    async (page: number, append: boolean = false) => {
+      try {
+        const params: GetPackagesParams = {
+          pageNumber: page,
+          pageSize: PAGE_SIZE,
+        };
 
-      if (debouncedSearchQuery) {
-        params.searchKey = debouncedSearchQuery;
-      }
+        if (debouncedSearchQuery) {
+          params.searchKey = debouncedSearchQuery;
+        }
 
-      if (filterHasVehicle !== null) {
-        params.allowSelfCar = filterHasVehicle;
-      }
+        if (filterHasVehicle !== null) {
+          params.allowSelfCar = filterHasVehicle;
+        }
 
-      if (selectedRoadTypes.length > 0) {
-        params.roadTypes = selectedRoadTypes;
-      }
+        if (selectedRoadTypes.length > 0) {
+          params.roadTypes = selectedRoadTypes;
+        }
 
-      if (selectedDrivingSkills.length > 0) {
-        params.drivingSkills = selectedDrivingSkills;
-      }
+        if (selectedDrivingSkills.length > 0) {
+          params.drivingSkills = selectedDrivingSkills;
+        }
 
-      const response = await packageViewModel.getPackages(params);
-      
-      if (append) {
-        setPackages((prev) => [...prev, ...(response.pageContent ?? [])]);
-      } else {
-        setPackages(response.pageContent ?? []);
+        const response = await packageViewModel.getPackages(params);
+
+        if (append) {
+          setPackages((prev) => [...prev, ...(response.pageContent ?? [])]);
+        } else {
+          setPackages(response.pageContent ?? []);
+        }
+
+        setTotalCount(response.totalCount ?? 0);
+        setCurrentPage(response.currentPage ?? page);
+      } catch (error) {
+        console.error("Error loading packages:", error);
       }
-      
-      setTotalCount(response.totalCount ?? 0);
-      setCurrentPage(response.currentPage ?? page);
-    } catch (error) {
-      console.error("Error loading packages:", error);
-    }
-  }, [packageViewModel, debouncedSearchQuery, filterHasVehicle, selectedRoadTypes, selectedDrivingSkills]);
+    },
+    [
+      packageViewModel,
+      debouncedSearchQuery,
+      filterHasVehicle,
+      selectedRoadTypes,
+      selectedDrivingSkills,
+    ]
+  );
 
   const handleLoadMore = useCallback(async () => {
     if (isLoadingMore || packages.length >= totalCount) {
@@ -190,6 +209,18 @@ export default function PackagesScreen() {
     loadPackages(1, false);
   }, [loadPackages]);
 
+  if (
+    packages.length === 0 ||
+    roadTypes.length === 0 ||
+    drivingSkills.length === 0
+  ) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={AppColors.primary} />
+        <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -285,5 +316,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: AppColors.primary,
   },
 });
