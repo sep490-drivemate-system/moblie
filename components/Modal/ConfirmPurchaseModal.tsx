@@ -13,12 +13,13 @@ import {
 import { Car, User, Route, Clock, Award, X } from "lucide-react-native";
 import { IInstructorCar, IInstructorPackages } from "@/models/instructor/instructor.type";
 import { AppColors } from "@/constants/Colors";
+import { ICar } from "@/models/car/car";
 
 type ConfirmPurchaseModalProps = {
   visible: boolean;
   selectedPackage: IInstructorPackages | null;
   selectedVehicle: string | null;
-  cars: IInstructorCar[];
+  cars: ICar[];
   isProcessing: boolean;
   scaleAnim: Animated.Value;
   onClose: () => void;
@@ -142,7 +143,7 @@ export function ConfirmPurchaseModal({
                       <View style={styles.confirmVehicleOptionInfo}>
                         <Text style={styles.confirmVehicleOptionName}>{vehicle.modelName}</Text>
                         <View style={styles.confirmVehicleOptionSpecs}>
-                          <Text style={styles.confirmVehicleOptionSpec}>{vehicle.seatCount} chỗ</Text>
+                          <Text style={styles.confirmVehicleOptionSpec}>{vehicle.seatCounts} chỗ</Text>
                           {vehicle.vehicleType && (
                             <>
                               <Text style={styles.confirmVehicleOptionDot}> • </Text>

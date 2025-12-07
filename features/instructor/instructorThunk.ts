@@ -1,3 +1,4 @@
+import { ICar } from "@/models/car/car";
 import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/HttpMethods";
 import {
@@ -42,7 +43,7 @@ export const getInstructorById = createThunk<IInstructors, { id: string }>(
 
 
 export const getInstructorCars = createThunk<
-  IInstructorCar[],
+  ICar[],
   { id: string }
 >(HttpMethod.GET, "getInstructorCars", `car/instructor/:id/cars`, {
   buildUrl: (payload) => `car/instructor/${payload.id}/cars`,

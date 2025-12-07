@@ -195,12 +195,12 @@ export default function CarsScreen() {
   // Render car card
   const renderCarCard = ({ item }: { item: ICar }) => (
     <Pressable
-      // onPress={() => {
-      //   router.push({
-      //     pathname: ROUTES.MAIN_NO_TABS_CAR_DETAIL,
-      //     params: { carId: item.id },
-      //   });
-      // }}
+      onPress={() => {
+        router.push({
+          pathname: ROUTES.MAIN_NO_TABS_CAR_DETAIL,
+          params: { carId: item.id },
+        });
+      }}
     >
       <View style={styles.carCard}>
         <LinearGradient
@@ -255,7 +255,7 @@ export default function CarsScreen() {
               </View>
 
               <Text style={styles.priceText}>
-                {item.unitPrice?.toLocaleString("vi-VN")} đ/giờ
+                {item.price.toLocaleString("vi-VN")} đ/giờ
               </Text>
             </View>
           </View>

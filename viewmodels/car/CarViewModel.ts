@@ -1,6 +1,6 @@
 import { getCarById, getCars, getCarsForInstructor } from "@/features/car/carThunk";
 import { AppDispatch, RootState } from "@/lib/redux/store";
-import { ICar, PaginatedCarsResponse, GetCarsParams } from "@/models/car/car";
+import { ICarDetail, PaginatedCarsResponse, GetCarsParams } from "@/models/car/car";
 import { BaseViewModel } from "../shared/BaseViewModel";
 
 export class CarViewModel extends BaseViewModel<
@@ -12,14 +12,14 @@ export class CarViewModel extends BaseViewModel<
 
     async getCarById(
         carId: string
-    ): Promise<ICar | null> {
+    ): Promise<ICarDetail | null> {
         return (
             (await this.executeAsync(
                 async () => {
                     const result = await this.dispatch(
                         getCarById({ id: carId })
                     ).unwrap();
-                    return result.value || null;
+                    return result.value as ICarDetail || null;
                 },
                 () => {
                     console.log("Car loaded successfully");

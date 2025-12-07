@@ -83,6 +83,35 @@ export interface ICar {
   average_rating: number;
 }
 
+export interface ICarDetail {
+  license_plate: string;
+  dsescription: string;
+  images: string[];
+  instructor_id: string;
+  insurance_document: CarDocument;
+  registration_document: CarDocument;
+  status: string;
+  statusEnum: number;
+  id: string;
+  thumbnailUrl: string;
+  modelName: string;
+  price: number;
+  seatCounts: number;
+  vehicleType: string;
+  licenseTier: LicenseTier;
+  brand: string;
+  manufacturerId: string;
+  fuel: string;
+  booking_count: number;
+  average_rating: number;
+}
+
+export interface CarDocument {
+  frontImageUrl: string;
+  backImageUrl: string;
+  documentType: string;
+}
+
 export interface PaginatedCarsResponse {
   currentPage: number;
   pageSize: number;

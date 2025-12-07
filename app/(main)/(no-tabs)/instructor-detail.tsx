@@ -44,6 +44,7 @@ import { ROUTES } from "@/constants/routes";
 import { AlertVariant, AppAlert } from "@/components/Commons/AppAlert";
 import { NoviceDriverViewModel } from "@/viewmodels/driver/NoviceDriverViewModel";
 import { PackageViewModel } from "@/viewmodels/package/PackageViewModel";
+import { ICar } from "@/models/car/car";
 
 const getGenderText = (gender: Gender): string => {
   return gender === Gender.Male ? "Nam" : "Nữ";
@@ -59,7 +60,7 @@ export default function InstructorDetailScreen() {
   const { instructorId } = useLocalSearchParams();
   const [instructor, setInstructor] = useState<IInstructors | null>(null);
   const [packages, setPackages] = useState<IInstructorPackages[]>([]);
-  const [cars, setCars] = useState<IInstructorCar[]>([]);
+  const [cars, setCars] = useState<ICar[]>([]);
   const [isLoadingInstructor, setIsLoadingInstructor] = useState(true);
   const [isLoadingPackages, setIsLoadingPackages] = useState(false);
   const [isLoadingCars, setIsLoadingCars] = useState(false);
@@ -129,6 +130,7 @@ export default function InstructorDetailScreen() {
             getInstructorCars({ id: instructor.id })
           ).unwrap();
           const cars = (carsResult as any).value || carsResult;
+          console.log(cars);
           setCars(cars);
         } catch (error) {
           console.error("Failed to fetch cars:", error);
@@ -454,7 +456,7 @@ export default function InstructorDetailScreen() {
                   <View style={styles.vehicleInfo}>
                     <Text style={styles.vehicleName}>{vehicle.modelName}</Text>
                     <Text style={styles.vehicleSpec}>
-                      {vehicle.seatCount} chỗ{" "}
+                      {vehicle.seatCounts} chỗ{" "}
                       {vehicle.vehicleType ? `• ${vehicle.vehicleType}` : ""}
                     </Text>
                     <Text style={styles.vehiclePrice}>
