@@ -34,7 +34,10 @@ export const getListInstructors = createThunk<
 export const getInstructorById = createThunk<IInstructors, { id: string }>(
   HttpMethod.GET,
   "getInstructorById",
-  `${INSTRUCTOR_PATH}/:id`
+  `${INSTRUCTOR_PATH}/:id`,
+  {
+    buildUrl: (payload) => `${INSTRUCTOR_PATH}/${payload.id}`
+  }
 );
 
 

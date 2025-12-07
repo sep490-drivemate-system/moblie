@@ -15,7 +15,7 @@ export const AppColors = {
 
   blue: '#31B2BD',
 
-  red: '#E57373',
+  red: '#ef4444',
 
   gradientStart: '#43cea2',
   gradientMiddle: '#a8e063',

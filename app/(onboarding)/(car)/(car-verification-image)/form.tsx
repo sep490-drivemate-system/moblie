@@ -19,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { AppColors } from "@/constants/Colors";
 
 export default function FormScreen() {
   const router = useRouter();
@@ -335,7 +336,7 @@ export default function FormScreen() {
             style={styles.editButton}
             onPress={() => handleImageUpload(type)}
           >
-            <Edit2Icon color="#70E000" size={16} />
+            <Edit2Icon color={AppColors.primary} size={16} />
           </TouchableOpacity>
         </View>
       </View>
@@ -472,9 +473,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "91%",
+    width: "100%",
     height: "100%",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 2,
   },
   headerButtons: {
@@ -540,7 +541,7 @@ const styles = StyleSheet.create({
   imageUploadArea: {
     position: "relative",
     borderWidth: 2,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderStyle: "dashed",
     borderRadius: 8,
     height: 150,
@@ -587,7 +588,7 @@ const styles = StyleSheet.create({
   },
   uploadText: {
     fontSize: 16,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
   },
   editButton: {
@@ -597,10 +598,10 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: AppColors.white,
     justifyContent: "center",
     alignItems: "center",
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderWidth: 1,
   },
   buttonContainer: {
@@ -612,16 +613,16 @@ const styles = StyleSheet.create({
   },
   backButton: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: AppColors.white,
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -629,11 +630,11 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#70E000",
+    color: AppColors.primary,
   },
   nextButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: AppColors.white,
   },
 });

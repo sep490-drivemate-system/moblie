@@ -49,7 +49,7 @@ export default function FormScreen() {
   const [vehicleClass, setVehicleClass] = useState<string>("");
 
   // Vehicle class options (same as license classes)
-  const vehicleClasses = ["B", "C", "C1", "C2", "D", "E", "F"];
+  const vehicleClasses = ["B", "C", "C1", "D1", "D2", "D", "BE", "C1E", "D1E", "D2E", "DE"];
 
   useEffect(() => {
     loadUserData();

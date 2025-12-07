@@ -28,7 +28,11 @@ import { AppColors } from "@/constants/Colors";
 import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { StatisticTimeType } from "@/models/enum/StatisticTimeType.enum";
-import { IInstructorStatistic, IStatisticsInstructor } from "@/models/instructor/instructor.type";
+import {
+  IInstructorStatistic,
+  IStatisticsInstructor,
+} from "@/models/instructor/instructor.type";
+import HeaderList from "@/components/Commons/HeaderList";
 
 const { width: screenWidth } = Dimensions.get("window");
 const CURRENT_YEAR = new Date().getFullYear();
@@ -279,7 +283,10 @@ const students = [
 ];
 
 export default function OverviewScreen() {
-  const [walletState, walletViewModel] = useViewModel(WalletViewModel, (state) => state.wallet);
+  const [walletState, walletViewModel] = useViewModel(
+    WalletViewModel,
+    (state) => state.wallet
+  );
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"year" | "month" | "week">("year");
@@ -287,8 +294,11 @@ export default function OverviewScreen() {
   const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [statisticsData, setStatisticsData] = useState<IInstructorStatistic | null>(null);
-  const [revenueData, setRevenueData] = useState<IStatisticsInstructor | null>(null);
+  const [statisticsData, setStatisticsData] =
+    useState<IInstructorStatistic | null>(null);
+  const [revenueData, setRevenueData] = useState<IStatisticsInstructor | null>(
+    null
+  );
 
   // Map viewMode to StatisticTimeType
   const getStatisticTimeType = (): StatisticTimeType => {
@@ -345,11 +355,16 @@ export default function OverviewScreen() {
   const totalPackages = statisticsData?.totalPackageCount ?? 0;
   const totalSessions = useMemo(() => {
     if (!statisticsData?.totalSessionByStatusCount) return 0;
-    return Object.values(statisticsData.totalSessionByStatusCount).reduce((sum, count) => sum + count, 0);
+    return Object.values(statisticsData.totalSessionByStatusCount).reduce(
+      (sum, count) => sum + count,
+      0
+    );
   }, [statisticsData]);
 
-  const totalCancelled = statisticsData?.totalSessionByStatusCount?.Cancelled ?? 0;
-  const totalRescheduled = statisticsData?.totalSessionByStatusCount?.Reschedule ?? 0;
+  const totalCancelled =
+    statisticsData?.totalSessionByStatusCount?.Cancelled ?? 0;
+  const totalRescheduled =
+    statisticsData?.totalSessionByStatusCount?.Reschedule ?? 0;
 
   const grossRevenue = revenueData?.totalRevenue ?? 0;
   const commission = revenueData?.totalDeduction ?? 0;
@@ -358,7 +373,10 @@ export default function OverviewScreen() {
 
   // Transform API data for charts
   const pieData = useMemo(() => {
-    if (!statisticsData?.topPersonalPackages || statisticsData.topPersonalPackages.length === 0) {
+    if (
+      !statisticsData?.topPersonalPackages ||
+      statisticsData.topPersonalPackages.length === 0
+    ) {
       return [];
     }
     return statisticsData.topPersonalPackages.map((pkg, idx) => ({
@@ -373,9 +391,17 @@ export default function OverviewScreen() {
   // Transform session data for bar chart based on viewMode
   const activeSessions = useMemo(() => {
     // Handle both totalSessionByDay and totalSessionByday (backend typo)
-    const dayData = (statisticsData as any)?.totalSessionByDay || (statisticsData as any)?.totalSessionByday || {};
+    const dayData =
+      (statisticsData as any)?.totalSessionByDay ||
+      (statisticsData as any)?.totalSessionByday ||
+      {};
 
-    const sessions: Array<{ period: string; completed: number; cancelled: number; rescheduled: number }> = [];
+    const sessions: Array<{
+      period: string;
+      completed: number;
+      cancelled: number;
+      rescheduled: number;
+    }> = [];
 
     if (viewMode === "year") {
       // Hiển thị 12 tháng trong năm
@@ -416,7 +442,8 @@ export default function OverviewScreen() {
       const today = new Date(selectedYear, selectedMonth - 1, 1); // First day of selected month
       const firstMonday = new Date(today);
       const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ...
-      const daysToMonday = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : 8 - dayOfWeek);
+      const daysToMonday =
+        dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : 8 - dayOfWeek;
       firstMonday.setDate(today.getDate() + daysToMonday);
 
       // Tính tuần dựa trên selectedWeek (tuần 1, 2, 3, 4)
@@ -535,7 +562,11 @@ export default function OverviewScreen() {
   // Calculate max value for y-axis scaling
   const maxValue = useMemo(() => {
     if (!activeSessions || activeSessions.length === 0) return 1;
-    const allValues = activeSessions.flatMap(s => [s.completed, s.cancelled, s.rescheduled]);
+    const allValues = activeSessions.flatMap((s) => [
+      s.completed,
+      s.cancelled,
+      s.rescheduled,
+    ]);
     const max = Math.max(...allValues, 1);
     // Round up to nearest integer, but if max is 1, keep it at 1
     return max <= 1 ? 1 : Math.ceil(max);
@@ -571,9 +602,16 @@ export default function OverviewScreen() {
 
   if (isLoading && !statisticsData && !revenueData) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
         <ActivityIndicator size="large" color={AppColors.primary} />
-        <Text style={{ marginTop: 16, color: AppColors.gray600 }}>Đang tải dữ liệu...</Text>
+        <Text style={{ marginTop: 16, color: AppColors.gray600 }}>
+          Đang tải dữ liệu...
+        </Text>
       </View>
     );
   }
@@ -584,26 +622,10 @@ export default function OverviewScreen() {
       contentContainerStyle={styles.contentContainer}
     >
       {/* Modern Header with Gradient */}
-      <LinearGradient
-        colors={[
-          AppColors.primary,
-          AppColors.gradientStart,
-          AppColors.gradientEnd,
-        ]}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Tổng Quan Hoạt Động</Text>
-            <Text style={styles.headerSubtitle}>
-              Quản lý doanh thu, khách hàng và gói dịch vụ của bạn
-            </Text>
-          </View>
-        </View>
-        <View style={styles.headerCurve} />
-      </LinearGradient>
+      <HeaderList
+        title="Tổng Quan Hoạt Động"
+        description="Quản lý doanh thu, khách hàng và gói dịch vụ của bạn"
+      />
 
       <View style={styles.filterWrapper}>
         <View style={styles.filterSummaryRow}>
@@ -684,8 +706,16 @@ export default function OverviewScreen() {
                 absolute
               />
             ) : (
-              <View style={{ height: 220, justifyContent: "center", alignItems: "center" }}>
-                <Text style={{ color: AppColors.gray500 }}>Chưa có dữ liệu</Text>
+              <View
+                style={{
+                  height: 220,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: AppColors.gray500 }}>
+                  Chưa có dữ liệu
+                </Text>
               </View>
             )}
           </View>
@@ -729,9 +759,7 @@ export default function OverviewScreen() {
         <View style={[styles.chartCard, styles.barChartCard]}>
           <View style={styles.chartHeader}>
             <TrendingUp size={20} color={AppColors.primary} />
-            <Text style={styles.chartTitle}>
-              {getChartTitle()}
-            </Text>
+            <Text style={styles.chartTitle}>{getChartTitle()}</Text>
           </View>
           <View style={styles.barChartContainer}>
             {activeSessions.length > 0 && barData.labels.length > 0 ? (
@@ -756,8 +784,16 @@ export default function OverviewScreen() {
                 />
               </ScrollView>
             ) : (
-              <View style={{ height: 220, justifyContent: "center", alignItems: "center" }}>
-                <Text style={{ color: AppColors.gray500 }}>Chưa có dữ liệu</Text>
+              <View
+                style={{
+                  height: 220,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: AppColors.gray500 }}>
+                  Chưa có dữ liệu
+                </Text>
               </View>
             )}
           </View>
@@ -852,7 +888,6 @@ export default function OverviewScreen() {
           </View>
         </LinearGradient>
       </View>
-
 
       <Modal
         visible={isFilterOpen}

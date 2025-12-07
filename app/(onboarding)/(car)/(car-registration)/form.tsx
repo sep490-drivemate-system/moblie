@@ -1,4 +1,5 @@
 import CustomAlert from "@/components/CustomAlert";
+import { AppColors } from "@/constants/Colors";
 import { RootState } from "@/lib/redux/store";
 import { AddCarViewModel } from "@/viewmodels/car/AddCarViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
@@ -85,7 +86,20 @@ export default function FormScreen() {
     "Pickup",
     "Khác",
   ];
-  const licenseTiers = ["B", "C1", "C", "D1", "D2", "D", "BE", "C1E", "CE", "D1E", "D2E", "DE"];
+  const licenseTiers = [
+    "B",
+    "C1",
+    "C",
+    "D1",
+    "D2",
+    "D",
+    "BE",
+    "C1E",
+    "CE",
+    "D1E",
+    "D2E",
+    "DE",
+  ];
 
   // Sync form data to Redux (similar to syncFormDataToViewModel in id-card form)
   const syncFormDataToRedux = React.useCallback(
@@ -979,9 +993,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "70%",
+    width: "20%",
     height: "100%",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 2,
   },
   headerButtons: {
@@ -1042,7 +1056,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   required: {
-    color: "#FF0000",
+    color: AppColors.red,
   },
   imageUploadArea: {
     position: "relative",
@@ -1197,16 +1211,16 @@ const styles = StyleSheet.create({
   },
   backButton: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: AppColors.white,
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -1214,12 +1228,12 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#70E000",
+    color: AppColors.primary,
   },
   nextButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: AppColors.white,
   },
   nextButtonDisabled: {
     opacity: 0.6,

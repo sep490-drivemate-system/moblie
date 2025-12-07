@@ -186,6 +186,7 @@ export default function AvatarScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}></View>

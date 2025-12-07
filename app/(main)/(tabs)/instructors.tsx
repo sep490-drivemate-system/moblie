@@ -160,11 +160,7 @@ function InstructorsScreen() {
 
 
   const renderInstructorCard = ({ item }: { item: IInstructors }) => (
-    <TouchableOpacity
-      style={styles.instructorCard}
-      onPress={() => instructorViewModel.handleInstructorPress(item)}
-      activeOpacity={0.7}
-    >
+    <View style={styles.instructorCard}>
       <View style={styles.cardContent}>
         <Image source={{ uri: item.avatar }} style={styles.avatar} />
 
@@ -186,7 +182,6 @@ function InstructorsScreen() {
               pathname: ROUTES.INSTRUCTOR_DETAIL,
               params: {
                 instructorId: item.id,
-                instructorData: JSON.stringify(item)
               },
             })}
           >
@@ -194,7 +189,7 @@ function InstructorsScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   const renderLoadingFooter = () => {

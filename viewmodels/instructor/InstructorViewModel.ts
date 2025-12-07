@@ -1,6 +1,9 @@
 import { BaseViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { RootState } from "@/lib/redux/store";
-import { getListInstructors } from "@/features/instructor/instructorThunk";
+import {
+  getInstructorById,
+  getListInstructors,
+} from "@/features/instructor/instructorThunk";
 import {
   setAllInstructors,
   setFilteredInstructors,
@@ -18,15 +21,20 @@ import {
   setSuccess,
   clearError,
 } from "@/features/instructor/instructorSlice";
-import { IInstructors, GetInstructorsParams } from "@/models/instructor/instructor.type";
-import { FilterState, SortType } from "@/models/instructor/instructor-filter.type";
+import {
+  IInstructors,
+  GetInstructorsParams,
+} from "@/models/instructor/instructor.type";
+import {
+  FilterState,
+  SortType,
+} from "@/models/instructor/instructor-filter.type";
 import { ROUTES } from "@/constants/routes";
 import { useRouter } from "expo-router";
 
 type InstructorState = RootState["instructor"];
 
 export class InstructorViewModel extends BaseViewModel<InstructorState> {
-
   // Fetch instructors from API với pagination và search
   async fetchInstructors(params?: GetInstructorsParams): Promise<void> {
     await this.executeAsync(
@@ -40,7 +48,9 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
           pageSize: params?.pageSize ?? currentState.pagination.itemsPerPage,
         };
 
-        const result = await this.dispatch(getListInstructors(requestParams)).unwrap();
+        const result = await this.dispatch(
+          getListInstructors(requestParams)
+        ).unwrap();
 
         // Extract data từ GenericResponse
         const paginatedData = (result as any).value || result;
@@ -51,17 +61,19 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
         this.dispatch(setDisplayedInstructors(paginatedData.pageContent));
 
         // Update pagination info
-        this.dispatch(setPagination({
-          currentPage: paginatedData.currentPage,
-          itemsPerPage: paginatedData.pageSize,
-          totalItems: paginatedData.totalCount,
-        }));
+        this.dispatch(
+          setPagination({
+            currentPage: paginatedData.currentPage,
+            itemsPerPage: paginatedData.pageSize,
+            totalItems: paginatedData.totalCount,
+          })
+        );
       },
       () => {
-        console.log('Instructors loaded successfully');
+        console.log("Instructors loaded successfully");
       },
       (error) => {
-        console.error('Failed to load instructors:', error);
+        console.error("Failed to load instructors:", error);
       },
       {
         setLoading,
@@ -73,13 +85,13 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
 
   handleInstructorPress = (instructor: IInstructors) => {
     useRouter().push({
-      pathname: ROUTES.NO_TABS + ROUTES.INSTRUCTOR_DETAIL as any,
+      pathname: (ROUTES.NO_TABS + ROUTES.INSTRUCTOR_DETAIL) as any,
       params: {
         instructorId: instructor.id,
         instructorData: JSON.stringify(instructor),
       },
     });
-  }
+  };
   async loadPage(pageNumber: number): Promise<void> {
     await this.fetchInstructors({ pageNumber });
   }
@@ -103,7 +115,9 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
           pageSize: currentState.pagination.itemsPerPage,
         };
 
-        const result = await this.dispatch(getListInstructors(requestParams)).unwrap();
+        const result = await this.dispatch(
+          getListInstructors(requestParams)
+        ).unwrap();
         const paginatedData = (result as any).value || result;
 
         // APPEND data thay vì replace
@@ -117,17 +131,19 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
         this.dispatch(setDisplayedInstructors(updatedInstructors));
 
         // Update pagination info
-        this.dispatch(setPagination({
-          currentPage: paginatedData.currentPage,
-          itemsPerPage: paginatedData.pageSize,
-          totalItems: paginatedData.totalCount,
-        }));
+        this.dispatch(
+          setPagination({
+            currentPage: paginatedData.currentPage,
+            itemsPerPage: paginatedData.pageSize,
+            totalItems: paginatedData.totalCount,
+          })
+        );
       },
       () => {
-        console.log('More instructors loaded');
+        console.log("More instructors loaded");
       },
       (error) => {
-        console.error('Failed to load more instructors:', error);
+        console.error("Failed to load more instructors:", error);
       },
       {
         setLoading,
@@ -177,7 +193,7 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
     // Giữ lại search query hiện tại, reset về page 1
     await this.fetchInstructors({
       searchKey: currentState.searchQuery,
-      pageNumber: 1
+      pageNumber: 1,
     });
     this.dispatch(setIsRefreshing(false));
   }
@@ -185,5 +201,25 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
   // Clear error
   clearErrorMessage(): void {
     this.dispatch(clearError());
+  }
+
+  async fetchInstructorById(id: string): Promise<IInstructors | null> {
+    return await this.executeAsync(
+      async (): Promise<IInstructors> => {
+        const result = await this.dispatch(getInstructorById({ id })).unwrap();
+        return result.value as IInstructors;
+      },
+      () => {
+        console.log("Instructor loaded successfully");
+      },
+      (error) => {
+        console.error("Failed to load instructor:", error);
+      },
+      {
+        setLoading,
+        setError,
+        setSuccess,
+      }
+    );
   }
 }

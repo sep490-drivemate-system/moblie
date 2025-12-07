@@ -1,30 +1,27 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-  Image,
-  TextInput,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  ArrowLeft,
-  MoreVertical,
-  Edit2Icon,
-  Trash2,
-  ChevronDown,
-} from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
-import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { RootState } from "@/lib/redux/store";
-import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { convertImageFile, uploadImageDLC } from "@/utils/utils";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useRouter } from "expo-router";
+import {
+  ChevronDown,
+  Edit2Icon,
+  Trash2
+} from "lucide-react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function FormScreen() {
   const [authState, authViewModel] = useViewModel(
@@ -32,6 +29,7 @@ export default function FormScreen() {
     (state: RootState) => state.auth
   );
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [tempFrontImageUri, setTempFrontImageUri] = useState<string | null>(
     null
   );
@@ -55,7 +53,7 @@ export default function FormScreen() {
   const lastProcessedFrontImageRef = useRef<string | null>(null);
 
   // License class options
-  const licenseClasses = ["B", "C", "C1", "C2", "D", "E", "F"];
+  const licenseClasses = ["B", "C", "C1", "D1", "D2", "D", "BE", "C1E", "D1E", "D2E", "DE"];
 
   const loadUserData = useCallback(async () => {
     try {
@@ -170,18 +168,6 @@ export default function FormScreen() {
   const handleLicenseClassSelect = (licenseClass: string) => {
     setLicenseClass(licenseClass);
     setShowLicenseClassDropdown(false);
-  };
-
-  // Check if all fields are filled
-  const isFormComplete = () => {
-    return tempFrontImageUri && tempBackImageUri;
-  };
-
-  // BYPASS: Temporary function to skip license validation
-  const handleNextBypass = () => {
-    router.push(
-      "/(onboarding)/(personal-identification)/(professional-license)/form"
-    );
   };
 
   const handleNext = () => {
@@ -299,11 +285,12 @@ export default function FormScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
       >
         <View style={styles.content}>
           {/* Header */}
@@ -462,7 +449,20 @@ export default function FormScreen() {
                 />
               </TouchableOpacity>
               {showLicenseClassDropdown && (
-                <View style={styles.dropdownList}>
+                <ScrollView
+                  style={[
+                    styles.dropdownList,
+                    { 
+                      marginBottom: insets.bottom,
+                      maxHeight: 200 - insets.bottom
+                    }
+                  ]}
+                  contentContainerStyle={{
+                    paddingBottom: Math.max(insets.bottom, 8)
+                  }}
+                  nestedScrollEnabled={true}
+                  showsVerticalScrollIndicator={true}
+                >
                   {licenseClasses.map((licenseClass) => (
                     <TouchableOpacity
                       key={licenseClass}
@@ -480,7 +480,7 @@ export default function FormScreen() {
                       </Text>
                     </TouchableOpacity>
                   ))}
-                </View>
+                </ScrollView>
               )}
             </View>
           </View>
@@ -504,7 +504,7 @@ export default function FormScreen() {
         message={alertConfig.message}
         buttons={alertConfig.buttons}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -512,6 +512,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+    paddingTop: StatusBar.currentHeight,
   },
   scrollView: {
     flex: 1,
@@ -803,6 +804,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    maxHeight: 200,
   },
   dropdownItem: {
     paddingHorizontal: 16,

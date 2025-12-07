@@ -19,6 +19,7 @@ import {
   Trash2,
 } from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
+import { AppColors } from "@/constants/Colors";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { AddCarViewModel } from "@/viewmodels/car/AddCarViewModel";
 import { RootState } from "@/lib/redux/store";
@@ -68,11 +69,17 @@ export default function FormScreen() {
       );
       if (tempFrontImage) {
         setTempFrontImageUri(tempFrontImage);
-        viewModel.updateCarRegistrationFormField("RegistrationFront", convertImageFile(tempFrontImage));
+        viewModel.updateCarRegistrationFormField(
+          "RegistrationFront",
+          convertImageFile(tempFrontImage)
+        );
       }
       if (tempBackImage) {
         setTempBackImageUri(tempBackImage);
-        viewModel.updateCarRegistrationFormField("RegistrationBack", convertImageFile(tempBackImage));
+        viewModel.updateCarRegistrationFormField(
+          "RegistrationBack",
+          convertImageFile(tempBackImage)
+        );
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -405,9 +412,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "84%",
+    width: "60%",
     height: "100%",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 2,
   },
   headerButtons: {
@@ -452,7 +459,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 25,
     fontWeight: "bold",
-    color: "#000",
+    color: AppColors.black,
   },
   imageSection: {
     paddingHorizontal: 20,
@@ -464,16 +471,16 @@ const styles = StyleSheet.create({
   imageLabel: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#000",
+    color: AppColors.black,
     marginBottom: 10,
   },
   required: {
-    color: "#FF0000",
+    color: AppColors.red,
   },
   imageUploadArea: {
     position: "relative",
     borderWidth: 2,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderStyle: "dashed",
     borderRadius: 8,
     height: 150,
@@ -520,7 +527,7 @@ const styles = StyleSheet.create({
   },
   uploadText: {
     fontSize: 16,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
   },
   editButton: {
@@ -530,10 +537,10 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: AppColors.white,
     justifyContent: "center",
     alignItems: "center",
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderWidth: 1,
   },
   formContainer: {
@@ -571,14 +578,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -586,11 +593,11 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#70E000",
+    color: AppColors.primary,
   },
   nextButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: AppColors.white,
   },
 });

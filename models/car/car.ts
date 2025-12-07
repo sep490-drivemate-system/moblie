@@ -72,8 +72,28 @@ export interface ICar {
   modelName: string;
   license_plate: string;
   seatCounts: number;
-  unitPrice: number;
+  price: number;
   status: CarStatus;
   thumbnailUrl: string;
   fuel: string;
+  vehicleType: string;
+  licenseTier: LicenseTier;
+  manufacturerId: string;
+  booking_count: number;
+  average_rating: number;
+}
+
+export interface PaginatedCarsResponse {
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  pageContent: ICar[];
+}
+
+export interface GetCarsParams {
+  page?: number;
+  size?: number;
+  seats?: number;
+  brand?: string;
+  fuel?: string;
 }

@@ -3,6 +3,7 @@ import { ROUTES } from "@/constants/routes";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useFocusEffect, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import HeaderList from "@/components/Commons/HeaderList";
 import {
   Calendar,
   Car,
@@ -593,7 +594,7 @@ export default function ScheduleScreen() {
     router.push(ROUTES.SCHEDULE_DETAIL);
   };
 
-  const fetchSchedule =  async () => {
+  const fetchSchedule = async () => {
     const userId = await getUserIdFromToken();
     const res = await dispatch(
       getInstructorSchedule({ instructorId: userId })
@@ -627,40 +628,23 @@ export default function ScheduleScreen() {
     fetchSchedule();
   }, []);
 
-  useFocusEffect(useCallback(() => {
-    fetchSchedule();
-  }, []));
+  useFocusEffect(
+    useCallback(() => {
+      fetchSchedule();
+    }, [])
+  );
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[
-        styles.contentContainer,
-        { paddingBottom: tabBarHeight + 32 },
-      ]}
+      contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
       <StatusBar barStyle="light-content" />
-      <LinearGradient
-        colors={[
-          AppColors.primary,
-          AppColors.gradientStart,
-          AppColors.gradientEnd,
-        ]}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerTextGroup}>
-            <Text style={styles.headerTitle}>Lịch Làm Việc</Text>
-            <Text style={styles.headerSubtitle}>
-              Quản lý lịch trình công việc của bạn
-            </Text>
-          </View>
-        </View>
-        <View style={styles.headerCurve} />
-      </LinearGradient>
+      <HeaderList
+        title="Lịch Huấn Luyện"
+        description="Quản lý lịch trình huấn luyện của bạn"
+      />
 
       <View style={styles.contentWrapper}>
         <UpdateScheduleButton
@@ -754,7 +738,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: "#16A34A",
+    backgroundColor: AppColors.primary,
     shadowColor: "#16A34A",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
@@ -842,9 +826,9 @@ const styles = StyleSheet.create({
     borderColor: "#BBF7D0",
   },
   calendarDayButtonSelected: {
-    backgroundColor: "#16A34A",
-    borderColor: "#16A34A",
-    shadowColor: "#16A34A",
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
+    shadowColor: AppColors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -895,7 +879,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#22C55E",
+    backgroundColor: AppColors.primary,
   },
   legendText: {
     fontSize: 13,

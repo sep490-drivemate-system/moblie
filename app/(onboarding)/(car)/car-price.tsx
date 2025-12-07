@@ -15,6 +15,7 @@ import CustomAlert from "@/components/CustomAlert";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { AddCarViewModel } from "@/viewmodels/car/AddCarViewModel";
 import { RootState } from "@/lib/redux/store";
+import { AppColors } from "@/constants/Colors";
 import { useSelector } from "react-redux";
 import { updateCarRegistrationForm } from "@/features/car/carSlice";
 
@@ -88,12 +89,16 @@ export default function CarPriceScreen() {
 
     const priceNum = parseFloat(normalized);
     if (isNaN(priceNum) || priceNum <= 0) {
-      showCustomAlert("Lỗi", "Số tiền không hợp lệ. Vui lòng nhập số tiền lớn hơn 0", [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+      showCustomAlert(
+        "Lỗi",
+        "Số tiền không hợp lệ. Vui lòng nhập số tiền lớn hơn 0",
+        [
+          {
+            text: "OK",
+            onPress: () => setShowAlert(false),
+          },
+        ]
+      );
       return;
     }
 
@@ -115,11 +120,14 @@ export default function CarPriceScreen() {
     // Keep only digits
     const onlyDigits = value.replace(/\D/g, "");
     setPrice(onlyDigits);
-    
+
     // Save to ViewModel and Redux as user types
     if (onlyDigits) {
       try {
-        viewModel.updateCarRegistrationFormField("HourlyPrice", parseFloat(onlyDigits) || 0);
+        viewModel.updateCarRegistrationFormField(
+          "HourlyPrice",
+          parseFloat(onlyDigits) || 0
+        );
       } catch (error) {
         console.error("Error saving price:", error);
       }
@@ -157,7 +165,7 @@ export default function CarPriceScreen() {
           <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                Số tiền mong muốn cho thuê (VNĐ){" "}
+                Số tiền mong muốn cho thuê / giờ (VNĐ){" "}
                 <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
@@ -225,9 +233,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "60%",
+    width: "80%",
     height: "100%",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 2,
   },
   background_1: {
@@ -259,7 +267,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   required: {
-    color: "#FF0000",
+    color: AppColors.red,
   },
   input: {
     backgroundColor: "#F5F5F5",
@@ -280,16 +288,16 @@ const styles = StyleSheet.create({
   },
   backButton: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: AppColors.white,
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -297,11 +305,11 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#70E000",
+    color: AppColors.primary,
   },
   nextButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: AppColors.white,
   },
 });

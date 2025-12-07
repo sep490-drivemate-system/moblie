@@ -9,17 +9,83 @@ import {
   Image,
   TextInput,
   Alert,
+  Dimensions,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Plus, MapPin, X, Trash2, Eye } from "lucide-react-native";
+import {
+  Plus,
+  MapPin,
+  X,
+  Trash2,
+  Eye,
+  Car,
+  CheckCircle,
+  Clock,
+  DollarSign,
+} from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { AppColors } from "@/constants/Colors";
+import HeaderList from "@/components/Commons/HeaderList";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { InstructorListCarViewModel } from "@/viewmodels/car/InstructorListCarViewModel";
 import { RootState } from "@/lib/redux/store";
 import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
 import { ICar } from "@/models/car/car";
 import { CarStatus } from "@/constants/enums";
+
+const { width: screenWidth } = Dimensions.get("window");
+
+interface CardOverviewProps {
+  title: string;
+  value: string;
+  sub?: string;
+  icon: React.ReactNode;
+  color: string[];
+  delay?: number;
+  fullWidth?: boolean;
+}
+
+const CardOverview: React.FC<CardOverviewProps> = ({
+  title,
+  value,
+  sub,
+  icon,
+  color,
+  delay = 0,
+  fullWidth = false,
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  return (
+    <LinearGradient
+      colors={color as [string, string]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[
+        styles.cardOverview,
+        fullWidth && styles.cardOverviewFullWidth,
+        {
+          opacity: isVisible ? 1 : 0,
+          transform: [{ translateY: isVisible ? 0 : 32 }],
+        },
+      ]}
+    >
+      <View style={styles.cardOverviewContent}>
+        <View style={styles.cardOverviewTextContainer}>
+          <Text style={styles.cardOverviewTitle}>{title}</Text>
+          <Text style={styles.cardOverviewValue}>{value}</Text>
+          {sub && <Text style={styles.cardOverviewSub}>{sub}</Text>}
+        </View>
+        <View style={styles.cardOverviewIconContainer}>{icon}</View>
+      </View>
+    </LinearGradient>
+  );
+};
 
 interface Vehicle {
   id: number;
@@ -84,7 +150,7 @@ const VehicleCard: React.FC<VehicleCardProps> = ({
         <View style={styles.vehicleDetails}>
           <Text style={styles.vehicleDetailText}>{vehicle.seatCounts} chỗ</Text>
           <Text style={styles.vehiclePrice}>
-            {vehicle.unitPrice.toLocaleString("vi-VN")} VNĐ
+            {vehicle.price.toLocaleString("vi-VN")} VNĐ
           </Text>
         </View>
       </View>
@@ -138,18 +204,10 @@ const VehicleModal: React.FC<VehicleModalProps> = ({
               <Text style={styles.modalLabel}>Biển số xe</Text>
               <Text style={styles.modalValue}>{vehicle.license_plate}</Text>
             </View>
-            {/* <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>Năm sản xuất</Text>
-              <Text style={styles.modalValue}>{vehicle.year}</Text>
-            </View> */}
             <View style={styles.modalSection}>
               <Text style={styles.modalLabel}>Nhiên liệu</Text>
               <Text style={styles.modalValue}>{vehicle.fuel}</Text>
             </View>
-            {/* <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>Hộp số</Text>
-              <Text style={styles.modalValue}>{vehicle.transmission}</Text>
-            </View> */}
             <View style={styles.modalSection}>
               <Text style={styles.modalLabel}>Số chỗ ngồi</Text>
               <Text style={styles.modalValue}>{vehicle.seatCounts}</Text>
@@ -157,7 +215,7 @@ const VehicleModal: React.FC<VehicleModalProps> = ({
             <View style={styles.modalSection}>
               <Text style={styles.modalLabel}>Giá</Text>
               <Text style={styles.modalValue}>
-                {vehicle.unitPrice.toLocaleString("vi-VN")} VNĐ
+                {vehicle.price.toLocaleString("vi-VN")} VNĐ
               </Text>
             </View>
             <View style={styles.modalSection}>
@@ -225,8 +283,8 @@ export default function MyCarScreen() {
   const averagePrice =
     cars.length > 0
       ? Math.round(
-        cars.reduce((s, v) => s + v.unitPrice, 0) / cars.length / 1000
-      )
+          cars.reduce((s, v) => s + v.price, 0) / cars.length / 1000
+        )
       : 0;
 
   const getIntructorListCar = useCallback(async () => {
@@ -253,101 +311,91 @@ export default function MyCarScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient
-          colors={[
-            AppColors.primary,
-            AppColors.gradientStart,
-            AppColors.gradientEnd,
-          ]}
-          style={styles.header}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.headerContent}>
-            <View style={styles.headerText}>
-              <Text style={styles.headerTitle}>Quản Lý Xe Học Lái</Text>
-              <Text style={styles.headerSubtitle}>
-                Quản lý danh sách xe và theo dõi tình trạng kiểm duyệt
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() =>
-                router.push("/(onboarding)/(car)/(car-registration)/form")
-              }
-            >
-              <Plus size={20} color="#ffffff" />
-              <Text style={styles.addButtonText}>Thêm Xe Mới</Text>
-            </TouchableOpacity>
-          </View>
+        <HeaderList
+          title="Quản Lý Xe Học Lái"
+          description="Quản lý danh sách xe và theo dõi tình trạng kiểm duyệt"
+        />
 
-          {/* Stats Cards */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Tổng Xe</Text>
-              <Text style={styles.statValue}>{cars.length}</Text>
-            </View>
-            <View style={[styles.statCard, styles.statCardApproved]}>
-              <Text style={[styles.statLabel, styles.statLabelApproved]}>
-                Đã Duyệt
-              </Text>
-              <Text style={[styles.statValue, styles.statValueApproved]}>
-                {approvedCount}
-              </Text>
-            </View>
-            <View style={[styles.statCard, styles.statCardPending]}>
-              <Text style={[styles.statLabel, styles.statLabelPending]}>
-                Chờ Duyệt
-              </Text>
-              <Text style={[styles.statValue, styles.statValuePending]}>
-                {pendingCount}
-              </Text>
-            </View>
-            <View style={[styles.statCard, styles.statCardPrice]}>
-              <Text style={[styles.statLabel, styles.statLabelPrice]}>
-                Giá Trung Bình
-              </Text>
-              <Text style={[styles.statValue, styles.statValuePrice]}>
-                {averagePrice?.toLocaleString("vi-VN")}K VNĐ
-              </Text>
-            </View>
-          </View>
-        </LinearGradient>
+        {/* Stats Cards */}
+        <View style={styles.statsContainer}>
+          <CardOverview
+            title="Tổng Xe"
+            value={`${cars.length}`}
+            sub="Xe trong hệ thống"
+            icon={<Car size={24} color={AppColors.textWhite} />}
+            color={[
+              AppColors.primary,
+              AppColors.primaryDark || AppColors.primary,
+            ]}
+            delay={0}
+            fullWidth
+          />
+          <CardOverview
+            title="Đã Duyệt"
+            value={`${approvedCount}`}
+            sub="Xe đã được phê duyệt"
+            icon={<CheckCircle size={24} color={AppColors.textWhite} />}
+            color={[AppColors.success, AppColors.success]}
+            delay={100}
+            fullWidth
+          />
+          <CardOverview
+            title="Chờ Duyệt"
+            value={`${pendingCount}`}
+            sub="Xe đang chờ xử lý"
+            icon={<Clock size={24} color={AppColors.textWhite} />}
+            color={[AppColors.yellow, AppColors.yellow]}
+            delay={200}
+            fullWidth
+          />
+          <CardOverview
+            title="Giá Trung Bình"
+            value={`${averagePrice?.toLocaleString("vi-VN")}K VNĐ`}
+            sub="Giá trung bình mỗi xe"
+            icon={<DollarSign size={24} color={AppColors.textWhite} />}
+            color={[AppColors.blue, AppColors.blue]}
+            delay={300}
+            fullWidth
+          />
+        </View>
 
-        {cars.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <MapPin size={32} color={AppColors.gray500} />
+        {/* Vehicles List */}
+        <View style={styles.listContainer}>
+          {cars.length === 0 ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <MapPin size={32} color={AppColors.gray500} />
+              </View>
+              <Text style={styles.emptyTitle}>Chưa có xe nào</Text>
+              <Text style={styles.emptySubtitle}>
+                Thêm xe của bạn để bắt đầu quản lý
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyButton}
+                onPress={() =>
+                  router.push("/(onboarding)/(car)/(car-registration)/form")
+                }
+              >
+                <Plus size={20} color="#ffffff" />
+                <Text style={styles.emptyButtonText}>Thêm Xe Đầu Tiên</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.emptyTitle}>Chưa có xe nào</Text>
-            <Text style={styles.emptySubtitle}>
-              Thêm xe của bạn để bắt đầu quản lý
-            </Text>
-            <TouchableOpacity
-              style={styles.emptyButton}
-              onPress={() =>
-                router.push("/(onboarding)/(car)/(car-registration)/form")
-              }
-            >
-              <Plus size={20} color="#ffffff" />
-              <Text style={styles.emptyButtonText}>Thêm Xe Đầu Tiên</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.vehiclesGrid}>
-            {cars.map((vehicle) => (
-              <VehicleCard
-                key={vehicle.id}
-                vehicle={vehicle}
-                onDetail={() => {
-                  setSelectedVehicle(vehicle);
-                  setShowModal(true);
-                }}
-                onDelete={() => handleDelete(vehicle.id)}
-              />
-            ))}
-          </View>
-        )}
+          ) : (
+            <View style={styles.vehiclesGrid}>
+              {cars.map((vehicle) => (
+                <VehicleCard
+                  key={vehicle.id}
+                  vehicle={vehicle}
+                  onDetail={() => {
+                    setSelectedVehicle(vehicle);
+                    setShowModal(true);
+                  }}
+                  onDelete={() => handleDelete(vehicle.id)}
+                />
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       {/* Modals */}
@@ -367,29 +415,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
-  },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 24,
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  headerContent: {
-    marginBottom: 20,
-  },
-  headerText: {
-    marginBottom: 16,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#ffffff",
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.9)",
   },
   addButton: {
     flexDirection: "row",
@@ -411,70 +436,68 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   statsContainer: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+    backgroundColor: "#ffffff",
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 16,
   },
-  statCard: {
-    flex: 1,
-    minWidth: "45%",
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
+  listContainer: {
+    marginHorizontal: 16,
+    marginBottom: 16,
     padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
+    borderColor: AppColors.border,
+    backgroundColor: "#ffffff",
+  },
+  cardOverview: {
+    width: (screenWidth - 64) / 2,
+    borderRadius: 16,
+    padding: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     elevation: 8,
   },
-  statCardApproved: {
-    backgroundColor: "#ffffff",
-    borderColor: AppColors.success,
-    borderWidth: 2,
+  cardOverviewFullWidth: {
+    width: "100%",
   },
-  statCardPending: {
-    backgroundColor: "#ffffff",
-    borderColor: AppColors.yellow,
-    borderWidth: 2,
+  cardOverviewContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
-  statCardPrice: {
-    backgroundColor: "#ffffff",
-    borderColor: AppColors.blue,
-    borderWidth: 2,
+  cardOverviewTextContainer: {
+    flex: 1,
   },
-  statLabel: {
-    fontSize: 12,
-    color: AppColors.gray600,
-    marginBottom: 4,
+  cardOverviewTitle: {
+    fontSize: 14,
     fontWeight: "500",
+    color: "rgba(255, 255, 255, 0.8)",
+    marginBottom: 8,
   },
-  statLabelApproved: {
-    color: AppColors.success,
-    fontWeight: "600",
-  },
-  statLabelPending: {
-    color: AppColors.yellow,
-    fontWeight: "600",
-  },
-  statLabelPrice: {
-    color: AppColors.blue,
-    fontWeight: "600",
-  },
-  statValue: {
+  cardOverviewValue: {
     fontSize: 24,
     fontWeight: "bold",
-    color: AppColors.textPrimary,
+    color: AppColors.textWhite,
+    marginBottom: 4,
   },
-  statValueApproved: {
-    color: AppColors.success,
+  cardOverviewSub: {
+    fontSize: 12,
+    color: "rgba(255, 255, 255, 0.7)",
   },
-  statValuePending: {
-    color: AppColors.yellow,
-  },
-  statValuePrice: {
-    color: AppColors.blue,
+  cardOverviewIconContainer: {
+    padding: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 12,
   },
   scrollView: {
     flex: 1,
@@ -486,8 +509,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 16,
-    paddingHorizontal: 16,
-    paddingTop: 16,
   },
   vehicleCard: {
     width: "100%",
