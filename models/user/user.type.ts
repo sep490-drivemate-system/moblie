@@ -25,3 +25,14 @@ export interface NoviceDriverDetailDTO {
     drivingLicense: string;
     drivingLicenseExpirationDate: string;
 }
+
+export interface EditUserPayload {
+    id: string;
+    Email?: string;
+    PhoneNumber?: string;
+    Password?: string;
+    ProfileAvatar?: string;
+    Fullname?: string;
+    EmergencyContactName?: string;
+    EmergencyContactPhone?: string;
+}

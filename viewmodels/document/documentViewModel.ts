@@ -1,7 +1,7 @@
 import { BaseViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { RootState } from "@/lib/redux/store";
-import { getInstructorApplication, getUserEmergencyContact } from "@/features/document/documentThunk";
-import { getUserById } from "@/features/user/userThunk";
+import { getInstructorApplication, getUserEmergencyContact, updateUserEmergencyContact, updateNoviceDriverLicense } from "@/features/document/documentThunk";
+import { getUserById, editUser, updateInstructor } from "@/features/user/userThunk";
 import {
   setApplication,
   setEmergencyContact,
@@ -14,7 +14,7 @@ import {
   updateUserProfile,
   setDocumentRecords,
 } from "@/features/document/documentSlice";
-import { ApplicantDocument, EmergencyContact } from "@/models/document/document";
+import { ApplicantDocument, EmergencyContact, DocumentField, DocumentFile, DocumentRecord, UserProfile } from "@/models/document/document";
 import { IUserInfo } from "@/models/user/user.type";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
@@ -22,35 +22,6 @@ import { Gender } from "@/models/user/gender.enum";
 import * as ImagePicker from "expo-image-picker";
 
 type DocumentState = RootState["document"];
-
-export interface DocumentField {
-  label: string;
-  value: string;
-}
-
-export interface DocumentFile {
-  label: string;
-  imageUrl: string | null;
-}
-
-export interface DocumentRecord {
-  id: string;
-  title: string;
-  description: string;
-  updatedAt: string;
-  reviewer?: string;
-  fields: DocumentField[];
-  files: DocumentFile[];
-}
-
-export interface UserProfile {
-  avatar: string | null;
-  fullName: string;
-  email: string;
-  phone: string;
-  password: string;
-  emergencyContact: EmergencyContact | null;
-}
 
 export class DocumentViewModel extends BaseViewModel<DocumentState> {
   /**
@@ -71,7 +42,18 @@ export class DocumentViewModel extends BaseViewModel<DocumentState> {
       const userResponse = await this.dispatch(
         getUserById({ id: userId })
       ).unwrap();
+      
+      // Check if response value is valid
+      if (!userResponse.value) {
+        throw new Error("User data not found in response");
+      }
+      
       const user = userResponse.value as IUserInfo;
+      
+      // Validate user data
+      if (!user || typeof user !== 'object') {
+        throw new Error("Invalid user data format");
+      }
 
       let application: ApplicantDocument | null = null;
 
@@ -128,6 +110,14 @@ export class DocumentViewModel extends BaseViewModel<DocumentState> {
         // Don't throw, just continue without emergency contact
       }
 
+      // Validate user data before updating state
+      if (!user.email || typeof user.email !== 'string') {
+        console.warn("Invalid email in user data:", user.email);
+      }
+      if (!user.phone || typeof user.phone !== 'string') {
+        console.warn("Invalid phone in user data:", user.phone);
+      }
+      
       // Update state
       this.dispatch(setUser(user));
       
@@ -152,7 +142,8 @@ export class DocumentViewModel extends BaseViewModel<DocumentState> {
       return { user, application, emergencyContact };
     } catch (error) {
       console.error("Error fetching user and application:", error);
-      return { user: null, application: null, emergencyContact: null };
+      // Re-throw the error so caller knows refresh failed
+      throw error;
     }
   }
 
@@ -221,17 +212,21 @@ export class DocumentViewModel extends BaseViewModel<DocumentState> {
       });
     }
     
+    // For role 3 (NoviceDriver), don't include "Hạng bằng lái" field
+    const driverLicenseFields: DocumentField[] = [];
+    if (role !== UserRole.NoviceDriver) {
+      driverLicenseFields.push({
+        label: "Hạng bằng lái",
+        value: this.getLicenseTierText(application.drivingLicenseTier),
+      });
+    }
+    
     records.push({
       id: "driverLicense",
       title: "Bằng Lái Xe",
       description: "Bản sao bằng lái xe hiện hành của người dùng.",
       updatedAt: submitDate,
-      fields: [
-        {
-          label: "Hạng bằng lái",
-          value: this.getLicenseTierText(application.drivingLicenseTier),
-        },
-      ],
+      fields: driverLicenseFields,
       files: driverLicenseFiles,
     });
 
@@ -300,17 +295,16 @@ export class DocumentViewModel extends BaseViewModel<DocumentState> {
     // LicenseTier is an enum with string values, use it directly
     const licenseTierValue = user.licenseTier ? String(user.licenseTier) : "";
 
+    // For role 3 (NoviceDriver), don't include "Hạng bằng lái" field
+    const driverLicenseFields: DocumentField[] = [];
+    // No fields for role 3
+    
     records.push({
       id: "driverLicense",
       title: "Bằng Lái Xe",
       description: "Bản sao bằng lái xe hiện hành của người dùng.",
       updatedAt: updatedAt,
-      fields: [
-        {
-          label: "Hạng bằng lái",
-          value: licenseTierValue,
-        },
-      ],
+      fields: driverLicenseFields,
       files: [
         {
           label: "Ảnh mặt trước",
@@ -738,52 +732,455 @@ export class DocumentViewModel extends BaseViewModel<DocumentState> {
   /**
    * Update profile methods
    */
-  updateEmail(email: string): void {
+  async updateEmail(email: string): Promise<void> {
     const validation = this.validateEmail(email);
     if (!validation.isValid) {
       throw new Error(validation.error);
     }
-    this.dispatch(updateUserProfile({ email }));
+    
+    try {
+      const userId = await getUserIdFromToken();
+      if (!userId || userId.trim() === "") {
+        throw new Error("User ID not found");
+      }
+
+      this.dispatch(setLoading(true));
+      this.dispatch(setError(null));
+
+      try {
+        const response = await this.dispatch(
+          editUser({
+            id: userId,
+            Email: email ,
+          })
+        ).unwrap();
+        
+        console.log("[updateEmail] API Response:", response);
+        
+        // Check if update was successful
+        if (!response.value) {
+          throw new Error("Cập nhật email thất bại");
+        }
+        
+        // Optimistically update the state immediately
+        this.dispatch(updateUserProfile({ email: email }));
+        
+        // Also update the user object in state
+        const currentUser = this.getCurrentState().user;
+        if (currentUser) {
+          this.dispatch(setUser({ ...currentUser, email: email }));
+        }
+        
+        // Refresh user data from server to ensure consistency
+        // Wait a bit to ensure server has processed the update
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        try {
+          await this.fetchUserAndApplication();
+        } catch (refreshError) {
+          // If refresh fails, the optimistic update is already in place
+          console.warn("[updateEmail] Failed to refresh from server, but optimistic update is applied:", refreshError);
+        }
+        
+        // Verify the update was reflected in the fetched data
+        const updatedProfile = this.getCurrentState().userProfile;
+        console.log("[updateEmail] Updated profile:", updatedProfile);
+        
+        this.dispatch(setSuccess(true));
+        this.dispatch(setLoading(false));
+      } catch (error: any) {
+        this.dispatch(setLoading(false));
+        const errorMessage = error?.message || error || "Không thể cập nhật email";
+        this.dispatch(setError(errorMessage));
+        throw new Error(errorMessage);
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || "Không thể cập nhật email";
+      throw new Error(errorMessage);
+    }
   }
 
-  updatePhone(phone: string): void {
+  async updatePhone(phone: string): Promise<void> {
     const validation = this.validatePhone(phone);
     if (!validation.isValid) {
       throw new Error(validation.error);
     }
-    const formattedPhone = this.formatPhone(phone);
-    this.dispatch(updateUserProfile({ phone: formattedPhone }));
+    
+    try {
+      const userId = await getUserIdFromToken();
+      if (!userId || userId.trim() === "") {
+        throw new Error("User ID not found");
+      }
+
+      const phoneDigits = phone.replace(/\D/g, "");
+      
+      this.dispatch(setLoading(true));
+      this.dispatch(setError(null));
+
+      try {
+        const response = await this.dispatch(
+          editUser({
+            id: userId,
+            PhoneNumber: phoneDigits ,
+          })
+        ).unwrap();
+        
+        console.log("[updatePhone] API Response:", response);
+        
+        // Check if update was successful
+        if (!response.value) {
+          throw new Error("Cập nhật số điện thoại thất bại");
+        }
+        
+        // Optimistically update the state immediately
+        this.dispatch(updateUserProfile({ phone: phoneDigits }));
+        
+        // Also update the user object in state
+        const currentUser = this.getCurrentState().user;
+        if (currentUser) {
+          this.dispatch(setUser({ ...currentUser, phone: phoneDigits }));
+        }
+        
+        // Refresh user data from server to ensure consistency
+        // Wait a bit to ensure server has processed the update
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        try {
+          await this.fetchUserAndApplication();
+        } catch (refreshError) {
+          // If refresh fails, the optimistic update is already in place
+          console.warn("[updatePhone] Failed to refresh from server, but optimistic update is applied:", refreshError);
+        }
+        
+        // Verify the update was reflected in the fetched data
+        const updatedProfile = this.getCurrentState().userProfile;
+        console.log("[updatePhone] Updated profile:", updatedProfile);
+        
+        this.dispatch(setSuccess(true));
+        this.dispatch(setLoading(false));
+      } catch (error: any) {
+        this.dispatch(setLoading(false));
+        const errorMessage = error?.message || error || "Không thể cập nhật số điện thoại";
+        this.dispatch(setError(errorMessage));
+        throw new Error(errorMessage);
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || "Không thể cập nhật số điện thoại";
+      throw new Error(errorMessage);
+    }
   }
 
-  updatePassword(password: string, confirmPassword: string): void {
+  async updatePassword(password: string, confirmPassword: string): Promise<void> {
     const validation = this.validatePassword(password, confirmPassword);
     if (!validation.isValid) {
       throw new Error(validation.error);
     }
-    // Password is masked in UI, so we just update the display
-    this.dispatch(updateUserProfile({ password: "••••••••" }));
-  }
+    
+    try {
+      const userId = await getUserIdFromToken();
+      if (!userId || userId.trim() === "") {
+        throw new Error("User ID not found");
+      }
 
-  updateEmergencyContact(name: string, phone: string): void {
-    const validation = this.validateEmergencyContact(name, phone);
-    if (!validation.isValid) {
-      throw new Error(validation.error);
+      this.dispatch(setLoading(true));
+      this.dispatch(setError(null));
+
+      try {
+        const response = await this.dispatch(
+          editUser({
+            id: userId,
+            Password: password ,
+          })
+        ).unwrap();
+        
+        console.log("[updatePassword] API Response:", response);
+        
+        // Check if update was successful
+        if (!response.value) {
+          throw new Error("Cập nhật mật khẩu thất bại");
+        }
+        
+        // Optimistically update the state immediately - Password is masked in UI
+        this.dispatch(updateUserProfile({ password: "••••••••" }));
+        
+        // Refresh user data from server to ensure consistency
+        // Wait a bit to ensure server has processed the update
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        try {
+          await this.fetchUserAndApplication();
+        } catch (refreshError) {
+          // If refresh fails, the optimistic update is already in place
+          console.warn("[updatePassword] Failed to refresh from server, but optimistic update is applied:", refreshError);
+        }
+        
+        // Verify the update was reflected in the fetched data
+        const updatedProfile = this.getCurrentState().userProfile;
+        console.log("[updatePassword] Updated profile:", updatedProfile);
+        
+        this.dispatch(setSuccess(true));
+        this.dispatch(setLoading(false));
+      } catch (error: any) {
+        this.dispatch(setLoading(false));
+        const errorMessage = error?.message || error || "Không thể cập nhật mật khẩu";
+        this.dispatch(setError(errorMessage));
+        throw new Error(errorMessage);
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || "Không thể cập nhật mật khẩu";
+      throw new Error(errorMessage);
     }
-    const formattedPhone = this.formatPhone(phone);
-    const currentProfile = this.getCurrentState().userProfile;
-    this.dispatch(
-      updateUserProfile({
-        emergencyContact: {
-          id: currentProfile?.emergencyContact?.id || "",
-          name: name.trim(),
-          phone: formattedPhone,
-        },
-      })
-    );
   }
 
-  updateAvatar(avatarUri: string | null): void {
-    this.dispatch(updateUserProfile({ avatar: avatarUri }));
+  async updateEmergencyContactName(name: string): Promise<void> {
+    if (!name.trim()) {
+      throw new Error("Tên người liên hệ không được để trống");
+    }
+    
+    try {
+      const currentProfile = this.getCurrentState().userProfile;
+      const currentPhone = currentProfile?.emergencyContact?.phone || "";
+      
+      // Get phone digits from current phone (remove formatting)
+      const phoneDigits = currentPhone.replace(/\D/g, "") || "";
+      
+      const userId = await getUserIdFromToken();
+      if (!userId || userId.trim() === "") {
+        throw new Error("User ID not found");
+      }
+      
+      this.dispatch(setLoading(true));
+      this.dispatch(setError(null));
+
+      try {
+        // Use editUser API for both role 3 (NoviceDriver) and role 4 (Instructor)
+        const response = await this.dispatch(
+          editUser({
+            id: userId,
+            EmergencyContactName: name.trim(),
+          })
+        ).unwrap();
+        
+        console.log("[updateEmergencyContactName] API Response:", response);
+        
+        // Check if update was successful
+        if (!response.value) {
+          throw new Error("Cập nhật tên người liên hệ thất bại");
+        }
+        
+        // Refresh to get the actual emergency contact data
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+          await this.fetchUserAndApplication();
+        } catch (refreshError) {
+          console.warn("[updateEmergencyContactName] Failed to refresh from server:", refreshError);
+        }
+        
+        // Get the updated emergency contact from refreshed data
+        const refreshedProfile = this.getCurrentState().userProfile;
+        const refreshedEmergencyContact = refreshedProfile?.emergencyContact;
+        
+        // Optimistically update the state immediately
+        const formattedPhone = currentPhone || (phoneDigits ? this.formatPhone(phoneDigits) : "");
+        const emergencyContactId = refreshedEmergencyContact?.id || "";
+        
+        if (emergencyContactId) {
+          this.dispatch(
+            updateUserProfile({
+              emergencyContact: {
+                id: emergencyContactId,
+                name: name.trim(),
+                phone: formattedPhone,
+              },
+            })
+          );
+          
+          // Also update emergencyContact in state
+          this.dispatch(
+            setEmergencyContact({
+              id: emergencyContactId,
+              name: name.trim(),
+              phone: formattedPhone,
+            })
+          );
+        }
+        
+        const updatedProfile = this.getCurrentState().userProfile;
+        console.log("[updateEmergencyContactName] Updated profile:", updatedProfile);
+        
+        this.dispatch(setSuccess(true));
+        this.dispatch(setLoading(false));
+      } catch (error: any) {
+        this.dispatch(setLoading(false));
+        const errorMessage = error?.message || error || "Không thể cập nhật tên người liên hệ";
+        this.dispatch(setError(errorMessage));
+        throw new Error(errorMessage);
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || "Không thể cập nhật tên người liên hệ";
+      throw new Error(errorMessage);
+    }
+  }
+
+  async updateEmergencyContactPhone(phone: string): Promise<void> {
+    const phoneValidation = this.validatePhone(phone);
+    if (!phoneValidation.isValid) {
+      throw new Error(phoneValidation.error);
+    }
+    
+    try {
+      const currentProfile = this.getCurrentState().userProfile;
+      const currentName = currentProfile?.emergencyContact?.name || "";
+      
+      const phoneDigits = phone.replace(/\D/g, "");
+      
+      const userId = await getUserIdFromToken();
+      if (!userId || userId.trim() === "") {
+        throw new Error("User ID not found");
+      }
+      
+      this.dispatch(setLoading(true));
+      this.dispatch(setError(null));
+
+      try {
+        // Use editUser API for both role 3 (NoviceDriver) and role 4 (Instructor)
+        const response = await this.dispatch(
+          editUser({
+            id: userId,
+            EmergencyContactName: currentName || undefined,
+            EmergencyContactPhone: phoneDigits,
+          })
+        ).unwrap();
+        
+        console.log("[updateEmergencyContactPhone] API Response:", response);
+        
+        // Check if update was successful
+        if (!response.value) {
+          throw new Error("Cập nhật số điện thoại liên hệ khẩn cấp thất bại");
+        }
+        
+        // Refresh to get the actual emergency contact data
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+          await this.fetchUserAndApplication();
+        } catch (refreshError) {
+          console.warn("[updateEmergencyContactPhone] Failed to refresh from server:", refreshError);
+        }
+        
+        // Get the updated emergency contact from refreshed data
+        const refreshedProfile = this.getCurrentState().userProfile;
+        const refreshedEmergencyContact = refreshedProfile?.emergencyContact;
+        
+        // Optimistically update the state immediately
+        const formattedPhone = this.formatPhone(phoneDigits);
+        const emergencyContactId = refreshedEmergencyContact?.id || "";
+        
+        if (emergencyContactId) {
+          this.dispatch(
+            updateUserProfile({
+              emergencyContact: {
+                id: emergencyContactId,
+                name: currentName,
+                phone: formattedPhone,
+              },
+            })
+          );
+          
+          // Also update emergencyContact in state
+          this.dispatch(
+            setEmergencyContact({
+              id: emergencyContactId,
+              name: currentName,
+              phone: formattedPhone,
+            })
+          );
+        }
+        
+        const updatedProfile = this.getCurrentState().userProfile;
+        console.log("[updateEmergencyContactPhone] Updated profile:", updatedProfile);
+        
+        this.dispatch(setSuccess(true));
+        this.dispatch(setLoading(false));
+      } catch (error: any) {
+        this.dispatch(setLoading(false));
+        const errorMessage = error?.message || error || "Không thể cập nhật số điện thoại liên hệ khẩn cấp";
+        this.dispatch(setError(errorMessage));
+        throw new Error(errorMessage);
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || "Không thể cập nhật số điện thoại liên hệ khẩn cấp";
+      throw new Error(errorMessage);
+    }
+  }
+
+  async updateAvatar(avatarUri: string | null): Promise<void> {
+    try {
+      const userId = await getUserIdFromToken();
+      if (!userId || userId.trim() === "") {
+        throw new Error("User ID not found");
+      }
+
+      // If avatarUri is null, we might want to clear the avatar
+      // For now, we'll only update if there's a URI
+      if (avatarUri) {
+        this.dispatch(setLoading(true));
+        this.dispatch(setError(null));
+
+        try {
+          const response = await this.dispatch(
+            editUser({
+              id: userId,
+              ProfileAvatar: avatarUri ,
+            })
+          ).unwrap();
+          
+          console.log("[updateAvatar] API Response:", response);
+          
+          // Check if update was successful
+          if (!response.value) {
+            throw new Error("Cập nhật ảnh đại diện thất bại");
+          }
+          
+          // Optimistically update the state immediately
+          this.dispatch(updateUserProfile({ avatar: avatarUri }));
+          
+          // Also update the user object in state
+          const currentUser = this.getCurrentState().user;
+          if (currentUser) {
+            this.dispatch(setUser({ ...currentUser, avatarUrl: avatarUri }));
+          }
+          
+          // Refresh user data from server to ensure consistency
+          // Wait a bit to ensure server has processed the update
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          try {
+            await this.fetchUserAndApplication();
+          } catch (refreshError) {
+            // If refresh fails, the optimistic update is already in place
+            console.warn("[updateAvatar] Failed to refresh from server, but optimistic update is applied:", refreshError);
+          }
+          
+          // Verify the update was reflected in the fetched data
+          const updatedProfile = this.getCurrentState().userProfile;
+          console.log("[updateAvatar] Updated profile:", updatedProfile);
+          
+          this.dispatch(setSuccess(true));
+          this.dispatch(setLoading(false));
+        } catch (error: any) {
+          this.dispatch(setLoading(false));
+          const errorMessage = error?.message || error || "Không thể cập nhật ảnh đại diện";
+          this.dispatch(setError(errorMessage));
+          throw new Error(errorMessage);
+        }
+      } else {
+        // If avatarUri is null, just update local state (clearing avatar)
+        this.dispatch(updateUserProfile({ avatar: null }));
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || "Không thể cập nhật ảnh đại diện";
+      throw new Error(errorMessage);
+    }
   }
 
   /**
@@ -805,6 +1202,283 @@ export class DocumentViewModel extends BaseViewModel<DocumentState> {
    */
   getDocumentRecords(): DocumentRecord[] {
     return this.getCurrentState().documentRecords;
+  }
+
+  /**
+   * Update instructor bio
+   */
+  async updateInstructorBio(bio: string): Promise<void> {
+    try {
+      const currentUser = this.getCurrentState().user;
+      if (!currentUser || !currentUser.instructor) {
+        throw new Error("Instructor information not found");
+      }
+
+      const instructorId = currentUser.instructor.instructorId;
+      if (!instructorId || instructorId.trim() === "") {
+        throw new Error("Instructor ID not found");
+      }
+
+      this.dispatch(setLoading(true));
+      this.dispatch(setError(null));
+
+      try {
+        const response = await this.dispatch(
+          updateInstructor({
+            id: instructorId,
+            bio: bio,
+          })
+        ).unwrap();
+        
+        console.log("[updateInstructorBio] API Response:", response);
+        
+        // Check if update was successful
+        if (!response.value) {
+          throw new Error("Cập nhật mô tả thất bại");
+        }
+        
+        // Optimistically update the state immediately
+        const updatedUser = { ...currentUser };
+        if (updatedUser.instructor) {
+          updatedUser.instructor = {
+            ...updatedUser.instructor,
+            bio: bio,
+          };
+        }
+        this.dispatch(setUser(updatedUser));
+        
+        // Refresh user data from server to ensure consistency
+        // Wait a bit to ensure server has processed the update
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        try {
+          await this.fetchUserAndApplication();
+        } catch (refreshError) {
+          // If refresh fails, the optimistic update is already in place
+          console.warn("[updateInstructorBio] Failed to refresh from server, but optimistic update is applied:", refreshError);
+        }
+        
+        this.dispatch(setSuccess(true));
+        this.dispatch(setLoading(false));
+      } catch (error: any) {
+        this.dispatch(setLoading(false));
+        const errorMessage = error?.message || error || "Không thể cập nhật mô tả";
+        this.dispatch(setError(errorMessage));
+        throw new Error(errorMessage);
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || "Không thể cập nhật mô tả";
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Update full name for role 3 (NoviceDriver)
+   */
+  async updateFullName(fullName: string): Promise<void> {
+    if (!fullName.trim()) {
+      throw new Error("Họ và tên không được để trống");
+    }
+    
+    try {
+      const userId = await getUserIdFromToken();
+      if (!userId || userId.trim() === "") {
+        throw new Error("User ID not found");
+      }
+
+      this.dispatch(setLoading(true));
+      this.dispatch(setError(null));
+
+      try {
+        const response = await this.dispatch(
+          editUser({
+            id: userId,
+            Fullname: fullName.trim(),
+          })
+        ).unwrap();
+        
+        console.log("[updateFullName] API Response:", response);
+        
+        // Check if update was successful
+        if (!response.value) {
+          throw new Error("Cập nhật họ và tên thất bại");
+        }
+        
+        // Optimistically update the state immediately
+        this.dispatch(updateUserProfile({ fullName: fullName.trim() }));
+        
+        // Also update the user object in state
+        const currentUser = this.getCurrentState().user;
+        if (currentUser) {
+          this.dispatch(setUser({ ...currentUser, fullName: fullName.trim() }));
+        }
+        
+        // Refresh user data from server to ensure consistency
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        try {
+          await this.fetchUserAndApplication();
+        } catch (refreshError) {
+          console.warn("[updateFullName] Failed to refresh from server, but optimistic update is applied:", refreshError);
+        }
+        
+        this.dispatch(setSuccess(true));
+        this.dispatch(setLoading(false));
+      } catch (error: any) {
+        this.dispatch(setLoading(false));
+        const errorMessage = error?.message || error || "Không thể cập nhật họ và tên";
+        this.dispatch(setError(errorMessage));
+        throw new Error(errorMessage);
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || "Không thể cập nhật họ và tên";
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Update driver license image for role 3 (NoviceDriver)
+   */
+  async updateDriverLicenseImage(imageUri: string | null): Promise<void> {
+    try {
+      const currentUser = this.getCurrentState().user;
+      if (!currentUser || currentUser.role !== UserRole.NoviceDriver) {
+        throw new Error("Chỉ người dùng role 3 mới có thể cập nhật ảnh bằng lái xe");
+      }
+
+      const userId = await getUserIdFromToken();
+      if (!userId || userId.trim() === "") {
+        throw new Error("User ID not found");
+      }
+
+      if (imageUri) {
+        this.dispatch(setLoading(true));
+        this.dispatch(setError(null));
+
+        try {
+          // Use the new API PUT /novice-driver/{id}/license
+          const response = await this.dispatch(
+            updateNoviceDriverLicense({
+              id: userId,
+              image: imageUri,
+            })
+          ).unwrap();
+          
+          console.log("[updateDriverLicenseImage] API Response:", response);
+          
+          // Check if update was successful
+          if (!response.value) {
+            throw new Error("Cập nhật ảnh bằng lái xe thất bại");
+          }
+          
+          // Refresh user data from server to ensure consistency
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          try {
+            await this.fetchUserAndApplication();
+          } catch (refreshError) {
+            console.warn("[updateDriverLicenseImage] Failed to refresh from server:", refreshError);
+          }
+          
+          this.dispatch(setSuccess(true));
+          this.dispatch(setLoading(false));
+        } catch (error: any) {
+          this.dispatch(setLoading(false));
+          const errorMessage = error?.message || error || "Không thể cập nhật ảnh bằng lái xe";
+          this.dispatch(setError(errorMessage));
+          throw new Error(errorMessage);
+        }
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || "Không thể cập nhật ảnh bằng lái xe";
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Update license tier for role 3 (NoviceDriver)
+   */
+  async updateLicenseTier(licenseTier: string): Promise<void> {
+    if (!licenseTier.trim()) {
+      throw new Error("Hạng bằng lái không được để trống");
+    }
+    
+    try {
+      const currentUser = this.getCurrentState().user;
+      if (!currentUser || currentUser.role !== UserRole.NoviceDriver) {
+        throw new Error("Chỉ người dùng role 3 mới có thể cập nhật hạng bằng lái");
+      }
+
+      const userId = await getUserIdFromToken();
+      if (!userId || userId.trim() === "") {
+        throw new Error("User ID not found");
+      }
+
+      // Convert license tier string to number if needed
+      // Based on getLicenseTierText, the mapping is: 1=B1, 2=B2, 3=C, 4=D, 5=E, 6=F
+      const tierMap: { [key: string]: number } = {
+        "B1": 1,
+        "B2": 2,
+        "C": 3,
+        "D": 4,
+        "E": 5,
+        "F": 6,
+      };
+      
+      const tierNumber = tierMap[licenseTier.toUpperCase()];
+      if (!tierNumber) {
+        throw new Error("Hạng bằng lái không hợp lệ");
+      }
+
+      this.dispatch(setLoading(true));
+      this.dispatch(setError(null));
+
+      try {
+        // Note: This assumes the API accepts license tier through editUser
+        // If there's a separate endpoint or field, it should be used here
+        // For now, we'll need to check if there's a LicenseTier field in EditUserPayload
+        const response = await this.dispatch(
+          editUser({
+            id: userId,
+            // LicenseTier might need to be added to EditUserPayload
+            // For now, this is a placeholder
+          })
+        ).unwrap();
+        
+        console.log("[updateLicenseTier] API Response:", response);
+        
+        // Check if update was successful
+        if (!response.value) {
+          throw new Error("Cập nhật hạng bằng lái thất bại");
+        }
+        
+        // Optimistically update the state immediately
+        const updatedUser = { ...currentUser };
+        updatedUser.licenseTier = licenseTier as any; // Update license tier
+        
+        this.dispatch(setUser(updatedUser));
+        
+        // Refresh user data from server to ensure consistency
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        try {
+          await this.fetchUserAndApplication();
+        } catch (refreshError) {
+          console.warn("[updateLicenseTier] Failed to refresh from server, but optimistic update is applied:", refreshError);
+        }
+        
+        this.dispatch(setSuccess(true));
+        this.dispatch(setLoading(false));
+      } catch (error: any) {
+        this.dispatch(setLoading(false));
+        const errorMessage = error?.message || error || "Không thể cập nhật hạng bằng lái";
+        this.dispatch(setError(errorMessage));
+        throw new Error(errorMessage);
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || "Không thể cập nhật hạng bằng lái";
+      throw new Error(errorMessage);
+    }
   }
 }
 

@@ -1,9 +1,8 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { BaseState } from "@/models/generic/baseState";
-import { ApplicantDocument, EmergencyContact } from "@/models/document/document";
-import { getInstructorApplication, getUserEmergencyContact } from "./documentThunk";
+import { ApplicantDocument, EmergencyContact, UserProfile, DocumentRecord } from "@/models/document/document";
+import { getInstructorApplication, getUserEmergencyContact, updateUserEmergencyContact } from "./documentThunk";
 import { IUserInfo } from "@/models/user/user.type";
-import { UserProfile, DocumentRecord } from "@/viewmodels/document/documentViewModel";
 
 export interface DocumentState extends BaseState {
   application: ApplicantDocument | null;
@@ -111,6 +110,21 @@ const documentSlice = createSlice({
         state.isLoading = false;
         state.isSuccess = false;
         state.errorMessage = action.payload ?? "Đã xảy ra lỗi khi tải thông tin liên hệ khẩn cấp";
+      })
+      .addCase(updateUserEmergencyContact.pending, (state) => {
+        state.isLoading = true;
+        state.errorMessage = null;
+        state.isSuccess = false;
+      })
+      .addCase(updateUserEmergencyContact.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.errorMessage = null;
+      })
+      .addCase(updateUserEmergencyContact.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = false;
+        state.errorMessage = action.payload ?? "Đã xảy ra lỗi khi cập nhật thông tin liên hệ khẩn cấp";
       });
   },
 });
