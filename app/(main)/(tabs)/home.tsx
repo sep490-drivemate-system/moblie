@@ -1,4 +1,6 @@
 import CarItem from "@/components/ui/car-item";
+import { NativeModules } from "react-native";
+
 import InstructorItem from "@/components/ui/instructor-item";
 import PackageItem from "@/components/ui/package-item";
 import { listCar, popularPackages } from "@/data/home_data";
@@ -29,6 +31,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const [walletState, walletViewModel] = useViewModel(WalletViewModel, (state) => state.wallet);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { PayZaloBridge } = NativeModules;
+
 
   const hasFetchedBalanceRef = useRef(false);
 
@@ -76,7 +80,7 @@ export default function HomeScreen() {
         <View style={styles.floatingContainer}>
           <TouchableOpacity
             style={styles.walletSection}
-          //  onPress={() => handleHeaderItemPress("1")}
+          // onPress={handleTestDeepLink}
           >
             <Wallet size={24} color={"#70E000"} />
             <View style={styles.walletTextContainer}>
@@ -95,7 +99,6 @@ export default function HomeScreen() {
           <View style={styles.iconGroup}>
             <TouchableOpacity
               style={styles.iconButton}
-            // onPress={() => handleHeaderItemPress("2")}
             >
               <View style={styles.iconContainer}>
                 <Bell size={24} color={"#70E000"} />

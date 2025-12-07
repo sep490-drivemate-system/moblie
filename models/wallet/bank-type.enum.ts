@@ -1,5 +1,5 @@
 export enum BankType {
-    VNPAY = "VNPAY",
-    ZALOPAY = "ZALOPAY",
-    PAYOS = "PAYOS",
+    VNPAY = 1,
+    ZALOPAY = 2,
+    PAYOS = 3,
 }

@@ -17,8 +17,6 @@ const { width, height } = Dimensions.get('window');
 
 export default function PaymentSuccessScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const [paymentData, setPaymentData] = useState<any>(null);
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;

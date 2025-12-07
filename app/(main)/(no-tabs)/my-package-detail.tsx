@@ -358,15 +358,19 @@ export default function PackageDetailScreen() {
             </View>
 
             {/* Feedback Button - Show when package is fully used */}
-            {(packageData.remainingHours === 0 || packageData.usedHours >= packageData.totalHours) && (
+            {/* {(packageData.remainingHours === 0 || packageData.usedHours >= packageData.totalHours) && (
+
+            )} */}
+            <View style={{ marginTop: 16 }}>
               <TouchableOpacity
                 style={styles.feedbackButton}
                 onPress={handleOpenFeedback}
+                activeOpacity={0.7}
               >
                 <MessageSquare size={20} color={AppColors.primary} strokeWidth={2} />
                 <Text style={styles.feedbackButtonText}>Đánh giá</Text>
               </TouchableOpacity>
-            )}
+            </View>
           </View>
         )}
 
@@ -963,8 +967,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     gap: 8,
-    marginTop: 16,
-    marginHorizontal: 20,
+    minHeight: 50,
+    width: "100%",
   },
   feedbackButtonText: {
     fontSize: 16,

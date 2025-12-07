@@ -76,4 +76,15 @@ export const createDeposit = createThunk<
     HttpMethod.POST,
     "createDeposit",
     `${WALLET_PATH}/deposit`,
+    {
+        transformPayload: (payload: IDeposit) => {
+            // BankType is already a number enum (1, 2, 3)
+            // IDeposit already has platform field, just pass through
+            return {
+                amount: payload.amount,
+                paymentMethod: payload.paymentMethod, // Already number enum
+                platform: payload.platform,
+            };
+        },
+    }
 );

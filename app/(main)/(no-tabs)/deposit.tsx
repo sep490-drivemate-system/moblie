@@ -6,13 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  Alert,
   TextInput,
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Linking from "expo-linking";
 import { AppColors } from "@/constants/Colors";
 import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
@@ -21,7 +19,6 @@ import { IDeposit } from "@/models/wallet/deposit.type";
 import { BankType } from "@/models/wallet/bank-type.enum";
 import { ClientPlatform } from "@/models/wallet/client-platform.enum";
 import {
-  ArrowLeft,
   Wallet,
   CreditCard,
   Check,
@@ -31,33 +28,34 @@ import {
 } from "lucide-react-native";
 import HeaderList from "@/components/Commons/HeaderList";
 import { ROUTES } from "@/constants/routes";
-
+import { AppAlert, AlertVariant } from "@/components/Commons/AppAlert";
+import * as WebBrowser from "expo-web-browser";
 
 export default function DepositScreen() {
   const router = useRouter();
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(
-    null
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<BankType>(
+    BankType.VNPAY
   );
-  const [selectedPayment, setSelectedPayment] = useState<BankType>(BankType.VNPAY);
   const [customAmount, setCustomAmount] = useState("");
-  const [currentBalance] = useState(150000);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showConfirmAlert, setShowConfirmAlert] = useState(false);
+  const [confirmAmount, setConfirmAmount] = useState(0);
   const walletSelector = (state: RootState) => state.wallet;
-  const [, walletViewModel] = useViewModel(WalletViewModel, walletSelector);
+  const [walletState, walletViewModel] = useViewModel(
+    WalletViewModel,
+    walletSelector
+  );
 
-  const topUpAmounts: number[] = [
-    100000,
-    200000,
-    500000,
-    1000000,
-  ];
+  const topUpAmounts: number[] = [100000, 200000, 500000, 1000000];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN").format(amount);
   };
 
-  // Helper function để lấy icon và màu cho payment method
-  const getPaymentMethodInfo = (method: string) => {
+  const getPaymentMethodInfo = (method: BankType) => {
     switch (method) {
       case BankType.VNPAY:
         return {
@@ -100,57 +98,41 @@ export default function DepositScreen() {
   const handlePayment = async () => {
     const total = getTotalAmount();
     if (total < 10000) {
-      Alert.alert("Lỗi", "Số tiền nạp tối thiểu là 10.000 VNĐ");
+      setErrorMessage("Số tiền nạp tối thiểu là 10.000 đ");
+      setShowErrorAlert(true);
       return;
     }
 
-    Alert.alert(
-      "Xác nhận thanh toán",
-      `Bạn sẽ nạp ${formatCurrency(total)} VNĐ vào tài khoản?`,
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xác nhận",
-          onPress: async () => {
-            try {
-              setIsProcessing(true);
+    
 
-              // ClientPlatform chỉ có Mobile = 2
-              const clientPlatform = ClientPlatform.Mobile;
+    setConfirmAmount(total);
+    setShowConfirmAlert(true);
+  };
 
-              // Tạo deposit payload
-              const depositPayload: IDeposit = {
-                amount: total.toString(),
-                paymentMethod: selectedPayment,
-                clientPlatform: clientPlatform,
-              };
+  const handleConfirmPayment = async () => {
+    setShowConfirmAlert(false);
+    try {
+      setIsProcessing(true);
+      const depositPayload: IDeposit = {
+        amount: confirmAmount,
+        paymentMethod: selectedPayment,
+        platform: ClientPlatform.Mobile,
+      };
+      const success = await walletViewModel.deposit(depositPayload);
 
-              // Gọi WalletViewModel để tạo deposit và nhận payment URL
-              const paymentUrl = await walletViewModel.deposit(depositPayload);
-
-              if (paymentUrl) {
-                // Mở payment URL trong browser
-                // Payment gateway sẽ redirect về backend sau khi thanh toán
-                // Backend sẽ verify và redirect về deep link của app
-                const canOpen = await Linking.canOpenURL(paymentUrl);
-                if (canOpen) {
-                  await Linking.openURL(paymentUrl);
-                } else {
-                  throw new Error('Cannot open payment URL');
-                }
-              } else {
-                throw new Error('No payment URL received from server');
-              }
-            } catch (error) {
-              Alert.alert("Lỗi", "Không thể tạo yêu cầu thanh toán. Vui lòng thử lại.");
-              console.error("Payment error:", error);
-            } finally {
-              setIsProcessing(false);
-            }
-          },
-        },
-      ]
-    );
+      if (!success) {
+        throw new Error("Không thể mở URL thanh toán");
+      }
+    } catch (error: any) {
+      const errorMsg =
+        error?.message ||
+        error?.toString() ||
+        "Không thể tạo yêu cầu thanh toán. Vui lòng thử lại.";
+      setErrorMessage(errorMsg);
+      setShowErrorAlert(true);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleAmountSelect = (amount: number) => {
@@ -164,8 +146,6 @@ export default function DepositScreen() {
     setCustomAmount(formattedValue);
     setSelectedAmount(null);
   };
-
-
 
   return (
     <View style={styles.container}>
@@ -194,14 +174,13 @@ export default function DepositScreen() {
               <Text style={styles.balanceLabel}>Số dư hiện tại</Text>
               <View style={styles.balanceAmountContainer}>
                 <Text style={styles.balanceAmount}>
-                  {formatCurrency(currentBalance)}
+                  {formatCurrency(walletState.balance)}
                 </Text>
                 <View style={styles.balanceUnitContainer}>
                   <Text style={styles.balanceUnit}>đ</Text>
                 </View>
               </View>
             </View>
-
           </View>
         </View>
         <View style={styles.section}>
@@ -234,7 +213,6 @@ export default function DepositScreen() {
             ))}
           </View>
 
-          {/* Custom Amount Input */}
           <View style={styles.customAmountSection}>
             <Text style={styles.customAmountLabel}>Hoặc nhập số tiền khác</Text>
             <View style={styles.customAmountContainer}>
@@ -249,10 +227,10 @@ export default function DepositScreen() {
                 keyboardType="numeric"
                 placeholderTextColor={AppColors.gray400}
               />
-              <Text style={styles.customAmountSuffix}>VNĐ</Text>
+              <Text style={styles.customAmountSuffix}>đ</Text>
             </View>
             <Text style={styles.customAmountNote}>
-              Số tiền tối thiểu: 10.000 VNĐ
+              Số tiền tối thiểu: 10.000 đ
             </Text>
           </View>
         </View>
@@ -261,7 +239,7 @@ export default function DepositScreen() {
           <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
           <View style={styles.paymentMethods}>
             {Object.values(BankType).map((method) => {
-              const methodInfo = getPaymentMethodInfo(method);
+              const methodInfo = getPaymentMethodInfo(method as BankType);
               const IconComponent = methodInfo.icon;
 
               return (
@@ -272,7 +250,9 @@ export default function DepositScreen() {
                     styles.paymentMethod,
                     selectedPayment === method && styles.paymentMethodSelected,
                   ]}
-                  onPress={() => setSelectedPayment(method)}
+                  onPress={() =>
+                    setSelectedPayment(method as unknown as BankType)
+                  }
                 >
                   <View style={styles.paymentMethodLeft}>
                     <View
@@ -281,10 +261,16 @@ export default function DepositScreen() {
                         { backgroundColor: methodInfo.color },
                       ]}
                     >
-                      <IconComponent size={20} color="#ffffff" strokeWidth={2} />
+                      <IconComponent
+                        size={20}
+                        color="#ffffff"
+                        strokeWidth={2}
+                      />
                     </View>
                     <View style={styles.paymentInfo}>
-                      <Text style={styles.paymentName}>{method}</Text>
+                      <Text style={styles.paymentName}>
+                        {BankType[method as unknown as keyof typeof BankType]}
+                      </Text>
                       <Text style={styles.paymentDescription}>
                         {methodInfo.description}
                       </Text>
@@ -292,7 +278,11 @@ export default function DepositScreen() {
                   </View>
                   {selectedPayment === method && (
                     <View style={styles.paymentSelectedIndicator}>
-                      <Check size={18} color={AppColors.primary} strokeWidth={3} />
+                      <Check
+                        size={18}
+                        color={AppColors.primary}
+                        strokeWidth={3}
+                      />
                     </View>
                   )}
                 </TouchableOpacity>
@@ -301,7 +291,6 @@ export default function DepositScreen() {
           </View>
         </View>
 
-        {/* Summary */}
         {getTotalAmount() > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Tóm tắt giao dịch</Text>
@@ -309,14 +298,14 @@ export default function DepositScreen() {
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Số tiền nạp:</Text>
                 <Text style={styles.summaryValue}>
-                  {formatCurrency(getTotalAmount())} VNĐ
+                  {formatCurrency(getTotalAmount())} đ
                 </Text>
               </View>
               <View style={styles.summaryDivider} />
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryTotalLabel}>Tổng nhận được:</Text>
                 <Text style={styles.summaryTotalValue}>
-                  {formatCurrency(getTotalAmount())} VNĐ
+                  {formatCurrency(getTotalAmount())} đ
                 </Text>
               </View>
             </View>
@@ -326,11 +315,13 @@ export default function DepositScreen() {
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {/* Payment Button */}
       {getTotalAmount() > 0 && (
         <View style={styles.paymentButtonContainer}>
           <TouchableOpacity
-            style={[styles.paymentButton, isProcessing && styles.paymentButtonDisabled]}
+            style={[
+              styles.paymentButton,
+              isProcessing && styles.paymentButtonDisabled,
+            ]}
             onPress={handlePayment}
             activeOpacity={0.8}
             disabled={isProcessing}
@@ -355,6 +346,36 @@ export default function DepositScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Error Alert */}
+      <AppAlert
+        visible={showErrorAlert}
+        title="Lỗi"
+        message={errorMessage}
+        variant={AlertVariant.Error}
+        primaryButton={{
+          label: "Đóng",
+          onPress: () => setShowErrorAlert(false),
+        }}
+        onDismiss={() => setShowErrorAlert(false)}
+      />
+
+      <AppAlert
+        visible={showConfirmAlert}
+        title="Xác nhận thanh toán"
+        message={`Bạn sẽ nạp ${formatCurrency(confirmAmount)} đ vào tài khoản?`}
+        variant={AlertVariant.Info}
+        primaryButton={{
+          label: "Xác nhận",
+          onPress: handleConfirmPayment,
+        }}
+        secondaryButton={{
+          label: "Hủy",
+          variant: "secondary",
+          onPress: () => setShowConfirmAlert(false),
+        }}
+        onDismiss={() => setShowConfirmAlert(false)}
+      />
     </View>
   );
 }
