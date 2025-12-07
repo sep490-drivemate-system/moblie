@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { BaseState } from "@/models/generic/baseState";
 import { ApplicantDocument, EmergencyContact, UserProfile, DocumentRecord } from "@/models/document/document";
-import { getInstructorApplication, getUserEmergencyContact, updateUserEmergencyContact } from "./documentThunk";
+import { getInstructorApplication, getUserEmergencyContact, updateUserEmergencyContact, updateNoviceDriverLicense } from "./documentThunk";
 import { IUserInfo } from "@/models/user/user.type";
 
 export interface DocumentState extends BaseState {
@@ -125,6 +125,21 @@ const documentSlice = createSlice({
         state.isLoading = false;
         state.isSuccess = false;
         state.errorMessage = action.payload ?? "Đã xảy ra lỗi khi cập nhật thông tin liên hệ khẩn cấp";
+      })
+      .addCase(updateNoviceDriverLicense.pending, (state) => {
+        state.isLoading = true;
+        state.errorMessage = null;
+        state.isSuccess = false;
+      })
+      .addCase(updateNoviceDriverLicense.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.errorMessage = null;
+      })
+      .addCase(updateNoviceDriverLicense.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = false;
+        state.errorMessage = action.payload ?? "Đã xảy ra lỗi khi cập nhật ảnh bằng lái xe";
       });
   },
 });
