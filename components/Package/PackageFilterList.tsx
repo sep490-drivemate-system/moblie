@@ -134,11 +134,7 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
     // Filter theo vehicle (đảm bảo chính xác)
     if (filterHasVehicle !== null) {
       result = result.filter((pkg) => {
-        if (filterHasVehicle === true) {
-          return pkg.carCount > 0;
-        } else {
-          return pkg.carCount === 0;
-        }
+        return pkg.allowSelfCar === filterHasVehicle;
       });
     }
 
