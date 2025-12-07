@@ -1,345 +1,292 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
-  Image,
   StyleSheet,
+  ActivityIndicator,
+  Modal,
+  TextInput,
+  Pressable,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-
-interface Transaction {
-  id: string;
-  type: "deposit" | "withdraw" | "receive";
-  title: string;
-  bankName?: string;
-  time: string;
-  date: string;
-  amount: number;
-  balance: number;
-  status: "success" | "processing" | "failed";
-}
-
-const mockTransactions: Transaction[] = [
-  {
-    id: "1",
-    type: "deposit",
-    title: "Nạp tiền vào ví từ NAM A BANK",
-    bankName: "NAM A BANK",
-    time: "14:30",
-    date: "15/01/2025",
-    amount: 250000,
-    balance: 281000,
-    status: "success",
-  },
-  {
-    id: "2",
-    type: "withdraw",
-    title: "Rút tiền từ ví",
-    time: "09:15",
-    date: "14/01/2025",
-    amount: 100000,
-    balance: 311000,
-    status: "success",
-  },
-  {
-    id: "3",
-    type: "receive",
-    title: "Nhận tiền từ Nguyễn Văn A",
-    time: "16:45",
-    date: "13/01/2025",
-    amount: 50000,
-    balance: 411000,
-    status: "success",
-  },
-  {
-    id: "4",
-    type: "deposit",
-    title: "Nạp tiền vào ví từ VIETCOMBANK",
-    bankName: "VIETCOMBANK",
-    time: "11:20",
-    date: "12/01/2025",
-    amount: 500000,
-    balance: 361000,
-    status: "success",
-  },
-  {
-    id: "5",
-    type: "withdraw",
-    title: "Rút tiền từ ví",
-    time: "08:30",
-    date: "11/01/2025",
-    amount: 200000,
-    balance: 411000,
-    status: "processing",
-  },
-  {
-    id: "6",
-    type: "receive",
-    title: "Nhận tiền từ Trần Thị B",
-    time: "19:15",
-    date: "10/01/2025",
-    amount: 150000,
-    balance: 611000,
-    status: "success",
-  },
-  {
-    id: "7",
-    type: "deposit",
-    title: "Nạp tiền vào ví từ TECHCOMBANK",
-    bankName: "TECHCOMBANK",
-    time: "15:45",
-    date: "09/01/2025",
-    amount: 300000,
-    balance: 461000,
-    status: "failed",
-  },
-  {
-    id: "8",
-    type: "withdraw",
-    title: "Rút tiền từ ví",
-    time: "13:20",
-    date: "08/01/2025",
-    amount: 75000,
-    balance: 461000,
-    status: "success",
-  },
-];
-
-interface FilterState {
-  timeRange: string;
-  amount: string;
-  status: string;
-}
+import HeaderList from "@/components/Commons/HeaderList";
+import CustomFilter, {
+  FilterOptionType,
+} from "@/components/Commons/CustomFilter";
+import { AppColors } from "@/constants/Colors";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { TransactionViewModel } from "@/viewmodels/transaction/TransactionViewModel";
+import {
+  StatusFilterOption,
+  MonthOption,
+} from "@/models/transaction/transaction";
+import { TransactionStatus } from "@/models/enum/transactionStatus";
+import { RootState } from "@/lib/redux/store";
 
 export default function TransactionScreen() {
-  const [searchText, setSearchText] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState("all");
-  const [transactions] = useState<Transaction[]>(mockTransactions);
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>({
-    timeRange: "all",
-    amount: "",
-    status: "all",
-  });
+  // Use ViewModel to manage state and API calls
+  const [transactionState, viewModel] = useViewModel<
+    RootState["transaction"],
+    TransactionViewModel
+  >(TransactionViewModel, (state: RootState) => state.transaction);
 
-  // Listen for filter parameters from filter-transaction screen
+  // Local state for re-rendering when filters change
+  const [selectedFilter, setSelectedFilter] = useState<
+    TransactionStatus | "all"
+  >("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFilter, setShowFilter] = useState(false);
+  const [showMonthModal, setShowMonthModal] = useState(false);
+  const [showAmountModal, setShowAmountModal] = useState(false);
+  const [selectedMonthValue, setSelectedMonthValue] = useState<string>("all");
+  const [selectedAmountValue, setSelectedAmountValue] = useState<string>("");
+  const [amountInput, setAmountInput] = useState<string>("");
+
+  // Fetch transactions on mount
   useEffect(() => {
-    const handleFilterUpdate = () => {
-      // Check if filters were applied from filter screen
-      if (typeof window !== "undefined" && (window as any).appliedFilters) {
-        const newFilters = (window as any).appliedFilters;
-        setAppliedFilters(newFilters);
-        // Clear the global state
-        (window as any).appliedFilters = null;
-      }
-    };
-
-    // Check for filter updates when component mounts or when returning from filter screen
-    const interval = setInterval(handleFilterUpdate, 500);
-
-    return () => clearInterval(interval);
+    viewModel.fetchTransactions();
   }, []);
 
-  const getTransactionIcon = (type: string) => {
-    switch (type) {
-      case "deposit":
-        return "arrow-down-circle";
-      case "withdraw":
-        return "arrow-up-circle";
-      case "receive":
-        return "person-add";
-      default:
-        return "card";
+  // Update search text in ViewModel when search query changes
+  useEffect(() => {
+    viewModel.setSearchText(searchQuery);
+  }, [searchQuery]);
+
+  // Sync selected month and amount with ViewModel when modals open
+  useEffect(() => {
+    if (showMonthModal) {
+      setSelectedMonthValue(viewModel.getSelectedMonth());
     }
-  };
+  }, [showMonthModal]);
 
-  const getTransactionIconColor = (type: string) => {
-    switch (type) {
-      case "deposit":
-        return "#70E000";
-      case "withdraw":
-        return "#FF6B6B";
-      case "receive":
-        return "#4ECDC4";
-      default:
-        return "#70E000";
+  useEffect(() => {
+    if (showAmountModal) {
+      const currentAmount = viewModel.getSelectedAmount();
+      setSelectedAmountValue(currentAmount);
+      viewModel.initializeAmountInput();
+      setAmountInput(viewModel.getAmountInput());
     }
-  };
+  }, [showAmountModal]);
 
-  const formatAmount = (amount: number, type: string) => {
-    const sign = type === "deposit" || type === "receive" ? "+" : "-";
-    return `${sign} ${amount.toLocaleString()} GF`;
-  };
+  // Get filtered transactions from ViewModel
+  const transactions = viewModel.getFilteredTransactions(selectedFilter);
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "success":
-        return "Thành công";
-      case "processing":
-        return "Đang xử lý";
-      case "failed":
-        return "Thất bại";
-      default:
-        return "";
-    }
-  };
+  // Get filter options
+  const monthOptions = viewModel.getMonthOptions();
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "success":
-        return "#70E000";
-      case "processing":
-        return "#FFA500";
-      case "failed":
-        return "#FF6B6B";
-      default:
-        return "#70E000";
-    }
-  };
+  // Create filter options for CustomFilter
+  const filterOptions: FilterOptionType[] = [
+    { id: "month", label: "Tháng" },
+    { id: "amount", label: "Số tiền" },
+  ];
 
-  // Helper function to check if transaction matches time range filter
-  const matchesTimeRange = (transaction: Transaction, timeRange: string) => {
-    if (timeRange === "all") return true;
+  // Check if any filter is active
+  const hasActiveFilter =
+    selectedMonthValue !== "all" || selectedAmountValue !== "";
 
-    const transactionDate = new Date(
-      transaction.date.split("/").reverse().join("-")
-    );
-    const [month, year] = timeRange.split("/").map(Number);
+  // Get selected month and amount labels
+  const selectedMonthLabel =
+    monthOptions.find((m) => m.value === selectedMonthValue)?.label || "Tháng";
+  const selectedAmountLabel = viewModel.getAmountLabel();
+
+  // Render filter option item
+  const renderFilterOptionItem = ({ item }: { item: FilterOptionType }) => {
+    const isActive =
+      (item.id === "month" && selectedMonthValue !== "all") ||
+      (item.id === "amount" && selectedAmountValue !== "");
+
+    const displayLabel =
+      item.id === "month"
+        ? selectedMonthValue !== "all"
+          ? selectedMonthLabel
+          : item.label
+        : selectedAmountValue !== ""
+        ? selectedAmountLabel
+        : item.label;
 
     return (
-      transactionDate.getMonth() + 1 === month &&
-      transactionDate.getFullYear() === year
+      <TouchableOpacity
+        style={[
+          styles.filterOptionButton,
+          isActive && styles.filterOptionButtonActive,
+        ]}
+        onPress={() => {
+          if (item.id === "month") {
+            setShowMonthModal(true);
+          } else if (item.id === "amount") {
+            setShowAmountModal(true);
+          }
+        }}
+      >
+        <Text
+          style={[
+            styles.filterOptionText,
+            isActive && styles.filterOptionTextActive,
+          ]}
+        >
+          {displayLabel}
+        </Text>
+      </TouchableOpacity>
     );
   };
 
-  // Helper function to check if transaction matches amount filter
-  const matchesAmount = (transaction: Transaction, amount: string) => {
-    if (!amount) return true;
-
-    const filterAmount = parseInt(amount);
-    return transaction.amount >= filterAmount;
-  };
-
-  // Helper function to check if transaction matches status filter
-  const matchesStatus = (transaction: Transaction, status: string) => {
-    if (status === "all") return true;
-    return transaction.status === status;
-  };
-
-  // Function to clear all applied filters
-  const clearAllFilters = () => {
-    setAppliedFilters({
-      timeRange: "all",
-      amount: "",
-      status: "all",
-    });
-  };
-
-  // Check if any filters are applied
-  const hasActiveFilters = () => {
+  // Render month item
+  const renderMonthItem = ({ item }: { item: MonthOption }) => {
+    const isSelected = selectedMonthValue === item.value;
     return (
-      appliedFilters.timeRange !== "all" ||
-      appliedFilters.amount !== "" ||
-      appliedFilters.status !== "all"
+      <TouchableOpacity
+        activeOpacity={1}
+        style={[styles.modalItem, isSelected && styles.modalItemSelected]}
+        onPress={() => {
+          viewModel.setSelectedMonth(item.value);
+          setSelectedMonthValue(item.value);
+        }}
+      >
+        <Text
+          style={[
+            styles.modalItemText,
+            isSelected && styles.modalItemTextSelected,
+          ]}
+        >
+          {item.label}
+        </Text>
+        {isSelected && (
+          <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+        )}
+      </TouchableOpacity>
     );
   };
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    const matchesSearch = transaction.title
-      .toLowerCase()
-      .includes(searchText.toLowerCase());
-    const matchesTypeFilter =
-      selectedFilter === "all" || transaction.type === selectedFilter;
-    const matchesTimeFilter = matchesTimeRange(
-      transaction,
-      appliedFilters.timeRange
-    );
-    const matchesAmountFilter = matchesAmount(
-      transaction,
-      appliedFilters.amount
-    );
-    const matchesStatusFilter = matchesStatus(
-      transaction,
-      appliedFilters.status
-    );
+  // Handle amount input change
+  const handleAmountInputChange = (text: string) => {
+    // Only allow numbers
+    const numericValue = text.replace(/[^0-9]/g, "");
+    setAmountInput(numericValue);
+    viewModel.handleAmountInputChange(numericValue);
+  };
 
-    return (
-      matchesSearch &&
-      matchesTypeFilter &&
-      matchesTimeFilter &&
-      matchesAmountFilter &&
-      matchesStatusFilter
-    );
-  });
+  // Handle apply month filter
+  const handleApplyMonthFilter = () => {
+    setShowMonthModal(false);
+  };
+
+  // Handle clear month filter
+  const handleClearMonthFilter = () => {
+    viewModel.clearMonthFilter();
+    setSelectedMonthValue("all");
+  };
+
+  // Handle apply amount filter
+  const handleApplyAmountFilter = () => {
+    viewModel.applyAmountFilter();
+    setSelectedAmountValue(viewModel.getSelectedAmount());
+    setShowAmountModal(false);
+  };
+
+  // Handle clear amount filter
+  const handleClearAmountFilter = () => {
+    viewModel.clearAmountFilter();
+    setSelectedAmountValue("");
+    setAmountInput("");
+  };
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+    >
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-            style={styles.backButton}
+      <HeaderList
+        title="Lịch sử giao dịch"
+        description="Xem và quản lý tất cả các giao dịch của bạn"
+        showBackButton={true}
+      />
+
+      {/* Search and Filter */}
+      <CustomFilter
+        searchQuery={searchQuery}
+        onChangeSearch={setSearchQuery}
+        filterHasVehicle={hasActiveFilter}
+        showFilter={showFilter}
+        onToggleFilter={() => setShowFilter(!showFilter)}
+        filterOptions={filterOptions}
+        renderFilterOptionItem={renderFilterOptionItem}
+        showRoadTypeModal={showMonthModal}
+        onCloseRoadTypeModal={() => setShowMonthModal(false)}
+        onApplyRoadTypes={handleApplyMonthFilter}
+        roadTypes={monthOptions as any}
+        renderRoadTypeItem={renderMonthItem as any}
+        onClearRoadTypeFilters={handleClearMonthFilter}
+        modalTitle="Chọn tháng"
+      />
+
+      {/* Amount Input Modal */}
+      <Modal
+        visible={showAmountModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAmountModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowAmountModal(false)}
+        >
+          <Pressable
+            style={styles.amountModalContent}
+            onPress={(e) => e.stopPropagation()}
           >
-            <Ionicons name="arrow-back" size={24} color="#374151" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Lịch sử giao dịch</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
-        {/* Search and Filter Row */}
-        <View style={styles.searchFilterRow}>
-          {/* Search Bar */}
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={20} color="#9CA3AF" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Tìm kiếm giao dịch..."
-              placeholderTextColor="#9CA3AF"
-              value={searchText}
-              onChangeText={setSearchText}
-            />
-          </View>
-
-          {/* Filter Button */}
-          <TouchableOpacity
-            onPress={() => router.push("./filter-transaction")}
-            activeOpacity={0.8}
-            style={[styles.filterButtonPage]}
-          >
-            <Ionicons name="filter" size={20} color="white" />
-            <Text style={styles.filterButtonText}>Bộ lọc</Text>
-            {hasActiveFilters() && (
-              <View style={styles.filterIndicator}>
-                <Text style={styles.filterIndicatorText}>!</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Active Filters Indicator */}
-        {hasActiveFilters() && (
-          <View style={styles.activeFiltersContainer}>
-            <View style={styles.activeFiltersContent}>
-              <Ionicons name="checkmark-circle" size={16} color="#70E000" />
-              <Text style={styles.activeFiltersText}>Đã áp dụng bộ lọc</Text>
+            <View style={styles.amountModalHeader}>
+              <Text style={styles.amountModalTitle}>Nhập số tiền</Text>
               <TouchableOpacity
-                onPress={clearAllFilters}
-                activeOpacity={0.7}
-                style={styles.clearFiltersButton}
+                onPress={() => setShowAmountModal(false)}
+                style={styles.modalCloseButton}
               >
-                <Text style={styles.clearFiltersText}>Xóa</Text>
+                <Ionicons name="close" size={24} color="#64748b" />
               </TouchableOpacity>
             </View>
-          </View>
-        )}
-      </View>
 
-      {/* Transaction Type Filter */}
+            <View style={styles.amountInputContainer}>
+              <Text style={styles.amountInputLabel}>
+                Nhập số tiền tối thiểu (VNĐ)
+              </Text>
+              <View style={styles.amountInputWrapper}>
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="0"
+                  placeholderTextColor="#9CA3AF"
+                  value={amountInput}
+                  onChangeText={handleAmountInputChange}
+                  keyboardType="numeric"
+                  maxLength={10}
+                />
+                <Text style={styles.amountUnit}>VNĐ</Text>
+              </View>
+              <Text style={styles.amountHint}>
+                Lọc các giao dịch có số tiền từ mức nhập vào trở lên
+              </Text>
+            </View>
+
+            <View style={styles.amountModalFooter}>
+              <TouchableOpacity
+                style={styles.amountClearButton}
+                onPress={handleClearAmountFilter}
+              >
+                <Text style={styles.amountClearButtonText}>Xóa bộ lọc</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.amountApplyButton}
+                onPress={handleApplyAmountFilter}
+              >
+                <Text style={styles.amountApplyButtonText}>Áp dụng</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Status Filter */}
       <View style={styles.filterContainer}>
         <ScrollView
           horizontal
@@ -347,173 +294,152 @@ export default function TransactionScreen() {
           contentContainerStyle={styles.filterScrollContent}
         >
           <View style={styles.filterRow}>
-            {[
-              { key: "all", label: "Tất cả" },
-              { key: "deposit", label: "Nạp tiền vào ví" },
-              { key: "withdraw", label: "Rút tiền" },
-              { key: "receive", label: "Nhận tiền" },
-            ].map((item) => (
-              <TouchableOpacity
-                key={item.key}
-                onPress={() => setSelectedFilter(item.key)}
-                activeOpacity={0.7}
-                style={[
-                  styles.filterButtonItem,
-                  selectedFilter === item.key
-                    ? styles.filterButtonActive
-                    : styles.filterButtonInactive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterButtonTextItem,
-                    selectedFilter === item.key
-                      ? styles.filterButtonTextActive
-                      : styles.filterButtonTextInactive,
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
-      </View>
-
-      {/* Transaction List */}
-      <ScrollView
-        style={styles.transactionList}
-        showsVerticalScrollIndicator={false}
-      >
-        {filteredTransactions.map((transaction, index) => (
-          <View key={transaction.id} style={styles.transactionCard}>
-            <View style={styles.transactionContent}>
-              {/* Icon */}
-              <View
-                style={[
-                  styles.transactionIcon,
-                  {
-                    backgroundColor: `${getTransactionIconColor(
-                      transaction.type
-                    )}15`,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={getTransactionIcon(transaction.type) as any}
-                  size={24}
-                  color={getTransactionIconColor(transaction.type)}
-                />
-              </View>
-
-              {/* Transaction Info */}
-              <View style={styles.transactionInfo}>
-                <Text style={styles.transactionTitle}>{transaction.title}</Text>
-                <Text style={styles.transactionTime}>
-                  {transaction.time} • {transaction.date}
-                </Text>
-                <View style={styles.statusContainer}>
-                  <View
+            {viewModel
+              .getStatusFilterOptions()
+              .map((item: StatusFilterOption) => {
+                const isSelected = selectedFilter === item.key;
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    onPress={() => {
+                      const newFilter = viewModel.handleStatusFilterSelection(
+                        item.key
+                      );
+                      setSelectedFilter(newFilter);
+                    }}
+                    activeOpacity={1}
                     style={[
-                      styles.statusBadge,
-                      {
-                        backgroundColor: `${getStatusColor(
-                          transaction.status
-                        )}15`,
-                      },
+                      styles.filterButtonItem,
+                      isSelected
+                        ? styles.filterButtonActive
+                        : styles.filterButtonInactive,
                     ]}
                   >
                     <Text
                       style={[
-                        styles.statusText,
-                        { color: getStatusColor(transaction.status) },
+                        styles.filterButtonTextItem,
+                        isSelected
+                          ? styles.filterButtonTextActive
+                          : styles.filterButtonTextInactive,
                       ]}
                     >
-                      {getStatusText(transaction.status)}
+                      {item.label}
                     </Text>
+                  </TouchableOpacity>
+                );
+              })}
+          </View>
+        </ScrollView>
+      </View>
+
+      {/* Loading Indicator */}
+      {transactionState.isLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={AppColors.primary} />
+          <Text style={styles.loadingText}>Đang tải giao dịch...</Text>
+        </View>
+      )}
+
+      {/* Error Message */}
+      {transactionState.errorMessage && !transactionState.isLoading && (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={24} color={AppColors.error} />
+          <Text style={styles.errorText}>{transactionState.errorMessage}</Text>
+          <TouchableOpacity
+            onPress={() => viewModel.fetchTransactions()}
+            style={styles.retryButton}
+          >
+            <Text style={styles.retryButtonText}>Thử lại</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Transaction List */}
+      {!transactionState.isLoading && !transactionState.errorMessage && (
+        <View style={styles.transactionList}>
+          {/* Using transactions directly since filteredTransactions is commented out */}
+          {transactions.map((transaction, index) => {
+            const transactionType = viewModel.getTransactionType(transaction);
+            const formattedDate = viewModel.getFormattedDate(transaction.date);
+            const formattedTime = viewModel.getFormattedTime(transaction.date);
+            const statusLabel = viewModel.getStatusLabel(transaction.status);
+            const statusColor = viewModel.getStatusColor(transaction.status);
+
+            return (
+              <View key={`transaction-${index}`} style={styles.transactionCard}>
+                <View style={styles.transactionContent}>
+                  {/* Transaction Info */}
+                  <View style={styles.transactionInfo}>
+                    <Text style={styles.transactionTitle}>
+                      {transaction.title}
+                    </Text>
+                    <Text style={styles.transactionTime}>
+                      {formattedTime} • {formattedDate}
+                    </Text>
+                    <Text style={styles.amountText}>
+                      {transaction.value.toLocaleString()} VNĐ
+                    </Text>
+                    <View style={styles.statusContainer}>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          {
+                            backgroundColor: `${statusColor}15`,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statusText,
+                            {
+                              color: statusColor,
+                            },
+                          ]}
+                        >
+                          {statusLabel}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
               </View>
+            );
+          })}
 
-              {/* Amount and Balance */}
-              <View style={styles.amountContainer}>
-                <Text
-                  style={[
-                    styles.amountText,
-                    {
-                      color:
-                        transaction.type === "deposit" ||
-                        transaction.type === "receive"
-                          ? "#70E000"
-                          : "#FF6B6B",
-                    },
-                  ]}
-                >
-                  {formatAmount(transaction.amount, transaction.type)}
-                </Text>
-                <Text style={styles.balanceText}>
-                  Số dư: {transaction.balance.toLocaleString()} GF
-                </Text>
+          {/* Using transactions directly since filteredTransactions is commented out */}
+          {transactions.length === 0 && (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconContainer}>
+                <Ionicons name="receipt-outline" size={48} color="#9CA3AF" />
               </View>
+              <Text style={styles.emptyTitle}>Không có giao dịch nào</Text>
+              <Text style={styles.emptyMessage}>
+                Hãy thử thay đổi bộ lọc hoặc từ khóa tìm kiếm để tìm thấy giao
+                dịch bạn cần
+              </Text>
             </View>
-          </View>
-        ))}
-
-        {filteredTransactions.length === 0 && (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconContainer}>
-              <Ionicons name="receipt-outline" size={48} color="#9CA3AF" />
-            </View>
-            <Text style={styles.emptyTitle}>Không có giao dịch nào</Text>
-            <Text style={styles.emptyMessage}>
-              Hãy thử thay đổi bộ lọc hoặc từ khóa tìm kiếm để tìm thấy giao
-              dịch bạn cần
-            </Text>
-          </View>
-        )}
-      </ScrollView>
-    </View>
+          )}
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#ffffff",
   },
-  header: {
-    backgroundColor: "white",
-    paddingHorizontal: 24,
-    paddingTop: 56,
-    paddingBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#111827",
-    textAlign: "center",
-  },
-  headerSpacer: {
-    width: 40,
+  contentContainer: {
+    backgroundColor: "#ffffff",
   },
   searchFilterRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
   },
   searchBar: {
     flex: 1,
@@ -535,11 +461,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    shadowColor: "#70E000",
+    shadowColor: AppColors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.5,
     shadowRadius: 4,
@@ -547,11 +473,11 @@ const styles = StyleSheet.create({
   },
   filterButtonText: {
     marginLeft: 8,
-    color: "white",
+    color: AppColors.white,
     fontWeight: "600",
   },
   filterButtonActive: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
   },
   filterButtonInactive: {
     backgroundColor: "white",
@@ -581,7 +507,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
   },
   activeFiltersContent: {
     flexDirection: "row",
@@ -590,14 +516,14 @@ const styles = StyleSheet.create({
   activeFiltersText: {
     flex: 1,
     marginLeft: 8,
-    color: "#70E000",
+    color: AppColors.primary,
     fontSize: 14,
     fontWeight: "500",
   },
   clearFiltersButton: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 6,
   },
   clearFiltersText: {
@@ -608,7 +534,7 @@ const styles = StyleSheet.create({
   filterContainer: {
     paddingHorizontal: 24,
     paddingVertical: 16,
-    backgroundColor: "white",
+    backgroundColor: "#ffffff",
   },
   filterScrollContent: {
     paddingHorizontal: 0,
@@ -640,8 +566,9 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
   transactionList: {
-    flex: 1,
     paddingHorizontal: 24,
+    paddingBottom: 24,
+    paddingTop: 8,
   },
   transactionCard: {
     backgroundColor: "white",
@@ -677,7 +604,7 @@ const styles = StyleSheet.create({
   transactionTime: {
     color: "#6B7280",
     fontSize: 12,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   statusContainer: {
     flexDirection: "row",
@@ -692,17 +619,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-  amountContainer: {
-    alignItems: "flex-end",
-  },
   amountText: {
-    fontWeight: "bold",
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  balanceText: {
-    color: "#6B7280",
-    fontSize: 12,
+    color: AppColors.primary,
+    fontWeight: "700",
+    fontSize: 20,
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
   emptyState: {
     flex: 1,
@@ -729,5 +651,198 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 80,
+    paddingHorizontal: 24,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: "#6B7280",
+    fontSize: 16,
+  },
+  errorContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+    backgroundColor: "#FEF2F2",
+    marginHorizontal: 24,
+    marginTop: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: AppColors.error,
+  },
+  errorText: {
+    marginTop: 12,
+    marginBottom: 16,
+    color: AppColors.error,
+    fontSize: 14,
+    textAlign: "center",
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: AppColors.error,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  filterOptionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  filterOptionButtonActive: {
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
+  },
+  filterOptionText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  filterOptionTextActive: {
+    color: "white",
+  },
+  modalItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  modalItemSelected: {
+    backgroundColor: `${AppColors.primary}15`,
+    borderColor: AppColors.primary,
+  },
+  modalItemText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#111827",
+  },
+  modalItemTextSelected: {
+    color: AppColors.primary,
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  amountModalContent: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+  },
+  amountModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  amountModalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#0f172a",
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#cbd5f5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  amountInputContainer: {
+    marginBottom: 20,
+  },
+  amountInputLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#475569",
+    marginBottom: 12,
+  },
+  amountInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    marginBottom: 8,
+  },
+  amountInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#111827",
+    fontWeight: "500",
+  },
+  amountUnit: {
+    color: "#6B7280",
+    fontSize: 14,
+    fontWeight: "500",
+    marginLeft: 8,
+  },
+  amountHint: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginTop: 4,
+  },
+  amountModalFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  amountClearButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  amountClearButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#64748b",
+  },
+  amountApplyButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: AppColors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  amountApplyButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#ffffff",
   },
 });

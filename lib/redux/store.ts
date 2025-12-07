@@ -13,6 +13,7 @@ import chatReducer from "@/features/chat/chatSlice";
 import notificationReducer from "@/features/notification/notificationSlice";
 import carReducer from "@/features/car/carSlice";
 import documentReducer from "@/features/document/documentSlice";
+import transactionReducer from "@/features/transaction/transactionSlice";
 import { logout } from "@/features/auth/authSlice";
 
 const appReducer = combineReducers({
@@ -30,6 +31,7 @@ const appReducer = combineReducers({
   notification: notificationReducer,
   car: carReducer,
   document: documentReducer,
+  transaction: transactionReducer,
 });
 
 const rootReducer = (
