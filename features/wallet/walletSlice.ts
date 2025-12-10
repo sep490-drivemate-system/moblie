@@ -1,9 +1,16 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { BaseState } from "@/models/generic/baseState";
-import { getWallet } from "./walletThunk";
+import { getPaymentCallback, getWallet } from "./walletThunk";
+
+interface PaymentCallback {
+    url: string;
+    params: Record<string, string>;
+    timestamp: number;
+}
 
 interface WalletState extends BaseState {
     balance: number;
+    paymentCallback: PaymentCallback | null;
 }
 
 const initialState: WalletState = {
@@ -11,6 +18,7 @@ const initialState: WalletState = {
     isLoading: false,
     errorMessage: null,
     isSuccess: false,
+    paymentCallback: null,
 };
 
 const walletSlice = createSlice({
@@ -27,6 +35,12 @@ const walletSlice = createSlice({
         clearWalletError: (state) => {
             state.errorMessage = null;
         },
+        setPaymentCallback: (state, action: PayloadAction<PaymentCallback>) => {
+            state.paymentCallback = action.payload;
+        },
+        clearPaymentCallback: (state) => {
+            state.paymentCallback = null;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -34,6 +48,17 @@ const walletSlice = createSlice({
                 state.isLoading = true;
                 state.isSuccess = false;
                 state.errorMessage = null;
+            })
+            .addCase(getPaymentCallback.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.errorMessage = null;
+                state.balance = (action.payload?.value ?? 0) + state.balance;
+            })
+            .addCase(getPaymentCallback.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = false;
+                state.errorMessage = action.error.message || "Không thể xử lý callback thanh toán";
             })
             .addCase(getWallet.fulfilled, (state, action) => {
                 state.isLoading = false;
@@ -58,6 +83,8 @@ export const {
     adjustWalletBalance,
     resetWalletState,
     clearWalletError,
+    setPaymentCallback,
+    clearPaymentCallback,
 } = walletSlice.actions;
 
 export default walletSlice.reducer;

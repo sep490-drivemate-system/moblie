@@ -1,12 +1,12 @@
 import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/HttpMethods";
-import { IUserPackageAPI, IGetUserPackagesParams, BookingStatus } from "@/models/package/user-package";
+import { BookingStatus, IGetUserPackages } from "@/models/package/user-package";
 import { IBookingSession, IGetBookingSessionsParams, IGetAllSessionsParams, ISessionDetailResponse, SessionStatus } from "@/models/booking/booking";
 import { ISessionRoutes } from "@/models/route/route";
 import axiosInstance from "@/lib/axios/axiosInstance";
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { GenericResponse } from "@/models/generic/genericResponse";
-import { IBuyPackageRequest, IBuyPackageResponse, IMyPackgesResponse } from "@/models/package/package";
+import { GenericResponse, PaginatedGeneric } from "@/models/generic/genericResponse";
+import { IBuyPackageRequest, IBuyPackageResponse, IMyPackges } from "@/models/package/package";
 
 const BOOKING_PATH = "booking";
 const SESSION_PATH = "session";
@@ -103,8 +103,8 @@ export interface IRescheduleSessionRequest {
 }
 
 export const getMyPackages = createThunk<
-  IMyPackgesResponse[],
-  IGetUserPackagesParams | undefined
+  PaginatedGeneric<IMyPackges>,
+  IGetUserPackages
 >(
   HttpMethod.GET,
   "getMyPackages",
@@ -112,8 +112,14 @@ export const getMyPackages = createThunk<
   {
     buildUrl: (payload) => {
       const params = new URLSearchParams();
-      if (payload?.bookingStatus !== undefined && payload.bookingStatus !== BookingStatus.All) {
-        params.append('bookingStatus', payload.bookingStatus.toString());
+      if (payload?.Status !== undefined && payload.Status !== BookingStatus.All) {
+        params.append('Status', payload.Status?.toString() ?? '');
+      }
+      if (payload?.PageNumber) {
+        params.append('PageNumber', payload.PageNumber.toString());
+      }
+      if (payload?.PageSize) {
+        params.append('PageSize', payload.PageSize.toString());
       }
 
       const queryString = params.toString();

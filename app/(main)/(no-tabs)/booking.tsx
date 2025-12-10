@@ -111,8 +111,8 @@ export default function BookingScreen() {
 
   // Calculate vehicle cost: prioritize carInfo.unitPrice, fallback to carPrice
   const vehicleCost = (() => {
-    if (carInfo && carInfo.unitPrice && selectedDuration > 0) {
-      return carInfo.unitPrice * selectedDuration;
+    if (carInfo && carInfo.price && selectedDuration > 0) {
+      return carInfo.price * selectedDuration;
     } else if (carPrice && vehicleId && selectedDuration > 0) {
       return carPrice * selectedDuration;
     }

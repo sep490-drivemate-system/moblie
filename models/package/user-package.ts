@@ -1,5 +1,7 @@
 // Model for user's purchased packages and driving sessions
 
+import { IPaginatedOption } from "../generic/paginatedOption";
+
 export interface IDrivingSession {
     id: string;
     packageId: string;
@@ -23,7 +25,7 @@ export interface IUserPackage {
     id: string;
     packageId: string;
     packageName: string;
-    price?: number; 
+    price?: number;
     instructorId: string;
     instructorName: string;
     instructorAvatar: string;
@@ -59,10 +61,10 @@ export enum BookingStatus {
 export interface IUserPackageAPI {
     id: string;
     nameInstructor: string;
-    instructorId:string;
+    instructorId: string;
     namePackake: string;
-    carId:string;
-    carPrice:number;
+    carId: string;
+    carPrice: number;
     bookingStatus: BookingStatus;
     avatarInstructor: string;
     buyDate: string; // ISO format
@@ -72,6 +74,6 @@ export interface IUserPackageAPI {
     remainingTime: number; // hours remaining
 }
 
-export interface IGetUserPackagesParams {
-    bookingStatus?: BookingStatus;
+export interface IGetUserPackages extends IPaginatedOption {
+    Status?: BookingStatus;
 }

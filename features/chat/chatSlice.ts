@@ -1,27 +1,31 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { IChatSession } from "@/models/chat/chat";
+import { IChatSession } from "@/models/chat/chat.type";
 import { BaseState } from "@/models/generic/baseState";
-import { getChatSessions, getChatSessionById } from "./chatThunk";
 
 interface ChatState extends BaseState {
     sessions: IChatSession[];
     currentSession: IChatSession | null;
     selectedSessionId: string | null;
+    unreadMessageCount: number;
 }
 
 const initialState: ChatState = {
-    sessions: [],
-    currentSession: null,
-    selectedSessionId: null,
     isLoading: false,
     errorMessage: null,
     isSuccess: false,
+    sessions: [],
+    currentSession: null,
+    selectedSessionId: null,
+    unreadMessageCount: 0,
 };
 
 const chatSlice = createSlice({
     name: "chat",
     initialState,
     reducers: {
+        setUnreadMessageCount: (state, action: PayloadAction<number>) => {
+            state.unreadMessageCount = action.payload;
+        },
         setSessions: (state, action: PayloadAction<IChatSession[]>) => {
             state.sessions = action.payload;
         },
@@ -59,47 +63,6 @@ const chatSlice = createSlice({
             state.selectedSessionId = null;
         },
     },
-    extraReducers: (builder) => {
-        // getChatSessions
-        builder
-            .addCase(getChatSessions.pending, (state) => {
-                state.isLoading = true;
-                state.errorMessage = null;
-                state.isSuccess = false;
-            })
-            .addCase(getChatSessions.fulfilled, (state, action) => {
-                state.isLoading = false;
-                state.isSuccess = true;
-                if (action.payload?.value) {
-                    state.sessions = action.payload.value;
-                }
-            })
-            .addCase(getChatSessions.rejected, (state, action) => {
-                state.isLoading = false;
-                state.isSuccess = false;
-                state.errorMessage = action.payload as string || "Không thể tải danh sách chat";
-            });
-
-        // getChatSessionById
-        builder
-            .addCase(getChatSessionById.pending, (state) => {
-                state.isLoading = true;
-                state.errorMessage = null;
-            })
-            .addCase(getChatSessionById.fulfilled, (state, action) => {
-                state.isLoading = false;
-                state.isSuccess = true;
-                if (action.payload?.value) {
-                    state.currentSession = action.payload.value;
-                    state.selectedSessionId = action.payload.value.id;
-                }
-            })
-            .addCase(getChatSessionById.rejected, (state, action) => {
-                state.isLoading = false;
-                state.isSuccess = false;
-                state.errorMessage = action.payload as string || "Không thể tải thông tin chat";
-            });
-    },
 });
 
 export const {
@@ -109,6 +72,7 @@ export const {
     setCurrentSession,
     setSelectedSessionId,
     clearChat,
+    setUnreadMessageCount,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

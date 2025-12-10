@@ -76,15 +76,18 @@ export const createDeposit = createThunk<
     HttpMethod.POST,
     "createDeposit",
     `${WALLET_PATH}/deposit`,
+);
+
+export const getPaymentCallback = createThunk<
+    number | null,
+    { url: string }
+>(
+    HttpMethod.GET,
+    "getPaymentCallback",
+    `${WALLET_PATH}/payment-callback`,
     {
-        transformPayload: (payload: IDeposit) => {
-            // BankType is already a number enum (1, 2, 3)
-            // IDeposit already has platform field, just pass through
-            return {
-                amount: payload.amount,
-                paymentMethod: payload.paymentMethod, // Already number enum
-                platform: payload.platform,
-            };
+        buildUrl: (payload) => {
+            return `${WALLET_PATH}/payment-callback?${payload.url}`;
         },
     }
-);
+);  

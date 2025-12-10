@@ -1,15 +1,14 @@
-import { useMemo } from "react";
-import { useAppDispatch } from "@/lib/redux/hooks";
 import { cancelPackageBooking, getMyPackages } from "@/features/booking/bookingThunk";
 import { buyPackage } from "@/features/booking/bookingThunk";
-import { BookingStatus } from "@/models/package/user-package";
-import { IBuyPackageRequest, IMyPackgesResponse } from "@/models/package/package";
+import { BookingStatus, IGetUserPackages } from "@/models/package/user-package";
+import { IBuyPackageRequest, IMyPackges } from "@/models/package/package";
 import { AppColors } from "@/constants/Colors";
 import { AppDispatch, RootState } from "@/lib/redux/store";
 import { router } from "expo-router";
 import { IInstructorPackages } from "@/models/instructor/instructor.type";
 import { ROUTES } from "@/constants/routes";
 import { BaseViewModel } from "../shared/BaseViewModel";
+import { PaginatedGeneric } from "@/models/generic/genericResponse";
 
 type RefundComputationInput = {
     status: string | BookingStatus;
@@ -39,13 +38,13 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
 
 
 
-    async fetchMyPackages(): Promise<IMyPackgesResponse[]> {
+    async fetchMyPackages(payload: IGetUserPackages): Promise<PaginatedGeneric<IMyPackges> | null> {
         const result = await this.executeAsync(async () => {
-            const response = await this.dispatch(getMyPackages(undefined)).unwrap();
+            const response = await this.dispatch(getMyPackages(payload)).unwrap();
             return (response as any).value || response;
         });
-        const packages: IMyPackgesResponse[] = (result as any)?.value || result || [];
-        return packages;
+        const paged: PaginatedGeneric<IMyPackges> | null = (result as any)?.value || result || null;
+        return paged;
     }
 
     getStatusOptions(): StatusOption[] {
@@ -63,9 +62,9 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
     }
 
     filterPackages(
-        packages: IMyPackgesResponse[],
+        packages: IMyPackges[],
         status: BookingStatus
-    ): IMyPackgesResponse[] {
+    ): IMyPackges[] {
         if (status === BookingStatus.All) {
             return packages;
         }
@@ -75,7 +74,7 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
         });
     }
 
-    calculateStatusCounts(packages: IMyPackgesResponse[]): Record<number, number> {
+    calculateStatusCounts(packages: IMyPackges[]): Record<number, number> {
         const counts: Record<number, number> = {
             [BookingStatus.All]: packages.length,
             [BookingStatus.Purchased]: 0,
@@ -103,7 +102,7 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
             case BookingStatus.InUse:
                 return AppColors.primary;
             case BookingStatus.Used:
-                return AppColors.gray;
+                return AppColors.gradientMiddle;
             case BookingStatus.CancellationWithRefund:
                 return AppColors.blue;
             case BookingStatus.CancellationWithoutRefund:

@@ -8,21 +8,20 @@ import {
   StatusBar,
   ActivityIndicator,
   RefreshControl,
+  FlatList,
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
-  ArrowLeft,
   Package,
   Clock,
   Calendar,
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { BookingStatus } from "@/models/package/user-package";
-import { IMyPackgesResponse } from "@/models/package/package";
+import { IMyPackges } from "@/models/package/package";
 import { ROUTES } from "@/constants/routes";
 import { BookingViewModel } from "@/viewmodels/booking/BookingViewModel";
 import HeaderList from "@/components/Commons/HeaderList";
-import TabFilter, { TabOption } from "@/components/Commons/TabFilter";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { RootState } from "@/lib/redux/store";
 
@@ -31,9 +30,54 @@ export default function MyPackagesScreen() {
   const [bookingState, bookingViewModel] = useViewModel<RootState["booking"], BookingViewModel>(BookingViewModel, (state) => state.booking);
 
   const [selectedStatus, setSelectedStatus] = useState<BookingStatus>(BookingStatus.All);
-  const [allPackages, setAllPackages] = useState<IMyPackgesResponse[]>([]);
+  const [allPackages, setAllPackages] = useState<IMyPackges[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState({ page: 1, totalCount: 0 });
+
+  const PAGE_SIZE = 10;
+
+  const renderFilterBar = () => (
+    <View style={styles.stickyFilterWrapper}>
+      <FlatList
+        data={tabOptions}
+        keyExtractor={(item) => String(item.value)}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipScrollContent}
+        renderItem={({ item }) => {
+          const isActive = selectedStatus === item.value;
+          const activeStyle = getActiveTabStyle(item.value);
+          const activeTextStyle = getActiveTextStyle(item.value);
+          return (
+            <TouchableOpacity
+              style={[
+                styles.chip,
+                isActive && {
+                  backgroundColor: activeStyle.backgroundColor,
+                  borderColor: activeStyle.borderColor,
+                },
+              ]}
+              onPress={() => setSelectedStatus(item.value)}
+              activeOpacity={0.85}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  isActive && { color: activeTextStyle.color, fontWeight: "800" },
+                ]}
+                numberOfLines={1}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        }}
+      />
+    </View>
+  );
+
 
   const statusOptions = useMemo(
     () => bookingViewModel.getStatusOptions(),
@@ -41,45 +85,58 @@ export default function MyPackagesScreen() {
   );
 
   useEffect(() => {
-    fetchAllPackages();
-  }, []);
+    loadPage(1, false, true);
+  }, [selectedStatus]);
 
-  const fetchAllPackages = async (isRefresh = false) => {
-    if (isRefresh) {
-      setIsRefreshing(true);
-    } else {
+  const loadPage = async (page = 1, append = false, showSpinner = false) => {
+    if (append) {
+      setIsLoadingMore(true);
+    } else if (showSpinner) {
       setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
     }
 
     try {
-      const packagesData = await bookingViewModel.fetchMyPackages();
-      setAllPackages(packagesData);
+      const response = await bookingViewModel.fetchMyPackages({
+        Status: selectedStatus,
+        PageNumber: page,
+        PageSize: PAGE_SIZE,
+      });
+      const items = response?.pageContent ?? [];
+      setAllPackages((prev) => (append ? [...prev, ...items] : items));
+      setPagination((prev) => ({
+        page,
+        totalCount: response?.totalCount ?? (append ? prev.totalCount : items.length),
+      }));
     } catch (error) {
-      setAllPackages([]);
-    } finally {
-      if (isRefresh) {
-        setIsRefreshing(false);
-      } else {
-        setIsLoading(false);
+      if (!append) {
+        setAllPackages([]);
+        setPagination({ page: 1, totalCount: 0 });
       }
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+      setIsLoadingMore(false);
     }
   };
 
   const handleRefresh = async () => {
-    await fetchAllPackages(true);
+    await loadPage(1, false, true);
   };
 
-  const displayedPackages = useMemo(
-    () => bookingViewModel.filterPackages(allPackages, selectedStatus),
-    [allPackages, selectedStatus, bookingViewModel]
-  );
+  const handleLoadMore = async () => {
+    const { page, totalCount } = pagination;
+    if (isLoadingMore || allPackages.length >= totalCount || isLoading) return;
+    await loadPage(page + 1, true, false);
+  };
 
   const statusCounts = useMemo(
     () => bookingViewModel.calculateStatusCounts(allPackages),
     [allPackages, bookingViewModel]
   );
 
-  const tabOptions: TabOption<BookingStatus>[] = useMemo(
+  const tabOptions = useMemo(
     () =>
       statusOptions.map((opt) => ({
         value: opt.key,
@@ -88,6 +145,8 @@ export default function MyPackagesScreen() {
       })),
     [statusOptions, statusCounts]
   );
+
+  const hasFilter = tabOptions.length > 0;
 
   const getActiveTabStyle = (status: BookingStatus) => {
     const color =
@@ -114,24 +173,11 @@ export default function MyPackagesScreen() {
     <View style={styles.container}>
       <HeaderList actionReturnScreen={ROUTES.PROFILE as any} title="Gói Đã Mua" colors={[AppColors.primary, AppColors.gradientStart, AppColors.gradientEnd]} />
 
-      {/* Filter Bar */}
-      <TabFilter
-        options={tabOptions}
-        activeValue={selectedStatus}
-        onSelect={setSelectedStatus}
-        showCount={true}
-        containerStyle={styles.filterBarContainer}
-        style={styles.filterBarScroll}
-        tabStyle={styles.filterChip}
-        activeTabStyle={getActiveTabStyle}
-        textStyle={styles.filterChipText}
-        activeTextStyle={getActiveTextStyle}
-      />
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+      <FlatList
+        data={isLoading && allPackages.length === 0 ? [] : allPackages}
+        keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -140,165 +186,170 @@ export default function MyPackagesScreen() {
             tintColor={AppColors.primary}
           />
         }
-      >
-        {isLoading ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color={AppColors.primary} />
-            <Text style={styles.loadingText}>Đang tải...</Text>
-          </View>
-        ) : displayedPackages.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Package size={80} color="#cbd5e1" strokeWidth={1.5} />
-            <Text style={styles.emptyTitle}>Bạn chưa có gói nào</Text>
+        ListHeaderComponent={hasFilter ? renderFilterBar : null}
+        ListHeaderComponentStyle={hasFilter ? styles.listHeaderSpacing : undefined}
+        stickyHeaderIndices={hasFilter ? [0] : []}
+        renderItem={({ item: pkg }) => {
+          const progressPercentage =
+            bookingViewModel.getProgressPercentage(pkg.precentInUse);
+          const statusColor = bookingViewModel.getStatusColor(
+            pkg.bookingStatus
+          );
+          const purchaseDateLabel =
+            bookingViewModel.formatPurchaseDate(pkg.buyDate);
+          return (
             <TouchableOpacity
-              style={styles.exploreButton}
-              onPress={() => router.push(ROUTES.PACKAGES)}
+              style={styles.packageCard}
+              activeOpacity={0.7}
             >
-              <Text style={styles.exploreButtonText}>Khám phá gói</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          displayedPackages.map((pkg: IMyPackgesResponse) => {
-            const progressPercentage =
-              bookingViewModel.getProgressPercentage(pkg.precentInUse);
-            const statusColor = bookingViewModel.getStatusColor(
-              pkg.bookingStatus
-            );
-            const purchaseDateLabel =
-              bookingViewModel.formatPurchaseDate(pkg.buyDate);
-            return (
-              <TouchableOpacity
-                key={pkg.id}
-                style={styles.packageCard}
-                activeOpacity={0.7}
-              >
 
-                {/* Package Name with Status */}
-                <View style={styles.packageNameRow}>
-                  <Text style={styles.packageName}>
-                    {pkg.namePackage}
-                  </Text>
+              <View style={styles.packageNameRow}>
+                <Text style={styles.packageName}>
+                  {pkg.namePackage}
+                </Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor: statusColor + "15",
+                      borderColor: statusColor,
+                    },
+                  ]}
+                >
                   <View
                     style={[
-                      styles.statusBadge,
-                      {
-                        backgroundColor: statusColor + "15",
-                        borderColor: statusColor,
-                      },
+                      styles.statusDot,
+                      { backgroundColor: statusColor },
                     ]}
-                  >
-                    <View
-                      style={[
-                        styles.statusDot,
-                        { backgroundColor: statusColor },
-                      ]}
-                    />
-                    <Text
-                      style={[styles.statusText, { color: statusColor }]}
-                    >
-                      {bookingViewModel.getStatusText(pkg.bookingStatus)}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Purchase Date */}
-                <View style={styles.purchaseDateRow}>
-                  <Calendar
-                    size={16}
-                    color="#64748b"
-                    strokeWidth={2}
                   />
-                  <Text style={styles.purchaseDateText}>
-                    {purchaseDateLabel}
+                  <Text
+                    style={[styles.statusText, { color: statusColor }]}
+                  >
+                    {bookingViewModel.getStatusText(pkg.bookingStatus)}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.purchaseDateRow}>
+                <Calendar
+                  size={16}
+                  color="#64748b"
+                  strokeWidth={2}
+                />
+                <Text style={styles.purchaseDateText}>
+                  {purchaseDateLabel}
+                </Text>
+              </View>
+
+              <View style={styles.progressSection}>
+                <View style={styles.progressHeader}>
+                  <View style={styles.progressHeaderLeft}>
+                    <Clock
+                      size={18}
+                      color={AppColors.primary}
+                      strokeWidth={2}
+                    />
+                    <Text style={styles.progressTitle}>Tiến độ sử dụng</Text>
+                  </View>
+                  <Text style={styles.progressPercentage}>
+                    {progressPercentage.toFixed(0)}%
                   </Text>
                 </View>
 
-                {/* Progress Section */}
-                <View style={styles.progressSection}>
-                  <View style={styles.progressHeader}>
-                    <View style={styles.progressHeaderLeft}>
-                      <Clock
-                        size={18}
-                        color={AppColors.primary}
-                        strokeWidth={2}
-                      />
-                      <Text style={styles.progressTitle}>Tiến độ sử dụng</Text>
-                    </View>
-                    <Text style={styles.progressPercentage}>
-                      {progressPercentage.toFixed(0)}%
+                <View style={styles.progressBarContainer}>
+                  <View style={styles.progressBar}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${progressPercentage}%`,
+                          backgroundColor: AppColors.primary,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.hoursStats}>
+                  <View style={styles.hoursStatItem}>
+                    <Text style={styles.hoursStatLabel}>Tổng</Text>
+                    <Text style={styles.hoursStatValue}>
+                      {pkg.duration}h
                     </Text>
                   </View>
-
-                  {/* Progress Bar */}
-                  <View style={styles.progressBarContainer}>
-                    <View style={styles.progressBar}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          {
-                            width: `${progressPercentage}%`,
-                            backgroundColor: AppColors.primary,
-                          },
-                        ]}
-                      />
-                    </View>
+                  <View style={styles.statDivider} />
+                  <View style={styles.hoursStatItem}>
+                    <Text style={styles.hoursStatLabel}>Đã dùng</Text>
+                    <Text style={styles.hoursStatValueUsed}>
+                      {pkg.durationInUse}h
+                    </Text>
                   </View>
-
-                  {/* Hours Stats */}
-                  <View style={styles.hoursStats}>
-                    <View style={styles.hoursStatItem}>
-                      <Text style={styles.hoursStatLabel}>Tổng</Text>
-                      <Text style={styles.hoursStatValue}>
-                        {pkg.duration}h
-                      </Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.hoursStatItem}>
-                      <Text style={styles.hoursStatLabel}>Đã dùng</Text>
-                      <Text style={styles.hoursStatValueUsed}>
-                        {pkg.durationInUse}h
-                      </Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.hoursStatItem}>
-                      <Text style={styles.hoursStatLabel}>Còn lại</Text>
-                      <Text
-                        style={[
-                          styles.hoursStatValue,
-                          {
-                            color:
-                              pkg.remainingTime > 0
-                                ? AppColors.primary
-                                : "#ef4444",
-                            fontWeight: "800",
-                          },
-                        ]}
-                      >
-                        {pkg.remainingTime}h
-                      </Text>
-                    </View>
+                  <View style={styles.statDivider} />
+                  <View style={styles.hoursStatItem}>
+                    <Text style={styles.hoursStatLabel}>Còn lại</Text>
+                    <Text
+                      style={[
+                        styles.hoursStatValue,
+                        {
+                          color:
+                            pkg.remainingTime > 0
+                              ? AppColors.primary
+                              : "#ef4444",
+                          fontWeight: "800",
+                        },
+                      ]}
+                    >
+                      {pkg.remainingTime}h
+                    </Text>
                   </View>
                 </View>
+              </View>
 
-                {/* Footer */}
-                <View style={styles.cardFooter}>
-                  <TouchableOpacity activeOpacity={1}
-                    style={styles.viewDetailButton}
-                    onPress={() => router.push({
-                      pathname: ROUTES.MY_PACKAGE_DETAIL,
-                      params: {
-                        packageData: JSON.stringify(pkg),
-                      },
-                    })}
-                  >
-                    <Text style={styles.viewDetailText}>Chi tiết</Text>
-                  </TouchableOpacity>
-                </View>
+              <View style={styles.cardFooter}>
+                <TouchableOpacity activeOpacity={1}
+                  style={styles.viewDetailButton}
+                  onPress={() => router.push({
+                    pathname: ROUTES.MY_PACKAGE_DETAIL,
+                    params: {
+                      packageData: JSON.stringify(pkg),
+                    },
+                  })}
+                >
+                  <Text style={styles.viewDetailText}>Chi tiết</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.loadingState}>
+              <ActivityIndicator size="large" color={AppColors.primary} />
+              <Text style={styles.loadingText}>Đang tải...</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Package size={80} color="#cbd5e1" strokeWidth={1.5} />
+              <Text style={styles.emptyTitle}>Bạn chưa có gói nào</Text>
+              <TouchableOpacity
+                style={styles.exploreButton}
+                onPress={() => router.push(ROUTES.PACKAGES)}
+              >
+                <Text style={styles.exploreButtonText}>Khám phá gói</Text>
               </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+            </View>
+          )
+        }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          isLoadingMore ? (
+            <View style={styles.loadMoreButton}>
+              <ActivityIndicator color={AppColors.primary} />
+            </View>
+          ) : null
+        }
+      />
     </View>
   );
 }
@@ -390,10 +441,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 12,
     paddingBottom: 32,
+    alignItems: "stretch",
   },
   packageCard: {
+    width: "100%",
     backgroundColor: "#ffffff",
     borderRadius: 20,
     padding: 20,
@@ -457,7 +510,7 @@ const styles = StyleSheet.create({
   packageNameRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     marginBottom: 12,
     gap: 12,
   },
@@ -642,5 +695,57 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#ffffff",
+  },
+  // Custom chip styles
+  chipScroll: {
+    backgroundColor: "transparent",
+  },
+  chipScrollContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 6,
+    alignItems: "flex-start",
+    marginBottom: 10,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    height: 36,
+    marginRight: 6,
+    borderRadius: 18,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chipText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  loadMoreButton: {
+    marginTop: 8,
+    marginBottom: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+  },
+  loadMoreText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: AppColors.primary,
+  },
+  stickyFilterWrapper: {
+    backgroundColor: "#f8fafc",
+    paddingBottom: 2,
+  },
+  listHeaderSpacing: {
+    paddingTop: 4,
+    paddingBottom: 4,
   },
 });

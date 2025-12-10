@@ -120,7 +120,6 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
         ).unwrap();
         const paginatedData = (result as any).value || result;
 
-        // APPEND data thay vì replace
         const updatedInstructors = [
           ...currentState.allInstructors,
           ...paginatedData.pageContent,
@@ -130,7 +129,6 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
         this.dispatch(setFilteredInstructors(updatedInstructors));
         this.dispatch(setDisplayedInstructors(updatedInstructors));
 
-        // Update pagination info
         this.dispatch(
           setPagination({
             currentPage: paginatedData.currentPage,

@@ -11,6 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ArrowLeft } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { RelativePathString, router } from "expo-router";
+import { ROUTES } from "@/constants/routes";
 
 export interface HeaderListProps {
   actionReturnScreen?: string;
@@ -40,6 +41,8 @@ export default function HeaderList({
   const handleBackPress = () => {
     if (onBackPress) {
       onBackPress();
+    } else if (actionReturnScreen === ROUTES.BACK || actionReturnScreen === '') {
+      router.back();
     } else if (actionReturnScreen) {
       router.push({
         pathname: actionReturnScreen as any,
@@ -50,7 +53,9 @@ export default function HeaderList({
   };
 
   const shouldShowBackButton =
-    showBackButton !== undefined ? showBackButton : !!actionReturnScreen;
+    showBackButton !== undefined
+      ? showBackButton
+      : actionReturnScreen !== undefined || onBackPress !== undefined;
 
   return (
     <LinearGradient

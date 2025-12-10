@@ -28,7 +28,7 @@ export interface IBuyPackageResponse {
   id: string;
 }
 
-export interface IMyPackgesResponse {
+export interface IMyPackges {
   id: string;
   namePackage: string;
   buyDate: string;

@@ -2,6 +2,7 @@ import { RootState } from "@/lib/redux/store";
 import { BaseViewModel } from "@/viewmodels/shared/BaseViewModel";
 import {
   createDeposit,
+  getPaymentCallback,
   getStatisticOverviewPriceInstructor,
   getStatisticsInstructor,
   getWallet,
@@ -15,6 +16,7 @@ import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
 import { IDeposit } from "@/models/wallet/deposit.type";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
+import { setPaymentCallback } from "@/features/wallet/walletSlice";
 
 export class WalletViewModel extends BaseViewModel<RootState["wallet"]> {
   getWalletBalance = async (): Promise<number> => {
@@ -55,35 +57,39 @@ export class WalletViewModel extends BaseViewModel<RootState["wallet"]> {
   deposit = async (payload: IDeposit): Promise<boolean> => {
     return (
       (await this.executeAsync<boolean>(async () => {
-        console.log(
-          "[WalletViewModel] Gọi API createDeposit với payload:",
-          payload
-        );
         const response = await this.dispatch(createDeposit(payload)).unwrap();
         const paymentUrl = response?.value as string;
-        console.log("[WalletViewModel] API response:", response);
-        console.log("[WalletViewModel] Payment URL:", paymentUrl);
+        const returnUrl = 'exp://192.168.110.147:8081/(main)/(no-tabs)/payment-success';
+        const result = await WebBrowser.openAuthSessionAsync(
+          paymentUrl,
+          returnUrl,
+          {
+            showInRecents: false,
+          }
+        );
 
-        // Kiểm tra paymentUrl có hợp lệ không
-        if (
-          !paymentUrl ||
-          typeof paymentUrl !== "string" ||
-          paymentUrl.trim() === ""
-        ) {
-          throw new Error("Không nhận được URL thanh toán từ server");
+        if (result.type === 'success' && result.url) {
+          const parsed = Linking.parse(result.url);
+          const params = parsed.queryParams || {};
+          const callbackUrl = result.url;
+          this.dispatch(setPaymentCallback({
+            url: callbackUrl,
+            params: params as Record<string, string>,
+            timestamp: Date.now(),
+          }));
+        } else if (result.type === 'cancel' || result.type === 'dismiss') {
         }
-
-        // Kiểm tra URL có thể mở được không
-        const canOpen = await Linking.canOpenURL(paymentUrl);
-        if (!canOpen) {
-          throw new Error("Không thể mở URL thanh toán. URL không hợp lệ.");
-        }
-
-        // Mở payment URL trong browser/webview
-        // Payment gateway sẽ redirect về backend sau khi thanh toán
-        // Backend sẽ verify và redirect về deep link của app (moblie://)
         return true;
       })) ?? false
+    );
+  };
+
+  handlePaymentCallback = async (params: string): Promise<number | null> => {
+    return (
+      (await this.executeAsync<number>(async () => {
+        const response = await this.dispatch(getPaymentCallback({ url: params })).unwrap();
+        return response?.value as number;
+      })) ?? 0
     );
   };
 }

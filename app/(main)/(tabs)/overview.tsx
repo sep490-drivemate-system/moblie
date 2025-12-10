@@ -23,6 +23,9 @@ import {
   Navigation,
   Filter,
   ChevronDown,
+  Wallet,
+  MessageSquareMore,
+  ChevronRight,
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
@@ -33,6 +36,9 @@ import {
   IStatisticsInstructor,
 } from "@/models/instructor/instructor.type";
 import HeaderList from "@/components/Commons/HeaderList";
+import { useAppSelector } from "@/lib/redux/hooks";
+import { useRouter } from "expo-router";
+import { ROUTES } from "@/constants/routes";
 
 const { width: screenWidth } = Dimensions.get("window");
 const CURRENT_YEAR = new Date().getFullYear();
@@ -283,6 +289,9 @@ const students = [
 ];
 
 export default function OverviewScreen() {
+  const router = useRouter();
+  const chatState = useAppSelector((state) => state.chat);
+  const notificationState = useAppSelector((state) => state.notification);
   const [walletState, walletViewModel] = useViewModel(
     WalletViewModel,
     (state) => state.wallet
@@ -621,7 +630,68 @@ export default function OverviewScreen() {
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
     >
-      {/* Modern Header with Gradient */}
+      {/* Header giống Home */}
+      <View style={styles.topHeader}>
+        <View style={styles.floatingContainer}>
+          <TouchableOpacity
+            style={styles.walletSection}
+            onPress={() => router.push(ROUTES.MAIN_NO_TABS_WALLET)}
+          >
+            <Wallet size={30} color={AppColors.primary} />
+            <View style={styles.walletTextContainer}>
+              <Text style={styles.headerItemLabel}>Ví DriveMate</Text>
+              <Text style={styles.headerItemValue}>
+                {Intl.NumberFormat("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                  maximumFractionDigits: 0,
+                }).format(walletState.balance || 0)}
+              </Text>
+            </View>
+            <ChevronRight size={20} color="#92929D" />
+          </TouchableOpacity>
+
+          <View style={styles.iconGroup}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => router.push(ROUTES.MAIN_NO_TABS_NOTIFICATIONS)}
+            >
+              <View style={styles.iconContainer}>
+                <Bell size={24} color={"#70E000"} />
+                {notificationState.unreadCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {notificationState.unreadCount > 99
+                        ? "99+"
+                        : notificationState.unreadCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => router.push(ROUTES.MAIN_NO_TABS_CHATS)}
+            >
+              <View style={styles.iconContainer}>
+                <MessageSquareMore size={24} color={"#70E000"} />
+                {chatState.unreadMessageCount > 0 ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {chatState.unreadMessageCount > 99
+                        ? "99+"
+                        : chatState.unreadMessageCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* Modern Header Title */}
       <HeaderList
         title="Tổng Quan Hoạt Động"
         description="Quản lý doanh thu, khách hàng và gói dịch vụ của bạn"
@@ -962,6 +1032,86 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     backgroundColor: "#ffffff",
+  },
+  topHeader: {
+    backgroundColor: "#70E000",
+    paddingTop: StatusBar.currentHeight,
+    alignItems: "center",
+    position: "relative",
+    height: 80,
+  },
+  floatingContainer: {
+    width: "95%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FFF",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    position: "absolute",
+    top: 50,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  walletSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+    paddingRight: 12,
+    borderRightWidth: 1,
+    borderRightColor: "#E5E5E5",
+  },
+  walletTextContainer: {
+    flex: 1,
+  },
+  iconGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 25,
+    paddingLeft: 12,
+  },
+  headerItemLabel: {
+    fontSize: 12,
+    color: "#92929D",
+  },
+  headerItemValue: {
+    fontSize: 14,
+    fontWeight: "500",
+    flex: 1,
+  },
+  iconButton: {
+    padding: 4,
+  },
+  iconContainer: {
+    position: "relative",
+    width: 28,
+    height: 28,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badge: {
+    position: "absolute",
+    top: -6,
+    right: -8,
+    backgroundColor: "#FF3B30",
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: "#FFF",
+  },
+  badgeText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "700",
   },
   header: {
     paddingTop: StatusBar.currentHeight,

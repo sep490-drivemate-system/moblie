@@ -7,31 +7,57 @@ import {
   StatusBar,
   Animated,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CheckCircle, Home, Calendar, Car } from 'lucide-react-native';
 import { ROUTES } from '@/constants/routes';
+import { WalletViewModel } from '@/viewmodels/wallet/WalletViewModel';
+import { useViewModel } from '@/viewmodels/shared/BaseViewModel';
+import { RootState } from '@/lib/redux/store';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export default function PaymentSuccessScreen() {
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(0)).current;
+  const params = useLocalSearchParams();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
+  const walletSelector = (state: RootState) => state.wallet;
+  const [walletState, walletViewModel] = useViewModel(
+    WalletViewModel,
+    walletSelector
+  );
+
+  const hasProcessedRef = useRef(false);
+  const lastParamsStringRef = useRef<string>('');
+
   useEffect(() => {
-    // Animation sequence
+    const paramsObj = params as Record<string, string>;
+    const queryString = Object.keys(paramsObj)
+      .map(k => `${encodeURIComponent(k)}=${encodeURIComponent(paramsObj[k])}`)
+      .join("&");
+      
+
+    if (queryString && lastParamsStringRef.current !== queryString) {
+      lastParamsStringRef.current = queryString;
+      hasProcessedRef.current = true;
+      walletViewModel.handlePaymentCallback(queryString);
+    }
+  }, [params]);
+
+
+  useEffect(() => {
     Animated.sequence([
-      // Scale in the check icon
       Animated.spring(scaleAnim, {
         toValue: 1,
         tension: 50,
         friction: 7,
         useNativeDriver: true,
       }),
-      // Fade in content
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -48,10 +74,6 @@ export default function PaymentSuccessScreen() {
   }, []);
 
 
-
-  const handleGoToRental = () => {
-    router.replace('/(main)/(tabs)/rental');
-  };
 
   return (
     <View style={styles.container}>
@@ -128,10 +150,11 @@ export default function PaymentSuccessScreen() {
               }
             ]}
           >
-            {/* Primary Button - Go to Rental */}
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={handleGoToRental}
+              onPress={() => router.replace({
+                pathname: ROUTES.MY_PACKAGES,
+              })}
               activeOpacity={0.8}
             >
               <View style={styles.buttonContent}>
@@ -140,7 +163,6 @@ export default function PaymentSuccessScreen() {
               </View>
             </TouchableOpacity>
 
-            {/* Secondary Button - Go Home */}
             <TouchableOpacity
               style={styles.secondaryButton}
               onPress={() => router.replace({

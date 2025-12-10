@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isTokenExpired } from "@/lib/jwt/tokenUtils";
 const axiosInstance = axios.create({
     baseURL: process.env.EXPO_PUBLIC_API_URL,
-    timeout: parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT || '30000'),
+    timeout: parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT || '15000'),
     headers: {
         "Content-Type": "application/json",
     },

@@ -97,9 +97,9 @@ export default function ProfileScreen() {
               </View>
               <TouchableOpacity
                 style={styles.topupButton}
-                onPress={() => router.push(ROUTES.MAIN_NO_TABS_DEPOSIT)}
+                onPress={() => router.push(ROUTES.MAIN_NO_TABS_WALLET)}
               >
-                <Text style={styles.topupButtonText}>Nạp tiền</Text>
+                <Text style={styles.topupButtonText}>Xem ví</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -162,16 +162,16 @@ export default function ProfileScreen() {
             )}
             {(authState.userInfo?.role as UserRole) ===
               UserRole.NoviceDriver && (
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
-              >
-                <View style={styles.menuItemLeft}>
-                  <Package2 size={20} color="#70E000" />
-                  <Text style={styles.menuItemText}>Quản lý gói đã mua</Text>
-                </View>
-              </TouchableOpacity>
-            )}
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
+                >
+                  <View style={styles.menuItemLeft}>
+                    <Package2 size={20} color="#70E000" />
+                    <Text style={styles.menuItemText}>Quản lý gói đã mua</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
           </View>
         </View>
 

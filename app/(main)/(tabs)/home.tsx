@@ -1,5 +1,4 @@
 import CarItem from "@/components/ui/car-item";
-import { NativeModules } from "react-native";
 
 import InstructorItem from "@/components/ui/instructor-item";
 import PackageItem from "@/components/ui/package-item";
@@ -7,7 +6,7 @@ import { listCar, popularPackages } from "@/data/home_data";
 import { instructorsData } from "@/data/instructors_data";
 import { LicenseType } from "@/models/license/license";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Bell, ChevronRight, MessageSquareMore, Wallet } from "lucide-react-native";
 import {
   FlatList,
@@ -20,18 +19,48 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { ROUTES } from "@/constants/routes";
 import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
-import { ICar } from "@/models/car/car";
 import { drivingLicenses } from "@/utils/utils";
+import { AppColors } from "@/constants/Colors";
+import { ROUTES } from "@/constants/routes";
+import { router } from "expo-router";
+import { useSignalRContext } from "@/lib/signalr/SignalRContext";
+import { NotificationHubViewModel } from "@/viewmodels/notification/NotificationHubViewModel";
+import { ChatHubViewModel } from "@/viewmodels/chat/ChatHubViewModel";
+
 export default function HomeScreen() {
   const tabBarHeight = useBottomTabBarHeight();
-  const router = useRouter();
   const [walletState, walletViewModel] = useViewModel(WalletViewModel, (state) => state.wallet);
+  const [chatState, chatHubViewModel] = useViewModel(ChatHubViewModel, (state) => state.chat);
+  const [notificationState, notificationHubViewModel] = useViewModel(NotificationHubViewModel, (state) => state.notification);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { PayZaloBridge } = NativeModules;
+
+  // Lấy SignalR connections từ context (đã được tạo ở layout)
+  const { chatHub, notificationHub } = useSignalRContext();
+
+  // Thiết lập connections cho viewmodels
+  useEffect(() => {
+    if (chatHub) {
+      chatHubViewModel.setSignalRConnection(chatHub);
+    }
+  }, [chatHub, chatHubViewModel]);
+
+  useEffect(() => {
+    if (notificationHub) {
+      notificationHubViewModel.setSignalRConnection(notificationHub);
+    }
+  }, [notificationHub, notificationHubViewModel]);
+
+
+  const fetchUnreadCounts = useCallback(async () => {
+    try {
+      await chatHubViewModel.getUnreadMessageCount();
+      await notificationHubViewModel.getUnreadNotificationCount();
+    } catch (error) {
+      console.error("Error fetching unread counts:", error);
+    }
+  }, [chatHubViewModel, notificationHubViewModel]);
 
 
   const hasFetchedBalanceRef = useRef(false);
@@ -42,16 +71,23 @@ export default function HomeScreen() {
     }
     hasFetchedBalanceRef.current = true;
     walletViewModel.getWalletBalance();
+
+    fetchUnreadCounts();
+
   }, [walletState.balance, walletViewModel]);
+
+
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
       await walletViewModel.getWalletBalance();
+      await fetchUnreadCounts();
     } finally {
       setIsRefreshing(false);
     }
   };
+
 
   // const handleHeaderItemPress = async (itemId: string) => {
   //   if (itemId === "3") {
@@ -80,9 +116,9 @@ export default function HomeScreen() {
         <View style={styles.floatingContainer}>
           <TouchableOpacity
             style={styles.walletSection}
-          // onPress={handleTestDeepLink}
+            onPress={() => router.push(ROUTES.MAIN_NO_TABS_WALLET)}
           >
-            <Wallet size={24} color={"#70E000"} />
+            <Wallet size={30} color={AppColors.primary} />
             <View style={styles.walletTextContainer}>
               <Text style={styles.headerItemLabel}>Ví DriveMate</Text>
               <Text style={styles.headerItemValue}>
@@ -99,24 +135,37 @@ export default function HomeScreen() {
           <View style={styles.iconGroup}>
             <TouchableOpacity
               style={styles.iconButton}
+              onPress={() => router.push(ROUTES.MAIN_NO_TABS_NOTIFICATIONS)}
             >
               <View style={styles.iconContainer}>
                 <Bell size={24} color={"#70E000"} />
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>100</Text>
-                </View>
+                {notificationState.unreadCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {notificationState.unreadCount > 99 ? "99+" : notificationState.unreadCount}
+                    </Text>
+                  </View>
+                )}
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.iconButton}
-            // onPress={() => handleHeaderItemPress("3")}
+              onPress={() => router.push(ROUTES.MAIN_NO_TABS_CHATS)}
             >
               <View style={styles.iconContainer}>
                 <MessageSquareMore size={24} color={"#70E000"} />
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>100</Text>
-                </View>
+                {chatState.unreadMessageCount > 0 ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {chatState.unreadMessageCount > 99 ? "99+" : chatState.unreadMessageCount}
+                    </Text>
+                  </View>
+                ) : null}
+                {/* Debug: Hiển thị count ngay cả khi là 0 để test */}
+                {/* <Text style={{ position: 'absolute', top: -10, right: -10, fontSize: 10, color: 'red' }}>
+                  {chatState.unreadMessageCount}
+                </Text> */}
               </View>
             </TouchableOpacity>
           </View>
@@ -207,7 +256,7 @@ const styles = StyleSheet.create({
   walletSection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     flex: 1,
     paddingRight: 12,
     borderRightWidth: 1,
@@ -219,7 +268,7 @@ const styles = StyleSheet.create({
   iconGroup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 25,
     paddingLeft: 12,
   },
   headerItemLabel: {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ScrollView,
   View,
@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Pressable,
   StatusBar,
-  TouchableOpacity,
   Image,
   ActivityIndicator,
   RefreshControl,
@@ -14,81 +13,113 @@ import {
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { AppColors } from "@/constants/Colors";
-import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
+import { useAppSelector } from "@/lib/redux/hooks";
 import { UserRole } from "@/models/enum/UserRole.enum";
-import { useSignalR } from "@/lib/signalr/useSignalR";
-import { SignalRHubUrls } from "@/lib/signalr/signalRConfig";
-import { IChatSession } from "@/models/chat/chat";
-import { updateSession } from "@/features/chat/chatSlice";
-import { getChatSessions } from "@/features/chat/chatThunk";
-import { MessageCircle, Clock, Wifi, WifiOff } from "lucide-react-native";
+import { IChatSession } from "@/models/chat/chat.type";
+import { ChatMessageStatus } from "@/models/chat/chat.enum";
+import { MessageCircle, Clock } from "lucide-react-native";
 import { ROUTES } from "@/constants/routes";
+import { useSignalRContext } from "@/lib/signalr/SignalRContext";
+import { ChatHubViewModel } from "@/viewmodels/chat/ChatHubViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { updateSession, addSession } from "@/features/chat/chatSlice";
+import HeaderList from "@/components/Commons/HeaderList";
+import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
+
 
 export default function ChatsScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { sessions, isLoading } = useAppSelector((state) => state.chat);
-  const userInfo = useAppSelector((state) => state.auth.userInfo);
   const userRole = useAppSelector((state) => state.auth.user?.role);
 
-  const { connectionId, isConnected, on, off } = useSignalR({
-    hubPath: SignalRHubUrls.CHAT,
-    enabled: true,
-  });
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const userId = await getUserIdFromToken();
+      setCurrentUserId(userId);
+    };
+    fetchUserId();
+  }, []);
+  const [, chatHubViewModel] = useViewModel(
+    ChatHubViewModel,
+    (state) => state.chat
+  );
+  const { chatHub } = useSignalRContext();
 
   const [refreshing, setRefreshing] = useState(false);
 
-  // Load chat sessions
   useEffect(() => {
-    loadChatSessions();
-  }, []);
+    if (chatHub) {
+      chatHubViewModel.setSignalRConnection(chatHub);
+    }
+  }, [chatHub, chatHubViewModel]);
 
-  // Listen for new messages via SignalR
+  const loadChatSessions = useCallback(async () => {
+    if (!chatHubViewModel.isConnected) {
+      console.log("Chat hub not connected, skipping loadChatSessions");
+      return;
+    }
+    await chatHubViewModel.getChatSessions();
+  }, [chatHubViewModel]);
+
   useEffect(() => {
-    if (isConnected) {
-      const handleNewMessage = (
-        sessionId: string,
-        message: string,
-        timestamp: string
-      ) => {
-        // Update the session with new message
-        const session = sessions.find((s) => s.id === sessionId);
-        if (session) {
-          const updatedSession: IChatSession = {
-            ...session,
-            lastMessage: message,
-            lastModifiedAt: new Date(timestamp),
-          };
-          dispatch(updateSession(updatedSession));
-        }
-      };
-
-      on("ReceiveMessage", handleNewMessage);
-
-      return () => {
-        off("ReceiveMessage", handleNewMessage);
-      };
+    if (chatHubViewModel.isConnected) {
+      loadChatSessions();
     }
-  }, [isConnected, sessions, on, off, dispatch]);
+  }, [chatHubViewModel.isConnected, loadChatSessions]);
 
-  const loadChatSessions = async () => {
-    try {
-      await dispatch(getChatSessions()).unwrap();
-    } catch (error) {
-      console.error("Error loading chat sessions:", error);
-    }
-  };
+  useEffect(() => {
+    if (!chatHub.isConnected) return;
 
-  const handleRefresh = async () => {
+    const handleReceiveMessage = (data: any) => {
+      const { sessionId, content, timestamp } = data;
+
+      const session = sessions.find((s) => s.id === sessionId);
+      if (session) {
+        const updatedSession: IChatSession = {
+          ...session,
+          lastMessage: content || data.message || "",
+          lastModifiedAt: new Date(timestamp || Date.now()),
+        };
+        dispatch(updateSession(updatedSession));
+      } else {
+        loadChatSessions();
+      }
+    };
+
+    const handleNewSession = (session: IChatSession) => {
+      dispatch(addSession(session));
+    };
+
+    const handleSessionUpdated = (session: IChatSession) => {
+      dispatch(updateSession(session));
+    };
+
+    chatHub.on("ReceiveMessage", handleReceiveMessage);
+    chatHub.on("NewSession", handleNewSession);
+    chatHub.on("SessionUpdated", handleSessionUpdated);
+
+    return () => {
+      chatHub.off("ReceiveMessage", handleReceiveMessage);
+      chatHub.off("NewSession", handleNewSession);
+      chatHub.off("SessionUpdated", handleSessionUpdated);
+    };
+  }, [chatHub.isConnected, chatHub, sessions, dispatch, loadChatSessions]);
+
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadChatSessions();
     setRefreshing(false);
-  };
+  }, [loadChatSessions]);
 
-  const formatTime = (date: Date): string => {
+  const formatTime = useCallback((date: Date | string): string => {
     if (!date) return "";
     const now = new Date();
-    const diff = now.getTime() - new Date(date).getTime();
+    const messageDate = new Date(date);
+    const diff = now.getTime() - messageDate.getTime();
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
@@ -98,31 +129,30 @@ export default function ChatsScreen() {
     if (hours < 24) return `${hours} giờ trước`;
     if (days < 7) return `${days} ngày trước`;
 
-    return new Date(date).toLocaleDateString("vi-VN", {
+    return messageDate.toLocaleDateString("vi-VN", {
       day: "2-digit",
       month: "2-digit",
       year:
-        new Date(date).getFullYear() !== now.getFullYear()
+        messageDate.getFullYear() !== now.getFullYear()
           ? "numeric"
           : undefined,
     });
-  };
+  }, []);
 
-  const handleChatPress = (session: IChatSession) => {
-    router.push({
-      pathname: ROUTES.CHAT,
-      params: {
-        userId: userInfo?.userId || "",
-        userName: userInfo?.fullName || "",
-        chatRoomId: session.id,
-        targetUserId: session.toUserId,
-        targetUserName: session.toUserFullName,
-        hubPath: "CHAT",
-      },
-    } as any);
-  };
+  const handleChatPress = useCallback(
+    (session: IChatSession) => {
+      router.push({
+        pathname: ROUTES.MAIN_NO_TABS_CHAT,
+        params: {
+          sessionId: session.id,
+          toUserFullName: session.toUserFullName,
+          toUserAvatar: session.toUserAvatar,
+        },
+      } as any);
+    },
+    [router]
+  );
 
-  // Sort sessions by last modified time
   const sortedSessions = useMemo(() => {
     return [...sessions].sort((a, b) => {
       const timeA = new Date(a.lastModifiedAt).getTime();
@@ -133,54 +163,7 @@ export default function ChatsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-
-      {/* Modern Header with Gradient */}
-      <LinearGradient
-        colors={[
-          AppColors.primary,
-          AppColors.gradientStart,
-          AppColors.gradientEnd,
-        ]}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Tin nhắn</Text>
-            <Text style={styles.headerSubtitle}>
-              Trò chuyện với {userRole === UserRole.Instructor ? "học viên" : "người hướng dẫn"}
-            </Text>
-          </View>
-          <View style={styles.headerStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{sessions.length}</Text>
-              <Text style={styles.statLabel}>Cuộc trò chuyện</Text>
-            </View>
-          </View>
-        </View>
-        <View style={styles.headerCurve} />
-      </LinearGradient>
-
-      {/* Connection Status */}
-      <View style={styles.connectionContainer}>
-        <View style={styles.connectionStatus}>
-          {isConnected ? (
-            <Wifi size={16} color="#22c55e" strokeWidth={2} />
-          ) : (
-            <WifiOff size={16} color="#ef4444" strokeWidth={2} />
-          )}
-          <Text
-            style={[
-              styles.connectionText,
-              { color: isConnected ? "#22c55e" : "#ef4444" },
-            ]}
-          >
-            {isConnected ? "Đã kết nối" : "Chưa kết nối"}
-          </Text>
-        </View>
-      </View>
+      <HeaderList actionReturnScreen={ROUTES.HOME} title="Tin nhắn" />
 
       <ScrollView
         style={styles.content}
@@ -209,7 +192,9 @@ export default function ChatsScreen() {
             </View>
             <Text style={styles.emptyTitle}>Chưa có cuộc trò chuyện nào</Text>
             <Text style={styles.emptySubtitle}>
-              Bắt đầu trò chuyện với {userRole === UserRole.Instructor ? "học viên" : "người hướng dẫn"} để xem lịch sử ở đây
+              Bắt đầu trò chuyện với{" "}
+              {userRole === UserRole.Instructor ? "người lái mới" : "người hướng dẫn"} để
+              xem lịch sử ở đây
             </Text>
           </View>
         ) : (
@@ -230,17 +215,15 @@ export default function ChatsScreen() {
               >
                 <View style={styles.chatContent}>
                   <View style={styles.avatarContainer}>
-                    {session.toUserAvatarUrl ? (
+                    {session.toUserAvatar ? (
                       <Image
-                        source={{ uri: session.toUserAvatarUrl }}
+                        source={{ uri: session.toUserAvatar }}
                         style={styles.avatar}
                       />
                     ) : (
                       <View style={styles.avatarPlaceholder}>
                         <Text style={styles.avatarText}>
-                          {session.toUserFullName
-                            .charAt(0)
-                            .toUpperCase()}
+                          {session.toUserFullName.charAt(0).toUpperCase()}
                         </Text>
                       </View>
                     )}
@@ -261,7 +244,13 @@ export default function ChatsScreen() {
                       )}
                     </View>
                     {session.lastMessage && (
-                      <Text style={styles.lastMessage} numberOfLines={2}>
+                      <Text
+                        style={[
+                          styles.lastMessage,
+                          session.status === ChatMessageStatus.Sent && session.toUserId !== currentUserId && styles.lastMessageUnread,
+                        ]}
+                        numberOfLines={2}
+                      >
                         {session.lastMessage}
                       </Text>
                     )}
@@ -271,7 +260,6 @@ export default function ChatsScreen() {
             </Pressable>
           ))
         )}
-
         <View style={{ height: 100 }} />
       </ScrollView>
     </View>
@@ -493,5 +481,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6b7280",
     lineHeight: 20,
+  },
+  lastMessageUnread: {
+    fontWeight: "800",
+    color: "#1e293b",
   },
 });

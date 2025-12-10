@@ -30,7 +30,7 @@ import {
   IInstructorPackages,
   IInstructorCar,
 } from "@/models/instructor/instructor.type";
-import { useAppDispatch } from "@/lib/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import {
   getInstructorById,
   getInstructorCars,
@@ -150,7 +150,7 @@ export default function InstructorDetailScreen() {
         friction: 7,
         tension: 40,
         useNativeDriver: true,
-      }).start(() => {});
+      }).start(() => { });
     } else {
       scaleAnim.setValue(0.95);
     }
@@ -219,6 +219,18 @@ export default function InstructorDetailScreen() {
     setIsProcessing(false);
   };
 
+  const handleMessagePress = () => {
+
+    router.push({
+      pathname: ROUTES.MAIN_NO_TABS_CHAT,
+      params: {
+        toUserFullName: instructor?.fullName,
+        toUserId: instructor?.id,
+        toUserAvatar: instructor?.avatar,
+      },
+    } as any);
+  };
+
   if (isLoadingInstructor || !instructor) {
     return (
       <View style={styles.loadingContainer}>
@@ -263,7 +275,7 @@ export default function InstructorDetailScreen() {
                 variant={AlertVariant.Warning}
                 primaryButton={{
                   label: "Nạp tiền",
-                  onPress: () => router.push(ROUTES.MAIN_NO_TABS_DEPOSIT),
+                  onPress: () => router.push(ROUTES.MAIN_NO_TABS_WALLET),
                 }}
                 onDismiss={() => setShowBalanceAlert(false)}
               />
@@ -284,6 +296,13 @@ export default function InstructorDetailScreen() {
                     {getGenderText(instructor.gender)}
                   </Text>
                 </View>
+                <TouchableOpacity
+                  style={styles.messageButton}
+                  onPress={handleMessagePress}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.messageButtonText}>Nhắn tin</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -635,6 +654,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "rgba(255, 255, 255, 0.9)",
     fontWeight: "600",
+  },
+  messageButton: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  messageButtonText: {
+    color: AppColors.primary,
+    fontWeight: "700",
+    fontSize: 14,
   },
   heroStatusDot: {
     fontSize: 14,

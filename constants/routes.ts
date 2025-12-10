@@ -22,12 +22,14 @@ export const ROUTES = {
   IDENTIFICATION_DOCUMENT_MANAGEMENT_INSTRUCTOR:
     '/(main)/(no-tabs)/identification-document-management-instructor',
   TRANSACTION_SUCCESS: '/(main)/(no-tabs)/transaction-success',
+  PAYMENT_SUCCESS: '/(main)/(no-tabs)/payment-success',
   NOTIFICATIONS: '/(main)/(tabs)/notifications',
   PACKAGES: '/(main)/(tabs)/packages',
   INTRO: '/(onboarding)/intro',
-  BACK_TO_WALLET: '/(main)/(no-tabs)/wallet',
+  MAIN_NO_TABS_WALLET: '/(main)/(no-tabs)/wallet',
   MAIN_NO_TABS_HISTORY: '/(main)/(no-tabs)/(transaction)/transaction',
-
+  MAIN_NO_TABS_NOTIFICATIONS: '/(main)/(no-tabs)/notifications',
+  MAIN_NO_TABS_CHATS: '/(main)/(no-tabs)/chats',
 
   MAIN_NO_TABS_CAR_DETAIL: '/(main)/(no-tabs)/car-detail',
   MAIN_NO_TABS_DEPOSIT: '/(main)/(no-tabs)/deposit',
@@ -35,5 +37,5 @@ export const ROUTES = {
   MAIN_NO_TABS_SERVICE_PACKAGE_SERVICE_PACKAGE_MANAGEMENT: `/(main)/(no-tabs)/(service-package)/service-package-management`,
   MAIN_NO_TABS_MY_PACKAGES: `/(main)/(no-tabs)/my-packages`,
   MAIN_NO_TABS_INTRO: `/(onboarding)`,
-  CHAT: `/(main)/(no-tabs)/chat`,
+  MAIN_NO_TABS_CHAT: `/(main)/(no-tabs)/chat`,
 } as const;

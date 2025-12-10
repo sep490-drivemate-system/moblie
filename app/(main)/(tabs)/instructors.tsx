@@ -41,7 +41,6 @@ function InstructorsScreen() {
     (state) => state.instructor
   );
 
-  // Get data from Redux state
   const {
     allInstructors,
     displayedInstructors,
@@ -218,7 +217,7 @@ function InstructorsScreen() {
   return (
     <View style={styles.container}>
       <HeaderList title="Danh sách người hướng dẫn" />
-      {/* <SearchBar
+      <SearchBar
         value={localSearchQuery}
         onChangeText={handleSearchChange}
         placeholder="Tìm kiếm người hướng dẫn..."
@@ -243,7 +242,7 @@ function InstructorsScreen() {
         activeValue={sortBy === SortType.Experience ? 'exp' : sortBy === SortType.Rating ? 'rating' : ''}
         onSelect={handleSortChange}
         showCount={false}
-      /> */}
+      />
       <FlatList
         data={displayedInstructors}
         renderItem={renderInstructorCard}

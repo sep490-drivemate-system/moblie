@@ -1,12 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { INotification } from "@/models/notification/notification";
+import { INotification } from "@/models/notification/notification.type";
 import { BaseState } from "@/models/generic/baseState";
-import {
-    getNotifications,
-    getNotificationById,
-    markNotificationAsRead,
-    markAllNotificationsAsRead,
-} from "./notificationThunk";
 
 interface NotificationState extends BaseState {
     notifications: INotification[];
@@ -15,18 +9,21 @@ interface NotificationState extends BaseState {
 }
 
 const initialState: NotificationState = {
-    notifications: [],
-    unreadCount: 0,
-    selectedNotification: null,
     isLoading: false,
     errorMessage: null,
     isSuccess: false,
+    notifications: [],
+    unreadCount: 0,
+    selectedNotification: null,
 };
 
 const notificationSlice = createSlice({
     name: "notification",
     initialState,
     reducers: {
+        setUnreadCount: (state, action: PayloadAction<number>) => {
+            state.unreadCount = action.payload;
+        },
         addNotification: (state, action: PayloadAction<INotification>) => {
             const existingIndex = state.notifications.findIndex(
                 (n) => n.id === action.payload.id
@@ -70,109 +67,21 @@ const notificationSlice = createSlice({
                 (n) => !n.isRead
             ).length;
         },
-    },
-    extraReducers: (builder) => {
-        // getNotifications
-        builder
-            .addCase(getNotifications.pending, (state) => {
-                state.isLoading = true;
-                state.errorMessage = null;
-                state.isSuccess = false;
-            })
-            .addCase(getNotifications.fulfilled, (state, action) => {
-                state.isLoading = false;
-                state.isSuccess = true;
-                if (action.payload?.value) {
-                    state.notifications = action.payload.value;
-                    state.unreadCount = action.payload.value.filter(
-                        (n) => !n.isRead
-                    ).length;
-                }
-            })
-            .addCase(getNotifications.rejected, (state, action) => {
-                state.isLoading = false;
-                state.isSuccess = false;
-                state.errorMessage =
-                    (action.payload as string) ||
-                    "Không thể tải danh sách thông báo";
-            });
-
-        // getNotificationById
-        builder
-            .addCase(getNotificationById.pending, (state) => {
-                state.isLoading = true;
-                state.errorMessage = null;
-            })
-            .addCase(getNotificationById.fulfilled, (state, action) => {
-                state.isLoading = false;
-                state.isSuccess = true;
-                if (action.payload?.value) {
-                    state.selectedNotification = action.payload.value;
-                }
-            })
-            .addCase(getNotificationById.rejected, (state, action) => {
-                state.isLoading = false;
-                state.isSuccess = false;
-                state.errorMessage =
-                    (action.payload as string) ||
-                    "Không thể tải thông tin thông báo";
-            });
-
-        // markNotificationAsRead
-        builder
-            .addCase(markNotificationAsRead.pending, (state) => {
-                state.isLoading = true;
-            })
-            .addCase(markNotificationAsRead.fulfilled, (state, action) => {
-                state.isLoading = false;
-                state.isSuccess = true;
-                const notificationId = action.meta.arg.notificationId;
-                const index = state.notifications.findIndex(
-                    (n) => n.id === notificationId
-                );
-                if (index >= 0 && !state.notifications[index].isRead) {
-                    state.notifications[index].isRead = true;
-                    state.unreadCount = Math.max(0, state.unreadCount - 1);
-                }
-            })
-            .addCase(markNotificationAsRead.rejected, (state, action) => {
-                state.isLoading = false;
-                state.isSuccess = false;
-                state.errorMessage =
-                    (action.payload as string) ||
-                    "Không thể đánh dấu đã đọc";
-            });
-
-        // markAllNotificationsAsRead
-        builder
-            .addCase(markAllNotificationsAsRead.pending, (state) => {
-                state.isLoading = true;
-            })
-            .addCase(markAllNotificationsAsRead.fulfilled, (state) => {
-                state.isLoading = false;
-                state.isSuccess = true;
-                state.notifications = state.notifications.map((n) => ({
-                    ...n,
-                    isRead: true,
-                }));
-                state.unreadCount = 0;
-            })
-            .addCase(markAllNotificationsAsRead.rejected, (state, action) => {
-                state.isLoading = false;
-                state.isSuccess = false;
-                state.errorMessage =
-                    (action.payload as string) ||
-                    "Không thể đánh dấu tất cả đã đọc";
-            });
+        setNotifications: (state, action: PayloadAction<INotification[]>) => {
+            state.notifications = action.payload;
+            state.unreadCount = action.payload.filter((n) => !n.isRead).length;
+        },
     },
 });
 
 export const {
+    setUnreadCount,
     addNotification,
     updateNotification,
     setSelectedNotification,
     clearNotifications,
     calculateUnreadCount,
+    setNotifications,
 } = notificationSlice.actions;
 
 export default notificationSlice.reducer;

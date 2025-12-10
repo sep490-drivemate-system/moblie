@@ -174,19 +174,16 @@ export default function PackagesScreen() {
     }
   }, [loadPackages]);
 
-  // Debounce search query - đợi 1 giây sau khi user ngừng nhập
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-    }, 1000); // 1 giây = 1000ms
+    }, 1000);
 
-    // Cleanup: nếu user tiếp tục nhập, hủy timer cũ
     return () => {
       clearTimeout(timer);
     };
   }, [searchQuery]);
 
-  // Load road types
   useEffect(() => {
     const getRoadTypes = async () => {
       const result = await packageViewModel.getRoadTypes();
@@ -203,7 +200,6 @@ export default function PackagesScreen() {
     getDrivingSkills();
   }, [packageViewModel]);
 
-  // Load packages when filters change or on mount
   useEffect(() => {
     setCurrentPage(1);
     loadPackages(1, false);

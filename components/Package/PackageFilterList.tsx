@@ -66,7 +66,6 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
   selectedDrivingSkills: externalSelectedDrivingSkills,
   onSelectedDrivingSkillsChange,
 }) => {
-  // Use external state if provided, otherwise use internal state
   const [internalSearchQuery, setInternalSearchQuery] = useState("");
   const [internalFilterHasVehicle, setInternalFilterHasVehicle] = useState<
     boolean | null
@@ -106,8 +105,7 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
   const [showFilter, setShowFilter] = useState(false);
   const [showRoadTypeModal, setShowRoadTypeModal] = useState(false);
   const [showDrivingSkillsModal, setShowDrivingSkillsModal] = useState(false);
-  
-  // Temporary state for modal selections (chưa apply)
+
   const [tempSelectedRoadTypes, setTempSelectedRoadTypes] = useState<string[]>([]);
   const [tempSelectedDrivingSkills, setTempSelectedDrivingSkills] = useState<string[]>([]);
   const [internalRefreshing, setInternalRefreshing] = useState(false);
@@ -116,12 +114,9 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
     ? Boolean(isRefreshing)
     : internalRefreshing;
 
-  // Server-side filtering: packages đã được filter từ API
-  // Thêm client-side filter để đảm bảo chính xác
   const filteredPackages = useMemo(() => {
     let result = packages;
 
-    // Filter theo search query (nếu có)
     if (searchQuery) {
       result = result.filter((pkg) => {
         return (
@@ -131,7 +126,6 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
       });
     }
 
-    // Filter theo vehicle (đảm bảo chính xác)
     if (filterHasVehicle !== null) {
       result = result.filter((pkg) => {
         return pkg.allowSelfCar === filterHasVehicle;
@@ -141,7 +135,6 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
     return result;
   }, [packages, searchQuery, filterHasVehicle]);
 
-  // Tính toán xem còn data để load không
   const hasMorePages = totalCount ? packages.length < totalCount : false;
 
   const handleLoadMore = async () => {
@@ -172,7 +165,6 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
     }
   };
 
-  // Khi mở modal, copy current selections vào temporary state
   const handleOpenRoadTypeModal = () => {
     setTempSelectedRoadTypes([...selectedRoadTypes]);
     setShowRoadTypeModal(true);
@@ -183,7 +175,6 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
     setShowDrivingSkillsModal(true);
   };
 
-  // Toggle trong modal (chỉ update temporary state)
   const toggleRoadTypeInModal = (roadType: string) => {
     setTempSelectedRoadTypes((prev) =>
       prev.includes(roadType)
@@ -200,7 +191,6 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
     );
   };
 
-  // Áp dụng selections từ modal (trigger API)
   const handleApplyRoadTypes = () => {
     if (onSelectedRoadTypesChange) {
       setSelectedRoadTypes([...tempSelectedRoadTypes]);
@@ -219,7 +209,6 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
     setShowDrivingSkillsModal(false);
   };
 
-  // Đóng modal mà không apply (reset về current state)
   const handleCloseRoadTypeModal = () => {
     setTempSelectedRoadTypes([...selectedRoadTypes]);
     setShowRoadTypeModal(false);
@@ -230,7 +219,6 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
     setShowDrivingSkillsModal(false);
   };
 
-  // Clear trong modal (chỉ clear temporary state)
   const clearRoadTypeFiltersInModal = () => {
     setTempSelectedRoadTypes([]);
   };
@@ -239,7 +227,6 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
     setTempSelectedDrivingSkills([]);
   };
 
-  // Clear filters (dùng khi nhấn "Tất cả" hoặc clear từ bên ngoài)
   const clearRoadTypeFilters = () => {
     if (onSelectedRoadTypesChange) {
       setSelectedRoadTypes([]);
@@ -265,12 +252,12 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
       item.id === PackageFilterOption.All
         ? filterHasVehicle === null && selectedRoadTypes.length === 0 && selectedDrivingSkills.length === 0
         : item.type === "vehicle"
-        ? filterHasVehicle === item.value
-        : item.type === "roadType"
-        ? selectedRoadTypes.length > 0
-        : item.type === "drivingSkills"
-        ? selectedDrivingSkills.length > 0
-        : false;
+          ? filterHasVehicle === item.value
+          : item.type === "roadType"
+            ? selectedRoadTypes.length > 0
+            : item.type === "drivingSkills"
+              ? selectedDrivingSkills.length > 0
+              : false;
 
     const handlePress = () => {
       if (item.id === PackageFilterOption.All) {
@@ -311,8 +298,7 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
   };
 
   const renderRoadTypeItem = ({ item }: { item: RoadType }) => {
-    // Sử dụng tempSelectedRoadTypes khi modal đang mở
-    const isSelected = showRoadTypeModal 
+    const isSelected = showRoadTypeModal
       ? tempSelectedRoadTypes.includes(item.id)
       : selectedRoadTypes.includes(item.id);
     return (
@@ -323,7 +309,6 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
           if (showRoadTypeModal) {
             toggleRoadTypeInModal(item.id);
           } else {
-            // Nếu không phải trong modal, apply ngay (backward compatibility)
             if (onSelectedRoadTypesChange) {
               const newTypes = selectedRoadTypes.includes(item.id)
                 ? selectedRoadTypes.filter((type: string) => type !== item.id)
