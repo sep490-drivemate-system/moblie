@@ -48,7 +48,7 @@ const filterOptions = [
   },
   {
     id: PackageFilterOption.HasVehicle,
-    label: "Có xe",
+    label: "Có thể đi xe cá nhân",
     value: true as boolean,
     type: "vehicle" as const,
   },
@@ -207,7 +207,7 @@ export default function PackagesScreen() {
   useEffect(() => {
     setCurrentPage(1);
     loadPackages(1, false);
-  }, [loadPackages]);
+  }, [debouncedSearchQuery, filterHasVehicle, selectedRoadTypes, selectedDrivingSkills]);
 
   if (
     packages.length === 0 ||

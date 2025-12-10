@@ -26,3 +26,35 @@ export interface EmergencyContact {
     phone: string,
 }
 
+export interface DocumentField {
+  label: string;
+  value: string;
+}
+
+export interface DocumentFile {
+  label: string;
+  imageUrl: string | null;
+}
+
+export interface DocumentRecord {
+  id: string;
+  title: string;
+  description: string;
+  updatedAt: string;
+  reviewer?: string;
+  fields: DocumentField[];
+  files: DocumentFile[];
+}
+
+export interface UserProfile {
+  avatar: string | null;
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+  emergencyContact: EmergencyContact | null;
+}
+
+export interface licenseNovice {
+  image: string | null;
+}

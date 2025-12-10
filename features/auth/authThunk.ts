@@ -1,6 +1,6 @@
 import { createThunk } from "../genericCreateThunk";
 import { ISignInRequest, ISignInResponse } from "@/models/auth/signin";
-import { ISignUpRequest, ISignUpResponse } from "@/models/auth/signup";
+import { IRegisterNoviceDriverRequest, ISignUpRequest, ISignUpResponse } from "@/models/auth/signup";
 import {
   IVerifyEmailRequest,
   IVerifyEmailResponse,
@@ -10,6 +10,7 @@ import { HttpMethod } from "@/models/enum/HttpMethods";
 import { Policy } from "@/models/policy/policy";
 
 export const AUTH_PATH = "auth";
+export const NOVICE_DRIVER_PATH = "novice-driver";
 
 export const signIn = createThunk<ISignInResponse, ISignInRequest>(
   HttpMethod.POST,
@@ -60,4 +61,10 @@ export const getInstructorPolicy = createThunk<Policy[], { type: number }>(
   {
     buildUrl: (payload) => `policy?policyType=${payload.type}`,
   }
+);
+
+export const registerNoviceDriver = createThunk<boolean, IRegisterNoviceDriverRequest>(
+  HttpMethod.POST,
+  `register-novice-driver`,
+  `/${NOVICE_DRIVER_PATH}/registration`,
 );

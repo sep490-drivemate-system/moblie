@@ -20,6 +20,8 @@ import {
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { RootState } from "@/lib/redux/store";
+import { ROUTES } from "@/constants/routes";
+import CustomAlert from "@/components/CustomAlert";
 
 interface Role {
   id: string;
@@ -49,7 +51,7 @@ export default function RoleSelectionScreen() {
   const [alertConfig, setAlertConfig] = useState({
     title: "",
     message: "",
-    onConfirm: () => {},
+    buttons: [] as Array<{ text: string; onPress: () => void }>,
   });
 
   useEffect(() => {
@@ -69,7 +71,7 @@ export default function RoleSelectionScreen() {
     setAlertConfig({
       title,
       message,
-      onConfirm,
+      buttons: [{ text: "OK", onPress: onConfirm }],
     });
     setShowAlert(true);
   };
@@ -88,9 +90,17 @@ export default function RoleSelectionScreen() {
 
       // Navigate based on role
       if (selectedRole.id === "noviceDriver") {
-        // Novice driver goes directly to home
-        await AsyncStorage.setItem("onboarding_completed", "true");
-        router.replace("/(main)/(tabs)/home");
+        const result = await authViewModel.registerNoviceDriver({
+          email: authState.registerFormData.email,
+          phoneNumber: authState.registerFormData.phone,
+          password: authState.registerFormData.password,
+        });
+        if (result) {
+          await AsyncStorage.setItem("onboarding_completed", "true");
+          showCustomAlert("Thành công", "Bạn đã đăng ký thành công. Vui lòng đăng nhập để tiếp tục.", () =>
+            router.replace(ROUTES.INTRO)
+          );
+        }
       } else if (selectedRole.id === "instructor") {
         const registerFormData = authState.registerFormData;
         authViewModel.updateRegisterInstructorFormData(
@@ -209,6 +219,14 @@ export default function RoleSelectionScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={showAlert}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        buttons={alertConfig.buttons}
+      />
     </SafeAreaView>
   );
 }

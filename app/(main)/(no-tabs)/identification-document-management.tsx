@@ -25,11 +25,8 @@ import { AppColors } from "@/constants/Colors";
 import { ROUTES } from "@/constants/routes";
 import CustomAlert from "@/components/CustomAlert";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
-import {
-  DocumentViewModel,
-  UserProfile,
-  DocumentRecord,
-} from "@/viewmodels/document/documentViewModel";
+import { DocumentViewModel } from "@/viewmodels/document/documentViewModel";
+import { UserProfile, DocumentRecord } from "@/models/document/document";
 import { RootState } from "@/lib/redux/store";
 import { UserRole } from "@/models/enum/UserRole.enum";
 
@@ -61,11 +58,15 @@ export default function IdentificationDocumentManagementInstructorScreen() {
 
   // Modal states
   const [showAvatarModal, setShowAvatarModal] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showEmergencyContactModal, setShowEmergencyContactModal] =
+  const [showEmergencyContactNameModal, setShowEmergencyContactNameModal] =
     useState(false);
+  const [showEmergencyContactPhoneModal, setShowEmergencyContactPhoneModal] =
+    useState(false);
+  const [showBioModal, setShowBioModal] = useState(false);
+  const [showFullNameModal, setShowFullNameModal] = useState(false);
+  const [showLicenseTierModal, setShowLicenseTierModal] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -78,7 +79,6 @@ export default function IdentificationDocumentManagementInstructorScreen() {
   });
 
   // Form states
-  const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [editPasswordConfirm, setEditPasswordConfirm] = useState("");
@@ -86,6 +86,9 @@ export default function IdentificationDocumentManagementInstructorScreen() {
   const [showPasswordInView, setShowPasswordInView] = useState(false);
   const [editEmergencyName, setEditEmergencyName] = useState("");
   const [editEmergencyPhone, setEditEmergencyPhone] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editFullName, setEditFullName] = useState("");
+  const [editLicenseTier, setEditLicenseTier] = useState("");
 
   const showCustomAlert = (
     title: string,
@@ -110,7 +113,7 @@ export default function IdentificationDocumentManagementInstructorScreen() {
           try {
             const uri = await documentViewModel.pickImageFromCamera();
             if (uri) {
-              documentViewModel.updateAvatar(uri);
+              await documentViewModel.updateAvatar(uri);
               showCustomAlert("Thành công", "Đã cập nhật ảnh đại diện", [
                 { text: "OK", onPress: () => setShowAlert(false) },
               ]);
@@ -130,7 +133,7 @@ export default function IdentificationDocumentManagementInstructorScreen() {
           try {
             const uri = await documentViewModel.pickImageFromLibrary();
             if (uri) {
-              documentViewModel.updateAvatar(uri);
+              await documentViewModel.updateAvatar(uri);
               showCustomAlert("Thành công", "Đã cập nhật ảnh đại diện", [
                 { text: "OK", onPress: () => setShowAlert(false) },
               ]);
@@ -145,12 +148,18 @@ export default function IdentificationDocumentManagementInstructorScreen() {
       {
         text: "Xóa ảnh",
         style: "destructive",
-        onPress: () => {
+        onPress: async () => {
           setShowAlert(false);
-          documentViewModel.updateAvatar(null);
-          showCustomAlert("Thành công", "Đã xóa ảnh đại diện", [
-            { text: "OK", onPress: () => setShowAlert(false) },
-          ]);
+          try {
+            await documentViewModel.updateAvatar(null);
+            showCustomAlert("Thành công", "Đã xóa ảnh đại diện", [
+              { text: "OK", onPress: () => setShowAlert(false) },
+            ]);
+          } catch (error: any) {
+            showCustomAlert("Lỗi", error.message || "Không thể xóa ảnh", [
+              { text: "OK", onPress: () => setShowAlert(false) },
+            ]);
+          }
         },
       },
       {
@@ -161,27 +170,6 @@ export default function IdentificationDocumentManagementInstructorScreen() {
     ]);
   };
 
-  const handleEditEmail = () => {
-    if (userProfile) {
-      setEditEmail(userProfile.email);
-      setShowEmailModal(true);
-    }
-  };
-
-  const handleSaveEmail = () => {
-    try {
-      documentViewModel.updateEmail(editEmail);
-      setShowEmailModal(false);
-      showCustomAlert("Thành công", "Đã cập nhật email", [
-        { text: "OK", onPress: () => setShowAlert(false) },
-      ]);
-    } catch (error: any) {
-      showCustomAlert("Lỗi", error.message || "Không thể cập nhật email", [
-        { text: "OK", onPress: () => setShowAlert(false) },
-      ]);
-    }
-  };
-
   const handleEditPhone = () => {
     if (userProfile) {
       setEditPhone(userProfile.phone.replace(/\s/g, ""));
@@ -189,9 +177,11 @@ export default function IdentificationDocumentManagementInstructorScreen() {
     }
   };
 
-  const handleSavePhone = () => {
+  const handleSavePhone = async () => {
     try {
-      documentViewModel.updatePhone(editPhone);
+      await documentViewModel.updatePhone(editPhone);
+      // Force refresh data to ensure UI updates
+      await documentViewModel.loadData();
       setShowPhoneModal(false);
       showCustomAlert("Thành công", "Đã cập nhật số điện thoại", [
         { text: "OK", onPress: () => setShowAlert(false) },
@@ -212,9 +202,11 @@ export default function IdentificationDocumentManagementInstructorScreen() {
     setShowPasswordModal(true);
   };
 
-  const handleSavePassword = () => {
+  const handleSavePassword = async () => {
     try {
-      documentViewModel.updatePassword(editPassword, editPasswordConfirm);
+      await documentViewModel.updatePassword(editPassword, editPasswordConfirm);
+      // Force refresh data to ensure UI updates
+      await documentViewModel.loadData();
       setShowPasswordModal(false);
       showCustomAlert("Thành công", "Đã cập nhật mật khẩu", [
         { text: "OK", onPress: () => setShowAlert(false) },
@@ -226,30 +218,180 @@ export default function IdentificationDocumentManagementInstructorScreen() {
     }
   };
 
-  const handleEditEmergencyContact = () => {
+  const handleEditEmergencyContactName = () => {
     if (userProfile) {
       setEditEmergencyName(userProfile.emergencyContact?.name || "");
-      setEditEmergencyPhone(
-        (userProfile.emergencyContact?.phone || "").replace(/\s/g, "")
-      );
-      setShowEmergencyContactModal(true);
+      setShowEmergencyContactNameModal(true);
     }
   };
 
-  const handleSaveEmergencyContact = () => {
+  const handleSaveEmergencyContactName = async () => {
     try {
-      documentViewModel.updateEmergencyContact(
-        editEmergencyName,
-        editEmergencyPhone
-      );
-      setShowEmergencyContactModal(false);
-      showCustomAlert("Thành công", "Đã cập nhật thông tin liên hệ khẩn cấp", [
+      await documentViewModel.updateEmergencyContactName(editEmergencyName);
+      setShowEmergencyContactNameModal(false);
+      showCustomAlert("Thành công", "Đã cập nhật tên người liên hệ", [
         { text: "OK", onPress: () => setShowAlert(false) },
       ]);
     } catch (error: any) {
       showCustomAlert(
         "Lỗi",
-        error.message || "Không thể cập nhật thông tin liên hệ khẩn cấp",
+        error.message || "Không thể cập nhật tên người liên hệ",
+        [{ text: "OK", onPress: () => setShowAlert(false) }]
+      );
+    }
+  };
+
+  const handleEditEmergencyContactPhone = () => {
+    if (userProfile) {
+      setEditEmergencyPhone(
+        (userProfile.emergencyContact?.phone || "").replace(/\s/g, "")
+      );
+      setShowEmergencyContactPhoneModal(true);
+    }
+  };
+
+  const handleSaveEmergencyContactPhone = async () => {
+    try {
+      await documentViewModel.updateEmergencyContactPhone(editEmergencyPhone);
+      setShowEmergencyContactPhoneModal(false);
+      showCustomAlert(
+        "Thành công",
+        "Đã cập nhật số điện thoại liên hệ khẩn cấp",
+        [{ text: "OK", onPress: () => setShowAlert(false) }]
+      );
+    } catch (error: any) {
+      showCustomAlert(
+        "Lỗi",
+        error.message || "Không thể cập nhật số điện thoại liên hệ khẩn cấp",
+        [{ text: "OK", onPress: () => setShowAlert(false) }]
+      );
+    }
+  };
+
+  const handleEditBio = () => {
+    if (user?.instructor) {
+      setEditBio(user.instructor.bio || "");
+      setShowBioModal(true);
+    }
+  };
+
+  const handleSaveBio = async () => {
+    try {
+      await documentViewModel.updateInstructorBio(editBio);
+      // Force refresh data to ensure UI updates
+      await documentViewModel.loadData();
+      setShowBioModal(false);
+      showCustomAlert("Thành công", "Đã cập nhật mô tả", [
+        { text: "OK", onPress: () => setShowAlert(false) },
+      ]);
+    } catch (error: any) {
+      showCustomAlert("Lỗi", error.message || "Không thể cập nhật mô tả", [
+        { text: "OK", onPress: () => setShowAlert(false) },
+      ]);
+    }
+  };
+
+  const handleEditFullName = () => {
+    if (userProfile) {
+      setEditFullName(userProfile.fullName || "");
+      setShowFullNameModal(true);
+    }
+  };
+
+  const handleSaveFullName = async () => {
+    try {
+      await documentViewModel.updateFullName(editFullName);
+      // Force refresh data to ensure UI updates
+      await documentViewModel.loadData();
+      setShowFullNameModal(false);
+      showCustomAlert("Thành công", "Đã cập nhật họ và tên", [
+        { text: "OK", onPress: () => setShowAlert(false) },
+      ]);
+    } catch (error: any) {
+      showCustomAlert("Lỗi", error.message || "Không thể cập nhật họ và tên", [
+        { text: "OK", onPress: () => setShowAlert(false) },
+      ]);
+    }
+  };
+
+  const handleEditDriverLicenseImage = () => {
+    showCustomAlert("Chọn ảnh", "Bạn muốn chụp ảnh mới hay chọn từ thư viện?", [
+      {
+        text: "Chụp ảnh",
+        style: "default",
+        onPress: async () => {
+          setShowAlert(false);
+          try {
+            const uri = await documentViewModel.pickImageFromCamera();
+            if (uri) {
+              await documentViewModel.updateDriverLicenseImage(uri);
+              await documentViewModel.loadData();
+              showCustomAlert("Thành công", "Đã cập nhật ảnh bằng lái xe", [
+                { text: "OK", onPress: () => setShowAlert(false) },
+              ]);
+            }
+          } catch (error: any) {
+            showCustomAlert("Lỗi", error.message || "Không thể chụp ảnh", [
+              { text: "OK", onPress: () => setShowAlert(false) },
+            ]);
+          }
+        },
+      },
+      {
+        text: "Chọn từ thư viện",
+        style: "default",
+        onPress: async () => {
+          setShowAlert(false);
+          try {
+            const uri = await documentViewModel.pickImageFromLibrary();
+            if (uri) {
+              await documentViewModel.updateDriverLicenseImage(uri);
+              await documentViewModel.loadData();
+              showCustomAlert("Thành công", "Đã cập nhật ảnh bằng lái xe", [
+                { text: "OK", onPress: () => setShowAlert(false) },
+              ]);
+            }
+          } catch (error: any) {
+            showCustomAlert("Lỗi", error.message || "Không thể chọn ảnh", [
+              { text: "OK", onPress: () => setShowAlert(false) },
+            ]);
+          }
+        },
+      },
+      {
+        text: "Hủy",
+        style: "cancel",
+        onPress: () => setShowAlert(false),
+      },
+    ]);
+  };
+
+  const handleEditLicenseTier = () => {
+    // Get current license tier value
+    const driverLicenseRecord = documentRecords.find(
+      (record) => record.id === "driverLicense"
+    );
+    const currentTier =
+      driverLicenseRecord?.fields.find(
+        (field) => field.label === "Hạng bằng lái"
+      )?.value || "";
+    setEditLicenseTier(currentTier);
+    setShowLicenseTierModal(true);
+  };
+
+  const handleSaveLicenseTier = async () => {
+    try {
+      await documentViewModel.updateLicenseTier(editLicenseTier);
+      // Force refresh data to ensure UI updates
+      await documentViewModel.loadData();
+      setShowLicenseTierModal(false);
+      showCustomAlert("Thành công", "Đã cập nhật hạng bằng lái", [
+        { text: "OK", onPress: () => setShowAlert(false) },
+      ]);
+    } catch (error: any) {
+      showCustomAlert(
+        "Lỗi",
+        error.message || "Không thể cập nhật hạng bằng lái",
         [{ text: "OK", onPress: () => setShowAlert(false) }]
       );
     }
@@ -334,15 +476,26 @@ export default function IdentificationDocumentManagementInstructorScreen() {
                   Thông tin được sử dụng để xác minh hồ sơ người dùng.
                 </Text>
                 <View style={styles.infoGrid}>
-                  <InfoItem
-                    label="Họ và tên"
-                    value={userProfile?.fullName || ""}
-                  />
-                  <EditableInfoItem
-                    label="Email"
-                    value={userProfile?.email || ""}
-                    onEdit={handleEditEmail}
-                  />
+                  {user?.role === UserRole.NoviceDriver ? (
+                    <EditableInfoItem
+                      label="Họ và tên"
+                      value={userProfile?.fullName || ""}
+                      onEdit={handleEditFullName}
+                    />
+                  ) : (
+                    <InfoItem
+                      label="Họ và tên"
+                      value={userProfile?.fullName || ""}
+                    />
+                  )}
+                  <InfoItem label="Email" value={userProfile?.email || ""} />
+                  {user?.role === UserRole.Instructor && (
+                    <EditableInfoItem
+                      label="Mô tả"
+                      value={user?.instructor?.bio || ""}
+                      onEdit={handleEditBio}
+                    />
+                  )}
                   <EditableInfoItem
                     label="Số điện thoại"
                     value={userProfile?.phone || ""}
@@ -369,12 +522,12 @@ export default function IdentificationDocumentManagementInstructorScreen() {
                   <EditableInfoItem
                     label="Tên người liên hệ"
                     value={userProfile?.emergencyContact?.name || ""}
-                    onEdit={handleEditEmergencyContact}
+                    onEdit={handleEditEmergencyContactName}
                   />
                   <EditableInfoItem
                     label="Số điện thoại"
                     value={userProfile?.emergencyContact?.phone || ""}
-                    onEdit={handleEditEmergencyContact}
+                    onEdit={handleEditEmergencyContactPhone}
                   />
                 </View>
               </View>
@@ -472,18 +625,40 @@ export default function IdentificationDocumentManagementInstructorScreen() {
                                 styles.fileFullWidth,
                             ]}
                           >
-                            <Text style={styles.fileLabel}>{file.label}</Text>
+                            <View style={styles.fileLabelContainer}>
+                              <Text style={styles.fileLabel}>{file.label}</Text>
+                              {record.id === "driverLicense" &&
+                                file.label === "Ảnh mặt trước" && (
+                                  <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    onPress={handleEditDriverLicenseImage}
+                                    style={styles.editButton}
+                                  >
+                                    <Edit2
+                                      size={14}
+                                      color={AppColors.primary}
+                                    />
+                                  </TouchableOpacity>
+                                )}
+                            </View>
                             {file.imageUrl ? (
                               <Image
                                 source={{ uri: file.imageUrl }}
                                 style={styles.fileImage}
                               />
                             ) : (
-                              <View style={styles.filePlaceholder}>
+                              <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={handleEditDriverLicenseImage}
+                                style={styles.filePlaceholder}
+                              >
                                 <Text style={styles.filePlaceholderText}>
                                   Chưa cung cấp ảnh
                                 </Text>
-                              </View>
+                                <Text style={styles.filePlaceholderSubtext}>
+                                  Nhấn để thêm ảnh
+                                </Text>
+                              </TouchableOpacity>
                             )}
                           </View>
                         ))}
@@ -491,17 +666,44 @@ export default function IdentificationDocumentManagementInstructorScreen() {
                     )}
 
                     <View style={styles.fieldGrid}>
-                      {record.fields.map((field) => (
-                        <View
-                          key={`${record.id}-${field.label}`}
-                          style={styles.fieldCard}
-                        >
-                          <Text style={styles.fieldLabel}>{field.label}</Text>
-                          <Text style={styles.fieldValue}>
-                            {field.value || "—"}
-                          </Text>
-                        </View>
-                      ))}
+                      {record.fields.map((field) => {
+                        // Hide "Hạng bằng lái" field for role 3 (NoviceDriver)
+                        if (
+                          user?.role === UserRole.NoviceDriver &&
+                          record.id === "driverLicense" &&
+                          field.label === "Hạng bằng lái"
+                        ) {
+                          return null;
+                        }
+                        return (
+                          <View
+                            key={`${record.id}-${field.label}`}
+                            style={styles.fieldCard}
+                          >
+                            <View style={styles.fieldLabelContainer}>
+                              <Text style={styles.fieldLabel}>
+                                {field.label}
+                              </Text>
+                              {record.id === "driverLicense" &&
+                                field.label === "Hạng bằng lái" && (
+                                  <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    onPress={handleEditLicenseTier}
+                                    style={styles.editButton}
+                                  >
+                                    <Edit2
+                                      size={14}
+                                      color={AppColors.primary}
+                                    />
+                                  </TouchableOpacity>
+                                )}
+                            </View>
+                            <Text style={styles.fieldValue}>
+                              {field.value || "—"}
+                            </Text>
+                          </View>
+                        );
+                      })}
                     </View>
                   </View>
                 ))}
@@ -510,51 +712,6 @@ export default function IdentificationDocumentManagementInstructorScreen() {
           </>
         )}
       </ScrollView>
-
-      {/* Email Edit Modal */}
-      <Modal
-        visible={showEmailModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowEmailModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chỉnh sửa Email</Text>
-              <TouchableOpacity
-                onPress={() => setShowEmailModal(false)}
-                style={styles.modalCloseButton}
-              >
-                <X size={24} color={AppColors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Nhập email"
-              placeholderTextColor={AppColors.textSecondary}
-              value={editEmail}
-              onChangeText={setEditEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalCancelButton]}
-                onPress={() => setShowEmailModal(false)}
-              >
-                <Text style={styles.modalCancelButtonText}>Hủy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalSaveButton]}
-                onPress={handleSaveEmail}
-              >
-                <Text style={styles.modalSaveButtonText}>Lưu</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Phone Edit Modal */}
       <Modal
@@ -684,19 +841,19 @@ export default function IdentificationDocumentManagementInstructorScreen() {
         </View>
       </Modal>
 
-      {/* Emergency Contact Edit Modal */}
+      {/* Emergency Contact Name Edit Modal */}
       <Modal
-        visible={showEmergencyContactModal}
+        visible={showEmergencyContactNameModal}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setShowEmergencyContactModal(false)}
+        onRequestClose={() => setShowEmergencyContactNameModal(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chỉnh sửa Liên hệ khẩn cấp</Text>
+              <Text style={styles.modalTitle}>Chỉnh sửa Tên người liên hệ</Text>
               <TouchableOpacity
-                onPress={() => setShowEmergencyContactModal(false)}
+                onPress={() => setShowEmergencyContactNameModal(false)}
                 style={styles.modalCloseButton}
               >
                 <X size={24} color={AppColors.textPrimary} />
@@ -710,9 +867,45 @@ export default function IdentificationDocumentManagementInstructorScreen() {
               value={editEmergencyName}
               onChangeText={setEditEmergencyName}
             />
-            <Text style={[styles.modalLabel, { marginTop: 16 }]}>
-              Số điện thoại
-            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowEmergencyContactNameModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSaveButton]}
+                onPress={handleSaveEmergencyContactName}
+              >
+                <Text style={styles.modalSaveButtonText}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Emergency Contact Phone Edit Modal */}
+      <Modal
+        visible={showEmergencyContactPhoneModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowEmergencyContactPhoneModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                Chỉnh sửa Số điện thoại liên hệ khẩn cấp
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowEmergencyContactPhoneModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <X size={24} color={AppColors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalLabel}>Số điện thoại</Text>
             <TextInput
               style={styles.modalInput}
               placeholder="Nhập số điện thoại"
@@ -726,13 +919,149 @@ export default function IdentificationDocumentManagementInstructorScreen() {
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalCancelButton]}
-                onPress={() => setShowEmergencyContactModal(false)}
+                onPress={() => setShowEmergencyContactPhoneModal(false)}
               >
                 <Text style={styles.modalCancelButtonText}>Hủy</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalSaveButton]}
-                onPress={handleSaveEmergencyContact}
+                onPress={handleSaveEmergencyContactPhone}
+              >
+                <Text style={styles.modalSaveButtonText}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Bio Edit Modal */}
+      <Modal
+        visible={showBioModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowBioModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chỉnh sửa Mô tả</Text>
+              <TouchableOpacity
+                onPress={() => setShowBioModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <X size={24} color={AppColors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalLabel}>Mô tả</Text>
+            <TextInput
+              style={[styles.modalInput, styles.modalTextArea]}
+              placeholder="Nhập mô tả về bản thân"
+              placeholderTextColor={AppColors.textSecondary}
+              value={editBio}
+              onChangeText={setEditBio}
+              multiline={true}
+              numberOfLines={6}
+              textAlignVertical="top"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowBioModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSaveButton]}
+                onPress={handleSaveBio}
+              >
+                <Text style={styles.modalSaveButtonText}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Full Name Edit Modal */}
+      <Modal
+        visible={showFullNameModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFullNameModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chỉnh sửa Họ và tên</Text>
+              <TouchableOpacity
+                onPress={() => setShowFullNameModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <X size={24} color={AppColors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalLabel}>Họ và tên</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Nhập họ và tên"
+              placeholderTextColor={AppColors.textSecondary}
+              value={editFullName}
+              onChangeText={setEditFullName}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowFullNameModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSaveButton]}
+                onPress={handleSaveFullName}
+              >
+                <Text style={styles.modalSaveButtonText}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* License Tier Edit Modal */}
+      <Modal
+        visible={showLicenseTierModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowLicenseTierModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chỉnh sửa Hạng bằng lái</Text>
+              <TouchableOpacity
+                onPress={() => setShowLicenseTierModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <X size={24} color={AppColors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalLabel}>Hạng bằng lái</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Nhập hạng bằng lái (B1, B2, C, D, E, F)"
+              placeholderTextColor={AppColors.textSecondary}
+              value={editLicenseTier}
+              onChangeText={setEditLicenseTier}
+              autoCapitalize="characters"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowLicenseTierModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSaveButton]}
+                onPress={handleSaveLicenseTier}
               >
                 <Text style={styles.modalSaveButtonText}>Lưu</Text>
               </TouchableOpacity>
@@ -1089,11 +1418,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: AppColors.borderLight,
   },
+  fileLabelContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
   fileLabel: {
     fontSize: 13,
     fontWeight: "600",
     color: AppColors.textPrimary,
-    marginBottom: 10,
+    flex: 1,
   },
   fileImage: {
     width: "100%",
@@ -1113,6 +1448,12 @@ const styles = StyleSheet.create({
   filePlaceholderText: {
     fontSize: 12,
     color: AppColors.textSecondary,
+    marginBottom: 4,
+  },
+  filePlaceholderSubtext: {
+    fontSize: 11,
+    color: AppColors.primary,
+    fontWeight: "600",
   },
   fieldGrid: {
     flexDirection: "column",
@@ -1126,11 +1467,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: AppColors.borderLight,
   },
+  fieldLabelContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   fieldLabel: {
     fontSize: 11,
     color: AppColors.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+    flex: 1,
   },
   fieldValue: {
     marginTop: 6,
@@ -1180,6 +1527,10 @@ const styles = StyleSheet.create({
     color: AppColors.textPrimary,
     borderWidth: 1,
     borderColor: AppColors.border,
+  },
+  modalTextArea: {
+    minHeight: 120,
+    paddingTop: 14,
   },
   passwordInputContainer: {
     position: "relative",

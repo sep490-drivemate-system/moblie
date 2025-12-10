@@ -10,6 +10,8 @@ import {
   TextInput,
   Alert,
   Dimensions,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
@@ -86,23 +88,6 @@ const CardOverview: React.FC<CardOverviewProps> = ({
     </LinearGradient>
   );
 };
-
-interface Vehicle {
-  id: number;
-  brand: string;
-  model: string;
-  licensePlate: string;
-  seats: number;
-  price: number;
-  image: string;
-  status: "approved" | "pending";
-  approvedDate: string | null;
-  year: number;
-  fuelType: string;
-  transmission: string;
-  features: string[];
-}
-
 interface VehicleCardProps {
   vehicle: ICar;
   onDetail: () => void;
@@ -252,6 +237,7 @@ const VehicleModal: React.FC<VehicleModalProps> = ({
 export default function MyCarScreen() {
   const [selectedVehicle, setSelectedVehicle] = useState<ICar | null>(null);
   const [cars, setCars] = useState<ICar[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const router = useRouter();
   const [carState, viewModel] = useViewModel(
@@ -282,9 +268,7 @@ export default function MyCarScreen() {
   ).length;
   const averagePrice =
     cars.length > 0
-      ? Math.round(
-          cars.reduce((s, v) => s + v.price, 0) / cars.length / 1000
-        )
+      ? Math.round(cars.reduce((s, v) => s + v.price, 0) / cars.length / 1000)
       : 0;
 
   const getIntructorListCar = useCallback(async () => {
@@ -293,6 +277,17 @@ export default function MyCarScreen() {
     setCars(cars);
     console.log(cars);
   }, [viewModel]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await getIntructorListCar();
+    } catch (error) {
+      console.error("Error refreshing cars:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [getIntructorListCar]);
 
   useEffect(() => {
     getIntructorListCar();
@@ -310,92 +305,117 @@ export default function MyCarScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[AppColors.primary]}
+            tintColor={AppColors.primary}
+          />
+        }
       >
         <HeaderList
           title="Quản Lý Xe Học Lái"
           description="Quản lý danh sách xe và theo dõi tình trạng kiểm duyệt"
         />
 
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <CardOverview
-            title="Tổng Xe"
-            value={`${cars.length}`}
-            sub="Xe trong hệ thống"
-            icon={<Car size={24} color={AppColors.textWhite} />}
-            color={[
-              AppColors.primary,
-              AppColors.primaryDark || AppColors.primary,
-            ]}
-            delay={0}
-            fullWidth
-          />
-          <CardOverview
-            title="Đã Duyệt"
-            value={`${approvedCount}`}
-            sub="Xe đã được phê duyệt"
-            icon={<CheckCircle size={24} color={AppColors.textWhite} />}
-            color={[AppColors.success, AppColors.success]}
-            delay={100}
-            fullWidth
-          />
-          <CardOverview
-            title="Chờ Duyệt"
-            value={`${pendingCount}`}
-            sub="Xe đang chờ xử lý"
-            icon={<Clock size={24} color={AppColors.textWhite} />}
-            color={[AppColors.yellow, AppColors.yellow]}
-            delay={200}
-            fullWidth
-          />
-          <CardOverview
-            title="Giá Trung Bình"
-            value={`${averagePrice?.toLocaleString("vi-VN")}K VNĐ`}
-            sub="Giá trung bình mỗi xe"
-            icon={<DollarSign size={24} color={AppColors.textWhite} />}
-            color={[AppColors.blue, AppColors.blue]}
-            delay={300}
-            fullWidth
-          />
-        </View>
+        {refreshing ? (
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <ActivityIndicator size="large" color={AppColors.primary} />
+            <Text style={{ marginTop: 16, color: AppColors.gray600 }}>
+              Đang tải dữ liệu...
+            </Text>
+          </View>
+        ) : (
+          <>
+            {/* Stats Cards */}
+            <View style={styles.statsContainer}>
+              <CardOverview
+                title="Tổng Xe"
+                value={`${cars.length}`}
+                sub="Xe trong hệ thống"
+                icon={<Car size={24} color={AppColors.textWhite} />}
+                color={[
+                  AppColors.primary,
+                  AppColors.primaryDark || AppColors.primary,
+                ]}
+                delay={0}
+                fullWidth
+              />
+              <CardOverview
+                title="Đã Duyệt"
+                value={`${approvedCount}`}
+                sub="Xe đã được phê duyệt"
+                icon={<CheckCircle size={24} color={AppColors.textWhite} />}
+                color={[AppColors.success, AppColors.success]}
+                delay={100}
+                fullWidth
+              />
+              <CardOverview
+                title="Chờ Duyệt"
+                value={`${pendingCount}`}
+                sub="Xe đang chờ xử lý"
+                icon={<Clock size={24} color={AppColors.textWhite} />}
+                color={[AppColors.yellow, AppColors.yellow]}
+                delay={200}
+                fullWidth
+              />
+              <CardOverview
+                title="Giá Trung Bình"
+                value={`${averagePrice?.toLocaleString("vi-VN")}K VNĐ`}
+                sub="Giá trung bình mỗi xe"
+                icon={<DollarSign size={24} color={AppColors.textWhite} />}
+                color={[AppColors.blue, AppColors.blue]}
+                delay={300}
+                fullWidth
+              />
+            </View>
 
-        {/* Vehicles List */}
-        <View style={styles.listContainer}>
-          {cars.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <MapPin size={32} color={AppColors.gray500} />
-              </View>
-              <Text style={styles.emptyTitle}>Chưa có xe nào</Text>
-              <Text style={styles.emptySubtitle}>
-                Thêm xe của bạn để bắt đầu quản lý
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyButton}
-                onPress={() =>
-                  router.push("/(onboarding)/(car)/(car-registration)/form")
-                }
-              >
-                <Plus size={20} color="#ffffff" />
-                <Text style={styles.emptyButtonText}>Thêm Xe Đầu Tiên</Text>
-              </TouchableOpacity>
+            {/* Vehicles List */}
+            <View style={styles.listContainer}>
+              {cars.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <View style={styles.emptyIcon}>
+                    <MapPin size={32} color={AppColors.gray500} />
+                  </View>
+                  <Text style={styles.emptyTitle}>Chưa có xe nào</Text>
+                  <Text style={styles.emptySubtitle}>
+                    Thêm xe của bạn để bắt đầu quản lý
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.emptyButton}
+                    onPress={() =>
+                      router.push("/(onboarding)/(car)/(car-registration)/form")
+                    }
+                  >
+                    <Plus size={20} color="#ffffff" />
+                    <Text style={styles.emptyButtonText}>Thêm Xe Đầu Tiên</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.vehiclesGrid}>
+                  {cars.map((vehicle) => (
+                    <VehicleCard
+                      key={vehicle.id}
+                      vehicle={vehicle}
+                      onDetail={() => {
+                        setSelectedVehicle(vehicle);
+                        setShowModal(true);
+                      }}
+                      onDelete={() => handleDelete(vehicle.id)}
+                    />
+                  ))}
+                </View>
+              )}
             </View>
-          ) : (
-            <View style={styles.vehiclesGrid}>
-              {cars.map((vehicle) => (
-                <VehicleCard
-                  key={vehicle.id}
-                  vehicle={vehicle}
-                  onDetail={() => {
-                    setSelectedVehicle(vehicle);
-                    setShowModal(true);
-                  }}
-                  onDelete={() => handleDelete(vehicle.id)}
-                />
-              ))}
-            </View>
-          )}
-        </View>
+          </>
+        )}
       </ScrollView>
 
       {/* Modals */}

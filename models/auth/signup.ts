@@ -28,3 +28,9 @@ export interface IRegisterInstructorRequest {
   HealthCheckup: File | null;
   PersonalProfile: File | null;
 }
+
+export interface IRegisterNoviceDriverRequest {
+  email: string;
+  phoneNumber: string;
+  password: string;
+}

@@ -2,6 +2,7 @@ import { BaseViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { ISignInRequest } from "@/models/auth/signin";
 import {
   IRegisterInstructorRequest,
+  IRegisterNoviceDriverRequest,
   ISignUpRequest,
 } from "@/models/auth/signup";
 import { IForgotPasswordRequest } from "@/models/auth/forgotPassword";
@@ -11,6 +12,7 @@ import {
   verifyEmail,
   verify,
   registerInstructor,
+  registerNoviceDriver,
 } from "@/features/auth/authThunk";
 import { signInSchema, signUpSchema } from "@/validations/authValidation";
 import { ValidationError } from "yup";
@@ -66,7 +68,9 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       return null;
     }
     try {
-      const response = await this.dispatch(getUserById({ id: userId as unknown as string })).unwrap();
+      const response = await this.dispatch(
+        getUserById({ id: userId as unknown as string })
+      ).unwrap();
       return response.value as IUserInfo;
     } catch (error) {
       console.log("Error fetching user info:", error);
@@ -181,8 +185,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         // Đã kiểm tra xong token và cập nhật state
         this.dispatch(setAuthChecked(true));
       },
-      () => { },
-      () => { },
+      () => {},
+      () => {},
       {
         setLoading,
         setError,
@@ -191,7 +195,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     );
   }
 
-  handleGoogleLogin = async () => { };
+  handleGoogleLogin = async () => {};
 
   async handleSignOut(): Promise<void> {
     await AsyncStorage.removeItem(
@@ -228,8 +232,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
           );
         }
       },
-      () => { },
-      () => { },
+      () => {},
+      () => {},
       {
         setLoading,
         setError,
@@ -344,8 +348,15 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
 
     // Cập nhật errors vào state
     this.dispatch(setRegisterFormError({ field: "email", error: emailError }));
-    this.dispatch(setRegisterFormError({ field: "password", error: passwordError }));
-    this.dispatch(setRegisterFormError({ field: "confirmPassword", error: confirmPasswordError }));
+    this.dispatch(
+      setRegisterFormError({ field: "password", error: passwordError })
+    );
+    this.dispatch(
+      setRegisterFormError({
+        field: "confirmPassword",
+        error: confirmPasswordError,
+      })
+    );
     this.dispatch(setRegisterFormError({ field: "phone", error: phoneError }));
 
     // Kiểm tra xem có lỗi nào không
@@ -453,8 +464,8 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
         typeof error === "string"
           ? error
           : (error as { message?: string })?.message ||
-          this.getCurrentState().errorMessage ||
-          "Không thể gửi mã OTP, vui lòng thử lại.";
+            this.getCurrentState().errorMessage ||
+            "Không thể gửi mã OTP, vui lòng thử lại.";
       this.dispatch(setError(message));
     }
   };
@@ -625,15 +636,15 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       | "DrivingLicenseTier"
       | "TeachingTier"
     > = [
-        "FullName",
-        "RawPassword",
-        "Email",
-        "PhoneNumber",
-        "BirthDate",
-        "Gender",
-        "DrivingLicenseTier",
-        "TeachingTier",
-      ];
+      "FullName",
+      "RawPassword",
+      "Email",
+      "PhoneNumber",
+      "BirthDate",
+      "Gender",
+      "DrivingLicenseTier",
+      "TeachingTier",
+    ];
 
     textFields.forEach((field) => {
       const value = data[field];
@@ -650,13 +661,13 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       | "HealthCheckup"
       | "PersonalProfile"
     > = [
-        "Avatar",
-        "DrivingLicenseFront",
-        "DrivingLicenseBack",
-        "TeachingLicenseFront",
-        "HealthCheckup",
-        "PersonalProfile",
-      ];
+      "Avatar",
+      "DrivingLicenseFront",
+      "DrivingLicenseBack",
+      "TeachingLicenseFront",
+      "HealthCheckup",
+      "PersonalProfile",
+    ];
 
     fileFields.forEach((field) => {
       const value = data[field];
@@ -672,5 +683,25 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     const formData = this.buildRegisterInstructorFormData();
     const result = await this.dispatch(registerInstructor(formData)).unwrap();
     return result;
+  }
+
+  async registerNoviceDriver(request: IRegisterNoviceDriverRequest) {
+    return await this.executeAsync<boolean>(async () => {
+      return (await this.dispatch(registerNoviceDriver(request)).unwrap())
+        .value as boolean;
+    },
+    (response) => {
+      console.log("response line 689", response);
+      this.dispatch(resetRegisterForm());
+    },
+    (error) => {
+      console.error("registerNoviceDriver error:", error);
+    },
+    {
+      setLoading,
+      setError,
+      setSuccess,
+    }
+  );
   }
 }
