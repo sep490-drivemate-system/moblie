@@ -257,22 +257,39 @@ export class DocumentViewModel extends BaseViewModel<DocumentState> {
       });
     }
 
-    // Health Checkup - Only for role 4
-    if (application.healthCheckup) {
-      records.push({
-        id: "healthCheckup",
-        title: "Giấy Khám Sức Khỏe",
-        description: "Giấy khám sức khỏe để đảm bảo đủ điều kiện sức khỏe lái xe.",
-        updatedAt: submitDate,
-        fields: [],
-        files: [
-          {
-            label: "Ảnh giấy khám sức khỏe",
-            imageUrl: application.healthCheckup || null,
-          },
-        ],
-      });
-    }
+      // Health Checkup - Only for role 4
+      if (application.healthCheckup) {
+        records.push({
+          id: "healthCheckup",
+          title: "Giấy Khám Sức Khỏe",
+          description: "Giấy khám sức khỏe để đảm bảo đủ điều kiện sức khỏe lái xe.",
+          updatedAt: submitDate,
+          fields: [],
+          files: [
+            {
+              label: "Ảnh giấy khám sức khỏe",
+              imageUrl: application.healthCheckup || null,
+            },
+          ],
+        });
+      }
+
+      // Personal Profile (Lý lịch tư pháp) - Only for role 4
+      if (application.personalProfile) {
+        records.push({
+          id: "personalProfile",
+          title: "Lý lịch tư pháp",
+          description: "Lý lịch tư pháp của người dùng.",
+          updatedAt: submitDate,
+          fields: [],
+          files: [
+            {
+              label: "Ảnh lý lịch tư pháp",
+              imageUrl: application.personalProfile || null,
+            },
+          ],
+        });
+      }
 
     return records;
   }
@@ -466,6 +483,21 @@ export class DocumentViewModel extends BaseViewModel<DocumentState> {
           },
         ],
       });
+
+      // Personal Profile (Lý lịch tư pháp) from application - Always show for Instructor role
+      records.push({
+        id: "personalProfile",
+        title: "Lý lịch tư pháp",
+        description: "Lý lịch tư pháp của người dùng.",
+        updatedAt: submitDate,
+        fields: [],
+        files: [
+          {
+            label: "Ảnh lý lịch tư pháp",
+            imageUrl: application.personalProfile || null,
+          },
+        ],
+      });
     } else {
       // Fallback to user data if application is not available
       // Driver License from user data
@@ -556,6 +588,21 @@ export class DocumentViewModel extends BaseViewModel<DocumentState> {
         files: [
           {
             label: "Ảnh giấy khám sức khỏe",
+            imageUrl: null,
+          },
+        ],
+      });
+
+      // Personal Profile (Lý lịch tư pháp) - Always show for Instructor role even if no application
+      records.push({
+        id: "personalProfile",
+        title: "Lý lịch tư pháp",
+        description: "Lý lịch tư pháp của người dùng.",
+        updatedAt: "",
+        fields: [],
+        files: [
+          {
+            label: "Ảnh lý lịch tư pháp",
             imageUrl: null,
           },
         ],

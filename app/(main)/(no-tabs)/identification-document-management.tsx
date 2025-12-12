@@ -83,7 +83,6 @@ export default function IdentificationDocumentManagementInstructorScreen() {
   const [editPassword, setEditPassword] = useState("");
   const [editPasswordConfirm, setEditPasswordConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showPasswordInView, setShowPasswordInView] = useState(false);
   const [editEmergencyName, setEditEmergencyName] = useState("");
   const [editEmergencyPhone, setEditEmergencyPhone] = useState("");
   const [editBio, setEditBio] = useState("");
@@ -505,10 +504,6 @@ export default function IdentificationDocumentManagementInstructorScreen() {
                     label="Mật khẩu"
                     value={userProfile?.password || "••••••••"}
                     onEdit={handleEditPassword}
-                    showPassword={showPasswordInView}
-                    onToggleShowPassword={() =>
-                      setShowPasswordInView(!showPasswordInView)
-                    }
                   />
                 </View>
               </View>
@@ -1120,47 +1115,24 @@ function EditablePasswordItem({
   label,
   value,
   onEdit,
-  showPassword,
-  onToggleShowPassword,
 }: {
   label: string;
   value: string;
   onEdit: () => void;
-  showPassword: boolean;
-  onToggleShowPassword: () => void;
 }) {
   return (
     <View style={styles.infoItem}>
       <View style={styles.infoItemHeader}>
         <Text style={styles.infoLabel}>{label}</Text>
-        <View style={styles.passwordItemActions}>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={onToggleShowPassword}
-            style={styles.passwordToggleButton}
-          >
-            {showPassword ? (
-              <EyeOff size={16} color={AppColors.textSecondary} />
-            ) : (
-              <Eye size={16} color={AppColors.textSecondary} />
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={onEdit}
-            style={styles.editButton}
-          >
-            <Edit2 size={14} color={AppColors.primary} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={onEdit}
+          style={styles.editButton}
+        >
+          <Edit2 size={14} color={AppColors.primary} />
+        </TouchableOpacity>
       </View>
-      <Text style={styles.infoValue}>
-        {showPassword
-          ? value === "••••••••"
-            ? "••••••••"
-            : value
-          : "••••••••"}
-      </Text>
+      <Text style={styles.infoValue}>••••••••</Text>
     </View>
   );
 }
@@ -1496,8 +1468,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
-    paddingBottom: 32,
-    maxHeight: "80%",
+    paddingBottom: 0,
   },
   modalHeader: {
     flexDirection: "row",
@@ -1557,6 +1528,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     marginTop: 24,
+    paddingBottom: 24,
   },
   modalButton: {
     flex: 1,
