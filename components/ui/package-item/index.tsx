@@ -3,25 +3,13 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { Clock, MapPin, Zap } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
+import { Package } from "@/models/package/package";
 
-interface Package {
-  id: string;
-  instructorId: string;
-  instructorName: string;
-  name: string;
-  duration: number;
-  basePrice: number;
-  roadTypes: string[];
-  skills: string[];
-  hasVehicle: boolean;
-  bookingCount?: number;
+interface PackageProps {
+  pkg: Package;
 }
 
-interface PackageItemProps {
-  package: Package;
-}
-
-export default function PackageItem({ package: pkg }: PackageItemProps) {
+export default function PackageItem({ pkg }: PackageProps) {
   const router = useRouter();
 
   const handlePress = () => {
@@ -60,7 +48,7 @@ export default function PackageItem({ package: pkg }: PackageItemProps) {
           </View>
           <View style={styles.instructorInfo}>
             <Text style={styles.instructorName}>{pkg.instructorName}</Text>
-            {pkg.hasVehicle ? (
+            {pkg.carCount > 0 ? (
               <View style={styles.badgeWithVehicle}>
                 <Text style={styles.badgeText}>Người hướng dẫn và xe</Text>
               </View>
@@ -95,7 +83,7 @@ export default function PackageItem({ package: pkg }: PackageItemProps) {
       <View style={styles.cardFooter}>
         <View style={styles.priceContainer}>
           <Text style={styles.price}>
-            {pkg.basePrice.toLocaleString("vi-VN")} đ
+            {pkg.price.toLocaleString("vi-VN")} đ
           </Text>
         </View>
         <View style={styles.actionButtons}>
@@ -126,10 +114,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
     borderWidth: 1,
     borderColor: "#f1f5f9",
-    width: 360,
+    marginBottom: 5,
+    marginLeft: 2,
   },
   packageHeader: {
     flexDirection: "row",

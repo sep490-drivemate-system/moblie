@@ -63,3 +63,9 @@ export const getInstructorApplicant = createThunk<
   }
 );
 
+export const getRecommendedInstructors = createThunk<IInstructors[], void>(
+  HttpMethod.GET,
+  "recommendedInstructors",
+  `${INSTRUCTOR_PATH}/recommended`,
+);
+

@@ -7,7 +7,12 @@ import { instructorsData } from "@/data/instructors_data";
 import { LicenseType } from "@/models/license/license";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Bell, ChevronRight, MessageSquareMore, Wallet } from "lucide-react-native";
+import {
+  Bell,
+  ChevronRight,
+  MessageSquareMore,
+  Wallet,
+} from "lucide-react-native";
 import {
   FlatList,
   ListRenderItemInfo,
@@ -28,14 +33,37 @@ import { router } from "expo-router";
 import { useSignalRContext } from "@/lib/signalr/SignalRContext";
 import { NotificationHubViewModel } from "@/viewmodels/notification/NotificationHubViewModel";
 import { ChatHubViewModel } from "@/viewmodels/chat/ChatHubViewModel";
+import { Package } from "@/models/package/package";
+import { PackageViewModel } from "@/viewmodels/package/PackageViewModel";
+import { RootState } from "@/lib/redux/store";
+import { IInstructors } from "@/models/instructor/instructor.type";
+import { InstructorViewModel } from "@/viewmodels/instructor/InstructorViewModel";
 
 export default function HomeScreen() {
   const tabBarHeight = useBottomTabBarHeight();
-  const [walletState, walletViewModel] = useViewModel(WalletViewModel, (state) => state.wallet);
-  const [chatState, chatHubViewModel] = useViewModel(ChatHubViewModel, (state) => state.chat);
-  const [notificationState, notificationHubViewModel] = useViewModel(NotificationHubViewModel, (state) => state.notification);
+  const [walletState, walletViewModel] = useViewModel(
+    WalletViewModel,
+    (state) => state.wallet
+  );
+  const [chatState, chatHubViewModel] = useViewModel(
+    ChatHubViewModel,
+    (state) => state.chat
+  );
+  const [notificationState, notificationHubViewModel] = useViewModel(
+    NotificationHubViewModel,
+    (state) => state.notification
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
-
+  const [recommendedPackages, setRecommendedPackages] = useState<Package[]>([]);
+  const [recommendedInstructors, setRecommendedInstructors] = useState<IInstructors[]>([]);
+  const [packageState, packageViewModel] = useViewModel(
+    PackageViewModel,
+    (state) => state.package
+  );
+  const [instructorState, instructorViewModel] = useViewModel(
+    InstructorViewModel,
+    (state) => state.instructor
+  );
   // Lấy SignalR connections từ context (đã được tạo ở layout)
   const { chatHub, notificationHub } = useSignalRContext();
 
@@ -52,7 +80,6 @@ export default function HomeScreen() {
     }
   }, [notificationHub, notificationHubViewModel]);
 
-
   const fetchUnreadCounts = useCallback(async () => {
     try {
       await chatHubViewModel.getUnreadMessageCount();
@@ -61,7 +88,6 @@ export default function HomeScreen() {
       console.error("Error fetching unread counts:", error);
     }
   }, [chatHubViewModel, notificationHubViewModel]);
-
 
   const hasFetchedBalanceRef = useRef(false);
 
@@ -73,10 +99,7 @@ export default function HomeScreen() {
     walletViewModel.getWalletBalance();
 
     fetchUnreadCounts();
-
   }, [walletState.balance, walletViewModel]);
-
-
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -87,16 +110,23 @@ export default function HomeScreen() {
       setIsRefreshing(false);
     }
   };
+  useEffect(() => {
+    const getRecommendedPackages = async () => {
+      const result = await packageViewModel.getRecommendedPackages();
+      setRecommendedPackages(result as Package[]);
+      console.log(result);
+    };
+    getRecommendedPackages();
+  }, [packageViewModel]);
 
-
-  // const handleHeaderItemPress = async (itemId: string) => {
-  //   if (itemId === "3") {
-  //     router.push(ROUTES.CHAT_LIST);
-  //   }
-  //   if (itemId === "2") {
-  //     router.push(ROUTES.NOTIFICATIONS);
-  //   }
-  // };
+  useEffect(() => {
+    const getRecommendedInstructors = async () => {
+      const result = await instructorViewModel.fetchRecommendedInstructors();
+      setRecommendedInstructors(result ?? []);
+      console.log(result);
+    };
+    getRecommendedInstructors();
+  }, [instructorViewModel]);
 
   const renderDrivingLicense = ({ item }: ListRenderItemInfo<LicenseType>) => (
     <TouchableOpacity key={item.id} style={styles.drivingLicenseItem}>
@@ -109,7 +139,11 @@ export default function HomeScreen() {
       style={[styles.container, { paddingBottom: tabBarHeight + 16 }]}
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#70E000" />
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          tintColor="#70E000"
+        />
       }
     >
       <View style={styles.header}>
@@ -142,7 +176,9 @@ export default function HomeScreen() {
                 {notificationState.unreadCount > 0 && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>
-                      {notificationState.unreadCount > 99 ? "99+" : notificationState.unreadCount}
+                      {notificationState.unreadCount > 99
+                        ? "99+"
+                        : notificationState.unreadCount}
                     </Text>
                   </View>
                 )}
@@ -158,7 +194,9 @@ export default function HomeScreen() {
                 {chatState.unreadMessageCount > 0 ? (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>
-                      {chatState.unreadMessageCount > 99 ? "99+" : chatState.unreadMessageCount}
+                      {chatState.unreadMessageCount > 99
+                        ? "99+"
+                        : chatState.unreadMessageCount}
                     </Text>
                   </View>
                 ) : null}
@@ -188,18 +226,20 @@ export default function HomeScreen() {
         <View style={styles.listItemContainer}>
           <Text style={styles.listLabel}>Gói được thuê thường xuyên</Text>
           <FlatList
-            data={popularPackages}
+            data={recommendedPackages}
             keyExtractor={(item) => item.id}
             horizontal
             contentContainerStyle={styles.listItem}
             showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => <PackageItem package={item} key={item.id} />}
+            renderItem={({ item }) => (
+              <PackageItem pkg={item} key={item.id} />
+            )}
           />
         </View>
         <View style={styles.listItemContainer}>
           <Text style={styles.listLabel}>Người hướng dẫn nổi bật</Text>
           <FlatList
-            data={instructorsData}
+            data={recommendedInstructors}
             keyExtractor={(item) => item.id}
             horizontal
             contentContainerStyle={styles.listItem}
@@ -218,8 +258,6 @@ export default function HomeScreen() {
             renderItem={({ item }) => <CarItem car={item as unknown as ICar} key={item.id} />}
           />
         </View> */}
-
-
       </View>
     </ScrollView>
   );
@@ -288,7 +326,7 @@ const styles = StyleSheet.create({
   listItemContainer: {
     width: "95%",
     backgroundColor: "#FFF",
-    paddingVertical: 15,
+    paddingVertical: 20,
     paddingLeft: 20,
     borderRadius: 5,
     elevation: 3,

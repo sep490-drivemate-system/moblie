@@ -16,6 +16,7 @@ import {
   getDrivingSkills,
   getInstructorPackages,
   getPackages,
+  getRecommendedPackages,
   getRoadTypes,
 } from "@/features/package/packageThunk";
 import { setIsRefreshing } from "@/features/package/packageSlice";
@@ -91,19 +92,32 @@ export class PackageViewModel extends BaseViewModel<RootState["package"]> {
   ): Promise<PaginatedPackagesResponse> => {
     return (
       (await this.executeAsync<PaginatedPackagesResponse>(async () => {
-        const response = await this.dispatch(getPackages(params || {})).unwrap();
-        return (response as any).value || {
-          currentPage: 1,
-          pageSize: 12,
-          totalCount: 0,
-          pageContent: [],
-        };
+        const response = await this.dispatch(
+          getPackages(params || {})
+        ).unwrap();
+        return (
+          (response as any).value || {
+            currentPage: 1,
+            pageSize: 12,
+            totalCount: 0,
+            pageContent: [],
+          }
+        );
       })) ?? {
         currentPage: 1,
         pageSize: 12,
         totalCount: 0,
         pageContent: [],
       }
+    );
+  };
+
+  getRecommendedPackages = async (): Promise<Package[]> => {
+    return (
+      (await this.executeAsync<Package[]>(async () => {
+        const response = await this.dispatch(getRecommendedPackages()).unwrap();
+        return response.value || [];
+      })) ?? []
     );
   };
 }

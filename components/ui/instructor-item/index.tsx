@@ -1,10 +1,10 @@
-import { IInstructor } from "@/models/instructor/instructor.type";
+import { IInstructors } from "@/models/instructor/instructor.type";
 import { LinearGradient } from "expo-linear-gradient";
 import { LucideStar, ShieldCheck } from "lucide-react-native";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type Props = {
-  instructor: IInstructor;
+  instructor: IInstructors;
   variant?: "compact" | "full";
 };
 const InstructorItem: React.FC<Props> = ({
@@ -24,11 +24,11 @@ const InstructorItem: React.FC<Props> = ({
         <View style={styles.banner}>
           <View style={styles.ratingContainer}>
             <LucideStar size={15} color={"#edb435"} fill={"#edb435"} />
-            <Text style={styles.ratingText}>{instructor.rating}</Text>
+            <Text style={styles.ratingText}>{instructor.averageRating}</Text>
           </View>
           <View style={styles.bookingContainer}>
             <Text style={styles.bookingText}>
-              Đã thuê {instructor.totalBookings} lượt
+              Đã thuê {instructor.bookingCount} lượt
             </Text>
           </View>
         </View>
@@ -36,10 +36,10 @@ const InstructorItem: React.FC<Props> = ({
       <View style={styles.body}>
         <Image source={{ uri: instructor.avatar }} style={styles.avatar} />
         <View style={styles.info}>
-          <Text style={styles.intructorName}>{instructor.name}</Text>
+          <Text style={styles.intructorName}>{instructor.fullName}</Text>
           <View style={styles.experienceContainer}>
             <ShieldCheck size={20} color={"#70E000"} />
-            <Text style={styles.experienceText}>{instructor.experienceYears} năm kinh nghiệm</Text>
+            <Text style={styles.experienceText}>{instructor.experienceYear} năm kinh nghiệm</Text>
           </View>       
         </View>
       </View>

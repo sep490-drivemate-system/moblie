@@ -1,6 +1,6 @@
 import { HttpMethod } from "@/models/enum/HttpMethods";
 import { createThunk } from "../genericCreateThunk";
-import { IInstructorPackages } from "@/models/instructor/instructor.type";
+import { IInstructorPackages, Instructor } from "@/models/instructor/instructor.type";
 import {
   CreatePackageForm,
   DrivingSkill,
@@ -36,10 +36,11 @@ export const getRoadTypes = createThunk<RoadType[]>(
   `roadtypes`
 );
 
-export const createInstructorPackage = createThunk<
-  boolean,
-  CreatePackageForm
->(HttpMethod.POST, "createPackage", `${PACKAGE_PATH}`);
+export const createInstructorPackage = createThunk<boolean, CreatePackageForm>(
+  HttpMethod.POST,
+  "createPackage",
+  `${PACKAGE_PATH}`
+);
 
 export const getPackages = createThunk<
   PaginatedPackagesResponse,
@@ -69,3 +70,9 @@ export const getPackages = createThunk<
     return `${PACKAGE_PATH}${queryString ? `?${queryString}` : ""}`;
   },
 });
+
+export const getRecommendedPackages = createThunk<Package[], void>(
+  HttpMethod.GET,
+  "recommendedPackages",
+  `${PACKAGE_PATH}/recommended`,
+);

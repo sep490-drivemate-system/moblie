@@ -3,6 +3,7 @@ import { RootState } from "@/lib/redux/store";
 import {
   getInstructorById,
   getListInstructors,
+  getRecommendedInstructors,
 } from "@/features/instructor/instructorThunk";
 import {
   setAllInstructors,
@@ -219,5 +220,12 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
         setSuccess,
       }
     );
+  }
+
+  async fetchRecommendedInstructors(): Promise<IInstructors[] | null> {
+    return await this.executeAsync(async (): Promise<IInstructors[]> => {
+      const result = await this.dispatch(getRecommendedInstructors()).unwrap();
+      return (result as any).value;
+    });
   }
 }
