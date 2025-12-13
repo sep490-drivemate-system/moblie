@@ -148,19 +148,6 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.menuItemsContainer}>
             {(authState.userInfo?.role as UserRole) === UserRole.Instructor && (
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() =>
-                  router.push(
-                    ROUTES.MAIN_NO_TABS_SERVICE_PACKAGE_SERVICE_PACKAGE_MANAGEMENT
-                  )
-                }
-              >
-                <View style={styles.menuItemLeft}>
-                  <Package2 size={20} color={AppColors.primary} />
-                  <Text style={styles.menuItemText}>Quản lý gói dịch vụ</Text>
-                </View>
-              </TouchableOpacity>
               <>
                 <TouchableOpacity
                   style={styles.menuItem}
@@ -171,17 +158,19 @@ export default function ProfileScreen() {
                   }
                 >
                   <View style={styles.menuItemLeft}>
-                    <Package2 size={20} color="#70E000" />
+                    <Package2 size={20} color={AppColors.primary} />
                     <Text style={styles.menuItemText}>Quản lý gói dịch vụ</Text>
                   </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.menuItem}
-                  onPress={() => router.push(ROUTES.MAIN_NO_TABS_INSTRUCTOR_ROUTES as any)}
+                  onPress={() =>
+                    router.push(ROUTES.MAIN_NO_TABS_INSTRUCTOR_ROUTES as any)
+                  }
                 >
                   <View style={styles.menuItemLeft}>
-                    <Navigation size={20} color="#70E000" />
+                    <Navigation size={20} color={AppColors.primary} />
                     <Text style={styles.menuItemText}>Quản lý tuyến đường</Text>
                   </View>
                 </TouchableOpacity>
