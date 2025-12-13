@@ -16,15 +16,17 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
-import { IUserInfo, submitFeedback, IFeedbackRequest } from "@/features/booking/bookingThunk";
-import { ArrowLeft, Star, MessageSquare, Award, Route } from "lucide-react-native";
-import SessionsList from "@/components/Session/Sessions";
+import { IUserInfo, submitFeedback, IFeedbackRequest, getBookingSessions } from "@/features/booking/bookingThunk";
+import { Star, Calendar, Clock, MapPin, Car, ChevronRight, AlertCircle, CheckCircle, RefreshCw, PlayCircle, Navigation, X } from "lucide-react-native";
+import { IBookingSession } from "@/models/booking/booking";
+import { SessionStatus } from "@/models/session/session.enum";
 import CancelPackageModal from "@/components/Modal/CancelPackageModal";
 import { AppColors } from "@/constants/Colors";
 import { PackageDetailData, usePackageDetailViewModel } from "@/viewmodels/booking/PackageDetailViewModel";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import HeaderList from "@/components/Commons/HeaderList";
 import { ROUTES } from "@/constants/routes";
+import PackageDetailContent from "@/components/Package/PackageDetailContent";
 
 export default function PackageDetailScreen() {
   const router = useRouter();
@@ -83,15 +85,179 @@ export default function PackageDetailScreen() {
   ]);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [sessionsRefreshKey, setSessionsRefreshKey] = useState(0);
+  const [sessions, setSessions] = useState<IBookingSession[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<"all" | "planning" | "replaning" | "upcoming" | "in_progress" | "completed" | "reschedule" | "cancelled">("all");
 
-  // Refresh sessions list when screen is focused (e.g., when returning from session detail)
+  // Normalize session status using enum (similar to rental screen)
+  const parseSessionStatus = (status: SessionStatus | string | number | undefined): SessionStatus | undefined => {
+    if (status === undefined || status === null) return undefined;
+    if (typeof status === "number") return status as SessionStatus;
+    const statusStr = String(status).toLowerCase();
+    if (statusStr.includes("planning") || statusStr.includes("pending")) return SessionStatus.Planning;
+    if (statusStr.includes("upcoming")) return SessionStatus.Upcoming;
+    if (statusStr.includes("in_progress") || statusStr.includes("inprogress")) return SessionStatus.InProgress;
+    if (statusStr.includes("completed")) return SessionStatus.Completed;
+    if (statusStr.includes("reschedule")) return SessionStatus.Reschedule;
+    if (statusStr.includes("cancelled") || statusStr.includes("canceled")) return SessionStatus.Cancelled;
+    return undefined;
+  };
+
+  const getStatusColor = (status: SessionStatus | string | number) => {
+    const parsed = parseSessionStatus(status);
+    switch (parsed) {
+      case SessionStatus.Planning:
+        return "#3b82f6"; // blue
+      case SessionStatus.Replaning:
+        return "#8b5cf6"; // purple
+      case SessionStatus.Upcoming:
+        return "#f59e0b"; // amber
+      case SessionStatus.InProgress:
+        return "#10b981"; // green
+      case SessionStatus.Completed:
+        return "#6b7280";
+      case SessionStatus.Reschedule:
+        return AppColors.blue;
+      case SessionStatus.Cancelled:
+        return "#9ca3af";
+      default:
+        return "#6b7280";
+    }
+  };
+
+  const getStatusText = (status: SessionStatus | string | number) => {
+    const parsed = parseSessionStatus(status);
+    switch (parsed) {
+      case SessionStatus.Planning:
+        return "Lên lộ trình";
+      case SessionStatus.Replaning:
+        return "Lộ trình lại";
+      case SessionStatus.Upcoming:
+        return "Sắp diễn ra";
+      case SessionStatus.InProgress:
+        return "Đang diễn ra";
+      case SessionStatus.Completed:
+        return "Hoàn thành";
+      case SessionStatus.Reschedule:
+        return "Đổi lịch";
+      case SessionStatus.Cancelled:
+        return "Đã hủy";
+      default:
+        return "Không xác định";
+    }
+  };
+
+  const getStatusIcon = (status: SessionStatus | string | number) => {
+    const parsed = parseSessionStatus(status);
+    switch (parsed) {
+      case SessionStatus.Planning:
+        return Navigation;
+      case SessionStatus.Replaning:
+        return RefreshCw;
+      case SessionStatus.Upcoming:
+        return Calendar;
+      case SessionStatus.InProgress:
+        return PlayCircle;
+      case SessionStatus.Completed:
+        return CheckCircle;
+      case SessionStatus.Reschedule:
+        return RefreshCw;
+      case SessionStatus.Cancelled:
+        return X;
+      default:
+        return AlertCircle;
+    }
+  };
+
+  // Fetch sessions
+  useEffect(() => {
+    const fetchSessions = async () => {
+      if (!packageData?.id) return;
+
+      try {
+        setIsLoadingSessions(true);
+        const result = await dispatch(getBookingSessions({ bookingId: packageData.id })).unwrap();
+        const sessionsData = (result as any)?.value ?? result ?? [];
+        setSessions(sessionsData);
+      } catch (error) {
+        console.error("Failed to fetch sessions:", error);
+        setSessions([]);
+      } finally {
+        setIsLoadingSessions(false);
+      }
+    };
+
+    fetchSessions();
+  }, [packageData?.id, dispatch]);
+
+  // Refresh sessions list when screen is focused
   useFocusEffect(
     useCallback(() => {
-      // Trigger refresh by changing the key
-      setSessionsRefreshKey(prev => prev + 1);
-    }, [])
+      if (packageData?.id) {
+        const fetchSessions = async () => {
+          try {
+            const result = await dispatch(getBookingSessions({ bookingId: packageData.id })).unwrap();
+            const sessionsData = (result as any)?.value ?? result ?? [];
+            setSessions(sessionsData);
+          } catch (error) {
+            console.error("Failed to refresh sessions:", error);
+          }
+        };
+        fetchSessions();
+      }
+    }, [packageData?.id, dispatch])
   );
+
+  // Map status to filter key
+  const mapStatusKey = (status: any): "planning" | "replaning" | "upcoming" | "in_progress" | "completed" | "reschedule" | "cancelled" => {
+    const statusStr = String(status).toLowerCase();
+    if (statusStr.includes("planning") || statusStr.includes("pending")) return "planning";
+    if (statusStr.includes("replaning")) return "replaning";
+    if (statusStr.includes("upcoming")) return "upcoming";
+    if (statusStr.includes("in_progress") || statusStr.includes("inprogress")) return "in_progress";
+    if (statusStr.includes("completed")) return "completed";
+    if (statusStr.includes("reschedule")) return "reschedule";
+    if (statusStr.includes("cancelled") || statusStr.includes("canceled")) return "cancelled";
+    return "planning";
+  };
+
+  // Calculate status counts
+  const statusCounts = useMemo(() => {
+    const counts = {
+      all: sessions.length,
+      planning: 0,
+      replaning: 0,
+      upcoming: 0,
+      in_progress: 0,
+      completed: 0,
+      reschedule: 0,
+      cancelled: 0,
+    };
+    sessions.forEach((session) => {
+      const statusKey = mapStatusKey(session.status);
+      if (counts[statusKey] !== undefined) {
+        counts[statusKey] += 1;
+      }
+    });
+    return counts;
+  }, [sessions]);
+
+  // Filter sessions by selected status
+  const filteredSessions = useMemo(() => {
+    if (selectedStatus === "all") return sessions;
+    return sessions.filter((session) => mapStatusKey(session.status) === selectedStatus);
+  }, [sessions, selectedStatus]);
+
+  const STATUS_OPTIONS = [
+    { key: "all" as const, label: "Tất cả" },
+    { key: "planning" as const, label: "Lên lộ trình" },
+    { key: "replaning" as const, label: "Lộ trình lại" },
+    { key: "upcoming" as const, label: "Sắp diễn ra" },
+    { key: "in_progress" as const, label: "Đang diễn ra" },
+    { key: "completed" as const, label: "Đã hoàn thành" },
+    { key: "reschedule" as const, label: "Đổi lịch" },
+    { key: "cancelled" as const, label: "Đã hủy" },
+  ];
 
   const handleBookNewSession = () => {
     const navigationConfig =
@@ -229,161 +395,184 @@ export default function PackageDetailScreen() {
       <HeaderList actionReturnScreen={ROUTES.MY_PACKAGES as any} title="Chi tiết gói" colors={[AppColors.primary, AppColors.gradientStart, AppColors.gradientEnd]} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {packageData && instructorInfo && (
-          <View style={styles.instructorCard}>
-            <View style={styles.instructorSection}>
-              <Image
-                source={{ uri: instructorInfo.avatarUrl }}
-                style={styles.instructorAvatar}
-              />
-              <View style={styles.instructorInfo}>
-                <Text style={styles.instructorLabel}>Người hướng dẫn</Text>
-                <Text style={styles.instructorName}>
-                  {instructorInfo.fullName}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
+        <PackageDetailContent
+          packageData={packageData}
+          instructorInfo={instructorInfo}
+          purchaseDateInfo={purchaseDateInfo}
+          onOpenFeedback={handleOpenFeedback}
+        />
 
-        {packageData && (
-          <View style={styles.packageCard}>
-            {/* Package Name */}
-            <Text style={styles.packageName}>{packageData.packageName}</Text>
-
-            {/* Skills and Road Types (styled similar to ConfirmPurchaseModal) */}
-            {(packageData.drivingSkills && packageData.drivingSkills.length > 0) ||
-              (packageData.roadTypes && packageData.roadTypes.length > 0) ? (
-              <View style={styles.skillsContainer}>
-                {packageData.drivingSkills && packageData.drivingSkills.length > 0 && (
-                  <View style={styles.skillCategory}>
-                    <View style={styles.skillCategoryHeader}>
-                      <Award size={16} color="#64748b" strokeWidth={2} />
-                      <Text style={styles.skillCategoryLabel}>Kỹ năng</Text>
-                    </View>
-                    <View style={styles.skillsTags}>
-                      {packageData.drivingSkills.map((skill: string, index: number) => (
-                        <View key={index} style={styles.skillChip}>
-                          <Text style={styles.skillChipText}>{skill}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-
-                {packageData.roadTypes && packageData.roadTypes.length > 0 && (
-                  <View style={styles.skillCategory}>
-                    <View style={styles.skillCategoryHeader}>
-                      <Route size={16} color="#64748b" strokeWidth={2} />
-                      <Text style={styles.skillCategoryLabel}>Loại đường</Text>
-                    </View>
-                    <View style={styles.skillsTags}>
-                      {packageData.roadTypes.map((road: string, index: number) => (
-                        <View key={index} style={styles.skillChip}>
-                          <Text style={styles.skillChipText}>{road}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-              </View>
-            ) : null}
-
-            {/* Hours Info */}
-            <View style={styles.hoursCard}>
-              <View style={styles.hoursRow}>
-                <View style={styles.hoursItem}>
-                  <Text style={styles.hoursLabel}>Tổng giờ</Text>
-                  <Text style={styles.hoursValue}>{packageData.totalHours}h</Text>
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.hoursItem}>
-                  <Text style={styles.hoursLabel}>Đã dùng</Text>
-                  <Text style={[styles.hoursValue, { color: "#64748b" }]}>
-                    {packageData.usedHours}h
-                  </Text>
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.hoursItem}>
-                  <Text style={styles.hoursLabel}>Còn lại</Text>
-                  <Text
-                    style={[
-                      styles.hoursValue,
-                      {
-                        color:
-                          packageData.remainingHours > 0
-                            ? AppColors.primary
-                            : "#ef4444",
-                      },
-                    ]}
-                  >
-                    {packageData.remainingHours}h
-                  </Text>
-                </View>
-              </View>
-
-              {/* Progress Bar */}
-              <View style={styles.progressBarContainer}>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${(packageData.usedHours / packageData.totalHours) * 100
-                          }%`,
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.progressText}>
-                  {Math.round(
-                    (packageData.usedHours / packageData.totalHours) * 100
-                  )}
-                  % đã sử dụng
-                </Text>
-              </View>
-            </View>
-
-            {/* Package Dates */}
-            <View style={styles.datesRow}>
-              <View style={styles.dateItem}>
-                <Text style={styles.dateLabel}>Mua ngày:</Text>
-                <Text style={styles.dateValue}>{purchaseDateInfo.date}</Text>
-                {purchaseDateInfo.time ? (
-                  <Text style={styles.dateTimeValue}>
-                    lúc {purchaseDateInfo.time}
-                  </Text>
-                ) : null}
-              </View>
-            </View>
-
-            {/* Feedback Button - Show when package is fully used */}
-            {/* {(packageData.remainingHours === 0 || packageData.usedHours >= packageData.totalHours) && (
-
-            )} */}
-            <View style={{ marginTop: 16 }}>
-              <TouchableOpacity
-                style={styles.feedbackButton}
-                onPress={handleOpenFeedback}
-                activeOpacity={0.7}
-              >
-                <MessageSquare size={20} color={AppColors.primary} strokeWidth={2} />
-                <Text style={styles.feedbackButtonText}>Đánh giá</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
+        {/* Sessions Section */}
         <View style={styles.sessionsSection}>
           <Text style={styles.sectionTitle}>Lịch thuê đã đặt</Text>
-          <SessionsList
-            key={sessionsRefreshKey}
-            bookingId={packageData?.id}
-            instructorId={instructorInfo?.userId}
-            enableScroll={false}
-            showHeader={false}
-            emptyStateText="Bạn chưa có lịch thuê nào cho gói này."
-          />
+
+          {/* Filter Bar */}
+          {sessions.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterBar}
+              contentContainerStyle={styles.filterBarContent}
+            >
+              {STATUS_OPTIONS.map((option) => {
+                const isActive = selectedStatus === option.key;
+                const baseColor =
+                  option.key === "all"
+                    ? "#cbd5f5"
+                    : option.key === "planning"
+                      ? "#3b82f6"
+                      : option.key === "replaning"
+                        ? "#8b5cf6"
+                        : option.key === "upcoming"
+                          ? "#f59e0b"
+                          : option.key === "in_progress"
+                            ? AppColors.primary
+                            : option.key === "completed"
+                              ? "#94a3b8"
+                              : option.key === "reschedule"
+                                ? AppColors.blue
+                                : AppColors.red;
+
+                return (
+                  <TouchableOpacity
+                    key={option.key}
+                    style={[
+                      styles.filterChip,
+                      isActive && { backgroundColor: `${baseColor}22` },
+                    ]}
+                    onPress={() => setSelectedStatus(option.key)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        isActive && { color: baseColor, fontWeight: "800" },
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    <View
+                      style={[
+                        styles.filterCount,
+                        { backgroundColor: isActive ? baseColor : "#e2e8f0" },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.filterCountText,
+                          isActive && { color: "#fff" },
+                        ]}
+                      >
+                        {statusCounts[option.key] ?? 0}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          {isLoadingSessions ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={AppColors.primary} />
+              <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+            </View>
+          ) : filteredSessions.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>Chưa có lịch phù hợp</Text>
+              <Text style={styles.emptySubtitle}>
+                {sessions.length === 0
+                  ? "Bạn chưa có lịch thuê nào cho gói này."
+                  : "Không có lịch thuê nào phù hợp với bộ lọc đã chọn."}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.sessionsList}>
+              {filteredSessions.map((session) => {
+                const statusColor = getStatusColor(session.status);
+                const statusLabel = getStatusText(session.status);
+                const StatusIcon = getStatusIcon(session.status);
+
+                return (
+                  <View key={session.id} style={styles.sessionCard}>
+                    <View style={styles.sessionHeaderRow}>
+                      <View style={[styles.sessionRow, { marginBottom: 0, flex: 1 }]}>
+                        <Calendar size={18} color="#64748b" strokeWidth={2} />
+                        <Text style={[styles.sessionText, { flex: 0 }]}>
+                          {new Date(session.date).toLocaleDateString("vi-VN")}
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          {
+                            borderColor: statusColor,
+                            backgroundColor: `${statusColor}20`,
+                          },
+                        ]}
+                      >
+                        {StatusIcon && <StatusIcon size={16} color={statusColor} strokeWidth={2} />}
+                        <Text style={[styles.statusText, { color: statusColor }]}>
+                          {statusLabel}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.sessionRow}>
+                      <Clock size={18} color="#64748b" strokeWidth={2} />
+                      <Text style={styles.sessionText}>
+                        {session.startTime} - {session.endTime} ({session.duration}h)
+                      </Text>
+                    </View>
+
+                    {session.displayStartLocationName && (
+                      <View style={styles.locationRow}>
+                        <MapPin size={18} color="#22c55e" strokeWidth={2} />
+                        <View style={styles.locationInfo}>
+                          <Text style={styles.locationLabel}>Điểm đón</Text>
+                          <Text style={styles.locationValue}>
+                            {session.displayStartLocationName}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {session.displayEndLocationName && (
+                      <View style={styles.locationRow}>
+                        <MapPin size={18} color="#f97316" strokeWidth={2} />
+                        <View style={styles.locationInfo}>
+                          <Text style={styles.locationLabel}>Điểm trả</Text>
+                          <Text style={styles.locationValue}>
+                            {session.displayEndLocationName}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {session.vehicleName && (
+                      <View style={styles.sessionRow}>
+                        <Car size={18} color="#64748b" strokeWidth={2} />
+                        <Text style={styles.sessionText}>{session.vehicleName}</Text>
+                      </View>
+                    )}
+
+                    <View style={styles.sessionFooter}>
+                      <TouchableOpacity
+                        onPress={() => router.push({
+                          pathname: ROUTES.DRIVING_SESSION_DETAIL,
+                          params: { sessionId: session.id, instructorId: instructorInfo?.userId },
+                        })}
+                        style={styles.viewDetailButton}
+                      >
+                        <Text style={styles.viewDetailText}>Chi tiết</Text>
+                        <ChevronRight size={16} color={AppColors.primary} strokeWidth={2} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         <View style={{ height: 100 }} />
@@ -757,6 +946,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginHorizontal: 16,
   },
+  filterBar: {
+    marginBottom: 16,
+  },
+  filterBarContent: {
+    paddingHorizontal: 4,
+    gap: 8,
+  },
   filterBarContainer: {
     backgroundColor: AppColors.white,
     borderRadius: 12,
@@ -855,6 +1051,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  sessionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -863,8 +1065,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    alignSelf: "flex-start",
-    marginBottom: 12,
   },
   statusText: {
     fontSize: 12,
@@ -884,25 +1084,74 @@ const styles = StyleSheet.create({
   },
   sessionFooter: {
     marginTop: 8,
-    alignItems: "flex-end",
+    alignItems: "stretch",
   },
   viewDetailButton: {
-    paddingHorizontal: 0,
-    paddingVertical: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
+    borderColor: AppColors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 6,
+    width: "100%",
   },
   viewDetailText: {
     fontSize: 15,
     fontWeight: "700",
     color: AppColors.primary,
   },
-  emptyState: {
-    backgroundColor: AppColors.white,
-    borderRadius: 12,
-    padding: 40,
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 8,
+  },
+  locationInfo: {
+    flex: 1,
+  },
+  locationLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#94a3b8",
+    marginBottom: 2,
+  },
+  locationValue: {
+    fontSize: 14,
+    color: "#1e293b",
+    fontWeight: "500",
+  },
+  loadingContainer: {
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#475569",
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: "#94a3b8",
+    textAlign: "center",
+    lineHeight: 20,
   },
   emptyText: {
     fontSize: 16,

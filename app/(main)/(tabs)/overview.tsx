@@ -35,7 +35,6 @@ import {
   IInstructorStatistic,
   IStatisticsInstructor,
 } from "@/models/instructor/instructor.type";
-import HeaderList from "@/components/Commons/HeaderList";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { useRouter } from "expo-router";
 import { ROUTES } from "@/constants/routes";
@@ -691,11 +690,15 @@ export default function OverviewScreen() {
         </View>
       </View>
 
-      {/* Modern Header Title */}
-      <HeaderList
-        title="Tổng Quan Hoạt Động"
-        description="Quản lý doanh thu, khách hàng và gói dịch vụ của bạn"
-      />
+      {/* Page Header */}
+      <View style={styles.pageHeader}>
+        <View>
+          <Text style={styles.pageTitle}>Tổng Quan Hoạt Động</Text>
+          <Text style={styles.pageSubtitle}>
+            Quản lý doanh thu, khách hàng và gói dịch vụ của bạn
+          </Text>
+        </View>
+      </View>
 
       <View style={styles.filterWrapper}>
         <View style={styles.filterSummaryRow}>
@@ -1215,13 +1218,28 @@ const styles = StyleSheet.create({
     color: AppColors.primary,
     fontWeight: "600",
   },
+  pageHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 4,
+  },
+  pageTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: AppColors.textPrimary,
+  },
+  pageSubtitle: {
+    fontSize: 14,
+    color: AppColors.gray600,
+    fontWeight: "500",
+  },
   kpiGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
-    marginBottom: 32,
-    padding: 16,
-    backgroundColor: "#ffffff",
+    flexDirection: "column",
+    gap: 12,
+    marginBottom: 24,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
   kpiCard: {
     width: (screenWidth - 48) / 2,

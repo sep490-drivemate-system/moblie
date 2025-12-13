@@ -7,7 +7,6 @@ import {
   Image,
   TouchableOpacity,
   StatusBar,
-  Alert,
   ActivityIndicator,
   Animated,
 } from "react-native";
@@ -25,16 +24,10 @@ import {
 } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import {
-  IInstructor,
   IInstructors,
   IInstructorPackages,
-  IInstructorCar,
 } from "@/models/instructor/instructor.type";
-import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
-import {
-  getInstructorById,
-  getInstructorCars,
-} from "@/features/instructor/instructorThunk";
+import { useAppDispatch } from "@/lib/redux/hooks";
 import { Gender } from "@/models/user/gender.enum";
 import { ConfirmPurchaseModal } from "@/components/Modal/ConfirmPurchaseModal";
 import { BookingViewModel } from "@/viewmodels/booking/BookingViewModel";
@@ -45,6 +38,8 @@ import { AlertVariant, AppAlert } from "@/components/Commons/AppAlert";
 import { NoviceDriverViewModel } from "@/viewmodels/driver/NoviceDriverViewModel";
 import { PackageViewModel } from "@/viewmodels/package/PackageViewModel";
 import { ICar } from "@/models/car/car";
+import { InstructorViewModel } from "@/viewmodels/instructor/InstructorViewModel";
+import { InstructorListCarViewModel } from "@/viewmodels/car/InstructorListCarViewModel";
 
 const getGenderText = (gender: Gender): string => {
   return gender === Gender.Male ? "Nam" : "Nữ";
@@ -80,67 +75,50 @@ export default function InstructorDetailScreen() {
     PackageViewModel,
     (state) => state.package
   );
+  const [, instructorViewModel] = useViewModel(
+    InstructorViewModel,
+    (state) => state.instructor
+  );
 
+  const [, carViewModel] = useViewModel(
+    InstructorListCarViewModel,
+    (state) => state.car
+  );
   const [showLicenseAlert, setShowLicenseAlert] = useState(false);
   const [licenseAlertMessage, setLicenseAlertMessage] = useState("");
 
-  // Fetch instructor by ID
-  useEffect(() => {
-    if (instructorId) {
-      const fetchInstructor = async () => {
-        setIsLoadingInstructor(true);
-        try {
-          const result = await dispatch(
-            getInstructorById({ id: instructorId as string })
-          ).unwrap();
-          const instructorData = (result as any).value || result;
-          setInstructor(instructorData as IInstructors);
-        } catch (error) {
-          console.error("Failed to fetch instructor:", error);
-        } finally {
-          setIsLoadingInstructor(false);
-        }
-      };
-      fetchInstructor();
-    }
-  }, [instructorId, dispatch]);
 
-  // Fetch packages and cars after instructor is loaded
+  useEffect(() => {
+    const fetchInstructor = async () => {
+      setIsLoadingInstructor(true);
+      const instructor = await instructorViewModel.getInstructor(instructorId as string);
+      setInstructor(instructor);
+      setIsLoadingInstructor(false);
+    };
+    fetchInstructor();
+  }, [instructorId, instructorViewModel]);
+
   useEffect(() => {
     if (instructor && instructor.id) {
       const fetchPackages = async () => {
         setIsLoadingPackages(true);
-        try {
-          const packages = await packageViewModel.getPackagesByInstructorId(
-            instructor.id
-          );
-          setPackages(packages);
-        } catch (error) {
-          console.error("Failed to fetch packages:", error);
-        } finally {
-          setIsLoadingPackages(false);
-        }
+        const packages = await packageViewModel.getPackagesByInstructorId(
+          instructor.id
+        );
+        setPackages(packages);
+        setIsLoadingPackages(false);
       };
       fetchPackages();
 
       const fetchCars = async () => {
         setIsLoadingCars(true);
-        try {
-          const carsResult = await dispatch(
-            getInstructorCars({ id: instructor.id })
-          ).unwrap();
-          const cars = (carsResult as any).value || carsResult;
-          console.log(cars);
-          setCars(cars);
-        } catch (error) {
-          console.error("Failed to fetch cars:", error);
-        } finally {
-          setIsLoadingCars(false);
-        }
+        const cars = await carViewModel.getCarsForInstructor(instructor.id);
+        setCars(cars);
+        setIsLoadingCars(false);
       };
       fetchCars();
     }
-  }, [instructor, dispatch, packageViewModel]);
+  }, [instructor, dispatch, packageViewModel, carViewModel]);
 
   useEffect(() => {
     if (showConfirmModal) {

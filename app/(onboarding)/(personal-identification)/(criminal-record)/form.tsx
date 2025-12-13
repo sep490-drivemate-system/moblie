@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "35%",
+    width: "80%",
     height: "100%",
     backgroundColor: AppColors.primary,
     borderRadius: 2,

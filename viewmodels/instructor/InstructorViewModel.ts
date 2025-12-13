@@ -84,6 +84,15 @@ export class InstructorViewModel extends BaseViewModel<InstructorState> {
     );
   }
 
+
+  async getInstructor(id: string): Promise<IInstructors | null> {
+    return await this.executeAsync(
+      async () => {
+        const result = await this.dispatch(getInstructorById({ id })).unwrap();
+        return result.value as IInstructors;
+      },
+    );
+  }
   handleInstructorPress = (instructor: IInstructors) => {
     useRouter().push({
       pathname: (ROUTES.NO_TABS + ROUTES.INSTRUCTOR_DETAIL) as any,

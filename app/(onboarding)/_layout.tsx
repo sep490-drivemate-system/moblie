@@ -9,10 +9,10 @@ export default function OnboardingLayout() {
         gestureDirection: "horizontal",
       }}
     >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="intro" />
-      <Stack.Screen name="otp" />
-      <Stack.Screen name="role-selection" />
+      <Stack.Screen name="index" options={{ animation: 'fade' }} />
+      <Stack.Screen name="intro" options={{ animation: 'fade' }} />
+      <Stack.Screen name="otp" options={{ animation: 'fade' }} />
+      <Stack.Screen name="role-selection" options={{ animation: 'fade' }} />
     </Stack>
   );
 }

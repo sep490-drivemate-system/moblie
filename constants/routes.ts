@@ -38,4 +38,7 @@ export const ROUTES = {
   MAIN_NO_TABS_MY_PACKAGES: `/(main)/(no-tabs)/my-packages`,
   MAIN_NO_TABS_INTRO: `/(onboarding)`,
   MAIN_NO_TABS_CHAT: `/(main)/(no-tabs)/chat`,
+  MAIN_NO_TABS_INSTRUCTOR_ROUTES: `/(main)/(no-tabs)/instructor-routes`,
+
+
 } as const;
