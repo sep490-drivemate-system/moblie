@@ -18,6 +18,20 @@ export default function NoTabsLayout() {
                 }}
             />
             <Stack.Screen
+                name="my-packages"
+                options={{
+                    presentation: 'card',
+                    animation: 'fade',
+                }}
+            />
+            <Stack.Screen
+                name="my-package-detail"
+                options={{
+                    presentation: 'card',
+                    animation: 'fade',
+                }}
+            />
+            <Stack.Screen
                 name="car-detail"
                 options={{
                     presentation: 'card',

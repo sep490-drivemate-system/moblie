@@ -60,6 +60,7 @@ export default function RentalScreen() {
 
     const statusMap: Record<string, SessionStatus> = {
       Planning: SessionStatus.Planning,
+      Replaning: SessionStatus.Replaning,
       Upcoming: SessionStatus.Upcoming,
       InProgress: SessionStatus.InProgress,
       Completed: SessionStatus.Completed,
@@ -149,6 +150,8 @@ export default function RentalScreen() {
     switch (parsedStatus) {
       case SessionStatus.Planning:
         return "#3b82f6";
+      case SessionStatus.Replaning:
+        return "#8b5cf6";
       case SessionStatus.Upcoming:
         return "#10b981";
       case SessionStatus.InProgress:
@@ -169,6 +172,8 @@ export default function RentalScreen() {
     switch (parsedStatus) {
       case SessionStatus.Planning:
         return "Lên lộ trình";
+      case SessionStatus.Replaning:
+        return "Lên lộ trình lại";
       case SessionStatus.Upcoming:
         return "Sắp diễn ra";
       case SessionStatus.InProgress:
@@ -189,6 +194,8 @@ export default function RentalScreen() {
     switch (parsedStatus) {
       case SessionStatus.Planning:
         return Navigation;
+      case SessionStatus.Replaning:
+        return RefreshCw;
       case SessionStatus.Upcoming:
         return Calendar;
       case SessionStatus.InProgress:
@@ -271,6 +278,40 @@ export default function RentalScreen() {
                       (session) =>
                         parseSessionStatus(session.status) ===
                         SessionStatus.Planning
+                    ).length
+                  : 0}
+                )
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              selectedTab === SessionStatus.Replaning && styles.activeTab,
+            ]}
+            onPress={() => setSelectedTab(SessionStatus.Replaning)}
+          >
+            <View style={styles.tabContent}>
+              <RefreshCw
+                size={16}
+                color={
+                  selectedTab === SessionStatus.Replaning ? "#ffffff" : "#6b7280"
+                }
+                strokeWidth={2}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  selectedTab === SessionStatus.Replaning &&
+                    styles.activeTabText,
+                ]}
+              >
+                Lộ trình lại (
+                {Array.isArray(sessions)
+                  ? sessions.filter(
+                      (session) =>
+                        parseSessionStatus(session.status) ===
+                        SessionStatus.Replaning
                     ).length
                   : 0}
                 )
