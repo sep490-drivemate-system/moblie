@@ -366,7 +366,7 @@ export default function FormScreen() {
   if (carState.isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#70E000" />
+        <ActivityIndicator size="large" color={AppColors.primary} />
         <Text style={{ marginTop: 16, fontSize: 16, color: "#92929D" }}>
           Đang xử lý...
         </Text>

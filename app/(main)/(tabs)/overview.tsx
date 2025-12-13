@@ -657,7 +657,7 @@ export default function OverviewScreen() {
               onPress={() => router.push(ROUTES.MAIN_NO_TABS_NOTIFICATIONS)}
             >
               <View style={styles.iconContainer}>
-                <Bell size={24} color={"#70E000"} />
+                <Bell size={24} color={AppColors.primary} />
                 {notificationState.unreadCount > 0 && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>
@@ -675,7 +675,7 @@ export default function OverviewScreen() {
               onPress={() => router.push(ROUTES.MAIN_NO_TABS_CHATS)}
             >
               <View style={styles.iconContainer}>
-                <MessageSquareMore size={24} color={"#70E000"} />
+                <MessageSquareMore size={24} color={AppColors.primary} />
                 {chatState.unreadMessageCount > 0 ? (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>
@@ -1034,7 +1034,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   topHeader: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingTop: StatusBar.currentHeight,
     alignItems: "center",
     position: "relative",

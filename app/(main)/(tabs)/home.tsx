@@ -55,7 +55,9 @@ export default function HomeScreen() {
   );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [recommendedPackages, setRecommendedPackages] = useState<Package[]>([]);
-  const [recommendedInstructors, setRecommendedInstructors] = useState<IInstructors[]>([]);
+  const [recommendedInstructors, setRecommendedInstructors] = useState<
+    IInstructors[]
+  >([]);
   const [packageState, packageViewModel] = useViewModel(
     PackageViewModel,
     (state) => state.package
@@ -142,7 +144,7 @@ export default function HomeScreen() {
         <RefreshControl
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
-          tintColor="#70E000"
+          tintColor={AppColors.primary}
         />
       }
     >
@@ -172,7 +174,7 @@ export default function HomeScreen() {
               onPress={() => router.push(ROUTES.MAIN_NO_TABS_NOTIFICATIONS)}
             >
               <View style={styles.iconContainer}>
-                <Bell size={24} color={"#70E000"} />
+                <Bell size={24} color={AppColors.primary} />
                 {notificationState.unreadCount > 0 && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>
@@ -190,7 +192,7 @@ export default function HomeScreen() {
               onPress={() => router.push(ROUTES.MAIN_NO_TABS_CHATS)}
             >
               <View style={styles.iconContainer}>
-                <MessageSquareMore size={24} color={"#70E000"} />
+                <MessageSquareMore size={24} color={AppColors.primary} />
                 {chatState.unreadMessageCount > 0 ? (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>
@@ -231,9 +233,7 @@ export default function HomeScreen() {
             horizontal
             contentContainerStyle={styles.listItem}
             showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <PackageItem pkg={item} key={item.id} />
-            )}
+            renderItem={({ item }) => <PackageItem pkg={item} key={item.id} />}
           />
         </View>
         <View style={styles.listItemContainer}>
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F1F5",
   },
   header: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingTop: StatusBar.currentHeight,
     alignItems: "center",
     position: "relative",
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   listLabel: {
     fontSize: 16,
     fontWeight: 500,
-    color: "#70E000",
+    color: AppColors.primary,
     marginBottom: 15,
   },
   listItem: {
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   drivingLicenseItemText: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#70E000",
+    color: AppColors.primary,
   },
   iconButton: {
     padding: 4,

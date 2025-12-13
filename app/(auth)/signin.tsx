@@ -21,6 +21,7 @@ import { ISignInRequest } from "@/models/auth/signin";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import { ROUTES } from "@/constants/routes";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { AppColors } from "@/constants/Colors";
 
 const { height } = Dimensions.get("window");
 
@@ -29,16 +30,16 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const dispatch = useAppDispatch();
   const authState = useAppSelector((state: RootState) => state.auth);
-  const { formData, isLoading, errorMessage, isAuthenticated, user } = authState;
+  const { formData, isLoading, errorMessage, isAuthenticated, user } =
+    authState;
 
-  const [authViewModel] = useState(() => new AuthViewModel(
-    dispatch,
-    () => {
-      const store = require('@/lib/redux/store').store;
-      return store.getState().auth;
-    }
-  ));
-
+  const [authViewModel] = useState(
+    () =>
+      new AuthViewModel(dispatch, () => {
+        const store = require("@/lib/redux/store").store;
+        return store.getState().auth;
+      })
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -84,7 +85,9 @@ export default function SignInScreen() {
                 placeholder="Nhập email hoặc số điện thoại"
                 placeholderTextColor="#9ca3af"
                 value={formData.emailOrPhone}
-                onChangeText={(value) => authViewModel.handleEmailOrPhoneChange(value)}
+                onChangeText={(value) =>
+                  authViewModel.handleEmailOrPhoneChange(value)
+                }
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -97,7 +100,9 @@ export default function SignInScreen() {
                 placeholder="Nhập mật khẩu"
                 placeholderTextColor="#9ca3af"
                 value={formData.password}
-                onChangeText={(value) => authViewModel.handlePasswordChange(value)}
+                onChangeText={(value) =>
+                  authViewModel.handlePasswordChange(value)
+                }
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -125,7 +130,10 @@ export default function SignInScreen() {
             )}
 
             <TouchableOpacity
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+              style={[
+                styles.loginButton,
+                isLoading && styles.loginButtonDisabled,
+              ]}
               onPress={async () => {
                 const result = await authViewModel.handleSignIn();
                 if (result.success && result.userRole) {
@@ -180,7 +188,11 @@ export default function SignInScreen() {
       {/* Full Screen Loading Overlay */}
       {isLoading && (
         <View style={styles.loadingOverlay}>
-          <LoadingSpinner message="Đang đăng nhập..." size="large" color="#70E000" />
+          <LoadingSpinner
+            message="Đang đăng nhập..."
+            size="large"
+            color={AppColors.primary}
+          />
         </View>
       )}
     </SafeAreaView>
@@ -256,7 +268,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#70E000",
+    color: AppColors.primary,
     marginBottom: 8,
   },
   subtitle: {
@@ -265,7 +277,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   highlightText: {
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "bold",
   },
   form: {
@@ -283,7 +295,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#000",
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     paddingRight: 50,
   },
   eyeIcon: {
@@ -298,7 +310,7 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "500",
   },
   errorContainer: {
@@ -314,7 +326,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   loginButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 16,
@@ -380,7 +392,7 @@ const styles = StyleSheet.create({
   },
   signUpLink: {
     fontSize: 14,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
   },
   // Loading Overlay Styles

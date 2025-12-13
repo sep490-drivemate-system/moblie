@@ -22,6 +22,7 @@ import { RootState } from "@/lib/redux/store";
 import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { IRegisterInstructorRequest } from "@/models/auth/signup";
+import { AppColors } from "@/constants/Colors";
 
 export default function AvatarScreen() {
   const [authState, authViewModel] = useViewModel(
@@ -246,7 +247,7 @@ export default function AvatarScreen() {
               style={styles.editButton}
               onPress={handleAvatarPress}
             >
-              <Edit2Icon color="#70E000" size={16} />
+              <Edit2Icon color={AppColors.primary} size={16} />
             </TouchableOpacity>
           </View>
         </View>
@@ -305,9 +306,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "7%",
+    width: "16%",
     height: "100%",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 2,
   },
   headerButtons: {
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   drivemateText: {
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "bold",
   },
   avatarContainer: {
@@ -373,7 +374,7 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 110,
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderStyle: "dashed",
     justifyContent: "center",
     alignItems: "center",
@@ -388,7 +389,7 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 90,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderWidth: 1,
     backgroundColor: "#F0F0F0",
     justifyContent: "center",
@@ -404,7 +405,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderWidth: 1,
   },
   imageContainer: {
@@ -447,20 +448,20 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#70E000",
+    color: AppColors.primary,
   },
   backButton: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",

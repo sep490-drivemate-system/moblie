@@ -22,6 +22,7 @@ import CustomAlert from "@/components/CustomAlert";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { getInstructorPolicy } from "@/features/auth/authThunk";
 import { Policy } from "@/models/policy/policy";
+import { AppColors } from "@/constants/Colors";
 
 export default function TermsAndConditionsScreen() {
   const router = useRouter();
@@ -300,7 +301,7 @@ const styles = StyleSheet.create({
   progressFill: {
     width: "63%",
     height: "100%",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 2,
   },
   headerButtons: {
@@ -382,8 +383,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   checkedBox: {
-    backgroundColor: "#70E000",
-    borderColor: "#70E000",
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
   },
   linkContainer: {
     flex: 1,
@@ -395,7 +396,7 @@ const styles = StyleSheet.create({
   linkText: {
     flex: 1,
     fontSize: 16,
-    color: "#70E000",
+    color: AppColors.primary,
     lineHeight: 22,
     marginRight: 8,
   },
@@ -410,14 +411,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -425,7 +426,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#70E000",
+    color: AppColors.primary,
   },
   nextButtonText: {
     fontSize: 16,

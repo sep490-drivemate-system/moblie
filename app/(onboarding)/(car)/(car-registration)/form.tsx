@@ -599,7 +599,7 @@ export default function FormScreen() {
                     style={styles.editButton}
                     onPress={() => handleImageUpload("front")}
                   >
-                    <Edit2Icon color="#70E000" size={16} />
+                    <Edit2Icon color={AppColors.primary} size={16} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -645,7 +645,7 @@ export default function FormScreen() {
                     style={styles.editButton}
                     onPress={() => handleImageUpload("back")}
                   >
-                    <Edit2Icon color="#70E000" size={16} />
+                    <Edit2Icon color={AppColors.primary} size={16} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1061,7 +1061,7 @@ const styles = StyleSheet.create({
   imageUploadArea: {
     position: "relative",
     borderWidth: 2,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderStyle: "dashed",
     borderRadius: 8,
     height: 150,
@@ -1108,7 +1108,7 @@ const styles = StyleSheet.create({
   },
   uploadText: {
     fontSize: 16,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
   },
   editButton: {
@@ -1121,7 +1121,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderWidth: 1,
   },
   formContainer: {

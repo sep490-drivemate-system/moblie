@@ -22,6 +22,7 @@ import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { RootState } from "@/lib/redux/store";
 import { ROUTES } from "@/constants/routes";
 import CustomAlert from "@/components/CustomAlert";
+import { AppColors } from "@/constants/Colors";
 
 interface Role {
   id: string;
@@ -97,8 +98,10 @@ export default function RoleSelectionScreen() {
         });
         if (result) {
           await AsyncStorage.setItem("onboarding_completed", "true");
-          showCustomAlert("Thành công", "Bạn đã đăng ký thành công. Vui lòng đăng nhập để tiếp tục.", () =>
-            router.replace(ROUTES.INTRO)
+          showCustomAlert(
+            "Thành công",
+            "Bạn đã đăng ký thành công. Vui lòng đăng nhập để tiếp tục.",
+            () => router.replace(ROUTES.INTRO)
           );
         }
       } else if (selectedRole.id === "instructor") {
@@ -154,7 +157,7 @@ export default function RoleSelectionScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Image
-            source={require("@/assets/images/logo_drivemate_green.png")}
+            source={require("@/assets/images/logo_whitebg.png")}
             style={styles.logo}
           />
         </View>
@@ -335,17 +338,12 @@ const styles = StyleSheet.create({
     color: "#000",
     marginBottom: 4,
   },
-  checkmark: {
-    fontSize: 18,
-    color: "#70E000",
-    fontWeight: "bold",
-  },
   buttonContainer: {
     marginTop: "auto",
     marginBottom: 30,
   },
   continueButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 20,
     alignItems: "center",

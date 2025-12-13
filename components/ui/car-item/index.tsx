@@ -9,6 +9,7 @@ import {
 } from "lucide-react-native";
 import { Car } from "@/models/car/car";
 import { useRouter } from "expo-router";
+import { AppColors } from "@/constants/Colors";
 
 type Props = {
   car: Car;
@@ -49,21 +50,21 @@ const CarItem: React.FC<Props> = ({ car, variant = "compact" }) => {
       </View>
       <View style={styles.footer}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <LucideUser size={18} color={"#70E000"} />
+          <LucideUser size={18} color={AppColors.primary} />
           <Text style={{ fontSize: 14, fontWeight: "500" }}>
             {car.seats} chỗ
           </Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
           <LucideAntenna
-            color={"#70E000"}
+            color={AppColors.primary}
             size={18}
             transform={[{ rotate: "180deg" }]}
           />
           <Text style={{ fontSize: 14, fontWeight: "500" }}>{car.type}</Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <LucideFuel size={18} color={"#70E000"} />
+          <LucideFuel size={18} color={AppColors.primary} />
           <Text style={{ fontSize: 14, fontWeight: "500" }}>{car.fuel}</Text>
         </View>
       </View>
@@ -120,7 +121,7 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: 20,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "bold",
   },
   footer: {

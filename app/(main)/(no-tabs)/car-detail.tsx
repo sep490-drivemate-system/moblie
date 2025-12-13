@@ -83,7 +83,7 @@ export default function CarDetailScreen() {
   if (!car) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#70E000" />
+        <ActivityIndicator size="large" color={AppColors.primary} />
         <Text style={{ marginTop: 16, fontSize: 16, color: "#92929D" }}>
           Đang tải thông tin xe...
         </Text>
@@ -93,7 +93,6 @@ export default function CarDetailScreen() {
 
   return (
     <View style={styles.container}>
-
       {/* Header */}
       <LinearGradient
         colors={[
@@ -294,14 +293,21 @@ export default function CarDetailScreen() {
       />
 
       {/* Bottom Button */}
-      <View style={[styles.bottomContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <View
+        style={[
+          styles.bottomContainer,
+          { paddingBottom: Math.max(insets.bottom, 16) },
+        ]}
+      >
         <TouchableOpacity
-          onPress={() => router.push({
-            pathname: "/(main)/(no-tabs)/instructor-detail",
-            params: {
-              instructorId: car.instructor_id,
-            },
-          })}
+          onPress={() =>
+            router.push({
+              pathname: "/(main)/(no-tabs)/instructor-detail",
+              params: {
+                instructorId: car.instructor_id,
+              },
+            })
+          }
           activeOpacity={0.8}
         >
           <LinearGradient

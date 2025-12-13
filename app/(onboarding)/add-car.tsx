@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppColors } from "@/constants/Colors";
 import { ArrowLeft, MoreVertical } from "lucide-react-native";
 
 export default function AddCarScreen() {
@@ -99,7 +100,7 @@ const styles = StyleSheet.create({
   progressFill: {
     width: "50%",
     height: "100%",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 2,
   },
   illustrationContainer: {
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   addCarButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",

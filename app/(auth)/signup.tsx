@@ -19,6 +19,7 @@ import {
 import CustomAlert from "@/components/CustomAlert";
 import { ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppColors } from "@/constants/Colors";
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function SignUpScreen() {
   // Helper function to validate form using current state
   const isFormValid = () => {
     const { registerFormData, registerFormErrors } = authState;
-    
+
     // Validate all fields
     const validateEmail = (email: string) => {
       if (!email.trim()) return "Email không được để trống";
@@ -47,13 +48,19 @@ export default function SignUpScreen() {
       if (!password) return "Mật khẩu không được để trống";
       const errors: string[] = [];
       if (password.length < 6) errors.push("Mật khẩu phải có ít nhất 6 ký tự");
-      if (!/[A-Z]/.test(password)) errors.push("Mật khẩu phải có ít nhất 1 ký tự hoa");
-      if (!/[0-9]/.test(password)) errors.push("Mật khẩu phải có ít nhất 1 ký tự số");
-      if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) errors.push("Mật khẩu phải có ít nhất 1 ký tự đặc biệt");
+      if (!/[A-Z]/.test(password))
+        errors.push("Mật khẩu phải có ít nhất 1 ký tự hoa");
+      if (!/[0-9]/.test(password))
+        errors.push("Mật khẩu phải có ít nhất 1 ký tự số");
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(password))
+        errors.push("Mật khẩu phải có ít nhất 1 ký tự đặc biệt");
       return errors.length > 0 ? errors.join("\n") : undefined;
     };
 
-    const validateConfirmPassword = (confirmPassword: string, password: string) => {
+    const validateConfirmPassword = (
+      confirmPassword: string,
+      password: string
+    ) => {
       if (!confirmPassword) return "Vui lòng nhập lại mật khẩu";
       if (confirmPassword !== password) return "Mật khẩu nhập lại không khớp";
       return undefined;
@@ -74,7 +81,12 @@ export default function SignUpScreen() {
     const phoneError = validatePhone(registerFormData.phone);
 
     // Check if there are any errors
-    const hasErrors = !!(emailError || passwordError || confirmPasswordError || phoneError);
+    const hasErrors = !!(
+      emailError ||
+      passwordError ||
+      confirmPasswordError ||
+      phoneError
+    );
 
     // Check acceptTerms
     const termsAccepted = registerFormData.acceptTerms;
@@ -190,7 +202,7 @@ export default function SignUpScreen() {
   if (authState.isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#70E000" />
+        <ActivityIndicator size="large" color={AppColors.primary} />
         <Text style={styles.loadingText}>Đang xử lý...</Text>
       </View>
     );
@@ -224,7 +236,7 @@ export default function SignUpScreen() {
             {/* Header */}
             <View style={styles.header}>
               <Image
-                source={require("@/assets/images/logo_drivemate_green.png")}
+                source={require("@/assets/images/logo_whitebg.png")}
                 style={styles.logo}
               />
             </View>
@@ -324,7 +336,7 @@ export default function SignUpScreen() {
                     style={[
                       styles.passwordInput,
                       authState.registerFormErrors.confirmPassword &&
-                      styles.inputError,
+                        styles.inputError,
                     ]}
                     value={authState.registerFormData.confirmPassword}
                     onChangeText={(value) =>
@@ -362,8 +374,7 @@ export default function SignUpScreen() {
                 <TextInput
                   style={[
                     styles.input,
-                    authState.registerFormErrors.phone &&
-                    styles.inputError,
+                    authState.registerFormErrors.phone && styles.inputError,
                   ]}
                   value={authState.registerFormData.phone}
                   onChangeText={(value) => {
@@ -400,7 +411,7 @@ export default function SignUpScreen() {
                   style={[
                     styles.checkbox,
                     authState.registerFormData.acceptTerms &&
-                    styles.checkboxChecked,
+                      styles.checkboxChecked,
                   ]}
                 >
                   {authState.registerFormData.acceptTerms && (
@@ -424,8 +435,7 @@ export default function SignUpScreen() {
               <TouchableOpacity
                 style={[
                   styles.primaryButton,
-                  !isFormValid() &&
-                  styles.primaryButtonDisabled,
+                  !isFormValid() && styles.primaryButtonDisabled,
                 ]}
                 onPress={authViewModel.handleRegister}
                 disabled={!isFormValid()}
@@ -433,8 +443,7 @@ export default function SignUpScreen() {
                 <Text
                   style={[
                     styles.primaryButtonText,
-                    !isFormValid() &&
-                    styles.primaryButtonTextDisabled,
+                    !isFormValid() && styles.primaryButtonTextDisabled,
                   ]}
                 >
                   Tiếp theo
@@ -519,7 +528,7 @@ const styles = StyleSheet.create({
     color: "black",
   },
   titleHighlight: {
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "bold",
     fontSize: 22,
   },
@@ -643,8 +652,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   checkboxChecked: {
-    backgroundColor: "#70E000",
-    borderColor: "#70E000",
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
   },
   checkmark: {
     color: "white",
@@ -658,7 +667,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   termsLink: {
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
     textDecorationLine: "underline",
   },
@@ -666,7 +675,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   primaryButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 20,
     alignItems: "center",

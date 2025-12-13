@@ -13,6 +13,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ArrowLeft, MoreVertical, Check } from "lucide-react-native";
 import CustomAlert from "@/components/CustomAlert";
+import { AppColors } from "@/constants/Colors";
 
 export default function CommitmentScreen() {
   const router = useRouter();
@@ -352,7 +353,7 @@ const styles = StyleSheet.create({
   progressFill: {
     width: "56%",
     height: "100%",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 2,
   },
   headerButtons: {
@@ -423,8 +424,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   checkedBox: {
-    backgroundColor: "#70E000",
-    borderColor: "#70E000",
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
   },
   commitmentText: {
     flex: 1,
@@ -443,14 +444,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -458,7 +459,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#70E000",
+    color: AppColors.primary,
   },
   nextButtonText: {
     fontSize: 16,

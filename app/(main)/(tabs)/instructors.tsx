@@ -21,7 +21,12 @@ import {
 } from "@/models/instructor/instructor-filter.type";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { InstructorViewModel } from "@/viewmodels/instructor/InstructorViewModel";
-import { setFilteredInstructors, setDisplayedInstructors, setSortBy, setSortAscending } from "@/features/instructor/instructorSlice";
+import {
+  setFilteredInstructors,
+  setDisplayedInstructors,
+  setSortBy,
+  setSortAscending,
+} from "@/features/instructor/instructorSlice";
 import HeaderList from "@/components/Commons/HeaderList";
 import SearchBar from "@/components/Commons/SearchBar";
 import TabFilter from "@/components/Commons/TabFilter";
@@ -30,11 +35,12 @@ import { UserRole } from "@/models/enum/UserRole.enum";
 import { RootState } from "@/lib/redux/store";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 
-
 function InstructorsScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const userRole = useAppSelector((state: RootState) => state.auth.user?.role ?? null);
+  const userRole = useAppSelector(
+    (state: RootState) => state.auth.user?.role ?? null
+  );
 
   const [instructorState, instructorViewModel] = useViewModel(
     InstructorViewModel,
@@ -119,7 +125,7 @@ function InstructorsScreen() {
   };
 
   const handleSortChange = (value: string) => {
-    if (value === 'exp') {
+    if (value === "exp") {
       if (sortBy === SortType.Experience) {
         // Nếu đang sort theo kinh nghiệm, toggle giữa tăng/giảm
         dispatch(setSortAscending(!sortAscending));
@@ -128,7 +134,7 @@ function InstructorsScreen() {
         dispatch(setSortBy(SortType.Experience));
         dispatch(setSortAscending(true));
       }
-    } else if (value === 'rating') {
+    } else if (value === "rating") {
       if (sortBy === SortType.Rating) {
         // Nếu đang sort theo rating, toggle giữa tăng/giảm
         dispatch(setSortAscending(!sortAscending));
@@ -139,7 +145,6 @@ function InstructorsScreen() {
       }
     }
   };
-
 
   const handleResetFilters = () => {
     instructorViewModel.resetAllFilters();
@@ -156,8 +161,6 @@ function InstructorsScreen() {
     }
   };
 
-
-
   const renderInstructorCard = ({ item }: { item: IInstructors }) => (
     <View style={styles.instructorCard}>
       <View style={styles.cardContent}>
@@ -165,7 +168,9 @@ function InstructorsScreen() {
 
         <View style={styles.mainInfo}>
           <Text style={styles.instructorName}>{item.fullName}</Text>
-          <Text style={styles.experience}>{item.experienceYear} năm kinh nghiệm</Text>
+          <Text style={styles.experience}>
+            {item.experienceYear} năm kinh nghiệm
+          </Text>
           <Text style={styles.packages}>{item.packageCount} gói thuê</Text>
         </View>
 
@@ -177,12 +182,14 @@ function InstructorsScreen() {
           <Text style={styles.bookings}>({item.bookingCount} lượt thuê)</Text>
           <TouchableOpacity
             style={styles.detailButton}
-            onPress={() => router.push({
-              pathname: ROUTES.INSTRUCTOR_DETAIL,
-              params: {
-                instructorId: item.id,
-              },
-            })}
+            onPress={() =>
+              router.push({
+                pathname: ROUTES.INSTRUCTOR_DETAIL,
+                params: {
+                  instructorId: item.id,
+                },
+              })
+            }
           >
             <Text style={styles.detailButtonText}>Chi tiết</Text>
           </TouchableOpacity>
@@ -195,7 +202,7 @@ function InstructorsScreen() {
     if (!hasMorePages) return null;
     return (
       <View style={styles.loadingFooter}>
-        <ActivityIndicator size="small" color="#70E000" />
+        <ActivityIndicator size="small" color={AppColors.primary} />
         <Text style={styles.loadingText}>Đang tải thêm...</Text>
       </View>
     );
@@ -205,10 +212,7 @@ function InstructorsScreen() {
     <View style={styles.emptyState}>
       <LucideUsers size={64} color={AppColors.gray300} />
       <Text style={styles.emptyTitle}>Không tìm thấy người hướng dẫn</Text>
-      <TouchableOpacity
-        style={styles.resetButton}
-        onPress={handleResetFilters}
-      >
+      <TouchableOpacity style={styles.resetButton} onPress={handleResetFilters}>
         <Text style={styles.resetButtonText}>Đặt lại bộ lọc</Text>
       </TouchableOpacity>
     </View>
@@ -223,23 +227,34 @@ function InstructorsScreen() {
         placeholder="Tìm kiếm người hướng dẫn..."
       />
 
-
       <TabFilter
         options={[
           {
-            value: 'exp',
-            label: sortBy === SortType.Experience
-              ? (sortAscending ? 'Kinh nghiệm ↑' : 'Kinh nghiệm ↓')
-              : 'Kinh nghiệm'
+            value: "exp",
+            label:
+              sortBy === SortType.Experience
+                ? sortAscending
+                  ? "Kinh nghiệm ↑"
+                  : "Kinh nghiệm ↓"
+                : "Kinh nghiệm",
           },
           {
-            value: 'rating',
-            label: sortBy === SortType.Rating
-              ? (sortAscending ? 'Đánh giá ↑' : 'Đánh giá ↓')
-              : 'Đánh giá'
+            value: "rating",
+            label:
+              sortBy === SortType.Rating
+                ? sortAscending
+                  ? "Đánh giá ↑"
+                  : "Đánh giá ↓"
+                : "Đánh giá",
           },
         ]}
-        activeValue={sortBy === SortType.Experience ? 'exp' : sortBy === SortType.Rating ? 'rating' : ''}
+        activeValue={
+          sortBy === SortType.Experience
+            ? "exp"
+            : sortBy === SortType.Rating
+            ? "rating"
+            : ""
+        }
         onSelect={handleSortChange}
         showCount={false}
       />
@@ -253,8 +268,8 @@ function InstructorsScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            colors={["#70E000"]}
-            tintColor="#70E000"
+            colors={[AppColors.primary]}
+            tintColor={AppColors.primary}
           />
         }
         // Infinite scroll pagination
@@ -264,13 +279,13 @@ function InstructorsScreen() {
         ListEmptyComponent={renderEmptyState}
       />
 
-
-
       {/* Error Message */}
       {errorMessage && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{errorMessage}</Text>
-          <TouchableOpacity onPress={() => instructorViewModel.clearErrorMessage()}>
+          <TouchableOpacity
+            onPress={() => instructorViewModel.clearErrorMessage()}
+          >
             <Text style={styles.dismissError}>Đóng</Text>
           </TouchableOpacity>
         </View>
@@ -285,7 +300,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.backgroundLight,
   },
   filtersContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     paddingTop: 12,
     paddingBottom: 12,
     paddingHorizontal: 0,
@@ -294,7 +309,7 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: AppColors.textPrimary,
     marginBottom: 10,
     marginLeft: 20,
@@ -370,13 +385,13 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#70E000",
+    color: AppColors.primary,
     lineHeight: 22,
   },
   packages: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#70E000",
+    color: AppColors.primary,
     lineHeight: 20,
   },
   ratingContainer: {
@@ -432,7 +447,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   detailButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 14,
@@ -475,7 +490,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   resetButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 20,

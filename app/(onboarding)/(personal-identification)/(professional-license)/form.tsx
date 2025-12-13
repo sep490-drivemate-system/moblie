@@ -23,6 +23,7 @@ import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { RootState } from "@/lib/redux/store";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { convertImageFile } from "@/utils/utils";
+import { AppColors } from "@/constants/Colors";
 
 export default function FormScreen() {
   const [authState, authViewModel] = useViewModel(
@@ -49,7 +50,19 @@ export default function FormScreen() {
   const [vehicleClass, setVehicleClass] = useState<string>("");
 
   // Vehicle class options (same as license classes)
-  const vehicleClasses = ["B", "C", "C1", "D1", "D2", "D", "BE", "C1E", "D1E", "D2E", "DE"];
+  const vehicleClasses = [
+    "B",
+    "C",
+    "C1",
+    "D1",
+    "D2",
+    "D",
+    "BE",
+    "C1E",
+    "D1E",
+    "D2E",
+    "DE",
+  ];
 
   useEffect(() => {
     loadUserData();
@@ -67,10 +80,16 @@ export default function FormScreen() {
       const tempImage = await AsyncStorage.getItem("temp_certificate");
       if (tempImage) {
         setTempImageUri(tempImage);
-        authViewModel.updateRegisterInstructorFormData("TeachingLicenseFront", convertImageFile(tempImage));
+        authViewModel.updateRegisterInstructorFormData(
+          "TeachingLicenseFront",
+          convertImageFile(tempImage)
+        );
       } else {
         setTempImageUri(null);
-        authViewModel.updateRegisterInstructorFormData("TeachingLicenseFront", null);
+        authViewModel.updateRegisterInstructorFormData(
+          "TeachingLicenseFront",
+          null
+        );
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -194,7 +213,10 @@ export default function FormScreen() {
           onPress: async () => {
             try {
               setTempImageUri(null);
-              authViewModel.updateRegisterInstructorFormData("TeachingLicenseFront", null);
+              authViewModel.updateRegisterInstructorFormData(
+                "TeachingLicenseFront",
+                null
+              );
               await AsyncStorage.removeItem("temp_certificate");
               setShowDeleteMode(false);
               setShowAlert(false);
@@ -289,7 +311,7 @@ export default function FormScreen() {
                   style={styles.editButton}
                   onPress={() => handleImageUpload()}
                 >
-                  <Edit2Icon color="#70E000" size={16} />
+                  <Edit2Icon color={AppColors.primary} size={16} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -297,7 +319,6 @@ export default function FormScreen() {
 
           {/* Form Fields */}
           <View style={styles.formContainer}>
-
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
                 Hạng xe đào tạo giảng dạy <Text style={styles.required}>*</Text>
@@ -338,7 +359,10 @@ export default function FormScreen() {
                         style={styles.dropdownItem}
                         onPress={() => {
                           handleVehicleClassSelect(vehicleClass);
-                          authViewModel.updateRegisterInstructorFormData("TeachingTier", vehicleClass);
+                          authViewModel.updateRegisterInstructorFormData(
+                            "TeachingTier",
+                            vehicleClass
+                          );
                         }}
                       >
                         <Text style={styles.dropdownItemText}>
@@ -357,10 +381,7 @@ export default function FormScreen() {
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.nextButton}
-              onPress={handleNext}
-            >
+            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>Kế tiếp</Text>
             </TouchableOpacity>
           </View>
@@ -407,9 +428,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "28%",
+    width: "64%",
     height: "100%",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 2,
   },
   headerButtons: {
@@ -475,7 +496,7 @@ const styles = StyleSheet.create({
   imageUploadArea: {
     position: "relative",
     borderWidth: 2,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderStyle: "dashed",
     borderRadius: 8,
     height: 150,
@@ -522,7 +543,7 @@ const styles = StyleSheet.create({
   },
   uploadText: {
     fontSize: 16,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
   },
   editButton: {
@@ -535,7 +556,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderWidth: 1,
   },
   formContainer: {
@@ -579,7 +600,7 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -668,13 +689,13 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#70E000",
+    color: AppColors.primary,
   },
   backButton: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",

@@ -26,7 +26,6 @@ import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { SessionViewModel } from "@/viewmodels/session/SessionViewModel";
 import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
 
-
 export default function RescheduleSessionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -43,15 +42,16 @@ export default function RescheduleSessionScreen() {
   const initialDuration = Number(params.duration || 2);
   const initialLocation = (params.location as string) || "";
 
-
   const [date, setDate] = useState<string>(initialDate);
   const [startTime, setStartTime] = useState<string>(initialStartTime);
   const [duration, setDuration] = useState<number>(initialDuration);
   const [location] = useState<string>(initialLocation);
-  const [selectedDate, setSelectedDate] = useState<string | null>(initialDate || null);
-  const [effectiveInstructorId, setEffectiveInstructorId] = useState<string | null>(
-    paramInstructorId ?? null
+  const [selectedDate, setSelectedDate] = useState<string | null>(
+    initialDate || null
   );
+  const [effectiveInstructorId, setEffectiveInstructorId] = useState<
+    string | null
+  >(paramInstructorId ?? null);
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [rescheduleNote, setRescheduleNote] = useState("");
   const [isFetchingInstructor, setIsFetchingInstructor] = useState(
@@ -96,9 +96,7 @@ export default function RescheduleSessionScreen() {
     const hour = Number(hourStr);
     const minute = Number(minuteStr);
 
-    if (
-      [year, month, dayNum, hour, minute].some((v) => Number.isNaN(v))
-    ) {
+    if ([year, month, dayNum, hour, minute].some((v) => Number.isNaN(v))) {
       return null;
     }
 
@@ -168,7 +166,10 @@ export default function RescheduleSessionScreen() {
   const onSave = async () => {
     const startDateTime = buildStartDateTime();
     if (!startDateTime) {
-      Alert.alert("Thiếu thông tin", "Vui lòng chọn đầy đủ ngày và giờ bắt đầu.");
+      Alert.alert(
+        "Thiếu thông tin",
+        "Vui lòng chọn đầy đủ ngày và giờ bắt đầu."
+      );
       return;
     }
 
@@ -182,7 +183,7 @@ export default function RescheduleSessionScreen() {
 
       // Calculate end datetime
       const endDateTime = new Date(startDateTime);
-      endDateTime.setMinutes(endDateTime.getMinutes() + (duration * 60));
+      endDateTime.setMinutes(endDateTime.getMinutes() + duration * 60);
 
       // Validate: endTime must be after startTime
       if (endDateTime <= startDateTime) {
@@ -206,7 +207,10 @@ export default function RescheduleSessionScreen() {
         newEndTime: endDateTime.toISOString(),
       };
 
-      console.log("Reschedule request body:", JSON.stringify(rescheduleData, null, 2));
+      console.log(
+        "Reschedule request body:",
+        JSON.stringify(rescheduleData, null, 2)
+      );
 
       const success = await sessionViewModel.rescheduleSession(
         sessionId,
@@ -222,19 +226,20 @@ export default function RescheduleSessionScreen() {
         [
           {
             text: "OK",
-            onPress: () => router.back()
-          }
+            onPress: () => router.back(),
+          },
         ]
       );
     } catch (error) {
       console.error("Error rescheduling session:", error);
-      Alert.alert("Lỗi", error as string || "Không thể đổi lịch buổi tập lái");
+      Alert.alert(
+        "Lỗi",
+        (error as string) || "Không thể đổi lịch buổi tập lái"
+      );
     } finally {
       setIsRescheduling(false);
     }
   };
-
-
 
   return (
     <View style={styles.container}>
@@ -273,8 +278,7 @@ export default function RescheduleSessionScreen() {
               onStartTimeSelect={(time) => {
                 setStartTime(time);
               }}
-              onEndTimeSelect={() => {
-              }}
+              onEndTimeSelect={() => {}}
               onDurationChange={(h) => {
                 setDuration(h);
               }}
@@ -569,7 +573,7 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",

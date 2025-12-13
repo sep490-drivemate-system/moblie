@@ -5,11 +5,7 @@ import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
-import {
-  ChevronDown,
-  Edit2Icon,
-  Trash2
-} from "lucide-react-native";
+import { ChevronDown, Edit2Icon, Trash2 } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -19,9 +15,10 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppColors } from "@/constants/Colors";
 
 export default function FormScreen() {
   const [authState, authViewModel] = useViewModel(
@@ -53,45 +50,69 @@ export default function FormScreen() {
   const lastProcessedFrontImageRef = useRef<string | null>(null);
 
   // License class options
-  const licenseClasses = ["B", "C", "C1", "D1", "D2", "D", "BE", "C1E", "D1E", "D2E", "DE"];
+  const licenseClasses = [
+    "B",
+    "C",
+    "C1",
+    "D1",
+    "D2",
+    "D",
+    "BE",
+    "C1E",
+    "D1E",
+    "D2E",
+    "DE",
+  ];
 
   const loadUserData = useCallback(async () => {
     try {
       // Load saved license class from form data if exists
-      const savedLicenseClass = authState.registerInstructorFormData.DrivingLicenseTier;
+      const savedLicenseClass =
+        authState.registerInstructorFormData.DrivingLicenseTier;
       if (savedLicenseClass && licenseClasses.includes(savedLicenseClass)) {
         setLicenseClass(savedLicenseClass);
       }
-      
+
       // Load temp images if exist
       const tempFront = await AsyncStorage.getItem("temp_license_front");
       const tempBack = await AsyncStorage.getItem("temp_license_back");
-      
+
       if (tempFront) {
         setTempFrontImageUri(tempFront);
         authViewModel.updateRegisterInstructorFormData(
           "DrivingLicenseFront",
           convertImageFile(tempFront)
         );
-        
+
         // Only call upload API if the image has changed
         if (lastProcessedFrontImageRef.current !== tempFront) {
           lastProcessedFrontImageRef.current = tempFront;
           setIsExtractingLicense(true);
           try {
             const response = await uploadImageDLC(tempFront);
-            if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
+            if (
+              response &&
+              response.data &&
+              Array.isArray(response.data) &&
+              response.data.length > 0
+            ) {
               console.log("License OCR response", response);
-              
+
               // Extract license class from response.data[0].class
               const extractedClass = response.data[0].class;
               if (extractedClass && licenseClasses.includes(extractedClass)) {
                 setLicenseClass(extractedClass);
-                authViewModel.updateRegisterInstructorFormData("DrivingLicenseTier", extractedClass);
+                authViewModel.updateRegisterInstructorFormData(
+                  "DrivingLicenseTier",
+                  extractedClass
+                );
               } else if (extractedClass) {
                 // If class exists but not in the predefined list, still set it
                 setLicenseClass(extractedClass);
-                authViewModel.updateRegisterInstructorFormData("DrivingLicenseTier", extractedClass);
+                authViewModel.updateRegisterInstructorFormData(
+                  "DrivingLicenseTier",
+                  extractedClass
+                );
                 console.log("License class extracted:", extractedClass);
               }
             }
@@ -105,7 +126,7 @@ export default function FormScreen() {
         // Reset the ref if no front image
         lastProcessedFrontImageRef.current = null;
       }
-      
+
       if (tempBack) {
         setTempBackImageUri(tempBack);
         authViewModel.updateRegisterInstructorFormData(
@@ -256,7 +277,10 @@ export default function FormScreen() {
                 lastProcessedFrontImageRef.current = null;
                 // Reset license class when front image is deleted
                 setLicenseClass("");
-                authViewModel.updateRegisterInstructorFormData("DrivingLicenseTier", "");
+                authViewModel.updateRegisterInstructorFormData(
+                  "DrivingLicenseTier",
+                  ""
+                );
               } else {
                 setTempBackImageUri(null);
                 await AsyncStorage.removeItem("temp_license_back");
@@ -339,8 +363,13 @@ export default function FormScreen() {
                     />
                     {isExtractingLicense && (
                       <View style={styles.loadingOverlay}>
-                        <ActivityIndicator size="large" color="#70E000" />
-                        <Text style={styles.loadingText}>Đang trích xuất thông tin...</Text>
+                        <ActivityIndicator
+                          size="large"
+                          color={AppColors.primary}
+                        />
+                        <Text style={styles.loadingText}>
+                          Đang trích xuất thông tin...
+                        </Text>
                       </View>
                     )}
                     {showDeleteMode && !isExtractingLicense && (
@@ -367,7 +396,7 @@ export default function FormScreen() {
                   onPress={() => handleImageUpload("front")}
                   disabled={isExtractingLicense}
                 >
-                  <Edit2Icon color="#70E000" size={16} />
+                  <Edit2Icon color={AppColors.primary} size={16} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -413,7 +442,7 @@ export default function FormScreen() {
                   style={styles.editButton}
                   onPress={() => handleImageUpload("back")}
                 >
-                  <Edit2Icon color="#70E000" size={16} />
+                  <Edit2Icon color={AppColors.primary} size={16} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -452,13 +481,13 @@ export default function FormScreen() {
                 <ScrollView
                   style={[
                     styles.dropdownList,
-                    { 
+                    {
                       marginBottom: insets.bottom,
-                      maxHeight: 200 - insets.bottom
-                    }
+                      maxHeight: 200 - insets.bottom,
+                    },
                   ]}
                   contentContainerStyle={{
-                    paddingBottom: Math.max(insets.bottom, 8)
+                    paddingBottom: Math.max(insets.bottom, 8),
                   }}
                   nestedScrollEnabled={true}
                   showsVerticalScrollIndicator={true}
@@ -538,9 +567,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressFill: {
-    width: "21%",
+    width: "48%",
     height: "100%",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 2,
   },
   headerButtons: {
@@ -606,7 +635,7 @@ const styles = StyleSheet.create({
   extractingText: {
     fontSize: 14,
     fontWeight: "400",
-    color: "#70E000",
+    color: AppColors.primary,
     fontStyle: "italic",
   },
   loadingOverlay: {
@@ -623,13 +652,13 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 14,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
   },
   imageUploadArea: {
     position: "relative",
     borderWidth: 2,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderStyle: "dashed",
     borderRadius: 8,
     height: 150,
@@ -676,7 +705,7 @@ const styles = StyleSheet.create({
   },
   uploadText: {
     fontSize: 16,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
   },
   editButton: {
@@ -689,7 +718,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderWidth: 1,
   },
   formContainer: {
@@ -733,7 +762,7 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -820,7 +849,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -828,6 +857,6 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#70E000",
+    color: AppColors.primary,
   },
 });

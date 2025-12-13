@@ -150,7 +150,7 @@ export default function InstructorDetailScreen() {
         friction: 7,
         tension: 40,
         useNativeDriver: true,
-      }).start(() => { });
+      }).start(() => {});
     } else {
       scaleAnim.setValue(0.95);
     }
@@ -220,7 +220,6 @@ export default function InstructorDetailScreen() {
   };
 
   const handleMessagePress = () => {
-
     router.push({
       pathname: ROUTES.MAIN_NO_TABS_CHAT,
       params: {
@@ -922,7 +921,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   vehicleDetailButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,

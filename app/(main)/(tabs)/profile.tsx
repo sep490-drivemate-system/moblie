@@ -34,6 +34,7 @@ import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { RootState } from "@/lib/redux/store";
 import { setUserInfo } from "@/features/home/homeSlice";
 import { IUserInfo } from "@/models/user/user.type";
+import { AppColors } from "@/constants/Colors";
 
 export default function ProfileScreen() {
   const [walletState] = useViewModel(WalletViewModel, (state) => state.wallet);
@@ -120,7 +121,7 @@ export default function ProfileScreen() {
               }
             >
               <View style={styles.menuItemLeft}>
-                <IdCard size={20} color="#70E000" />
+                <IdCard size={20} color={AppColors.primary} />
                 <Text style={styles.menuItemText}>
                   Quản lý thông tin tài khoản
                 </Text>
@@ -133,7 +134,7 @@ export default function ProfileScreen() {
               }
             >
               <View style={styles.menuItemLeft}>
-                <Shield size={20} color="#70E000" />
+                <Shield size={20} color={AppColors.primary} />
                 <Text style={styles.menuItemText}>Lịch sử giao dịch</Text>
               </View>
             </TouchableOpacity>
@@ -155,23 +156,23 @@ export default function ProfileScreen() {
                 }
               >
                 <View style={styles.menuItemLeft}>
-                  <Package2 size={20} color="#70E000" />
+                  <Package2 size={20} color={AppColors.primary} />
                   <Text style={styles.menuItemText}>Quản lý gói dịch vụ</Text>
                 </View>
               </TouchableOpacity>
             )}
             {(authState.userInfo?.role as UserRole) ===
               UserRole.NoviceDriver && (
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
-                >
-                  <View style={styles.menuItemLeft}>
-                    <Package2 size={20} color="#70E000" />
-                    <Text style={styles.menuItemText}>Quản lý gói đã mua</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Package2 size={20} color={AppColors.primary} />
+                  <Text style={styles.menuItemText}>Quản lý gói đã mua</Text>
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -209,7 +210,7 @@ export default function ProfileScreen() {
               }}
             >
               <View style={styles.menuItemLeft}>
-                <FileText size={20} color="#70E000" />
+                <FileText size={20} color={AppColors.primary} />
                 <Text style={styles.menuItemText}>Điều khoản và dịch vụ</Text>
               </View>
             </TouchableOpacity>
@@ -241,7 +242,7 @@ export default function ProfileScreen() {
               }}
             >
               <View style={styles.menuItemLeft}>
-                <Info size={20} color="#70E000" />
+                <Info size={20} color={AppColors.primary} />
                 <Text style={styles.menuItemText}>Thông tin về DriveMate</Text>
               </View>
             </TouchableOpacity>
@@ -250,7 +251,7 @@ export default function ProfileScreen() {
               onPress={() => setShowLogoutModal(true)}
             >
               <View style={styles.menuItemLeft}>
-                <LogOut size={20} color="#70E000" />
+                <LogOut size={20} color={AppColors.primary} />
                 <Text style={styles.menuItemText}>Đăng xuất</Text>
               </View>
             </TouchableOpacity>
@@ -444,7 +445,7 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#70E000",
+    color: AppColors.primary,
   },
   menuItemsContainer: {
     gap: 4,

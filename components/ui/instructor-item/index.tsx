@@ -2,6 +2,7 @@ import { IInstructors } from "@/models/instructor/instructor.type";
 import { LinearGradient } from "expo-linear-gradient";
 import { LucideStar, ShieldCheck } from "lucide-react-native";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { AppColors } from "@/constants/Colors";
 
 type Props = {
   instructor: IInstructors;
@@ -16,7 +17,7 @@ const InstructorItem: React.FC<Props> = ({
       style={[styles.container, { width: variant === "full" ? "100%" : 280 }]}
     >
       <LinearGradient
-        colors={["#70E000", "#9EF01A", "#CFFF8D"]}
+        colors={[AppColors.primary, "#9EF01A", "#CFFF8D"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.header}
@@ -38,9 +39,11 @@ const InstructorItem: React.FC<Props> = ({
         <View style={styles.info}>
           <Text style={styles.intructorName}>{instructor.fullName}</Text>
           <View style={styles.experienceContainer}>
-            <ShieldCheck size={20} color={"#70E000"} />
-            <Text style={styles.experienceText}>{instructor.experienceYear} năm kinh nghiệm</Text>
-          </View>       
+            <ShieldCheck size={20} color={AppColors.primary} />
+            <Text style={styles.experienceText}>
+              {instructor.experienceYear} năm kinh nghiệm
+            </Text>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -78,7 +81,7 @@ const styles = StyleSheet.create({
     color: "#edb435",
   },
   bookingContainer: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     padding: 5,
     alignItems: "center",
   },
@@ -117,7 +120,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#70E000",
+    color: AppColors.primary,
   },
 });
 

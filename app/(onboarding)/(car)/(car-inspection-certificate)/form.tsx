@@ -300,7 +300,7 @@ export default function FormScreen() {
                   style={styles.editButton}
                   onPress={() => handleImageUpload("front")}
                 >
-                  <Edit2Icon color="#70E000" size={16} />
+                  <Edit2Icon color={AppColors.primary} size={16} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -346,7 +346,7 @@ export default function FormScreen() {
                   style={styles.editButton}
                   onPress={() => handleImageUpload("back")}
                 >
-                  <Edit2Icon color="#70E000" size={16} />
+                  <Edit2Icon color={AppColors.primary} size={16} />
                 </TouchableOpacity>
               </View>
             </View>

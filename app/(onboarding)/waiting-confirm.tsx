@@ -15,6 +15,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { getInstructorApplicant } from "@/features/instructor/instructorThunk";
+import { AppColors } from "@/constants/Colors";
 
 export default function WaitingConfirmScreen() {
   const router = useRouter();
@@ -482,13 +483,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   circleCompleted: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
   },
   circleActive: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
   },
   circleInactive: {
     width: 20,
@@ -506,7 +507,7 @@ const styles = StyleSheet.create({
   },
   lineBottomActive: {
     flex: 1,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     width: 2,
   },
   lineBottomRejected: {
@@ -547,12 +548,12 @@ const styles = StyleSheet.create({
     color: "#FF3B30",
   },
   link: {
-    color: "#70E000",
+    color: AppColors.primary,
     marginTop: 4,
     fontSize: 14,
   },
   drivemateText: {
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
   },
 });

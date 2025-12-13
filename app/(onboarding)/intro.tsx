@@ -1,12 +1,7 @@
 import { ResizeMode, Video } from "expo-av";
 import { useRouter } from "expo-router";
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from "react-native";
-
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { AppColors } from "@/constants/Colors";
 
 export default function IntroScreen() {
   const router = useRouter();
@@ -42,11 +37,17 @@ export default function IntroScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity style={styles.signUpButton} onPress={() => router.push("/(auth)/signup")}>
+          <TouchableOpacity
+            style={styles.signUpButton}
+            onPress={() => router.push("/(auth)/signup")}
+          >
             <Text style={styles.signUpButtonText}>Đăng ký</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.signInButton} onPress={() => router.push("/(auth)/signin")}>
+          <TouchableOpacity
+            style={styles.signInButton}
+            onPress={() => router.push("/(auth)/signin")}
+          >
             <Text style={styles.signInButtonText}>Đăng nhập</Text>
           </TouchableOpacity>
         </View>
@@ -87,7 +88,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   appNameHighlight: {
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "bold",
   },
   sloganLine2: {
@@ -123,7 +124,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   signUpButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
@@ -134,7 +135,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   signUpButtonText: {
-    color: "white",
+    color: AppColors.white,
     fontSize: 16,
     fontWeight: "600",
   },

@@ -1,4 +1,3 @@
-
 import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -7,15 +6,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet, 
+  StyleSheet,
   TouchableOpacity,
   TextInput,
   SafeAreaView,
   StatusBar,
-  Modal,  
+  Modal,
   Keyboard,
 } from "react-native";
 import { RootState } from "@/lib/redux/store";
+import { AppColors } from "@/constants/Colors";
 
 const maskEmail = (email: string): string => {
   if (!email) return "";
@@ -45,7 +45,7 @@ export default function OTPScreen() {
   const [modalConfig, setModalConfig] = useState({
     title: "",
     message: "",
-    onConfirm: () => { },
+    onConfirm: () => {},
     confirmText: "OK",
   });
   const inputRefs = useRef<(TextInput | null)[]>([]);
@@ -201,23 +201,21 @@ export default function OTPScreen() {
   };
 
   const handleResendOTP = async () => {
-      try {
-        // Call handleRegister again to resend OTP
-        await authViewModel.handleRegister();
+    try {
+      // Call handleRegister again to resend OTP
+      await authViewModel.handleRegister();
 
-        setOtp(["", "", "", "", "", ""]);
-        // Auto focus first input after resend
-        setTimeout(() => {
-          inputRefs.current[0]?.focus();
-        }, 100);
-      } catch (error) {
-      }
+      setOtp(["", "", "", "", "", ""]);
+      // Auto focus first input after resend
+      setTimeout(() => {
+        inputRefs.current[0]?.focus();
+      }, 100);
+    } catch (error) {}
   };
 
   const handleBack = () => {
     router.back();
   };
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -382,13 +380,13 @@ const styles = StyleSheet.create({
   },
   resendButton: {
     fontSize: 16,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
     textDecorationLine: "underline",
   },
   timerText: {
     fontSize: 16,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
   },
   buttonContainer: {
@@ -396,7 +394,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   verifyButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 20,
     alignItems: "center",
@@ -435,7 +433,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   modalButton: {
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 12,
     paddingHorizontal: 32,
     borderRadius: 8,

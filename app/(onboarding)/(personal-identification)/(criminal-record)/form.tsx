@@ -5,10 +5,7 @@ import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
-import {
-  Edit2Icon,
-  Trash2
-} from "lucide-react-native";
+import { Edit2Icon, Trash2 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   Image,
@@ -16,9 +13,10 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { AppColors } from "@/constants/Colors";
 
 export default function FormScreen() {
   const [authState, authViewModel] = useViewModel(
@@ -55,7 +53,10 @@ export default function FormScreen() {
       const tempImage = await AsyncStorage.getItem("temp_criminal_record");
       if (tempImage) {
         setTempImageUri(tempImage);
-        authViewModel.updateRegisterInstructorFormData("PersonalProfile", convertImageFile(tempImage));
+        authViewModel.updateRegisterInstructorFormData(
+          "PersonalProfile",
+          convertImageFile(tempImage)
+        );
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -177,7 +178,10 @@ export default function FormScreen() {
           onPress: async () => {
             try {
               setTempImageUri(null);
-              authViewModel.updateRegisterInstructorFormData("PersonalProfile", null);
+              authViewModel.updateRegisterInstructorFormData(
+                "PersonalProfile",
+                null
+              );
               await AsyncStorage.removeItem("temp_criminal_record");
               setShowDeleteMode(false);
               setShowAlert(false);
@@ -271,7 +275,7 @@ export default function FormScreen() {
                   style={styles.editButton}
                   onPress={() => handleImageUpload()}
                 >
-                  <Edit2Icon color="#70E000" size={16} />
+                  <Edit2Icon color={AppColors.primary} size={16} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -331,7 +335,7 @@ const styles = StyleSheet.create({
   progressFill: {
     width: "35%",
     height: "100%",
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     borderRadius: 2,
   },
   headerButtons: {
@@ -397,7 +401,7 @@ const styles = StyleSheet.create({
   imageUploadArea: {
     position: "relative",
     borderWidth: 2,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderStyle: "dashed",
     borderRadius: 8,
     height: 150,
@@ -444,7 +448,7 @@ const styles = StyleSheet.create({
   },
   uploadText: {
     fontSize: 16,
-    color: "#70E000",
+    color: AppColors.primary,
     fontWeight: "600",
   },
   editButton: {
@@ -457,7 +461,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     borderWidth: 1,
   },
   formContainer: {
@@ -501,7 +505,7 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#70E000",
+    backgroundColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -536,13 +540,13 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#70E000",
+    color: AppColors.primary,
   },
   backButton: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#70E000",
+    borderColor: AppColors.primary,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: "center",
