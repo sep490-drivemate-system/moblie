@@ -33,9 +33,10 @@ export default function IntroScreen() {
         <View style={styles.signInContainer}>
           <View style={styles.signInDivider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.signInText}>Chọn phương thức đăng nhập</Text>
+            <Text style={styles.signInText}>Chọn phương thức </Text>
             <View style={styles.dividerLine} />
           </View>
+          
 
           <TouchableOpacity
             style={styles.signUpButton}

@@ -116,6 +116,7 @@ export class PackageViewModel extends BaseViewModel<RootState["package"]> {
     return (
       (await this.executeAsync<Package[]>(async () => {
         const response = await this.dispatch(getRecommendedPackages()).unwrap();
+        console.log("Recommended Packages:", response.value);
         return response.value || [];
       })) ?? []
     );

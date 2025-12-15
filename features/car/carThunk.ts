@@ -59,7 +59,7 @@ export const getCars = createThunk<PaginatedCarsResponse, GetCarsParams>(
     buildUrl: (payload) => {
       const baseUrl = `/${CAR_PATH}`;
       const params = new URLSearchParams();
-      
+
       if (payload.page) {
         params.append("page", payload.page.toString());
       }
@@ -75,13 +75,19 @@ export const getCars = createThunk<PaginatedCarsResponse, GetCarsParams>(
       if (payload.fuel) {
         params.append("fuel", payload.fuel);
       }
-      
+
       const queryString = params.toString();
       const fullUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
-      
+
       console.log("[Car Filter] Built URL:", fullUrl);
-      
+
       return fullUrl;
     },
   }
+);
+
+export const getRecommendedCars = createThunk<ICar[], void>(
+  HttpMethod.GET,
+  "getRecommendedCars",
+  `/${CAR_PATH}/recommendation`
 );

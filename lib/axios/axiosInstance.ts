@@ -15,7 +15,6 @@ axiosInstance.interceptors.request.use(
             process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token'
         );
         if (token) {
-            // Nếu token đã hết hạn thì xóa khỏi storage và không gắn Authorization
             if (isTokenExpired(token)) {
                 await AsyncStorage.removeItem(
                     process.env.EXPO_PUBLIC_STORAGE_TOKEN || '@token'

@@ -23,10 +23,6 @@ const InstructorItem: React.FC<Props> = ({
         style={styles.header}
       >
         <View style={styles.banner}>
-          <View style={styles.ratingContainer}>
-            <LucideStar size={15} color={"#edb435"} fill={"#edb435"} />
-            <Text style={styles.ratingText}>{instructor.averageRating}</Text>
-          </View>
           <View style={styles.bookingContainer}>
             <Text style={styles.bookingText}>
               Đã thuê {instructor.bookingCount} lượt
@@ -83,6 +79,7 @@ const styles = StyleSheet.create({
   bookingContainer: {
     backgroundColor: AppColors.primary,
     padding: 5,
+    borderBottomLeftRadius: 10,
     alignItems: "center",
   },
   bookingText: {

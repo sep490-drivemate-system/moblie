@@ -37,7 +37,7 @@ export class ChatHubViewModel extends BaseViewModel<RootState["chat"]> {
             this.dispatch(setUnreadMessageCount(count));
             return count;
         } catch (error) {
-            console.error("Error getting unread message count:", error);
+            console.log("Error getting unread message count:", error);
             return 0;
         }
     }
