@@ -43,12 +43,10 @@ import { ICar } from "@/models/car/car";
 const logoWhiteBg = require("@/assets/images/logo_whitebg_main.png");
 
 export default function HomeScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
   const [walletState, walletViewModel] = useViewModel(WalletViewModel, (state) => state.wallet);
   const [chatState, chatHubViewModel] = useViewModel(ChatHubViewModel, (state) => state.chat);
   const [notificationState, notificationHubViewModel] = useViewModel(NotificationHubViewModel, (state) => state.notification
   );
-  const { width } = useWindowDimensions();
   const heroSlides = [
     {
       title: "Nền tảng bổ túc lái xe thông minh",

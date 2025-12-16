@@ -17,17 +17,11 @@ import { AppColors } from "@/constants/Colors";
 import { RootState } from "@/lib/redux/store";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import {
-  Car,
-  MapPin,
-  Star,
-  Users,
-  Fuel,
-  Search,
-} from "lucide-react-native";
+import { Car, Star, Users, Fuel, Search, Filter } from "lucide-react-native";
 import { CarViewModel } from "@/viewmodels/car/CarViewModel";
 import { ICar, PaginatedCarsResponse, GetCarsParams } from "@/models/car/car";
 import HeaderList from "@/components/Commons/HeaderList";
+import SearchBar from "@/components/Commons/SearchBar";
 import { useCallback } from "react";
 import { RefreshControl } from "react-native";
 import CarFilter, {
@@ -64,19 +58,22 @@ export default function CarsScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [showFilter, setShowFilter] = useState(true);
+
   const PAGE_SIZE = 4;
-  
+
   // Filter states - radio (single selection)
   const [selectedSeats, setSelectedSeats] = useState<number | null>(null);
   const [selectedBrands, setSelectedBrands] = useState<string | null>(null);
   const [selectedFuels, setSelectedFuels] = useState<string | null>(null);
-  
+
   // Modal states
   const [showSeatsModal, setShowSeatsModal] = useState(false);
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [showFuelModal, setShowFuelModal] = useState(false);
-  
+
   // Temporary states for modals
   const [tempSelectedSeats, setTempSelectedSeats] = useState<number | null>(null);
   const [tempSelectedBrands, setTempSelectedBrands] = useState<string | null>(null);
@@ -168,6 +165,13 @@ export default function CarsScreen() {
     }
   }, [viewModel, selectedSeats, selectedBrands, selectedFuels]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const handleLoadMore = useCallback(async () => {
     if (isLoadingMore || cars.length >= totalCount) {
       return;
@@ -190,6 +194,18 @@ export default function CarsScreen() {
     setCurrentPage(1);
     loadCars(1, false);
   }, [loadCars]);
+
+  const filteredCars = useMemo(() => {
+    const q = debouncedSearchQuery.trim().toLowerCase();
+    if (!q) return cars;
+    return cars.filter((c) => {
+      return (
+        c.modelName.toLowerCase().includes(q) ||
+        c.brand.toLowerCase().includes(q) ||
+        c.license_plate?.toLowerCase().includes(q)
+      );
+    });
+  }, [cars, debouncedSearchQuery]);
 
 
   // Render car card
@@ -336,12 +352,12 @@ export default function CarsScreen() {
       item.id === CarFilterOption.All
         ? !hasActiveFilters
         : item.type === "seats"
-        ? selectedSeats !== null
-        : item.type === "brand"
-        ? selectedBrands !== null
-        : item.type === "fuel"
-        ? selectedFuels !== null
-        : false;
+          ? selectedSeats !== null
+          : item.type === "brand"
+            ? selectedBrands !== null
+            : item.type === "fuel"
+              ? selectedFuels !== null
+              : false;
 
     const handlePress = () => {
       if (item.id === CarFilterOption.All) {
@@ -403,11 +419,37 @@ export default function CarsScreen() {
     <View style={styles.container}>
       <HeaderList title="Danh sách xe" />
 
-      {/* Filter Component */}
-      <CarFilter
-        filterOptions={filterOptions}
-        renderFilterOptionItem={renderFilterOptionItem}
-      />
+      {/* Search + Filter */}
+      <View style={styles.filtersContainer}>
+        <View style={styles.searchRow}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Tìm kiếm xe theo tên, hãng, biển số..."
+            style={styles.searchBarWrapper}
+          />
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              showFilter && styles.filterButtonActive,
+            ]}
+            activeOpacity={0.9}
+            onPress={() => setShowFilter((prev) => !prev)}
+          >
+            <Filter
+              size={18}
+              color={showFilter ? "#ffffff" : AppColors.primary}
+              strokeWidth={2}
+            />
+          </TouchableOpacity>
+        </View>
+        {showFilter && (
+          <CarFilter
+            filterOptions={filterOptions}
+            renderFilterOptionItem={renderFilterOptionItem}
+          />
+        )}
+      </View>
 
       {/* Seats Modal */}
       <FilterModal
@@ -520,7 +562,7 @@ export default function CarsScreen() {
           </View>
         ) : (
           <FlatList
-            data={cars}
+            data={filteredCars}
             renderItem={renderCarCard}
             keyExtractor={(item) => item.id}
             contentContainerStyle={[
@@ -678,6 +720,34 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     backgroundColor: AppColors.background,
+  },
+  filtersContainer: {
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 8,
+  },
+  searchBarWrapper: {
+    flex: 1,
+  },
+  filterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: AppColors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+  },
+  filterButtonActive: {
+    backgroundColor: AppColors.primary,
   },
   emptyState: {
     alignItems: "center",

@@ -23,7 +23,7 @@ const InstructorItem: React.FC<Props> = ({
         style={styles.header}
       >
         <View style={styles.banner}>
-          <View style={styles.bookingContainer}>
+          <View style={styles.bookingContainer}>            
             <Text style={styles.bookingText}>
               Đã thuê {instructor.bookingCount} lượt
             </Text>

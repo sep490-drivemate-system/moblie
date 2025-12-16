@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ScrollView,
   View,
@@ -10,13 +10,12 @@ import {
   Modal,
   ActivityIndicator,
   Linking,
+  RefreshControl,
 } from "react-native";
 import {
   Wallet,
   LogOut,
-  User,
   Shield,
-  Star,
   FileText,
   Info,
   IdCard,
@@ -25,87 +24,100 @@ import {
 } from "lucide-react-native";
 import { ROUTES } from "@/constants/routes";
 import { useRouter } from "expo-router";
-import { mockUserProfile } from "@/data/profile-screen";
-import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
-import { useMemo } from "react";
 import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { RootState } from "@/lib/redux/store";
-import { setUserInfo } from "@/features/home/homeSlice";
-import { IUserInfo } from "@/models/user/user.type";
 import { AppColors } from "@/constants/Colors";
+import VNDCurrency from "@/components/Commons/VNDCurrency ";
+import { AppAlert } from "@/components/Commons/AppAlert";
+const UserIcon = require("@/assets/images/icon_avatar_user.jpg");
 
 export default function ProfileScreen() {
-  const [walletState] = useViewModel(WalletViewModel, (state) => state.wallet);
+  const [walletState, walletViewModel] = useViewModel(WalletViewModel, (state) => state.wallet);
   const router = useRouter();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [authState, authViewModel] = useViewModel<
-    RootState["auth"],
-    AuthViewModel
-  >(AuthViewModel, (state) => state.auth);
-
+  const [authState, authViewModel] = useViewModel(AuthViewModel, (state) => state.auth);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showTermsAlert, setShowTermsAlert] = useState(false);
+  const [showAboutAlert, setShowAboutAlert] = useState(false);
+  const URL_WEBAPP = process.env.EXPO_PUBLIC_URL_WEBAPP;
   useEffect(() => {
     if (authState.isAuthenticated) {
       authViewModel.fetchUserInfo().catch((error) => {
-        console.error("Error fetching user info:", error);
+        console.log("Error fetching user info:", error);
       });
     }
   }, [authState.isAuthenticated]);
 
+  const handleRefresh = async () => {
+    if (!authState.isAuthenticated) return;
+    setIsRefreshing(true);
+    await Promise.all([
+      authViewModel.fetchUserInfo(),
+      walletViewModel.getWalletBalance(),
+    ]);
+    setIsRefreshing(false);
+  };
+
   return (
     <View style={styles.container}>
+      <View style={styles.profileCard}>
+        <View style={styles.profileHeader}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Image
+                source={authState.userInfo?.avatarUrl ? { uri: authState.userInfo?.avatarUrl } : UserIcon}
+                style={styles.avatarImage}
+                resizeMode="cover"
+              />
+            </View>
+          </View>
+
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>
+              {authState.userInfo?.fullName}
+            </Text>
+            <Text style={styles.userEmail}>{authState.userInfo?.email}</Text>
+            <Text style={styles.userPhone}>{authState.userInfo?.phone}</Text>
+          </View>
+        </View>
+
+        <View style={styles.walletSection}>
+          <View style={styles.walletContent}>
+            <View style={styles.walletInfo}>
+              <View style={styles.walletHeader}>
+                <Wallet size={16} color="white" />
+                <Text style={styles.walletLabel}>Số dư ví</Text>
+              </View>
+              <Text style={styles.walletBalance}>
+                <VNDCurrency amount={walletState.balance} />
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.topupButton}
+              onPress={() => router.push(ROUTES.MAIN_NO_TABS_WALLET)}
+            >
+              <Text style={styles.topupButtonText}>Xem ví</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={[AppColors.primary]}
+            tintColor={AppColors.primary}
+          />
+        }
       >
-        <View style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <Image
-                  source={{
-                    uri:
-                      authState.userInfo?.avatarUrl ??
-                      "https://cdn-media.sforum.vn/storage/app/media/wp-content/uploads/2024/02/anh-phong-canh-66-1.jpg",
-                  }}
-                  style={styles.avatarImage}
-                  resizeMode="cover"
-                />
-              </View>
-            </View>
-
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>
-                {authState.userInfo?.fullName}
-              </Text>
-              <Text style={styles.userEmail}>{authState.userInfo?.email}</Text>
-              <Text style={styles.userPhone}>{authState.userInfo?.phone}</Text>
-            </View>
-          </View>
-
-          <View style={styles.walletSection}>
-            <View style={styles.walletContent}>
-              <View style={styles.walletInfo}>
-                <View style={styles.walletHeader}>
-                  <Wallet size={16} color="white" />
-                  <Text style={styles.walletLabel}>Số dư ví</Text>
-                </View>
-                <Text style={styles.walletBalance}>
-                  {walletState.balance.toLocaleString("vi-VN")} đ
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.topupButton}
-                onPress={() => router.push(ROUTES.MAIN_NO_TABS_WALLET)}
-              >
-                <Text style={styles.topupButtonText}>Xem ví</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
 
         <View style={styles.menuCard}>
           <View style={styles.menuHeader}>
@@ -117,7 +129,7 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() =>
                 router.push(
-                  "/(main)/(no-tabs)/identification-document-management"
+                  ROUTES.MAIN_NO_TABS_IDENTIFICATION_DOCUMENT_MANAGEMENT
                 )
               }
             >
@@ -131,7 +143,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() =>
-                router.push("/(main)/(no-tabs)/(transaction)/transaction")
+                router.push(ROUTES.MAIN_NO_TABS_HISTORY)
               }
             >
               <View style={styles.menuItemLeft}>
@@ -139,59 +151,52 @@ export default function ProfileScreen() {
                 <Text style={styles.menuItemText}>Lịch sử giao dịch</Text>
               </View>
             </TouchableOpacity>
+            <View style={styles.menuItemsContainer}>
+              {(authState.userInfo?.role as UserRole) === UserRole.Instructor && (
+                <>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() =>
+                      router.push(
+                        ROUTES.MAIN_NO_TABS_SERVICE_PACKAGE_SERVICE_PACKAGE_MANAGEMENT
+                      )
+                    }
+                  >
+                    <View style={styles.menuItemLeft}>
+                      <Package2 size={20} color={AppColors.primary} />
+                      <Text style={styles.menuItemText}>Quản lý gói dịch vụ</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() =>
+                      router.push(ROUTES.MAIN_NO_TABS_INSTRUCTOR_ROUTES)
+                    }
+                  >
+                    <View style={styles.menuItemLeft}>
+                      <Navigation size={20} color={AppColors.primary} />
+                      <Text style={styles.menuItemText}>Quản lý tuyến đường</Text>
+                    </View>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {(authState.userInfo?.role as UserRole) ===
+                UserRole.NoviceDriver && (
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
+                  >
+                    <View style={styles.menuItemLeft}>
+                      <Package2 size={20} color={AppColors.primary} />
+                      <Text style={styles.menuItemText}>Quản lý gói đã mua</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+            </View>
           </View>
         </View>
-
-        <View style={styles.menuCard}>
-          <View style={styles.menuHeader}>
-            <Text style={styles.menuTitle}>Tổng quát</Text>
-          </View>
-          <View style={styles.menuItemsContainer}>
-            {(authState.userInfo?.role as UserRole) === UserRole.Instructor && (
-              <>
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() =>
-                    router.push(
-                      ROUTES.MAIN_NO_TABS_SERVICE_PACKAGE_SERVICE_PACKAGE_MANAGEMENT
-                    )
-                  }
-                >
-                  <View style={styles.menuItemLeft}>
-                    <Package2 size={20} color={AppColors.primary} />
-                    <Text style={styles.menuItemText}>Quản lý gói dịch vụ</Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() =>
-                    router.push(ROUTES.MAIN_NO_TABS_INSTRUCTOR_ROUTES as any)
-                  }
-                >
-                  <View style={styles.menuItemLeft}>
-                    <Navigation size={20} color={AppColors.primary} />
-                    <Text style={styles.menuItemText}>Quản lý tuyến đường</Text>
-                  </View>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {(authState.userInfo?.role as UserRole) ===
-              UserRole.NoviceDriver && (
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => router.push(ROUTES.MAIN_NO_TABS_MY_PACKAGES)}
-              >
-                <View style={styles.menuItemLeft}>
-                  <Package2 size={20} color={AppColors.primary} />
-                  <Text style={styles.menuItemText}>Quản lý gói đã mua</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
         <View style={styles.menuCard}>
           <View style={styles.menuHeader}>
             <Text style={styles.menuTitle}>Thông tin khác</Text>
@@ -200,29 +205,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                Alert.alert(
-                  "Rời khỏi ứng dụng?",
-                  "Bạn có muốn mở trang điều khoản và dịch vụ trong trình duyệt?",
-                  [
-                    {
-                      text: "Hủy",
-                      style: "cancel",
-                    },
-                    {
-                      text: "Mở",
-                      onPress: async () => {
-                        const url =
-                          "http://192.168.1.207:3000/terms-and-sersvices";
-                        const supported = await Linking.canOpenURL(url);
-                        if (supported) {
-                          await Linking.openURL(url);
-                        } else {
-                          Alert.alert("Lỗi", "Không thể mở liên kết này");
-                        }
-                      },
-                    },
-                  ]
-                );
+                setShowTermsAlert(true);
               }}
             >
               <View style={styles.menuItemLeft}>
@@ -233,28 +216,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                Alert.alert(
-                  "Rời khỏi ứng dụng?",
-                  "Bạn có muốn mở trang thông tin về DriveMate trong trình duyệt?",
-                  [
-                    {
-                      text: "Hủy",
-                      style: "cancel",
-                    },
-                    {
-                      text: "Mở",
-                      onPress: async () => {
-                        const url = "http://192.168.1.207:3000/about-us";
-                        const supported = await Linking.canOpenURL(url);
-                        if (supported) {
-                          await Linking.openURL(url);
-                        } else {
-                          Alert.alert("Lỗi", "Không thể mở liên kết này");
-                        }
-                      },
-                    },
-                  ]
-                );
+                setShowAboutAlert(true);
               }}
             >
               <View style={styles.menuItemLeft}>
@@ -275,6 +237,52 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      <AppAlert
+        visible={showTermsAlert}
+        title="Rời khỏi ứng dụng?"
+        message="Bạn có muốn mở trang điều khoản và dịch vụ trong trình duyệt?"
+        primaryButton={{
+          label: "Mở",
+          onPress: async () => {
+            const url = `${URL_WEBAPP}/terms-and-sersvices`;
+            const supported = await Linking.canOpenURL(url);
+            if (supported) {
+              await Linking.openURL(url);
+            } else {
+              Alert.alert("Lỗi", "Không thể mở liên kết này");
+            }
+          },
+        }}
+        secondaryButton={{
+          label: "Hủy",
+          variant: "secondary",
+        }}
+        onDismiss={() => setShowTermsAlert(false)}
+      />
+
+      <AppAlert
+        visible={showAboutAlert}
+        title="Rời khỏi ứng dụng?"
+        message="Bạn có muốn mở trang thông tin về DriveMate trong trình duyệt?"
+        primaryButton={{
+          label: "Mở",
+          onPress: async () => {
+            const url = `${URL_WEBAPP}/about-us`;
+            const supported = await Linking.canOpenURL(url);
+            if (supported) {
+              await Linking.openURL(url);
+            } else {
+              Alert.alert("Lỗi", "Không thể mở liên kết này");
+            }
+          },
+        }}
+        secondaryButton={{
+          label: "Hủy",
+          variant: "secondary",
+        }}
+        onDismiss={() => setShowAboutAlert(false)}
+      />
 
       <Modal
         visible={showLogoutModal}
@@ -376,6 +384,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
+    backgroundColor: AppColors.white,
   },
   userInfo: {
     flex: 1,
