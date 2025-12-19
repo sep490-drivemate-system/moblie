@@ -37,6 +37,16 @@ export const rescheduleSession = createThunk<
     }
 );
 
+export const rejectRoute = createThunk<
+    boolean,
+    { sessionId: string }
+>(
+    HttpMethod.PATCH,
+    "rejectRoute",
+    `/${SESSION_PATH}`,
+    { buildUrl: (payload) => `/${SESSION_PATH}/${payload.sessionId}/reject-route` }
+);
+
 export const getSessionDetail = createThunk<
     ISessionDetailDTO,
     { sessionId: string }
@@ -71,3 +81,4 @@ export const saveSessionRoutes = createThunk<
         }),
     }
 );
+

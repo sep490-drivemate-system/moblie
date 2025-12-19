@@ -1,9 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { BaseState } from '@/models/generic/baseState';
 import {
-    IMyPackgesResponse,
-} from '@/models/package/package';
-import {
     IBookingSession,
     ISessionDetailResponse,
 } from '@/models/booking/booking';
@@ -34,9 +31,10 @@ import {
     getInstructorSchedule,
     getInstructorBookedSessions,
 } from '../schedule/scheduleThunk';
+import { IMyPackges } from '@/models/package/package';
 
 interface BookingState extends BaseState {
-    myPackages: IMyPackgesResponse[];
+    myPackages: IMyPackges[];
 
     bookingSessions: IBookingSession[];
     allSessions: IBookingSession[];

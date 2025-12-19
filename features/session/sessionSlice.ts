@@ -42,6 +42,9 @@ const sessionSlice = createSlice({
         clearSessions: (state) => {
             state.sessions = [];
         },
+        clearSessionDetail: (state) => {
+            state.sessionDetail = null;
+        },
         setSelectedStatus: (state, action: PayloadAction<SessionStatus | "">) => {
             state.selectedStatus = action.payload;
         },

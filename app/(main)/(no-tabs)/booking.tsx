@@ -36,6 +36,7 @@ import { CarViewModel } from "@/viewmodels/car/CarViewModel";
 import { RootState } from "@/lib/redux/store";
 import { ICar } from "@/models/car/car";
 import { adjustWalletBalance } from "@/features/wallet/walletSlice";
+import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
 
 export default function BookingScreen() {
   const router = useRouter();
@@ -79,17 +80,23 @@ export default function BookingScreen() {
     variant: AlertVariant;
   } | null>(null);
 
-  useEffect(() => {
-    console.log("params: ", params);
-  }, []);
+  const showError = (message: string) =>
+    setAlertConfig({
+      visible: true,
+      message,
+      variant: AlertVariant.Error,
+    });
+
 
 
   const [, carViewModel] = useViewModel(CarViewModel, (state: RootState) => state.car);
+
+  const [walletState, walletViewModel] = useViewModel(WalletViewModel, (state: RootState) => state.wallet);
   useEffect(() => {
     if (vehicleId) {
       const fetchCarData = async () => {
         const carData = await carViewModel.getCarById(vehicleId);
-        setCarInfo(carData || null);
+        setCarInfo(carData as ICar | null);
         console.log("carData: ", carData);
       }
       fetchCarData();
@@ -266,17 +273,21 @@ export default function BookingScreen() {
 
     const bookingId = userPackageId || packageId;
 
-    if (!bookingId || !selectedDate || !selectedStartTime || !selectedLocationId) {
-      Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin");
+    if (bookingCost > 0 && bookingCost < walletState.balance) {
+      showError("Số dư không đủ");
       return;
     }
 
-    // Get selected address for coordinates
+    if (!bookingId || !selectedDate || !selectedStartTime || !selectedLocationId) {
+      showError("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
     const pickupAddress = addresses.find(
       (addr) => addr.id === selectedLocationId
     );
     if (!pickupAddress) {
-      Alert.alert("Lỗi", "Không tìm thấy địa chỉ đón");
+      showError("Không tìm thấy địa chỉ đón");
       return;
     }
 
@@ -286,27 +297,18 @@ export default function BookingScreen() {
         (addr) => addr.id === selectedDropoffId
       ) as INoviceDriverAddress;
       if (!dropoffAddress) {
-        Alert.alert("Lỗi", "Vui lòng chọn địa điểm trả");
+        showError("Vui lòng chọn địa điểm trả");
         return;
       }
     }
 
-    console.log(
-      "📍 Selected pickup address:",
-      JSON.stringify(pickupAddress, null, 2)
-    );
-    console.log(
-      "📍 Selected dropoff address:",
-      JSON.stringify(dropoffAddress, null, 2)
-    );
 
     try {
       setIsCreatingSession(true);
 
-      // Combine date and time to create ISO datetime string (keep local timezone)
+
       const startDateTime = new Date(`${selectedDate}T${selectedStartTime}:00`);
 
-      // Format to ISO string but keep local timezone offset instead of converting to UTC
       const year = startDateTime.getFullYear();
       const month = String(startDateTime.getMonth() + 1).padStart(2, '0');
       const day = String(startDateTime.getDate()).padStart(2, '0');
@@ -333,22 +335,13 @@ export default function BookingScreen() {
         endingLongtitude: dropoffAddress.longitude,
       };
 
-      console.log("🚀 Creating session with request:", JSON.stringify(sessionRequest, null, 2));
-
-
 
       const response = await dispatch(createSession(sessionRequest)).unwrap();
 
-      console.log("Session created, response:", response);
-
-      // Extract boolean from GenericResponse wrapper
       const success = (response as any)?.data?.value ?? (response as any)?.value ?? response;
 
-      console.log("Extracted success value:", success);
 
-      // API returns boolean: true = success, false = failed
       if (success === true) {
-        // Update wallet balance in Redux after successful booking
         dispatch(adjustWalletBalance(-bookingCost));
         setAlertConfig({
           visible: true,
@@ -364,10 +357,7 @@ export default function BookingScreen() {
       }
     } catch (error: any) {
       console.error("Failed to create session:", error);
-      Alert.alert(
-        "Lỗi",
-        error?.message || "Không thể tạo lịch học. Vui lòng thử lại."
-      );
+      showError(error?.message || "Không thể tạo lịch học. Vui lòng thử lại.");
     } finally {
       setIsCreatingSession(false);
     }
@@ -562,7 +552,7 @@ export default function BookingScreen() {
             walletBalance={walletBalance}
             isLoading={isLoadingPolicies}
             vehicleId={vehicleId}
-            carPrice={carInfo?.unitPrice || carPrice}
+            carPrice={carInfo?.price || carPrice}
             selectedDuration={selectedDuration}
             sessionNote={sessionNote}
             onSessionNoteChange={setSessionNote}
@@ -581,10 +571,9 @@ export default function BookingScreen() {
 
         {currentStep !== 3 && (
           <TouchableOpacity
-            activeOpacity={canProceedToNextStep() ? 0 : 1}
+            activeOpacity={canProceedToNextStep() ? 0.7 : 1}
             style={[
               styles.continueButton,
-              !canProceedToNextStep() && styles.continueButtonDisabled,
             ]}
             onPress={handleNext}
             disabled={!canProceedToNextStep()}

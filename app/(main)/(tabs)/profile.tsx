@@ -28,7 +28,6 @@ import { UserRole } from "@/models/enum/UserRole.enum";
 import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { WalletViewModel } from "@/viewmodels/wallet/WalletViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
-import { RootState } from "@/lib/redux/store";
 import { AppColors } from "@/constants/Colors";
 import VNDCurrency from "@/components/Commons/VNDCurrency ";
 import { AppAlert } from "@/components/Commons/AppAlert";

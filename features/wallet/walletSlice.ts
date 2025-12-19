@@ -31,6 +31,9 @@ const walletSlice = createSlice({
         adjustWalletBalance: (state, action: PayloadAction<number>) => {
             state.balance += action.payload;
         },
+        subtractWalletBalance: (state, action: PayloadAction<number>) => {
+            state.balance -= action.payload;
+        },
         resetWalletState: () => initialState,
         clearWalletError: (state) => {
             state.errorMessage = null;
@@ -81,6 +84,7 @@ const walletSlice = createSlice({
 export const {
     setWalletBalance,
     adjustWalletBalance,
+    subtractWalletBalance,
     resetWalletState,
     clearWalletError,
     setPaymentCallback,

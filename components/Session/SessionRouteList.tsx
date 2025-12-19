@@ -258,6 +258,7 @@ export default function SessionRouteList({
         instructorId={instructorId as string}
         displaySession={displaySession}
         onCancelPress={onCancelPress}
+        isSimulating={isSimulating}
       />
     </View>
   );

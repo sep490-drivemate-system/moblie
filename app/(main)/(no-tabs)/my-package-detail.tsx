@@ -27,6 +27,7 @@ import { useAppDispatch } from "@/lib/redux/hooks";
 import HeaderList from "@/components/Commons/HeaderList";
 import { ROUTES } from "@/constants/routes";
 import PackageDetailContent from "@/components/Package/PackageDetailContent";
+import { clearSessionDetail } from "@/features/booking/bookingSlice";
 
 export default function PackageDetailScreen() {
   const router = useRouter();
@@ -87,7 +88,7 @@ export default function PackageDetailScreen() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [sessions, setSessions] = useState<IBookingSession[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<"all" | "planning" | "replaning" | "upcoming" | "in_progress" | "completed" | "reschedule" | "cancelled">("all");
+  const [selectedStatus, setSelectedStatus] = useState<"all" | "planning" | "upcoming" | "in_progress" | "completed" | "reschedule" | "cancelled">("all");
 
   // Normalize session status using enum (similar to rental screen)
   const parseSessionStatus = (status: SessionStatus | string | number | undefined): SessionStatus | undefined => {
@@ -108,8 +109,6 @@ export default function PackageDetailScreen() {
     switch (parsed) {
       case SessionStatus.Planning:
         return "#3b82f6"; // blue
-      case SessionStatus.Replaning:
-        return "#8b5cf6"; // purple
       case SessionStatus.Upcoming:
         return "#f59e0b"; // amber
       case SessionStatus.InProgress:
@@ -130,8 +129,6 @@ export default function PackageDetailScreen() {
     switch (parsed) {
       case SessionStatus.Planning:
         return "Lên lộ trình";
-      case SessionStatus.Replaning:
-        return "Lộ trình lại";
       case SessionStatus.Upcoming:
         return "Sắp diễn ra";
       case SessionStatus.InProgress:
@@ -152,8 +149,6 @@ export default function PackageDetailScreen() {
     switch (parsed) {
       case SessionStatus.Planning:
         return Navigation;
-      case SessionStatus.Replaning:
-        return RefreshCw;
       case SessionStatus.Upcoming:
         return Calendar;
       case SessionStatus.InProgress:
@@ -180,7 +175,7 @@ export default function PackageDetailScreen() {
         const sessionsData = (result as any)?.value ?? result ?? [];
         setSessions(sessionsData);
       } catch (error) {
-        console.error("Failed to fetch sessions:", error);
+        console.log("Failed to fetch sessions:", error);
         setSessions([]);
       } finally {
         setIsLoadingSessions(false);
@@ -200,7 +195,7 @@ export default function PackageDetailScreen() {
             const sessionsData = (result as any)?.value ?? result ?? [];
             setSessions(sessionsData);
           } catch (error) {
-            console.error("Failed to refresh sessions:", error);
+            console.log("Failed to refresh sessions:", error);
           }
         };
         fetchSessions();
@@ -209,10 +204,9 @@ export default function PackageDetailScreen() {
   );
 
   // Map status to filter key
-  const mapStatusKey = (status: any): "planning" | "replaning" | "upcoming" | "in_progress" | "completed" | "reschedule" | "cancelled" => {
+  const mapStatusKey = (status: any): "planning" | "upcoming" | "in_progress" | "completed" | "reschedule" | "cancelled" => {
     const statusStr = String(status).toLowerCase();
     if (statusStr.includes("planning") || statusStr.includes("pending")) return "planning";
-    if (statusStr.includes("replaning")) return "replaning";
     if (statusStr.includes("upcoming")) return "upcoming";
     if (statusStr.includes("in_progress") || statusStr.includes("inprogress")) return "in_progress";
     if (statusStr.includes("completed")) return "completed";
@@ -226,7 +220,6 @@ export default function PackageDetailScreen() {
     const counts = {
       all: sessions.length,
       planning: 0,
-      replaning: 0,
       upcoming: 0,
       in_progress: 0,
       completed: 0,
@@ -251,7 +244,6 @@ export default function PackageDetailScreen() {
   const STATUS_OPTIONS = [
     { key: "all" as const, label: "Tất cả" },
     { key: "planning" as const, label: "Lên lộ trình" },
-    { key: "replaning" as const, label: "Lộ trình lại" },
     { key: "upcoming" as const, label: "Sắp diễn ra" },
     { key: "in_progress" as const, label: "Đang diễn ra" },
     { key: "completed" as const, label: "Đã hoàn thành" },
@@ -392,7 +384,7 @@ export default function PackageDetailScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      <HeaderList actionReturnScreen={ROUTES.MY_PACKAGES as any} title="Chi tiết gói" colors={[AppColors.primary, AppColors.gradientStart, AppColors.gradientEnd]} />
+      <HeaderList onRightActionPress={() => dispatch(clearSessionDetail())} actionReturnScreen={ROUTES.MY_PACKAGES as any} title="Chi tiết gói" colors={[AppColors.primary, AppColors.gradientStart, AppColors.gradientEnd]} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <PackageDetailContent
@@ -421,17 +413,15 @@ export default function PackageDetailScreen() {
                     ? "#cbd5f5"
                     : option.key === "planning"
                       ? "#3b82f6"
-                      : option.key === "replaning"
-                        ? "#8b5cf6"
-                        : option.key === "upcoming"
-                          ? "#f59e0b"
-                          : option.key === "in_progress"
-                            ? AppColors.primary
-                            : option.key === "completed"
-                              ? "#94a3b8"
-                              : option.key === "reschedule"
-                                ? AppColors.blue
-                                : AppColors.red;
+                      : option.key === "upcoming"
+                        ? "#f59e0b"
+                        : option.key === "in_progress"
+                          ? AppColors.primary
+                          : option.key === "completed"
+                            ? "#94a3b8"
+                            : option.key === "reschedule"
+                              ? AppColors.blue
+                              : AppColors.red;
 
                 return (
                   <TouchableOpacity

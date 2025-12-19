@@ -36,8 +36,6 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
         super(dispatch, getCurrentState);
     }
 
-
-
     async fetchMyPackages(payload: IGetUserPackages): Promise<PaginatedGeneric<IMyPackges> | null> {
         const result = await this.executeAsync(async () => {
             const response = await this.dispatch(getMyPackages(payload)).unwrap();
@@ -112,7 +110,6 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
         }
     }
 
-    // Convert string status from API to BookingStatus enum
     private parseBookingStatus(status: string | BookingStatus): BookingStatus {
         if (typeof status === 'number') {
             return status as BookingStatus;

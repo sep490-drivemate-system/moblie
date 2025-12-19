@@ -63,6 +63,7 @@ export default function DrivingSessionDetailScreen() {
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isSavingRoutes, setIsSavingRoutes] = useState(false);
+  const [isRejectingRoute, setIsRejectingRoute] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState<string>("");
   const [alertMessage, setAlertMessage] = useState<string>("");
@@ -420,7 +421,7 @@ export default function DrivingSessionDetailScreen() {
 
         await sessionViewModel.getSessionDetail(sessionId);
       } catch (error) {
-        console.error("Error updating session status:", error);
+        console.log("Error updating session status:", error);
       }
     }
 
@@ -474,19 +475,35 @@ export default function DrivingSessionDetailScreen() {
   }, [sessionId, dispatch, router, sessionViewModel]);
 
   const handleRejectRoute = useCallback(async () => {
-    if (!sessionId || typeof sessionId !== "string") {
-      Alert.alert("Lỗi", "Không tìm thấy thông tin buổi tập.");
-      return;
-    }
-
+    if (isRejectingRoute) return;
     try {
-      Alert.alert("Thông báo", "Đã từ chối lộ trình");
-      await sessionViewModel.getSessionDetail(sessionId);
+      setIsRejectingRoute(true);
+      const result = await sessionViewModel.rejectRoute(sessionId as string);
+      if (!result) {
+        setAlertTitle("Lỗi");
+        setAlertMessage("Không thể từ chối lộ trình. Vui lòng thử lại.");
+        setAlertVariant(AlertVariant.Error);
+        setAlertPrimaryButton({
+          label: "OK",
+          onPress: () => setAlertVisible(false),
+        });
+        setAlertVisible(true);
+        return;
+      }
+      await sessionViewModel.getSessionDetail(sessionId as string);
     } catch (error) {
-      console.error("Error rejecting route:", error);
-      Alert.alert("Lỗi", "Không thể từ chối lộ trình");
+      setAlertTitle("Lỗi");
+      setAlertMessage("Không thể từ chối lộ trình. Vui lòng thử lại.");
+      setAlertVariant(AlertVariant.Error);
+      setAlertPrimaryButton({
+        label: "OK",
+        onPress: () => setAlertVisible(false),
+      });
+      setAlertVisible(true);
+    } finally {
+      setIsRejectingRoute(false);
     }
-  }, [sessionId, dispatch]);
+  }, [isRejectingRoute, sessionId, sessionViewModel]);
 
 
   return (
