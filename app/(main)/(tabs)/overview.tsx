@@ -1222,6 +1222,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 4,
+    marginTop: 20,
   },
   pageTitle: {
     fontSize: 22,

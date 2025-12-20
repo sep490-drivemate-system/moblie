@@ -20,9 +20,7 @@ import { AppColors } from "@/constants/Colors";
 export default function WaitingConfirmScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [instructorId, setInstructorId] = useState<string | null>(
-    "fcab8704-5a0e-4c63-be87-5ce403bde784"
-  );
+  const [instructorId, setInstructorId] = useState<string | null>(null);
   const [applicationStatus, setApplicationStatus] = useState<number | null>(
     null
   );
@@ -161,8 +159,10 @@ export default function WaitingConfirmScreen() {
   }, []);
 
   useEffect(() => {
-    fetchApplicantStatus();
-  }, []);
+    if (instructorId) {
+      fetchApplicantStatus();
+    }
+  }, [instructorId, fetchApplicantStatus]);
 
   useFocusEffect(
     useCallback(() => {
@@ -173,8 +173,10 @@ export default function WaitingConfirmScreen() {
 
       checkTermsCompleted();
 
-      fetchApplicantStatus();
-    }, [fetchApplicantStatus])
+      if (instructorId) {
+        fetchApplicantStatus();
+      }
+    }, [fetchApplicantStatus, instructorId])
   );
 
   return (
