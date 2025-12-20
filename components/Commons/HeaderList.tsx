@@ -19,6 +19,8 @@ export interface HeaderListProps {
   onBackPress?: () => void;
   title: string;
   description?: string;
+  rightActionLabel?: string;
+  onRightActionPress?: () => void;
   colors?: readonly [ColorValue, ColorValue, ...ColorValue[]];
   showCurve?: boolean;
   gradientStart?: { x: number; y: number };
@@ -32,6 +34,8 @@ export default function HeaderList({
   onBackPress,
   title,
   description,
+  rightActionLabel,
+  onRightActionPress,
   colors = [AppColors.primary, AppColors.gradientStart, AppColors.gradientEnd],
   showCurve = true,
   gradientStart = { x: 0, y: 0 },
@@ -75,14 +79,25 @@ export default function HeaderList({
           </TouchableOpacity>
         )}
         <View style={styles.headerTextContainer}>
-          <Text
-            style={[
-              styles.headerTitle,
-              !description && styles.headerTitleNoDescription,
-            ]}
-          >
-            {title}
-          </Text>
+          <View style={styles.headerTextRow}>
+            <Text
+              style={[
+                styles.headerTitle,
+                !description && styles.headerTitleNoDescription,
+              ]}
+            >
+              {title}
+            </Text>
+            {rightActionLabel && onRightActionPress && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={onRightActionPress}
+                style={styles.rightActionButton}
+              >
+                <Text style={styles.rightActionText}>{rightActionLabel}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {description && (
             <Text style={styles.headerDescription}>{description}</Text>
           )}
@@ -116,6 +131,12 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     flex: 1,
+  },
+  headerTextRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
   },
   headerTitle: {
     fontSize: 24,
@@ -167,5 +188,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
+  },
+  rightActionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.85)",
+    backgroundColor: "rgba(15, 23, 42, 0.16)",
+  },
+  rightActionText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#ffffff",
   },
 });

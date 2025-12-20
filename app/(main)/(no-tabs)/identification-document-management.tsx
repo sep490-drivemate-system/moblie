@@ -26,7 +26,6 @@ import { ROUTES } from "@/constants/routes";
 import CustomAlert from "@/components/CustomAlert";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { DocumentViewModel } from "@/viewmodels/document/documentViewModel";
-import { UserProfile, DocumentRecord } from "@/models/document/document";
 import { RootState } from "@/lib/redux/store";
 import { UserRole } from "@/models/enum/UserRole.enum";
 
@@ -50,14 +49,12 @@ export default function IdentificationDocumentManagementInstructorScreen() {
       showCustomAlert(
         "Lỗi",
         documentState.errorMessage ||
-          "Không thể tải dữ liệu. Vui lòng thử lại.",
+        "Không thể tải dữ liệu. Vui lòng thử lại.",
         [{ text: "OK", onPress: () => setShowAlert(false) }]
       );
     });
   }, []);
 
-  // Modal states
-  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showEmergencyContactNameModal, setShowEmergencyContactNameModal] =
@@ -544,7 +541,7 @@ export default function IdentificationDocumentManagementInstructorScreen() {
                         style={[
                           styles.fileGrid,
                           record.id === "driverLicense" &&
-                            styles.fileGridStacked,
+                          styles.fileGridStacked,
                         ]}
                       >
                         {record.files.map((file) => (
@@ -553,7 +550,7 @@ export default function IdentificationDocumentManagementInstructorScreen() {
                             style={[
                               styles.file,
                               record.id === "driverLicense" &&
-                                styles.fileFullWidth,
+                              styles.fileFullWidth,
                             ]}
                           >
                             <Text style={styles.fileLabel}>{file.label}</Text>
@@ -608,7 +605,7 @@ export default function IdentificationDocumentManagementInstructorScreen() {
                         style={[
                           styles.fileGrid,
                           record.id === "driverLicense" &&
-                            styles.fileGridStacked,
+                          styles.fileGridStacked,
                         ]}
                       >
                         {record.files.map((file) => (
@@ -617,7 +614,7 @@ export default function IdentificationDocumentManagementInstructorScreen() {
                             style={[
                               styles.file,
                               record.id === "driverLicense" &&
-                                styles.fileFullWidth,
+                              styles.fileFullWidth,
                             ]}
                           >
                             <View style={styles.fileLabelContainer}>

@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Image } from "react-native";
-import { LucideUsers, Search, X, Star } from "lucide-react-native";
+import { LucideUsers, Search, X, Star, Filter } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { IInstructors } from "@/models/instructor/instructor.type";
 import {
@@ -29,7 +29,6 @@ import {
 } from "@/features/instructor/instructorSlice";
 import HeaderList from "@/components/Commons/HeaderList";
 import SearchBar from "@/components/Commons/SearchBar";
-import TabFilter from "@/components/Commons/TabFilter";
 import { ROUTES } from "@/constants/routes";
 import { UserRole } from "@/models/enum/UserRole.enum";
 import { RootState } from "@/lib/redux/store";
@@ -51,7 +50,6 @@ function InstructorsScreen() {
     allInstructors,
     displayedInstructors,
     searchQuery,
-    filters,
     sortBy,
     sortAscending,
     isRefreshing,
@@ -60,14 +58,11 @@ function InstructorsScreen() {
     pagination,
   } = instructorState;
 
-  // Local search state để debounce
   const [localSearchQuery, setLocalSearchQuery] = useState("");
 
-  // Pagination helpers
   const totalPages = Math.ceil(pagination.totalItems / pagination.itemsPerPage);
   const hasMorePages = pagination.currentPage < totalPages;
 
-  // Chỉ fetch instructors khi tab được focus và user là NoviceDriver
   useFocusEffect(
     React.useCallback(() => {
       if (userRole === UserRole.NoviceDriver) {
@@ -76,18 +71,15 @@ function InstructorsScreen() {
     }, [userRole, instructorViewModel])
   );
 
-  // Sync localSearchQuery với searchQuery từ Redux khi component mount
   useEffect(() => {
     if (searchQuery && !localSearchQuery) {
       setLocalSearchQuery(searchQuery);
     }
   }, [searchQuery]);
 
-  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       if (localSearchQuery !== searchQuery) {
-        // Gọi API backend với SearchKey parameter
         instructorViewModel.searchInstructors(localSearchQuery);
       }
     }, 500);
@@ -99,7 +91,6 @@ function InstructorsScreen() {
     if (allInstructors.length === 0) return;
     let sorted = [...allInstructors];
 
-    // Sort by Experience or Rating
     if (sortBy === SortType.Experience) {
       sorted.sort((a, b) => {
         const aYears = parseInt(a.experienceYear) || 0;
@@ -118,7 +109,6 @@ function InstructorsScreen() {
     dispatch(setDisplayedInstructors(sorted));
   }, [sortBy, sortAscending, allInstructors, dispatch]);
 
-  // Action handlers
   const handleSearchChange = (query: string) => {
     setLocalSearchQuery(query);
     instructorViewModel.updateSearchQuery(query);
@@ -127,19 +117,15 @@ function InstructorsScreen() {
   const handleSortChange = (value: string) => {
     if (value === "exp") {
       if (sortBy === SortType.Experience) {
-        // Nếu đang sort theo kinh nghiệm, toggle giữa tăng/giảm
         dispatch(setSortAscending(!sortAscending));
       } else {
-        // Nếu chưa sort theo kinh nghiệm, bắt đầu với tăng dần
         dispatch(setSortBy(SortType.Experience));
         dispatch(setSortAscending(true));
       }
     } else if (value === "rating") {
       if (sortBy === SortType.Rating) {
-        // Nếu đang sort theo rating, toggle giữa tăng/giảm
         dispatch(setSortAscending(!sortAscending));
       } else {
-        // Nếu chưa sort theo rating, bắt đầu với tăng dần
         dispatch(setSortBy(SortType.Rating));
         dispatch(setSortAscending(true));
       }
@@ -154,7 +140,8 @@ function InstructorsScreen() {
     await instructorViewModel.refreshInstructors();
   };
 
-  // Infinite scroll - load more và append data
+  const [showSortFilter, setShowSortFilter] = useState(false);
+
   const loadMoreInstructors = () => {
     if (hasMorePages && !isLoading) {
       instructorViewModel.loadMoreInstructors();
@@ -221,43 +208,79 @@ function InstructorsScreen() {
   return (
     <View style={styles.container}>
       <HeaderList title="Danh sách người hướng dẫn" />
-      <SearchBar
-        value={localSearchQuery}
-        onChangeText={handleSearchChange}
-        placeholder="Tìm kiếm người hướng dẫn..."
-      />
+      <View style={styles.filtersContainer}>
+        <View style={styles.searchRow}>
+          <SearchBar
+            value={localSearchQuery}
+            onChangeText={handleSearchChange}
+            placeholder="Tìm kiếm người hướng dẫn..."
+            style={styles.searchBarWrapper}
+          />
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              showSortFilter && styles.filterButtonActive,
+            ]}
+            activeOpacity={0.9}
+            onPress={() => setShowSortFilter((prev) => !prev)}
+          >
+            <Filter
+              size={18}
+              color={showSortFilter ? "#ffffff" : AppColors.primary}
+              strokeWidth={2}
+            />
+          </TouchableOpacity>
+        </View>
 
-      <TabFilter
-        options={[
-          {
-            value: "exp",
-            label:
-              sortBy === SortType.Experience
-                ? sortAscending
-                  ? "Kinh nghiệm ↑"
-                  : "Kinh nghiệm ↓"
-                : "Kinh nghiệm",
-          },
-          {
-            value: "rating",
-            label:
-              sortBy === SortType.Rating
-                ? sortAscending
-                  ? "Đánh giá ↑"
-                  : "Đánh giá ↓"
-                : "Đánh giá",
-          },
-        ]}
-        activeValue={
-          sortBy === SortType.Experience
-            ? "exp"
-            : sortBy === SortType.Rating
-            ? "rating"
-            : ""
-        }
-        onSelect={handleSortChange}
-        showCount={false}
-      />
+        {showSortFilter && (
+          <View style={styles.sortChipsRow}>
+            <TouchableOpacity
+              style={[
+                styles.sortChip,
+                sortBy === SortType.Experience && styles.sortChipActive,
+              ]}
+              onPress={() => handleSortChange("exp")}
+              activeOpacity={0.9}
+            >
+              <Text
+                style={[
+                  styles.sortChipText,
+                  sortBy === SortType.Experience && styles.sortChipTextActive,
+                ]}
+              >
+                Kinh nghiệm{" "}
+                {sortBy === SortType.Experience
+                  ? sortAscending
+                    ? "↑"
+                    : "↓"
+                  : ""}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.sortChip,
+                sortBy === SortType.Rating && styles.sortChipActive,
+              ]}
+              onPress={() => handleSortChange("rating")}
+              activeOpacity={0.9}
+            >
+              <Text
+                style={[
+                  styles.sortChipText,
+                  sortBy === SortType.Rating && styles.sortChipTextActive,
+                ]}
+              >
+                Đánh giá{" "}
+                {sortBy === SortType.Rating
+                  ? sortAscending
+                    ? "↑"
+                    : "↓"
+                  : ""}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
       <FlatList
         data={displayedInstructors}
         renderItem={renderInstructorCard}
@@ -272,14 +295,12 @@ function InstructorsScreen() {
             tintColor={AppColors.primary}
           />
         }
-        // Infinite scroll pagination
         onEndReached={loadMoreInstructors}
         onEndReachedThreshold={0.3}
         ListFooterComponent={renderLoadingFooter}
         ListEmptyComponent={renderEmptyState}
       />
 
-      {/* Error Message */}
       {errorMessage && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{errorMessage}</Text>
@@ -301,10 +322,6 @@ const styles = StyleSheet.create({
   },
   filtersContainer: {
     backgroundColor: "#ffffff",
-    paddingTop: 12,
-    paddingBottom: 12,
-    paddingHorizontal: 0,
-    borderBottomWidth: 1,
     borderBottomColor: AppColors.gray200,
   },
   filterLabel: {
@@ -336,6 +353,52 @@ const styles = StyleSheet.create({
   listContainer: {
     padding: 20,
     gap: 20,
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  searchBarWrapper: {
+    flex: 1,
+  },
+  filterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    marginRight: 15,
+    borderWidth: 1,
+    borderColor: AppColors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+  },
+  filterButtonActive: {
+    backgroundColor: AppColors.primary,
+  },
+  sortChipsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+  sortChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: AppColors.gray300,
+    backgroundColor: "#f9fafb",
+  },
+  sortChipActive: {
+    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary + "15",
+  },
+  sortChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: AppColors.gray700,
+  },
+  sortChipTextActive: {
+    color: AppColors.primary,
   },
   instructorCard: {
     backgroundColor: AppColors.white,

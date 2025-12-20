@@ -4,6 +4,7 @@ import { Award, Route, MessageSquare } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { IUserInfo } from "@/features/booking/bookingThunk";
 import { PackageDetailData } from "@/viewmodels/booking/PackageDetailViewModel";
+import { BookingStatus } from "@/models/package/user-package";
 
 interface PackageDetailContentProps {
   packageData: PackageDetailData | null;
@@ -14,6 +15,7 @@ interface PackageDetailContentProps {
   };
   onOpenFeedback: () => void;
 }
+
 
 export default function PackageDetailContent({
   packageData,
@@ -150,17 +152,24 @@ export default function PackageDetailContent({
             </View>
           </View>
 
-          {/* Feedback Button */}
-          <View style={{ marginTop: 16 }}>
-            <TouchableOpacity
-              style={styles.feedbackButton}
-              onPress={onOpenFeedback}
-              activeOpacity={0.7}
-            >
-              <MessageSquare size={20} color={AppColors.primary} strokeWidth={2} />
-              <Text style={styles.feedbackButtonText}>Đánh giá</Text>
-            </TouchableOpacity>
-          </View>
+          {(() => {
+            const statusValue = typeof packageData.status === 'string'
+              ? BookingStatus[packageData.status as keyof typeof BookingStatus]
+              : packageData.status;
+
+            return statusValue === BookingStatus.Used ? (
+              <View style={{ marginTop: 16 }}>
+                <TouchableOpacity
+                  style={styles.feedbackButton}
+                  onPress={onOpenFeedback}
+                  activeOpacity={0.7}
+                >
+                  <MessageSquare size={20} color={AppColors.primary} strokeWidth={2} />
+                  <Text style={styles.feedbackButtonText}>Đánh giá</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null;
+          })()}
         </View>
       )}
     </>

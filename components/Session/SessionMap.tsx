@@ -421,7 +421,7 @@ export default function SessionMap({
                   }}
                   title={`Điểm ${point.order + (sessionState?.sessionDetail?.routeDetails?.length ?? 0) + 1}`}
                   description={point.streetName || "Điểm mới"}
-                  pinColor="orange"
+                  pinColor="blue"
                   draggable={allowDirectMapPress}
                   onDragEnd={
                     allowDirectMapPress && onSelectedPointDrag

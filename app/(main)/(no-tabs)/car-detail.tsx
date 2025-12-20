@@ -16,7 +16,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -205,81 +204,81 @@ export default function CarDetailScreen() {
           carImages.left ||
           carImages.right ||
           carImages.interior) && (
-          <View style={styles.galleryCard}>
-            <Text style={styles.sectionTitle}>Hình ảnh xe</Text>
+            <View style={styles.galleryCard}>
+              <Text style={styles.sectionTitle}>Hình ảnh xe</Text>
 
-            {/* Main grid layout - 2 columns */}
-            <View style={styles.imageGrid}>
-              {carImages.front && (
+              {/* Main grid layout - 2 columns */}
+              <View style={styles.imageGrid}>
+                {carImages.front && (
+                  <TouchableOpacity
+                    style={styles.imageItem}
+                    onPress={() => openImageViewer(carImages.front)}
+                    activeOpacity={0.9}
+                  >
+                    <Image
+                      source={{ uri: carImages.front }}
+                      style={styles.galleryImage}
+                    />
+                    <Text style={styles.imageLabel}>Mặt trước</Text>
+                  </TouchableOpacity>
+                )}
+                {carImages.back && (
+                  <TouchableOpacity
+                    style={styles.imageItem}
+                    onPress={() => openImageViewer(carImages.back)}
+                    activeOpacity={0.9}
+                  >
+                    <Image
+                      source={{ uri: carImages.back }}
+                      style={styles.galleryImage}
+                    />
+                    <Text style={styles.imageLabel}>Mặt sau</Text>
+                  </TouchableOpacity>
+                )}
+                {carImages.left && (
+                  <TouchableOpacity
+                    style={styles.imageItem}
+                    onPress={() => openImageViewer(carImages.left)}
+                    activeOpacity={0.9}
+                  >
+                    <Image
+                      source={{ uri: carImages.left }}
+                      style={styles.galleryImage}
+                    />
+                    <Text style={styles.imageLabel}>Bên trái</Text>
+                  </TouchableOpacity>
+                )}
+                {carImages.right && (
+                  <TouchableOpacity
+                    style={styles.imageItem}
+                    onPress={() => openImageViewer(carImages.right)}
+                    activeOpacity={0.9}
+                  >
+                    <Image
+                      source={{ uri: carImages.right }}
+                      style={styles.galleryImage}
+                    />
+                    <Text style={styles.imageLabel}>Bên phải</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Interior image - full width */}
+              {carImages.interior && (
                 <TouchableOpacity
-                  style={styles.imageItem}
-                  onPress={() => openImageViewer(carImages.front)}
+                  style={styles.interiorContainer}
+                  onPress={() => openImageViewer(carImages.interior)}
                   activeOpacity={0.9}
                 >
                   <Image
-                    source={{ uri: carImages.front }}
-                    style={styles.galleryImage}
+                    source={{ uri: carImages.interior }}
+                    style={styles.interiorImage}
                   />
-                  <Text style={styles.imageLabel}>Mặt trước</Text>
-                </TouchableOpacity>
-              )}
-              {carImages.back && (
-                <TouchableOpacity
-                  style={styles.imageItem}
-                  onPress={() => openImageViewer(carImages.back)}
-                  activeOpacity={0.9}
-                >
-                  <Image
-                    source={{ uri: carImages.back }}
-                    style={styles.galleryImage}
-                  />
-                  <Text style={styles.imageLabel}>Mặt sau</Text>
-                </TouchableOpacity>
-              )}
-              {carImages.left && (
-                <TouchableOpacity
-                  style={styles.imageItem}
-                  onPress={() => openImageViewer(carImages.left)}
-                  activeOpacity={0.9}
-                >
-                  <Image
-                    source={{ uri: carImages.left }}
-                    style={styles.galleryImage}
-                  />
-                  <Text style={styles.imageLabel}>Bên trái</Text>
-                </TouchableOpacity>
-              )}
-              {carImages.right && (
-                <TouchableOpacity
-                  style={styles.imageItem}
-                  onPress={() => openImageViewer(carImages.right)}
-                  activeOpacity={0.9}
-                >
-                  <Image
-                    source={{ uri: carImages.right }}
-                    style={styles.galleryImage}
-                  />
-                  <Text style={styles.imageLabel}>Bên phải</Text>
+                  <Text style={styles.imageLabel}>Nội thất</Text>
                 </TouchableOpacity>
               )}
             </View>
-
-            {/* Interior image - full width */}
-            {carImages.interior && (
-              <TouchableOpacity
-                style={styles.interiorContainer}
-                onPress={() => openImageViewer(carImages.interior)}
-                activeOpacity={0.9}
-              >
-                <Image
-                  source={{ uri: carImages.interior }}
-                  style={styles.interiorImage}
-                />
-                <Text style={styles.imageLabel}>Nội thất</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+          )}
 
         <View style={{ height: 100 }} />
       </ScrollView>

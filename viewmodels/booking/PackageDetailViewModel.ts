@@ -5,6 +5,7 @@ import { IUserInfo } from "@/models/user/user.type";
 import { getUserById } from "@/features/user/userThunk";
 import { AppColors } from "@/constants/Colors";
 import { ROUTES } from "@/constants/routes";
+import { BookingStatus } from "@/models/package/user-package";
 
 export type PackageDetailData = {
     id: string;
@@ -17,7 +18,7 @@ export type PackageDetailData = {
     remainingHours: number;
     purchaseDate: string;
     price?: number;
-    status: string;
+    status: BookingStatus;
     cancelDate?: string | null;
     carId?: string;
     carPrice?: number;
@@ -61,7 +62,7 @@ export class PackageDetailViewModel {
                     packageDataFromParams.buyDate || new Date().toISOString(),
                 price: packageDataFromParams.price,
                 status:
-                    packageDataFromParams.bookingStatus === 1 ? "paid" : "in_progress",
+                    packageDataFromParams.bookingStatus as BookingStatus,
                 cancelDate: packageDataFromParams.cancelDate || null,
                 carId: packageDataFromParams.carId,
                 carPrice: packageDataFromParams.carPrice,

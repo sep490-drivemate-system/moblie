@@ -40,6 +40,7 @@ import { PackageViewModel } from "@/viewmodels/package/PackageViewModel";
 import { ICar } from "@/models/car/car";
 import { InstructorViewModel } from "@/viewmodels/instructor/InstructorViewModel";
 import { InstructorListCarViewModel } from "@/viewmodels/car/InstructorListCarViewModel";
+import { subtractWalletBalance } from "@/features/wallet/walletSlice";
 
 const getGenderText = (gender: Gender): string => {
   return gender === Gender.Male ? "Nam" : "Nữ";
@@ -52,6 +53,7 @@ export default function InstructorDetailScreen() {
     BookingViewModel,
     (state) => state.booking
   );
+
   const { instructorId } = useLocalSearchParams();
   const [instructor, setInstructor] = useState<IInstructors | null>(null);
   const [packages, setPackages] = useState<IInstructorPackages[]>([]);
@@ -128,7 +130,7 @@ export default function InstructorDetailScreen() {
         friction: 7,
         tension: 40,
         useNativeDriver: true,
-      }).start(() => {});
+      }).start(() => { });
     } else {
       scaleAnim.setValue(0.95);
     }
@@ -153,6 +155,7 @@ export default function InstructorDetailScreen() {
     setSelectedVehicle(null);
     setShowConfirmModal(true);
     scaleAnim.setValue(0.9);
+
   };
 
   const handleConfirmPurchase = async () => {
@@ -193,6 +196,7 @@ export default function InstructorDetailScreen() {
       selectedPackage,
       selectedVehicleId: selectedVehicle,
     });
+    dispatch(subtractWalletBalance(selectedPackage.price));
     setShowConfirmModal(false);
     setIsProcessing(false);
   };

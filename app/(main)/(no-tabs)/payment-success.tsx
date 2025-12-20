@@ -16,6 +16,8 @@ import { ROUTES } from '@/constants/routes';
 import { WalletViewModel } from '@/viewmodels/wallet/WalletViewModel';
 import { useViewModel } from '@/viewmodels/shared/BaseViewModel';
 import { RootState } from '@/lib/redux/store';
+import { adjustWalletBalance } from '@/features/wallet/walletSlice';
+import { useAppDispatch } from '@/lib/redux/hooks';
 
 const { width } = Dimensions.get('window');
 
@@ -31,45 +33,43 @@ export default function PaymentSuccessScreen() {
     WalletViewModel,
     walletSelector
   );
+  const dispatch = useAppDispatch();
 
   const hasProcessedRef = useRef(false);
   const lastParamsStringRef = useRef<string>('');
 
   useEffect(() => {
-    const paramsObj = params as Record<string, string>;
-    const queryString = Object.keys(paramsObj)
-      .map(k => `${encodeURIComponent(k)}=${encodeURIComponent(paramsObj[k])}`)
-      .join("&");
-      
+    const processPayment = async () => {
+      const paramsObj = params as Record<string, string>;
+      const queryString = Object.keys(paramsObj)
+        .map(k => `${encodeURIComponent(k)}=${encodeURIComponent(paramsObj[k])}`)
+        .join("&");
 
-    if (queryString && lastParamsStringRef.current !== queryString) {
-      lastParamsStringRef.current = queryString;
-      hasProcessedRef.current = true;
-      walletViewModel.handlePaymentCallback(queryString);
-    }
-  }, [params]);
+      if (queryString && lastParamsStringRef.current !== queryString) {
+        lastParamsStringRef.current = queryString;
+        hasProcessedRef.current = true;
+        const amount = await walletViewModel.handlePaymentCallback(queryString);
+        if (amount !== null) {
+          dispatch(adjustWalletBalance(amount));
+        }
+      }
+    };
 
+    processPayment();
+  }, [params, dispatch, walletViewModel]);
 
   useEffect(() => {
     Animated.sequence([
-      Animated.spring(scaleAnim, {
+      Animated.timing(fadeAnim, {
         toValue: 1,
-        tension: 50,
-        friction: 7,
+        duration: 800,
         useNativeDriver: true,
       }),
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ]),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
     ]).start();
   }, []);
 

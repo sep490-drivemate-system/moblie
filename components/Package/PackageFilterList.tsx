@@ -21,6 +21,7 @@ import CustomFilter, {
 import { AppColors } from "@/constants/Colors";
 import { PackageFilterOption } from "@/models/package/package.enum";
 import { DrivingSkill, Package, RoadType } from "@/models/package/package";
+import VNDCurrency from "../Commons/VNDCurrency ";
 interface PackageFilterListProps {
   packages: Package[];
   roadTypes: RoadType[];
@@ -128,7 +129,7 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
 
     if (filterHasVehicle !== null) {
       result = result.filter((pkg) => {
-        return pkg.allowSelfCar === filterHasVehicle;
+        return pkg.isRentalCar === filterHasVehicle;
       });
     }
 
@@ -144,7 +145,7 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
     try {
       await Promise.resolve(onLoadMore());
     } catch (error) {
-      console.error("Error loading more packages:", error);
+      console.log("Error loading more packages:", error);
     }
   };
 
@@ -338,7 +339,6 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
   };
 
   const renderDrivingSkillItem = ({ item }: { item: DrivingSkill }) => {
-    // Sử dụng tempSelectedDrivingSkills khi modal đang mở
     const isSelected = showDrivingSkillsModal
       ? tempSelectedDrivingSkills.includes(item.id)
       : selectedDrivingSkills.includes(item.id);
@@ -350,7 +350,6 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
           if (showDrivingSkillsModal) {
             toggleDrivingSkillInModal(item.id);
           } else {
-            // Nếu không phải trong modal, apply ngay (backward compatibility)
             if (onSelectedDrivingSkillsChange) {
               const newSkills = selectedDrivingSkills.includes(item.id)
                 ? selectedDrivingSkills.filter((id: string) => id !== item.id)
@@ -402,7 +401,7 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
           />
           <View style={styles.instructorInfo}>
             <Text style={styles.instructorName}>{item.instructorName}</Text>
-            {item.carCount > 0 ? (
+            {item.isRentalCar ? (
               <View style={styles.badgeWithVehicle}>
                 <Text style={styles.badgeText}>Người hướng dẫn và xe</Text>
               </View>
@@ -435,21 +434,15 @@ const PackageFilterList: React.FC<PackageFilterListProps> = ({
       <View style={styles.cardFooter}>
         <View style={styles.priceContainer}>
           <Text style={styles.price}>
-            {item.price.toLocaleString("vi-VN")} đ
+            <VNDCurrency amount={item.price} />
           </Text>
         </View>
         <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={styles.detailButton}
-            onPress={() => onPackagePress(item)}
-          >
-            <Text style={styles.detailButtonText}>Chi tiết</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
             style={styles.buyButton}
             onPress={() => onPackagePress(item)}
           >
-            <Text style={styles.buyButtonText}>Mua ngay</Text>
+            <Text style={styles.buyButtonText}>Chi tiết</Text>
           </TouchableOpacity>
         </View>
       </View>

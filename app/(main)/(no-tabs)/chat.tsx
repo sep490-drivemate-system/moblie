@@ -65,6 +65,16 @@ export default function ChatPage() {
     }
   }, [chatHub, chatHubViewModel]);
 
+  // Kiểm tra và reconnect nếu chưa kết nối khi vào màn hình
+  useEffect(() => {
+    if (chatHub && !chatHub.isConnected && !chatHub.isConnecting) {
+      console.log("Chat hub chưa kết nối, đang thử kết nối lại...");
+      chatHub.connect().catch((error) => {
+        console.error("Lỗi khi reconnect chat hub:", error);
+      });
+    }
+  }, [chatHub]);
+
   useEffect(() => {
     if (chatHubViewModel.isConnected && sessionId) {
       chatHubViewModel.markAsRead(sessionId).catch(console.error);
@@ -263,7 +273,7 @@ export default function ChatPage() {
       ) : (
         <FlatList
           ref={flatListRef}
-          data={[...messages].reverse()} 
+          data={[...messages].reverse()}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           style={styles.messagesList}
@@ -277,7 +287,9 @@ export default function ChatPage() {
               <Text style={styles.emptyText}>
                 {chatHub.isConnected
                   ? "Chưa có tin nhắn nào. Hãy bắt đầu trò chuyện!"
-                  : "Đang kết nối đến server..."}
+                  : chatHub.isConnecting
+                    ? "Đang kết nối đến server..."
+                    : "Đang thử kết nối lại..."}
               </Text>
             </View>
           }
@@ -392,7 +404,7 @@ const styles = StyleSheet.create({
   },
   messageRow: {
     flexDirection: "row",
-    alignItems: "center", // avatar và bubble cùng đường ngang
+    alignItems: "center",
     gap: 8,
     marginBottom: 10,
   },
@@ -487,7 +499,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 20,
     backgroundColor: AppColors.white,
     borderTopWidth: 1,
     borderTopColor: "#e2e8f0",
@@ -495,19 +507,19 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    minHeight: 40,
+    minHeight: 52,
     maxHeight: 100,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 14,
     borderRadius: 20,
     backgroundColor: "#f1f5f9",
     fontSize: 15,
     color: "#1e293b",
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: AppColors.primary,
     justifyContent: "center",
     alignItems: "center",

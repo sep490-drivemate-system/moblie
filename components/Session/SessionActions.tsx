@@ -17,6 +17,7 @@ interface SessionActionsProps {
     location?: string;
   } | null;
   onCancelPress: () => void;
+  isSimulating?: boolean;
 }
 
 export default function SessionActions({
@@ -25,11 +26,11 @@ export default function SessionActions({
   instructorId,
   displaySession,
   onCancelPress,
+  isSimulating = false,
 }: SessionActionsProps) {
   const router = useRouter();
 
-  // Nếu buổi tập đã hoàn thành thì không cho đổi lịch / hủy
-  if (status === SessionStatus.Completed) {
+  if (status === SessionStatus.Completed || isSimulating) {
     return null;
   }
 

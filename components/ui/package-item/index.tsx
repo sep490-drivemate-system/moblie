@@ -1,9 +1,11 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { Clock, MapPin, Zap } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { Package } from "@/models/package/package";
+import VNDCurrency from "@/components/Commons/VNDCurrency ";
+import { ROUTES } from "@/constants/routes";
 
 interface PackageProps {
   pkg: Package;
@@ -14,7 +16,7 @@ export default function PackageItem({ pkg }: PackageProps) {
 
   const handlePress = () => {
     router.push({
-      pathname: "/(main)/(no-tabs)/instructor-detail",
+      pathname: ROUTES.INSTRUCTOR_DETAIL,
       params: { instructorId: pkg.instructorId },
     });
   };
@@ -38,13 +40,19 @@ export default function PackageItem({ pkg }: PackageProps) {
         )}
       </View>
 
-      {/* Instructor + badge */}
       <View style={styles.cardHeader}>
         <View style={styles.instructorRow}>
           <View style={styles.instructorAvatar}>
-            <Text style={styles.instructorAvatarText}>
-              {pkg.instructorName?.charAt(0).toUpperCase()}
-            </Text>
+            {pkg.instructorAvatar ? (
+              <Image
+                source={{ uri: pkg.instructorAvatar }}
+                style={styles.instructorAvatarImage}
+              />
+            ) : (
+              <Text style={styles.instructorAvatarText}>
+                {pkg.instructorName?.charAt(0).toUpperCase()}
+              </Text>
+            )}
           </View>
           <View style={styles.instructorInfo}>
             <Text style={styles.instructorName}>{pkg.instructorName}</Text>
@@ -83,21 +91,15 @@ export default function PackageItem({ pkg }: PackageProps) {
       <View style={styles.cardFooter}>
         <View style={styles.priceContainer}>
           <Text style={styles.price}>
-            {pkg.price.toLocaleString("vi-VN")} đ
+            <VNDCurrency amount={pkg.price} />
           </Text>
         </View>
         <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={styles.detailButton}
-            onPress={handlePress}
-          >
-            <Text style={styles.detailButtonText}>Chi tiết</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
             style={styles.buyButton}
             onPress={handlePress}
           >
-            <Text style={styles.buyButtonText}>Mua ngay</Text>
+            <Text style={styles.buyButtonText}>Chi tiết</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -166,6 +168,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#e2e8f0",
     alignItems: "center",
     justifyContent: "center",
+  },
+  instructorAvatarImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 20,
   },
   instructorAvatarText: {
     fontSize: 16,

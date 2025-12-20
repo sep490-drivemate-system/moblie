@@ -182,6 +182,21 @@ export default function Step4({
             <Text style={styles.sectionTitle}>Thanh toán</Text>
           </View>
 
+          {remainingBalance < 0 ? (
+            <View style={styles.warningBanner}>
+              <AlertTriangle size={24} color="#dc2626" strokeWidth={2.5} style={{ marginTop: 2 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.warningText}>
+                  Số dư không đủ để thanh toán
+                </Text>
+                <Text style={styles.warningSubtext}>
+                  Số dư hiện tại: {walletBalance.toLocaleString()} vnd{'\n'}
+                  Tổng chi phí: {bookingCost.toLocaleString()} vnd{'\n'}
+                  Thiếu: {Math.abs(remainingBalance).toLocaleString()} vnd
+                </Text>
+              </View>
+            </View>
+          ) : (
           <View style={styles.paymentCard}>
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Số dư hiện tại:</Text>
@@ -218,16 +233,12 @@ export default function Step4({
 
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabelBold}>Số dư sau khi đặt:</Text>
-              <Text
-                style={[
-                  styles.paymentValueBold,
-                  remainingBalance < 0 && styles.paymentValueError,
-                ]}
-              >
+                <Text style={styles.paymentValueBold}>
                 {remainingBalance.toLocaleString()} vnd
               </Text>
             </View>
           </View>
+          )}
 
         </View>
       ) : null}
@@ -463,20 +474,25 @@ const styles = StyleSheet.create({
   },
   warningBanner: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 12,
-    padding: 12,
+    alignItems: "flex-start",
+    gap: 12,
+    padding: 16,
     backgroundColor: "#fef2f2",
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 2,
     borderColor: "#fecaca",
   },
   warningText: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     color: "#dc2626",
-    flex: 1,
+    marginBottom: 8,
+  },
+  warningSubtext: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#991b1b",
+    lineHeight: 20,
   },
   noteInput: {
     backgroundColor: "#f8fafc",

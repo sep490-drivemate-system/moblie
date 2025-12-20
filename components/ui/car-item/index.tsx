@@ -10,49 +10,49 @@ import {
 import { Car } from "@/models/car/car";
 import { useRouter } from "expo-router";
 import { AppColors } from "@/constants/Colors";
+import VNDCurrency from "@/components/Commons/VNDCurrency ";
+import { ICar } from "@/models/car/car";
+import { ROUTES } from "@/constants/routes";
 
 type Props = {
-  car: Car;
-  variant?: "compact" | "full";
+  car: ICar;
 };
 
-const CarItem: React.FC<Props> = ({ car, variant = "compact" }) => {
+const CarItem: React.FC<Props> = ({ car }) => {
   const router = useRouter();
 
   const handlePress = () => {
     router.push({
-      pathname: "/(main)/(no-tabs)/car-detail",
+      pathname: ROUTES.MAIN_NO_TABS_CAR_DETAIL,
       params: { carId: car.id.toString() },
     });
   };
 
   return (
     <TouchableOpacity
-      style={[styles.container, { width: variant === "full" ? "100%" : 280 }]}
+      style={[styles.container]}
       activeOpacity={0.9}
       onPress={handlePress}
     >
       <Image
         style={[
           styles.carImage,
-          variant === "full" ? styles.carImageFull : undefined,
         ]}
         source={{
-          uri: car.imageUrl,
+          uri: car.thumbnailUrl,
         }}
       />
       <View style={styles.information}>
-        <Text style={styles.carName}>{car.name}</Text>
+        <Text style={styles.carName}>{car.modelName}</Text>
         <Text style={styles.price}>
-          {car.price.toLocaleString("vi-VN")} đ /{" "}
-          <Text style={{ fontWeight: "400" }}>giờ</Text>
+          <VNDCurrency amount={car.price} />
         </Text>
       </View>
       <View style={styles.footer}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
           <LucideUser size={18} color={AppColors.primary} />
           <Text style={{ fontSize: 14, fontWeight: "500" }}>
-            {car.seats} chỗ
+            {car.seatCounts} chỗ
           </Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
@@ -61,7 +61,7 @@ const CarItem: React.FC<Props> = ({ car, variant = "compact" }) => {
             size={18}
             transform={[{ rotate: "180deg" }]}
           />
-          <Text style={{ fontSize: 14, fontWeight: "500" }}>{car.type}</Text>
+          <Text style={{ fontSize: 14, fontWeight: "500" }}>{car.vehicleType}</Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
           <LucideFuel size={18} color={AppColors.primary} />
@@ -71,11 +71,12 @@ const CarItem: React.FC<Props> = ({ car, variant = "compact" }) => {
       <View style={styles.banner}>
         <View style={styles.ratingContainer}>
           <LucideStar size={15} color={"#edb435"} fill={"#edb435"} />
-          <Text style={styles.ratingText}>{car.rating}</Text>
+          <Text style={styles.ratingText}>{car.average_rating}</Text>
+          <Text style={{ fontSize: 14, fontWeight: "500", color: AppColors.textSecondary }}>|</Text>
         </View>
         <View style={styles.bookingContainer}>
           <Text style={styles.bookingText}>
-            Đã thuê {car.totalRentalCount} lượt
+            Đã thuê {car.booking_count} lượt
           </Text>
         </View>
       </View>
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: "row",
     gap: 0,
-    backgroundColor: "#4a827d",
+    backgroundColor: AppColors.primary,
     borderBottomLeftRadius: 10,
   },
   ratingContainer: {
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
     color: "#edb435",
   },
   bookingContainer: {
-    backgroundColor: "#026AA7",
+    backgroundColor: AppColors.primary,
     padding: 5,
     alignItems: "center",
   },

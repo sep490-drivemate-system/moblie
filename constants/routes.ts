@@ -30,6 +30,7 @@ export const ROUTES = {
   MAIN_NO_TABS_HISTORY: '/(main)/(no-tabs)/(transaction)/transaction',
   MAIN_NO_TABS_NOTIFICATIONS: '/(main)/(no-tabs)/notifications',
   MAIN_NO_TABS_CHATS: '/(main)/(no-tabs)/chats',
+  MAIN_NO_TABS_IDENTIFICATION_DOCUMENT_MANAGEMENT: '/(main)/(no-tabs)/identification-document-management',
 
   MAIN_NO_TABS_CAR_DETAIL: '/(main)/(no-tabs)/car-detail',
   MAIN_NO_TABS_DEPOSIT: '/(main)/(no-tabs)/deposit',

@@ -25,7 +25,7 @@ export class NotificationHubViewModel extends BaseViewModel<RootState["notificat
             this.dispatch(setUnreadCount(count));
             return count;
         } catch (error) {
-            console.error("Error getting unread notification count:", error);
+            console.log("Error getting unread notification count:", error);
             return 0;
         }
     }

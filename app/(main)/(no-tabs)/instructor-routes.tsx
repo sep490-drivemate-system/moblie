@@ -116,12 +116,6 @@ export default function InstructorRoutesScreen() {
         ];
     }, [startLocation, endLocation]);
 
-    useEffect(() => {
-        if (!routeName && routeNameSuggestions.length > 0) {
-            setRouteName(routeNameSuggestions[0]);
-        }
-    }, [routeNameSuggestions, routeName]);
-
     const fetchRouteFromGoong = async (from: LocationInfo, to: LocationInfo) => {
         if (!GOONG_API_KEY || !from || !to) return;
         try {
@@ -296,209 +290,156 @@ export default function InstructorRoutesScreen() {
                 onRequestClose={() => setRouteModalVisible(false)}
             >
                 <View style={styles.modalOverlay}>
-                    <ScrollView
-                        style={{ width: "100%" }}
-                        contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
-                        keyboardShouldPersistTaps="handled"
-                    >
-                        <View style={styles.setupModal}>
-                            <Text style={styles.modalTitle}>
-                                {isEditing ? "Thiết lập tuyến đường" : "Xem lộ trình"}
-                            </Text>
-                            <Text style={styles.modalSubtitle}>
-                                Chạm map để chọn {selectionType === "pickup" ? "điểm đầu" : "điểm cuối"}
-                            </Text>
+                    <View style={styles.setupModal}>
+                        <Text style={styles.modalTitle}>
+                            {isEditing ? "Thiết lập tuyến đường" : "Xem lộ trình"}
+                        </Text>
+                        <Text style={styles.modalSubtitle}>
+                            Chạm map để chọn {selectionType === "pickup" ? "điểm đầu" : "điểm cuối"}
+                        </Text>
 
-                            <View style={styles.toggleRow}>
-                                <Text style={styles.toggleLabel}>Chế độ chọn:</Text>
-                                <View style={styles.toggleButtons}>
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.toggleBtn,
-                                            selectionType === "pickup" && styles.toggleBtnActive,
-                                            !isEditing && styles.toggleBtnDisabled,
-                                        ]}
-                                        onPress={() => isEditing && setSelectionType("pickup")}
-                                        activeOpacity={isEditing ? 0.85 : 1}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.toggleBtnText,
-                                                selectionType === "pickup" && styles.toggleBtnTextActive,
-                                            ]}
-                                        >
-                                            Điểm đầu
-                                        </Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.toggleBtn,
-                                            selectionType === "dropoff" && styles.toggleBtnActive,
-                                            !isEditing && styles.toggleBtnDisabled,
-                                        ]}
-                                        onPress={() => isEditing && setSelectionType("dropoff")}
-                                        activeOpacity={isEditing ? 0.85 : 1}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.toggleBtnText,
-                                                selectionType === "dropoff" && styles.toggleBtnTextActive,
-                                            ]}
-                                        >
-                                            Điểm cuối
-                                        </Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-
-                            <View style={[styles.mapWrapper, { height: 320 }]}>
-                                <MapView
-                                    ref={mapRef}
-                                    showsUserLocation={true}
-                                    showsTraffic={true}
-                                    showsCompass={true}
-                                    showsScale={true}
-                                    style={styles.map}
-                                    initialRegion={{
-                                        latitude: startLocation?.latitude || 10.823019,
-                                        longitude: startLocation?.longitude || 106.700806,
-                                        latitudeDelta: 0.05,
-                                        longitudeDelta: 0.05,
-                                    }}
-                                    onPress={isEditing ? handleMapPress : undefined}
-                                >
-                                    {startLocation && (
-                                        <Marker
-                                            coordinate={{ latitude: startLocation.latitude, longitude: startLocation.longitude }}
-                                            pinColor={AppColors.primary}
-                                            title="Điểm đầu"
-                                            description={startLocation.address}
-                                        />
-                                    )}
-                                    {endLocation && (
-                                        <Marker
-                                            coordinate={{ latitude: endLocation.latitude, longitude: endLocation.longitude }}
-                                            pinColor={AppColors.red}
-                                            title="Điểm cuối"
-                                            description={endLocation.address}
-                                        />
-                                    )}
-                                    {polylineCoords.length >= 2 && (
-                                        <Polyline
-                                            coordinates={polylineCoords}
-                                            strokeColor={AppColors.primary}
-                                            strokeWidth={4}
-                                        />
-                                    )}
-                                </MapView>
-                                {polylineCoords.length >= 2 && (
-                                    <View style={styles.routeSummary}>
-                                        <Info size={16} color={AppColors.primary} />
-                                        <Text style={styles.routeSummaryText}>
-                                            Dài khoảng {distanceKm} km · Ước tính {estimatedMinutes} phút
-                                        </Text>
-                                    </View>
-                                )}
-                            </View>
-
-                            <View style={styles.summaryCard}>
-                                {routeName ? (
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>Tên tuyến:</Text>
-                                        <Text style={styles.summaryValue}>{routeName}</Text>
-                                    </View>
-                                ) : null}
-                                <View style={styles.summaryRow}>
-                                    <Text style={styles.summaryLabel}>Điểm đầu:</Text>
-                                    <Text style={styles.summaryValue}>
-                                        {startLocation ? startLocation.address : "Chưa chọn"}
-                                    </Text>
-                                </View>
-                                <View style={styles.summaryRow}>
-                                    <Text style={styles.summaryLabel}>Điểm cuối:</Text>
-                                    <Text style={styles.summaryValue}>
-                                        {endLocation ? endLocation.address : "Chưa chọn"}
-                                    </Text>
-                                </View>
-                            </View>
-
-                            <View style={styles.routeNameCard}>
-                                <Text style={styles.routeNameLabel}>Tên tuyến đường</Text>
-                                <TextInput
-                                    style={styles.routeNameInput}
-                                    placeholder="Nhập tên (ví dụ: Tuyến A -> B)"
-                                    value={routeName}
-                                    onChangeText={setRouteName}
-                                    editable={isEditing}
-                                />
-                                {routeNameSuggestions.length > 0 && (
-                                    <ScrollView
-                                        horizontal
-                                        showsHorizontalScrollIndicator={false}
-                                        style={styles.suggestionRow}
-                                        contentContainerStyle={{ gap: 8 }}
-                                        keyboardShouldPersistTaps="handled"
-                                    >
-                                        {routeNameSuggestions.map((suggestion) => (
-                                            <TouchableOpacity
-                                                key={suggestion}
-                                                style={[
-                                                    styles.suggestionChip,
-                                                    routeName === suggestion && styles.suggestionChipActive,
-                                                ]}
-                                                onPress={() => isEditing && setRouteName(suggestion)}
-                                                activeOpacity={isEditing ? 0.8 : 1}
-                                            >
-                                                <Text
-                                                    style={[
-                                                        styles.suggestionChipText,
-                                                        routeName === suggestion && styles.suggestionChipTextActive,
-                                                    ]}
-                                                >
-                                                    {suggestion}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </ScrollView>
-                                )}
-                            </View>
-
-                            {isEditing && (
+                        <View style={styles.toggleRow}>
+                            <Text style={styles.toggleLabel}>Chế độ chọn:</Text>
+                            <View style={styles.toggleButtons}>
                                 <TouchableOpacity
-                                    style={[styles.saveButton, { marginTop: 10 }]}
-                                    onPress={() => {
-                                        if (!startLocation || !endLocation) {
-                                            Alert.alert("Thiếu thông tin", "Vui lòng chọn đủ điểm đầu và điểm cuối.");
-                                            return;
-                                        }
-                                        if (polylineCoords.length < 2) {
-                                            Alert.alert("Chưa có tuyến", "Vui lòng chạm map để lấy tuyến đường.");
-                                            return;
-                                        }
-                                        setRouteModalVisible(false);
-                                    }}
-                                    activeOpacity={0.85}
+                                    style={[
+                                        styles.toggleBtn,
+                                        selectionType === "pickup" && styles.toggleBtnActive,
+                                        !isEditing && styles.toggleBtnDisabled,
+                                    ]}
+                                    onPress={() => isEditing && setSelectionType("pickup")}
+                                    activeOpacity={isEditing ? 0.85 : 1}
                                 >
-                                    {isLoadingRoute ? (
-                                        <ActivityIndicator color="#fff" />
-                                    ) : (
-                                        <>
-                                            <Save size={18} color="#fff" />
-                                            <Text style={styles.saveButtonText}>Lưu lộ trình</Text>
-                                        </>
-                                    )}
+                                    <Text
+                                        style={[
+                                            styles.toggleBtnText,
+                                            selectionType === "pickup" && styles.toggleBtnTextActive,
+                                        ]}
+                                    >
+                                        Điểm đầu
+                                    </Text>
                                 </TouchableOpacity>
-                            )}
-
-                            <TouchableOpacity
-                                style={styles.modalClose}
-                                onPress={() => setRouteModalVisible(false)}
-                                activeOpacity={0.8}
-                            >
-                                <Text style={styles.modalCloseText}>Đóng</Text>
-                            </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.toggleBtn,
+                                        selectionType === "dropoff" && styles.toggleBtnActive,
+                                        !isEditing && styles.toggleBtnDisabled,
+                                    ]}
+                                    onPress={() => isEditing && setSelectionType("dropoff")}
+                                    activeOpacity={isEditing ? 0.85 : 1}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.toggleBtnText,
+                                            selectionType === "dropoff" && styles.toggleBtnTextActive,
+                                        ]}
+                                    >
+                                        Điểm cuối
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                    </ScrollView>
+
+                        <View style={[styles.mapWrapper, { height: 320 }]}>
+                            <MapView
+                                ref={mapRef}
+                                showsUserLocation={true}
+                                showsTraffic={true}
+                                showsCompass={true}
+                                showsScale={true}
+                                style={styles.map}
+                                initialRegion={{
+                                    latitude: startLocation?.latitude || 10.823019,
+                                    longitude: startLocation?.longitude || 106.700806,
+                                    latitudeDelta: 0.05,
+                                    longitudeDelta: 0.05,
+                                }}
+                                onPress={isEditing ? handleMapPress : undefined}
+                            >
+                                {startLocation && (
+                                    <Marker
+                                        coordinate={{ latitude: startLocation.latitude, longitude: startLocation.longitude }}
+                                        pinColor={AppColors.primary}
+                                        title="Điểm đầu"
+                                        description={startLocation.address}
+                                    />
+                                )}
+                                {endLocation && (
+                                    <Marker
+                                        coordinate={{ latitude: endLocation.latitude, longitude: endLocation.longitude }}
+                                        pinColor={AppColors.red}
+                                        title="Điểm cuối"
+                                        description={endLocation.address}
+                                    />
+                                )}
+                                {polylineCoords.length >= 2 && (
+                                    <Polyline
+                                        coordinates={polylineCoords}
+                                        strokeColor={AppColors.primary}
+                                        strokeWidth={4}
+                                    />
+                                )}
+                            </MapView>
+                            {polylineCoords.length >= 2 && (
+                                <View style={styles.routeSummary}>
+                                    <Info size={16} color={AppColors.primary} />
+                                    <Text style={styles.routeSummaryText}>
+                                        Dài khoảng {distanceKm} km · Ước tính {estimatedMinutes} phút
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+
+                        <View style={styles.summaryCard}>
+                            <View style={styles.summaryRow}>
+                                <Text style={styles.summaryLabel}>Điểm đầu:</Text>
+                                <Text style={styles.summaryValue}>
+                                    {startLocation ? startLocation.address : "Chưa chọn"}
+                                </Text>
+                            </View>
+                            <View style={styles.summaryRow}>
+                                <Text style={styles.summaryLabel}>Điểm cuối:</Text>
+                                <Text style={styles.summaryValue}>
+                                    {endLocation ? endLocation.address : "Chưa chọn"}
+                                </Text>
+                            </View>
+                        </View>
+
+                        {isEditing && (
+                            <TouchableOpacity
+                                style={[styles.saveButton, { marginTop: 10 }]}
+                                onPress={() => {
+                                    if (!startLocation || !endLocation) {
+                                        Alert.alert("Thiếu thông tin", "Vui lòng chọn đủ điểm đầu và điểm cuối.");
+                                        return;
+                                    }
+                                    if (polylineCoords.length < 2) {
+                                        Alert.alert("Chưa có tuyến", "Vui lòng chạm map để lấy tuyến đường.");
+                                        return;
+                                    }
+                                    setRouteModalVisible(false);
+                                }}
+                                activeOpacity={0.85}
+                            >
+                                {isLoadingRoute ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <>
+                                        <Save size={18} color="#fff" />
+                                        <Text style={styles.saveButtonText}>Lưu lộ trình</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        )}
+
+                        <TouchableOpacity
+                            style={styles.modalClose}
+                            onPress={() => setRouteModalVisible(false)}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.modalCloseText}>Đóng</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </Modal>
 
@@ -724,51 +665,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: AppColors.gray600,
         fontStyle: "italic",
-    },
-    routeNameCard: {
-        backgroundColor: AppColors.cardBackground,
-        borderRadius: 16,
-        padding: 16,
-        gap: 10,
-        borderWidth: 1,
-        borderColor: AppColors.border,
-    },
-    routeNameLabel: {
-        fontSize: 14,
-        fontWeight: "700",
-        color: AppColors.textPrimary,
-    },
-    routeNameInput: {
-        borderWidth: 1,
-        borderColor: AppColors.border,
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 14,
-        backgroundColor: "#fff",
-    },
-    suggestionRow: {
-        marginTop: 4,
-    },
-    suggestionChip: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: AppColors.border,
-        backgroundColor: "#fff",
-    },
-    suggestionChipActive: {
-        backgroundColor: `${AppColors.primary}12`,
-        borderColor: AppColors.primary,
-    },
-    suggestionChipText: {
-        fontSize: 13,
-        color: AppColors.gray700,
-        fontWeight: "700",
-    },
-    suggestionChipTextActive: {
-        color: AppColors.primary,
     },
     modalOverlay: {
         flex: 1,

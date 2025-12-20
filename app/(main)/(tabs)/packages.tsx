@@ -1,8 +1,5 @@
 import { AppColors } from "@/constants/Colors";
-import { popularPackages } from "@/data/home_data";
-import { instructorsData } from "@/data/instructors_data";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
@@ -26,18 +23,7 @@ import {
 } from "@/models/package/package";
 import { ROUTES } from "@/constants/routes";
 
-// Road types list
-const roadTypes = [
-  "Đường khu dân cư",
-  "Đường đô thị",
-  "Quốc lộ",
-  "Đường cao tốc",
-  "Đường đèo",
-  "Đường trường",
-  "Đường qua khu đông dân cư",
-  "Đường đang thi công",
-  "Đường trơn trượt",
-];
+
 
 const filterOptions = [
   {
@@ -48,7 +34,7 @@ const filterOptions = [
   },
   {
     id: PackageFilterOption.HasVehicle,
-    label: "Có thể đi xe cá nhân",
+    label: "Người hướng dẫn và xe",
     value: true as boolean,
     type: "vehicle" as const,
   },
@@ -77,10 +63,7 @@ const PAGE_SIZE = 4;
 export default function PackagesScreen() {
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
-  const [packageState, packageViewModel] = useViewModel<
-    RootState["package"],
-    PackageViewModel
-  >(PackageViewModel, (state) => state.package);
+  const [, packageViewModel] = useViewModel(PackageViewModel, (state: RootState) => state.package);
   const [packages, setPackages] = useState<Package[]>([]);
   const [roadTypes, setRoadTypes] = useState<RoadType[]>([]);
   const [drivingSkills, setDrivingSkills] = useState<DrivingSkill[]>([]);
@@ -94,9 +77,7 @@ export default function PackagesScreen() {
     null
   );
   const [selectedRoadTypes, setSelectedRoadTypes] = useState<string[]>([]);
-  const [selectedDrivingSkills, setSelectedDrivingSkills] = useState<string[]>(
-    []
-  );
+  const [selectedDrivingSkills, setSelectedDrivingSkills] = useState<string[]>([]);
 
   const handlePackagePress = (pkg: Package) => {
     router.push({
@@ -118,7 +99,7 @@ export default function PackagesScreen() {
         }
 
         if (filterHasVehicle !== null) {
-          params.allowSelfCar = filterHasVehicle;
+          params.isRentalCar = filterHasVehicle;
         }
 
         if (selectedRoadTypes.length > 0) {

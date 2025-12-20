@@ -34,6 +34,8 @@ import { ROUTES } from "@/constants/routes";
 import { AppAlert, AlertVariant } from "@/components/Commons/AppAlert";
 import { clearPaymentCallback } from "@/features/wallet/walletSlice";
 import { useDispatch } from "react-redux";
+import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
+import { UserRole } from "@/models/enum/UserRole.enum";
 const zalopayLogo = require("@/assets/images/zalopay-logo.png");
 const payosLogo = require("@/assets/images/payos-logo.png");
 const vnpayLogo = require("@/assets/images/vnpay-logo.jpg");
@@ -63,20 +65,14 @@ export default function DepositScreen() {
   const topUpAmounts: number[] = [100000, 200000, 500000, 1000000];
   const withdrawAmounts: number[] = [100000, 200000, 500000, 1000000];
 
-  // Check payment callback và navigate đến payment-success
-  // CHỈ navigate khi đang ở wallet screen, không navigate nếu đã ở payment-success
   useFocusEffect(
     useCallback(() => {
-      // Chỉ xử lý khi đang ở wallet screen
+
       if (pathname?.includes('wallet') && walletState.paymentCallback) {
-        console.log("[WalletScreen] Payment callback detected, navigating to payment-success");
         const callback = walletState.paymentCallback;
 
-        // Clear payment callback trước
         dispatch(clearPaymentCallback());
 
-        // Navigate đến payment-success với params
-        // Sử dụng replace thay vì push để tránh quay lại wallet
         setTimeout(() => {
           router.replace({
             pathname: ROUTES.PAYMENT_SUCCESS,
@@ -223,6 +219,8 @@ export default function DepositScreen() {
     setShowConfirmAlert(true);
   };
 
+
+  const [authState, authViewModel] = useViewModel(AuthViewModel, (state) => state.auth);
   return (
     <View style={styles.container}>
       <HeaderList title="Ví của tôi" actionReturnScreen={ROUTES.BACK} />
@@ -259,19 +257,25 @@ export default function DepositScreen() {
               </View>
 
               <View style={styles.actionButtonsContainer}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => {
-                    setShowDepositForm(true);
-                    setShowWithdrawForm(false);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.actionButtonIcon, styles.depositButtonIcon]}>
-                    <ArrowDownCircle size={18} color={AppColors.textWhite} strokeWidth={2.5} />
-                  </View>
-                  <Text style={styles.actionButtonText}>Nạp tiền</Text>
-                </TouchableOpacity>
+
+
+                {authState.userInfo?.role === UserRole.NoviceDriver && (
+                  <>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => {
+                        setShowDepositForm(true);
+                        setShowWithdrawForm(false);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.actionButtonIcon, styles.depositButtonIcon]}>
+                        <ArrowDownCircle size={18} color={AppColors.textWhite} strokeWidth={2.5} />
+                      </View>
+                      <Text style={styles.actionButtonText}>Nạp tiền</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
 
                 <TouchableOpacity
                   style={styles.actionButton}

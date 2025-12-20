@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { View, StyleSheet, TouchableOpacity, Text, Alert } from "react-native";
+import React, { useState } from "react";
+import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
 import { AppColors } from "@/constants/Colors";
 import { AppAlert } from "../Commons/AppAlert";
 
@@ -13,26 +13,14 @@ export default function RouteActions({
   onReject,
 }: RouteActionsProps) {
   const [showConfirmAccept, setShowConfirmAccept] = useState(false);
+  const [showConfirmReject, setShowConfirmReject] = useState(false);
 
 
   return (
     <View style={styles.routeActions}>
       <TouchableOpacity
         style={styles.rejectButton}
-        onPress={() => {
-          Alert.alert(
-            "Từ chối lộ trình",
-            "Bạn không đồng ý với lộ trình đề xuất này?",
-            [
-              { text: "Hủy", style: "cancel" },
-              {
-                text: "Từ chối",
-                style: "destructive",
-                onPress: onReject,
-              },
-            ]
-          );
-        }}
+        onPress={() => setShowConfirmReject(true)}
       >
         <Text style={styles.rejectButtonText}>Không đồng ý</Text>
       </TouchableOpacity>
@@ -61,6 +49,26 @@ export default function RouteActions({
           onPress: () => setShowConfirmAccept(false),
         }}
         onDismiss={() => setShowConfirmAccept(false)}
+        closable={false}
+      />
+
+      <AppAlert
+        visible={showConfirmReject}
+        title="Từ chối lộ trình"
+        message="Bạn không đồng ý với lộ trình đề xuất này?"
+        primaryButton={{
+          label: "Từ chối",
+          onPress: () => {
+            setShowConfirmReject(false);
+            onReject();
+          },
+        }}
+        secondaryButton={{
+          label: "Hủy",
+          variant: "secondary",
+          onPress: () => setShowConfirmReject(false),
+        }}
+        onDismiss={() => setShowConfirmReject(false)}
         closable={false}
       />
 

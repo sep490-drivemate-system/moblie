@@ -24,8 +24,8 @@ import {
     X,
     LucideIcon,
 } from "lucide-react-native";
-import { ISessionDetailDTO, IRouteDetailDTO, ISessionRouteDetai } from "@/models/session/session.type";
-import { getSessionDetail, rescheduleSession } from "@/features/session/sessionThunk";
+import { ISessionDetailDTO, ISessionRouteDetai } from "@/models/session/session.type";
+import { getSessionDetail, rejectRoute, rescheduleSession } from "@/features/session/sessionThunk";
 import { saveSessionRoutes } from "@/features/session/sessionThunk";
 export type SessionStatusFilter = SessionStatus | "all";
 
@@ -63,7 +63,6 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
         await this.getBookingSessions();
     }
 
-    // Convert string status from API to SessionStatus enum
     private parseSessionStatus(status: string | SessionStatus): SessionStatus {
         if (typeof status === 'number') {
             return status as SessionStatus;
@@ -94,10 +93,18 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
                 return detail;
             },
             (sessionDetail) => {
-                if (sessionDetail.status && typeof sessionDetail.status === 'string') {
-                    sessionDetail.status = this.parseSessionStatus(sessionDetail.status) as any;
-                }
-                this.dispatch(setSessionDetail(sessionDetail));
+                const normalizedStatus =
+                    sessionDetail.status && typeof sessionDetail.status === "string"
+                        ? this.parseSessionStatus(sessionDetail.status) as any
+                        : sessionDetail.status;
+
+                // Không mutate trực tiếp object (có thể là read-only từ Redux)
+                const normalizedDetail: ISessionDetailDTO = {
+                    ...sessionDetail,
+                    status: normalizedStatus,
+                };
+
+                this.dispatch(setSessionDetail(normalizedDetail));
             },
         );
         return sessionDetail ?? {} as ISessionDetailDTO;
@@ -113,6 +120,17 @@ export class SessionViewModel extends BaseViewModel<SessionState> {
         return result ?? false;
     }
 
+
+
+    async rejectRoute(sessionId: string): Promise<boolean> {
+        const result = await this.executeAsync<boolean>(
+            async () => {
+                const response = await this.dispatch(rejectRoute({ sessionId })).unwrap();
+                return response?.value ?? false;
+            },
+        );
+        return result ?? false;
+    }
 
     async refreshSessions(): Promise<void> {
         this.dispatch(setIsRefreshing(true));
