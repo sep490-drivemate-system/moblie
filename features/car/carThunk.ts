@@ -23,7 +23,7 @@ export const getCarsForInstructor = createThunk<ICar[], { id: string }>(
   "getCarsForInstructor",
   `/${CAR_PATH}/instructor/:id/cars`,
   {
-    buildUrl: (payload) => `/${CAR_PATH}/instructor/${payload.id}/cars`,
+    buildUrl: (payload) => `/${CAR_PATH}/instructors/${payload.id}/cars`,
   }
 );
 

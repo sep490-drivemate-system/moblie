@@ -16,7 +16,7 @@ export enum gender {
 }
 
 export enum CarStatus {
-  Approved = "Approve",
+  Approved = "Approved",
   Pending = "Pending",
-  Rejected = "Reject",
+  Rejected = "Rejected",
 }
