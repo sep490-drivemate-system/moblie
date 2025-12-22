@@ -377,6 +377,21 @@ export default function MyCarScreen() {
               />
             </View>
 
+            {/* Add Car Button - Only show when cars exist */}
+            {cars.length > 0 && (
+              <View style={styles.addButtonContainer}>
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() =>
+                    router.push("/(onboarding)/(car)/(car-registration)/form")
+                  }
+                >
+                  <Plus size={20} color="#ffffff" />
+                  <Text style={styles.addButtonText}>Thêm Xe Mới</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Vehicles List */}
             <View style={styles.listContainer}>
               {cars.length === 0 ? (
@@ -454,6 +469,10 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "700",
+  },
+  addButtonContainer: {
+    marginHorizontal: 16,
+    marginBottom: 16,
   },
   statsContainer: {
     marginHorizontal: 16,

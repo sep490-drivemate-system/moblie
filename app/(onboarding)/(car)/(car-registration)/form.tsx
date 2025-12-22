@@ -74,6 +74,20 @@ export default function FormScreen() {
     description: "",
   });
 
+  // Form errors
+  const [formErrors, setFormErrors] = useState({
+    licensePlate: "",
+    carBrand: "",
+    carModel: "",
+    carColor: "",
+    seatCount: "",
+    fuelType: "",
+    carType: "",
+    licenseTier: "",
+    year: "",
+    description: "",
+  });
+
   const fuelTypes = ["Xăng", "Dầu", "Điện", "Hybrid"];
   const carTypes = [
     "Sedan",
@@ -297,6 +311,14 @@ export default function FormScreen() {
     };
     setFormData(newFormData);
 
+    // Clear error for this field when user starts typing
+    if (formErrors[field as keyof typeof formErrors]) {
+      setFormErrors((prev) => ({
+        ...prev,
+        [field]: "",
+      }));
+    }
+
     // Sync to Redux immediately
     syncFormDataToRedux(newFormData);
   };
@@ -308,6 +330,14 @@ export default function FormScreen() {
     };
     setFormData(newFormData);
     setShowFuelTypeDropdown(false);
+
+    // Clear error
+    if (formErrors.fuelType) {
+      setFormErrors((prev) => ({
+        ...prev,
+        fuelType: "",
+      }));
+    }
 
     // Sync to Redux
     syncFormDataToRedux(newFormData);
@@ -321,6 +351,14 @@ export default function FormScreen() {
     setFormData(newFormData);
     setShowCarTypeDropdown(false);
 
+    // Clear error
+    if (formErrors.carType) {
+      setFormErrors((prev) => ({
+        ...prev,
+        carType: "",
+      }));
+    }
+
     // Sync to Redux
     syncFormDataToRedux(newFormData);
   };
@@ -332,6 +370,14 @@ export default function FormScreen() {
     };
     setFormData(newFormData);
     setShowLicenseTierDropdown(false);
+
+    // Clear error
+    if (formErrors.licenseTier) {
+      setFormErrors((prev) => ({
+        ...prev,
+        licenseTier: "",
+      }));
+    }
 
     // Sync to Redux
     syncFormDataToRedux(newFormData);
@@ -349,6 +395,14 @@ export default function FormScreen() {
     setFormData(newFormData);
     setShowManufacturerDropdown(false);
 
+    // Clear error
+    if (formErrors.carBrand) {
+      setFormErrors((prev) => ({
+        ...prev,
+        carBrand: "",
+      }));
+    }
+
     // Sync to Redux
     syncFormDataToRedux(newFormData);
   };
@@ -358,83 +412,100 @@ export default function FormScreen() {
   };
 
   const handleNext = async () => {
-    // Validate all required fields
-    const errors: string[] = [];
+    // Validate all required fields and set errors
+    const newErrors = {
+      licensePlate: "",
+      carBrand: "",
+      carModel: "",
+      carColor: "",
+      seatCount: "",
+      fuelType: "",
+      carType: "",
+      licenseTier: "",
+      year: "",
+      description: "",
+    };
+
+    let hasErrors = false;
 
     // Check license plate
     if (!formData.licensePlate.trim()) {
-      errors.push("Vui lòng nhập biển số xe");
+      newErrors.licensePlate = "Vui lòng nhập biển số xe";
+      hasErrors = true;
     }
 
     // Check car brand
     if (!formData.carBrand.trim() || !formData.brandId) {
-      errors.push("Vui lòng chọn hãng xe");
+      newErrors.carBrand = "Vui lòng chọn hãng xe";
+      hasErrors = true;
     }
 
     // Check car model
     if (!formData.carModel.trim()) {
-      errors.push("Vui lòng nhập tên mẫu xe");
+      newErrors.carModel = "Vui lòng nhập tên mẫu xe";
+      hasErrors = true;
     }
 
     // Check car color
     if (!formData.carColor.trim()) {
-      errors.push("Vui lòng nhập màu xe");
+      newErrors.carColor = "Vui lòng nhập màu xe";
+      hasErrors = true;
     }
 
     // Check seat count
     if (!formData.seatCount.trim()) {
-      errors.push("Vui lòng nhập số chỗ ngồi");
+      newErrors.seatCount = "Vui lòng nhập số chỗ ngồi";
+      hasErrors = true;
     } else {
       const seats = parseInt(formData.seatCount);
       if (isNaN(seats) || seats <= 0) {
-        errors.push("Số chỗ ngồi phải là số lớn hơn 0");
+        newErrors.seatCount = "Số chỗ ngồi phải là số lớn hơn 0";
+        hasErrors = true;
       }
     }
 
     // Check fuel type
     if (!formData.fuelType.trim()) {
-      errors.push("Vui lòng chọn loại nhiên liệu");
+      newErrors.fuelType = "Vui lòng chọn loại nhiên liệu";
+      hasErrors = true;
     }
 
     // Check car type
     if (!formData.carType.trim()) {
-      errors.push("Vui lòng chọn loại xe");
+      newErrors.carType = "Vui lòng chọn loại xe";
+      hasErrors = true;
     }
 
     // Check license tier
     if (!formData.licenseTier.trim()) {
-      errors.push("Vui lòng chọn hạng bằng lái");
+      newErrors.licenseTier = "Vui lòng chọn hạng bằng lái";
+      hasErrors = true;
     }
 
     // Check year
     if (!formData.year.trim()) {
-      errors.push("Vui lòng nhập năm sản xuất");
+      newErrors.year = "Vui lòng nhập năm sản xuất";
+      hasErrors = true;
     } else {
       const year = parseInt(formData.year);
       const currentYear = new Date().getFullYear();
       if (isNaN(year) || year < 1900 || year > currentYear) {
-        errors.push(`Năm sản xuất phải từ 1900 đến ${currentYear}`);
+        newErrors.year = `Năm sản xuất phải từ 1900 đến ${currentYear}`;
+        hasErrors = true;
       }
     }
 
-    // // Check front image
-    // if (!tempFrontImageUri && !carState.carRegistrationForm.RegistrationFront) {
-    //   errors.push("Vui lòng tải ảnh mặt trước giấy đăng ký xe");
-    // }
+    // Check description
+    if (!formData.description.trim()) {
+      newErrors.description = "Vui lòng nhập mô tả";
+      hasErrors = true;
+    }
 
-    // // Check back image
-    // if (!tempBackImageUri && !carState.carRegistrationForm.RegistrationBack) {
-    //   errors.push("Vui lòng tải ảnh mặt sau giấy đăng ký xe");
-    // }
+    // Set errors
+    setFormErrors(newErrors);
 
-    // If there are errors, show alert
-    if (errors.length > 0) {
-      showCustomAlert("Thiếu thông tin", errors.join("\n"), [
-        {
-          text: "OK",
-          onPress: () => setShowAlert(false),
-        },
-      ]);
+    // If there are errors, scroll to top and return
+    if (hasErrors) {
       return;
     }
 
@@ -659,7 +730,10 @@ export default function FormScreen() {
                 Biển số xe <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  formErrors.licensePlate && styles.inputError,
+                ]}
                 value={formData.licensePlate}
                 onChangeText={(value) =>
                   handleInputChange("licensePlate", value)
@@ -668,6 +742,9 @@ export default function FormScreen() {
                 placeholderTextColor="#92929D"
                 autoCapitalize="characters"
               />
+              {formErrors.licensePlate ? (
+                <Text style={styles.errorText}>{formErrors.licensePlate}</Text>
+              ) : null}
             </View>
 
             <View style={styles.inputGroup}>
@@ -676,7 +753,10 @@ export default function FormScreen() {
               </Text>
               <TouchableOpacity
                 activeOpacity={1}
-                style={styles.dropdownContainer}
+                style={[
+                  styles.dropdownContainer,
+                  formErrors.carBrand && styles.inputError,
+                ]}
                 onPress={() =>
                   setShowManufacturerDropdown(!showManufacturerDropdown)
                 }
@@ -698,6 +778,9 @@ export default function FormScreen() {
                   ]}
                 />
               </TouchableOpacity>
+              {formErrors.carBrand ? (
+                <Text style={styles.errorText}>{formErrors.carBrand}</Text>
+              ) : null}
               {showManufacturerDropdown && (
                 <View style={styles.dropdownList}>
                   <ScrollView
@@ -727,12 +810,18 @@ export default function FormScreen() {
                 Tên mẫu xe <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  formErrors.carModel && styles.inputError,
+                ]}
                 value={formData.carModel}
                 onChangeText={(value) => handleInputChange("carModel", value)}
                 placeholder="Nhập tên mẫu xe"
                 placeholderTextColor="#92929D"
               />
+              {formErrors.carModel ? (
+                <Text style={styles.errorText}>{formErrors.carModel}</Text>
+              ) : null}
             </View>
 
             <View style={styles.inputGroup}>
@@ -740,12 +829,18 @@ export default function FormScreen() {
                 Màu xe <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  formErrors.carColor && styles.inputError,
+                ]}
                 value={formData.carColor}
                 onChangeText={(value) => handleInputChange("carColor", value)}
                 placeholder="Nhập màu xe"
                 placeholderTextColor="#92929D"
               />
+              {formErrors.carColor ? (
+                <Text style={styles.errorText}>{formErrors.carColor}</Text>
+              ) : null}
             </View>
 
             <View style={styles.inputGroup}>
@@ -753,13 +848,19 @@ export default function FormScreen() {
                 Số chỗ ngồi <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  formErrors.seatCount && styles.inputError,
+                ]}
                 value={formData.seatCount}
                 onChangeText={(value) => handleInputChange("seatCount", value)}
                 placeholder="Nhập số chỗ ngồi"
                 placeholderTextColor="#92929D"
                 keyboardType="numeric"
               />
+              {formErrors.seatCount ? (
+                <Text style={styles.errorText}>{formErrors.seatCount}</Text>
+              ) : null}
             </View>
 
             <View style={styles.inputGroup}>
@@ -768,7 +869,10 @@ export default function FormScreen() {
               </Text>
               <TouchableOpacity
                 activeOpacity={1}
-                style={styles.dropdownContainer}
+                style={[
+                  styles.dropdownContainer,
+                  formErrors.fuelType && styles.inputError,
+                ]}
                 onPress={() => setShowFuelTypeDropdown(!showFuelTypeDropdown)}
               >
                 <Text
@@ -788,6 +892,9 @@ export default function FormScreen() {
                   ]}
                 />
               </TouchableOpacity>
+              {formErrors.fuelType ? (
+                <Text style={styles.errorText}>{formErrors.fuelType}</Text>
+              ) : null}
               {showFuelTypeDropdown && (
                 <View style={styles.dropdownList}>
                   <ScrollView
@@ -816,7 +923,10 @@ export default function FormScreen() {
               </Text>
               <TouchableOpacity
                 activeOpacity={1}
-                style={styles.dropdownContainer}
+                style={[
+                  styles.dropdownContainer,
+                  formErrors.carType && styles.inputError,
+                ]}
                 onPress={() => setShowCarTypeDropdown(!showCarTypeDropdown)}
               >
                 <Text
@@ -836,6 +946,9 @@ export default function FormScreen() {
                   ]}
                 />
               </TouchableOpacity>
+              {formErrors.carType ? (
+                <Text style={styles.errorText}>{formErrors.carType}</Text>
+              ) : null}
               {showCarTypeDropdown && (
                 <View style={styles.dropdownList}>
                   <ScrollView
@@ -864,7 +977,10 @@ export default function FormScreen() {
               </Text>
               <TouchableOpacity
                 activeOpacity={1}
-                style={styles.dropdownContainer}
+                style={[
+                  styles.dropdownContainer,
+                  formErrors.licenseTier && styles.inputError,
+                ]}
                 onPress={() =>
                   setShowLicenseTierDropdown(!showLicenseTierDropdown)
                 }
@@ -886,6 +1002,9 @@ export default function FormScreen() {
                   ]}
                 />
               </TouchableOpacity>
+              {formErrors.licenseTier ? (
+                <Text style={styles.errorText}>{formErrors.licenseTier}</Text>
+              ) : null}
               {showLicenseTierDropdown && (
                 <View style={styles.dropdownList}>
                   <ScrollView
@@ -913,7 +1032,10 @@ export default function FormScreen() {
                 Năm sản xuất <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  formErrors.year && styles.inputError,
+                ]}
                 value={formData.year}
                 onChangeText={(value) => handleInputChange("year", value)}
                 placeholder="Nhập năm sản xuất (VD: 2020)"
@@ -921,6 +1043,32 @@ export default function FormScreen() {
                 keyboardType="numeric"
                 maxLength={4}
               />
+              {formErrors.year ? (
+                <Text style={styles.errorText}>{formErrors.year}</Text>
+              ) : null}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Mô tả <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  formErrors.description && styles.inputError,
+                ]}
+                value={formData.description}
+                onChangeText={(value) => handleInputChange("description", value)}
+                placeholder="Nhập mô tả về xe"
+                placeholderTextColor="#92929D"
+                multiline={true}
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+              {formErrors.description ? (
+                <Text style={styles.errorText}>{formErrors.description}</Text>
+              ) : null}
             </View>
           </View>
 
@@ -1147,6 +1295,21 @@ const styles = StyleSheet.create({
     color: "#000",
     borderWidth: 1,
     borderColor: "#E0E0E0",
+  },
+  textArea: {
+    minHeight: 100,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  inputError: {
+    borderColor: AppColors.red,
+    borderWidth: 1,
+  },
+  errorText: {
+    color: AppColors.red,
+    fontSize: 14,
+    marginTop: 4,
+    marginLeft: 4,
   },
   dropdownContainer: {
     backgroundColor: "#F5F5F5",

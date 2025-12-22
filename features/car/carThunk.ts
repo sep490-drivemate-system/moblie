@@ -5,7 +5,7 @@ import { GetCarsParams } from "@/models/car/car";
 
 export const CAR_PATH = "car";
 
-export const registerCar = createThunk<void, FormData>(
+export const registerCar = createThunk<string, FormData>(
   HttpMethod.POST,
   "registerCar",
   `${CAR_PATH}`,

@@ -1,9 +1,11 @@
 import { AppDispatch, RootState } from "@/lib/redux/store";
 import { BaseViewModel } from "../shared/BaseViewModel";
-import { clearCarRegistrationForm, updateCarRegistrationFormField } from "@/features/car/carSlice";
+import {
+  clearCarRegistrationForm,
+  updateCarRegistrationFormField,
+} from "@/features/car/carSlice";
 import { IBrandCar, ICarRegistrationRequest } from "@/models/car/car";
 import { getManufacturers, registerCar } from "@/features/car/carThunk";
-import { ICarRegistrationResponse } from "@/models/car/carRegistration";
 
 export interface CarRegistrationFormData {
   ownerName: string;
@@ -155,25 +157,25 @@ export class AddCarViewModel extends BaseViewModel<RootState["car"]> {
       BrandId: form.BrandId,
       Description: form.Description,
       InsuranceEndTime: form.InsuranceEndTime,
-      hasThumbnailImage: !!form.ThumbnailImage,
-      hasCarFrontImage: !!form.CarFrontImage,
-      hasCarBackImage: !!form.CarBackImage,
-      hasCarLeftImage: !!form.CarLeftImage,
-      hasCarRightImage: !!form.CarRightImage,
-      hasInteriorImage: !!form.InteriorImage,
-      hasRegistrationFront: !!form.RegistrationFront,
-      hasRegistrationBack: !!form.RegistrationBack,
-      hasInsuranceFront: !!form.InsuranceFront,
-      hasInsuranceBack: !!form.InsuranceBack,
+      ThumbnailImage: form.ThumbnailImage,
+      CarFrontImage: form.CarFrontImage,
+      CarBackImage: form.CarBackImage,
+      CarLeftImage: form.CarLeftImage,
+      CarRightImage: form.CarRightImage,
+      InteriorImage: form.InteriorImage,
+      RegistrationFront: form.RegistrationFront,
+      RegistrationBack: form.RegistrationBack,
+      InsuranceFront: form.InsuranceFront,
+      InsuranceBack: form.InsuranceBack,
     });
 
     return formData;
   }
 
   // Register car using FormData
-  async registerCar(): Promise<ICarRegistrationResponse | null> {
+  async registerCar() {
     const form = this.getCurrentState().carRegistrationForm;
-    
+
     // Validate required fields before converting
     const missingFields: string[] = [];
     if (!form.InstructorId || form.InstructorId.trim() === "") {
@@ -197,7 +199,11 @@ export class AddCarViewModel extends BaseViewModel<RootState["car"]> {
     if (!form.LicenseTier || form.LicenseTier.trim() === "") {
       missingFields.push("LicenseTier");
     }
-    if (form.HourlyPrice === undefined || form.HourlyPrice === null || form.HourlyPrice <= 0) {
+    if (
+      form.HourlyPrice === undefined ||
+      form.HourlyPrice === null ||
+      form.HourlyPrice <= 0
+    ) {
       missingFields.push("HourlyPrice");
     }
     if (form.Year === undefined || form.Year === null || form.Year <= 0) {
@@ -213,20 +219,26 @@ export class AddCarViewModel extends BaseViewModel<RootState["car"]> {
     }
 
     const formData = this.convertFormToFormData(form);
-
-    return await this.executeAsync<ICarRegistrationResponse>(async () => {
-      try {
-        const response = await this.dispatch(registerCar(formData)).unwrap();
-        if (!response.value) {
-          throw new Error("Không thể đăng ký xe - Response không có dữ liệu");
+    await this.executeAsync(
+      async () => {
+        try {
+          await this.dispatch(registerCar(formData)).unwrap();
+          return "success"; // Return value to ensure onSuccess is called
+        } catch (error: any) {
+          console.error("Error registering car:", error);
+          const errorMessage =
+            typeof error === "string"
+              ? error
+              : error?.message ||
+                error?.data?.message ||
+                "Không thể đăng ký xe";
+          throw new Error(errorMessage);
         }
+      },
+      () => {
         this.dispatch(clearCarRegistrationForm());
-        return response.value;
-      } catch (error: any) {
-        console.error("Error registering car:", error);
-        const errorMessage = error?.message || error?.data?.message || "Không thể đăng ký xe";
-        throw new Error(errorMessage);
+        this.navigate("/(main)/(tabs)/mycar");
       }
-    });
+    );
   }
 }

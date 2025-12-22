@@ -100,10 +100,6 @@ export default function FormScreen() {
       }
       const userId = await getUserIdFromToken();
       viewModel.updateCarRegistrationFormField("InstructorId", userId);
-      viewModel.updateCarRegistrationFormField(
-        "Description",
-        "Tình trạng xe rất tốt, không có vấn đề gì"
-      );
     } catch (error) {
       console.error("Error loading user data:", error);
     }
@@ -214,10 +210,7 @@ export default function FormScreen() {
       await AsyncStorage.removeItem("temp_car_verification_back");
       await AsyncStorage.removeItem("temp_car_verification_side");
       await AsyncStorage.removeItem("temp_car_verification_interior");
-      const result = await viewModel.registerCar();
-      if (result) {
-        router.push("/(main)/(tabs)/mycar");
-      }
+      await viewModel.registerCar();
     } catch (error) {
       showCustomAlert("Lỗi", "Không thể lưu ảnh xác thực xe", [
         {
@@ -346,6 +339,10 @@ export default function FormScreen() {
   useEffect(() => {
     loadUserData();
   }, []);
+
+  useEffect(() => {
+    viewModel.setRouter(router);
+  }, [router, viewModel]);
 
   useFocusEffect(
     React.useCallback(() => {
