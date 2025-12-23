@@ -131,7 +131,7 @@ export default function UploadGuideScreen() {
   };
 
   const getSampleImages = () => {
-    return [require("@/assets/images/image_1-guide5.png")];
+    return [require("@/assets/images/image_1_guide5.png")];
   };
 
   return (

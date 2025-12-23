@@ -142,28 +142,28 @@ export default function UploadGuideScreen() {
     switch (type) {
       case "front":
         return [
-          require("@/assets/images/image_1-guide1.png"),
-          require("@/assets/images/image_1-guide2.png"),
+          require("@/assets/images/image_1_guide1.png"),
+          require("@/assets/images/image_1_guide2.png"),
         ];
       case "back":
         return [
-          require("@/assets/images/image_1-guide2.png"),
-          require("@/assets/images/image_1-guide1.png"),
+          require("@/assets/images/image_1_guide2.png"),
+          require("@/assets/images/image_1_guide1.png"),
         ];
       case "side":
         return [
-          require("@/assets/images/image_1-guide3.png"),
-          require("@/assets/images/image_1-guide4.png"),
+          require("@/assets/images/image_1_guide3.png"),
+          require("@/assets/images/image_1_guide4.png"),
         ];
       case "interior":
         return [
-          require("@/assets/images/image_1-guide4.png"),
-          require("@/assets/images/image_1-guide3.png"),
+          require("@/assets/images/image_1_guide4.png"),
+          require("@/assets/images/image_1_guide3.png"),
         ];
       default:
         return [
-          require("@/assets/images/image_1-guide1.png"),
-          require("@/assets/images/image_1-guide2.png"),
+          require("@/assets/images/image_1_guide1.png"),
+          require("@/assets/images/image_1_guide2.png"),
         ];
     }
   };
@@ -191,25 +191,25 @@ export default function UploadGuideScreen() {
             <Text style={styles.sampleLabel}>Ảnh mẫu</Text>
             <View style={styles.samplePhotos}>
               <Image
-                source={require("@/assets/images/image_1-guide10.png")}
+                source={require("@/assets/images/image_1_guide10.png")}
                 style={styles.samplePhoto}
               />
             </View>
             <View style={styles.samplePhotos}>
               <Image
-                source={require("@/assets/images/image_2-guide10.png")}
+                source={require("@/assets/images/image_2_guide10.png")}
                 style={styles.samplePhoto}
               />
             </View>
             <View style={styles.samplePhotos}>
               <Image
-                source={require("@/assets/images/image_3-guide10.png")}
+                source={require("@/assets/images/image_3_guide10.png")}
                 style={styles.samplePhoto}
               />
             </View>
             <View style={styles.samplePhotos}>
               <Image
-                source={require("@/assets/images/image_4-guide10.png")}
+                source={require("@/assets/images/image_4_guide10.png")}
                 style={styles.samplePhoto}
               />
             </View>

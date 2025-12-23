@@ -238,7 +238,7 @@ export class PackageDetailViewModel {
             color: AppColors.primary,
             reason: refundInfo.reason,
             isEligible: true,
-        };
+        }; 
     }
 }
 

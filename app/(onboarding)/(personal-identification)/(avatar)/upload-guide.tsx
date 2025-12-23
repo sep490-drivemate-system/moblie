@@ -156,12 +156,12 @@ export default function UploadGuideScreen() {
             <Text style={styles.sampleLabel}>Ảnh mẫu</Text>
             <View style={styles.samplePhotos}>
               <Image
-                source={require("@/assets/images/image_1-guide1.png")}
+                source={require("@/assets/images/image_1_guide1.png")}
                 style={styles.samplePhoto}
               />
 
               <Image
-                source={require("@/assets/images/image_2-guide1.png")}
+                source={require("@/assets/images/image_2_guide1.png")}
                 style={styles.samplePhoto}
               />
             </View>

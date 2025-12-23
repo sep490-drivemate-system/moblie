@@ -104,7 +104,7 @@ const VehicleCard: React.FC<VehicleCardProps> = ({
       <View style={styles.vehicleImageContainer}>
         <View style={styles.vehicleImagePlaceholder}>
           <Image
-            source={require(`@/assets/images/image_3-guide10.png`)}
+            source={require(`@/assets/images/image_3_guide10.png`)}
             style={styles.vehicleImage}
           />
         </View>

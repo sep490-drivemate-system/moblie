@@ -149,13 +149,13 @@ export default function UploadGuideScreen() {
   const getSampleImages = () => {
     if (type === "front") {
       return [
-        require("@/assets/images/image_1-guide9.png"),
-        require("@/assets/images/image_2-guide9.png"),
+        require("@/assets/images/image_1_guide9.png"),
+        require("@/assets/images/image_2_guide9.png"),
       ];
     } else {
       return [
-        require("@/assets/images/image_1-guide9.png"),
-        require("@/assets/images/image_2-guide9.png"),
+        require("@/assets/images/image_1_guide9.png"),
+        require("@/assets/images/image_2_guide9.png"),
       ];
     }
   };

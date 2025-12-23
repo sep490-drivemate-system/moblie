@@ -170,8 +170,8 @@ export default function UploadGuideScreen() {
 
   const getSampleImages = () => {
     return [
-      require("@/assets/images/image_1-guide8.png"),
-      require("@/assets/images/image_2-guide8.png"),
+      require("@/assets/images/image_1_guide8.png"),
+      require("@/assets/images/image_2_guide8.png"),
     ];
   };
 

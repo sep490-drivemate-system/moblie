@@ -21,7 +21,6 @@ import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import HeaderList from "@/components/Commons/HeaderList";
 import { ROUTES } from "@/constants/routes";
 import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
-import * as Notifications from "expo-notifications";
 
 
 interface Message {
@@ -108,17 +107,6 @@ export default function ChatPage() {
         if (exists) return prev;
         return [...prev, newMessage];
       });
-
-      if (!isOwn) {
-        Notifications.scheduleNotificationAsync({
-          content: {
-            title: newMessage.userName || "Tin nhắn mới",
-            body: newMessage.content || "",
-          },
-          trigger: null,
-        }).catch((err: unknown) => console.log("Local notification error", err));
-      }
-
     };
 
     const handleReceiveMessage = (data: any) => {

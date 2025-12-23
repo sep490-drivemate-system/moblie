@@ -7,6 +7,7 @@ import {
   getStatisticsInstructor,
   getWallet,
   IInstructorStatisticFilter,
+  withdrawRequest,
 } from "@/features/wallet/walletThunk";
 import {
   IInstructorStatistic,
@@ -17,6 +18,7 @@ import { IDeposit } from "@/models/wallet/deposit.type";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 import { setPaymentCallback } from "@/features/wallet/walletSlice";
+import { IWithdrawRequest } from "@/models/wallet/withdraw.type";
 
 export class WalletViewModel extends BaseViewModel<RootState["wallet"]> {
   getWalletBalance = async (): Promise<number> => {
@@ -40,6 +42,16 @@ export class WalletViewModel extends BaseViewModel<RootState["wallet"]> {
         })) ?? null
       );
     };
+
+
+  withdrawRequest = async (payload: IWithdrawRequest): Promise<boolean> => {
+    return (
+      (await this.executeAsync<boolean>(async () => {
+        const response = await this.dispatch(withdrawRequest(payload)).unwrap();
+        return response?.value as boolean;
+      })) ?? false
+    );
+  };
 
   getStatisticsInstructor = async (
     filter?: IInstructorStatisticFilter

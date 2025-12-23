@@ -58,17 +58,17 @@
           "locationAlwaysAndWhenInUsePermission": "Allow this app to access your location to show your position on the map."
         }
       ],
-      [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsImpl": "mapbox"
-        }
-      ],
       "expo-font",
       "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1bb97fd7-9307-4467-9ac4-b743716d2495"
+      }
     }
   }
 }

@@ -3,6 +3,7 @@ import { createThunk } from "../genericCreateThunk";
 import { HttpMethod } from "@/models/enum/HttpMethods";
 import { StatisticTimeType } from "@/models/enum/StatisticTimeType.enum";
 import { IDeposit } from "@/models/wallet/deposit.type";
+import { IWithdrawRequest } from "@/models/wallet/withdraw.type";
 
 const WALLET_PATH = "wallet";
 
@@ -21,8 +22,14 @@ export const getWallet = createThunk<
     "getWallet",
     `${WALLET_PATH}`,
 );
-
-
+export const withdrawRequest = createThunk<
+    boolean,
+    IWithdrawRequest
+>(
+    HttpMethod.POST,
+    "withdrawRequest",
+    `${WALLET_PATH}/withdraw-request`,
+);
 export const getStatisticOverviewPriceInstructor = createThunk<
     IStatisticsInstructor,
     { instructorId: string }

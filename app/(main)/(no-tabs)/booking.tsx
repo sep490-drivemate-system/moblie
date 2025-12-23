@@ -273,10 +273,10 @@ export default function BookingScreen() {
 
     const bookingId = userPackageId || packageId;
 
-    if (bookingCost > 0 && bookingCost < walletState.balance) {
-      showError("Số dư không đủ");
-      return;
-    }
+    // if (bookingCost > 0 && bookingCost < walletState.balance) {
+    //   showError("Số dư không đủ");
+    //   return;
+    // }
 
     if (!bookingId || !selectedDate || !selectedStartTime || !selectedLocationId) {
       showError("Vui lòng điền đầy đủ thông tin");

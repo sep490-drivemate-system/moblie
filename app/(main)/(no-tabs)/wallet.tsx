@@ -21,11 +21,8 @@ import { BankType } from "@/models/wallet/bank-type.enum";
 import { ClientPlatform } from "@/models/wallet/client-platform.enum";
 import {
   Wallet,
-  CreditCard,
   Check,
   Activity,
-  Building2,
-  Smartphone,
   ArrowDownCircle,
   ArrowUpCircle,
 } from "lucide-react-native";
@@ -36,9 +33,9 @@ import { clearPaymentCallback } from "@/features/wallet/walletSlice";
 import { useDispatch } from "react-redux";
 import { AuthViewModel } from "@/viewmodels/auth/AuthViewModel";
 import { UserRole } from "@/models/enum/UserRole.enum";
-const zalopayLogo = require("@/assets/images/zalopay-logo.png");
-const payosLogo = require("@/assets/images/payos-logo.png");
-const vnpayLogo = require("@/assets/images/vnpay-logo.jpg");
+const zalopayLogo = require("@/assets/images/zalopay_logo.png");
+const payosLogo = require("@/assets/images/payos_logo.png");
+const vnpayLogo = require("@/assets/images/vnpay_logo.png");
 
 export default function DepositScreen() {
   const router = useRouter();
@@ -51,9 +48,12 @@ export default function DepositScreen() {
   const [selectedPayment, setSelectedPayment] = useState<BankType>();
   const [customAmount, setCustomAmount] = useState("");
   const [customWithdrawAmount, setCustomWithdrawAmount] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [showConfirmAlert, setShowConfirmAlert] = useState(false);
   const [confirmAmount, setConfirmAmount] = useState(0);
   const walletSelector = (state: RootState) => state.wallet;
@@ -210,8 +210,22 @@ export default function DepositScreen() {
       setShowErrorAlert(true);
       return;
     }
-    if (total > walletState.balance) {
+    // Chỉ kiểm tra số dư cho NoviceDriver, Instructor có thể rút ngay cả khi số tiền lớn hơn số dư
+    if (total > walletState.balance && authState.userInfo?.role !== UserRole.Instructor) {
       setErrorMessage("Số tiền rút không được vượt quá số dư hiện có");
+      setShowErrorAlert(true);
+      return;
+    }
+    // Kiểm tra số dư sau khi rút không được <= 0
+    const balanceAfterWithdraw = walletState.balance - total;
+    if (balanceAfterWithdraw <= 0) {
+      setErrorMessage("Số dư sau khi rút phải lớn hơn 0");
+      setShowErrorAlert(true);
+      return;
+    }
+    // Kiểm tra thông tin tài khoản ngân hàng
+    if (!bankAccount || bankAccount.trim().length === 0) {
+      setErrorMessage("Vui lòng nhập số tài khoản ngân hàng");
       setShowErrorAlert(true);
       return;
     }
@@ -219,8 +233,58 @@ export default function DepositScreen() {
     setShowConfirmAlert(true);
   };
 
+  const handleConfirmWithdraw = async () => {
+    setShowConfirmAlert(false);
+    try {
+      setIsProcessing(true);
+      const total = getTotalWithdrawAmount();
+      const success = await walletViewModel.withdrawRequest({
+        amount: total,
+        transactionNote: bankAccount.trim(),
+      });
+
+      if (!success) {
+        throw new Error("Không thể tạo yêu cầu rút tiền");
+      }
+
+      // Reset form và hiển thị thông báo thành công
+      setShowWithdrawForm(false);
+      setSelectedWithdrawAmount(null);
+      setCustomWithdrawAmount("");
+      setBankAccount("");
+      setSuccessMessage("Yêu cầu rút tiền đã được gửi thành công");
+      setShowSuccessAlert(true);
+
+      // Refresh wallet balance
+      await walletViewModel.getWalletBalance();
+    } catch (error: any) {
+      const errorMsg =
+        error?.message ||
+        error?.toString() ||
+        "Không thể tạo yêu cầu rút tiền. Vui lòng thử lại.";
+      setErrorMessage(errorMsg);
+      setShowErrorAlert(true);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
 
   const [authState, authViewModel] = useViewModel(AuthViewModel, (state) => state.auth);
+
+  // Auto-show forms on initial load
+  useFocusEffect(
+    useCallback(() => {
+      if (!showDepositForm && !showWithdrawForm) {
+        if (authState.userInfo?.role === UserRole.NoviceDriver) {
+          setShowDepositForm(true);
+        } else if (authState.userInfo?.role === UserRole.Instructor) {
+          setShowWithdrawForm(true);
+        }
+      }
+    }, [authState.userInfo?.role])
+  );
+
   return (
     <View style={styles.container}>
       <HeaderList title="Ví của tôi" actionReturnScreen={ROUTES.BACK} />
@@ -257,39 +321,45 @@ export default function DepositScreen() {
               </View>
 
               <View style={styles.actionButtonsContainer}>
-
-
-                {authState.userInfo?.role === UserRole.NoviceDriver && (
-                  <>
-                    <TouchableOpacity
-                      style={styles.actionButton}
-                      onPress={() => {
+                {/* Nạp tiền - hiển thị cho cả NoviceDriver và Instructor, nhưng disable cho Instructor */}
+                {(authState.userInfo?.role === UserRole.NoviceDriver || authState.userInfo?.role === UserRole.Instructor) && (
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      authState.userInfo?.role === UserRole.Instructor && styles.actionButtonDisabled
+                    ]}
+                    onPress={() => {
+                      if (authState.userInfo?.role === UserRole.NoviceDriver) {
                         setShowDepositForm(true);
                         setShowWithdrawForm(false);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <View style={[styles.actionButtonIcon, styles.depositButtonIcon]}>
-                        <ArrowDownCircle size={18} color={AppColors.textWhite} strokeWidth={2.5} />
-                      </View>
-                      <Text style={styles.actionButtonText}>Nạp tiền</Text>
-                    </TouchableOpacity>
-                  </>
+                      }
+                    }}
+                    activeOpacity={authState.userInfo?.role === UserRole.Instructor ? 1 : 0.7}
+                    disabled={authState.userInfo?.role === UserRole.Instructor}
+                  >
+                    <View style={[styles.actionButtonIcon, styles.depositButtonIcon]}>
+                      <ArrowDownCircle size={18} color={AppColors.textWhite} strokeWidth={2.5} />
+                    </View>
+                    <Text style={styles.actionButtonText}>Nạp tiền</Text>
+                  </TouchableOpacity>
                 )}
 
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => {
-                    setShowWithdrawForm(true);
-                    setShowDepositForm(false);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.actionButtonIcon, styles.withdrawButtonIcon]}>
-                    <ArrowUpCircle size={18} color={AppColors.textWhite} strokeWidth={2.5} />
-                  </View>
-                  <Text style={styles.actionButtonText}>Rút tiền</Text>
-                </TouchableOpacity>
+                {/* Rút tiền - hiển thị cho cả NoviceDriver và Instructor */}
+                {(authState.userInfo?.role === UserRole.NoviceDriver || authState.userInfo?.role === UserRole.Instructor) && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => {
+                      setShowWithdrawForm(true);
+                      setShowDepositForm(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.actionButtonIcon, styles.withdrawButtonIcon]}>
+                      <ArrowUpCircle size={18} color={AppColors.textWhite} strokeWidth={2.5} />
+                    </View>
+                    <Text style={styles.actionButtonText}>Rút tiền</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </LinearGradient>
@@ -453,6 +523,7 @@ export default function DepositScreen() {
                     setShowWithdrawForm(false);
                     setSelectedWithdrawAmount(null);
                     setCustomWithdrawAmount("");
+                    setBankAccount("");
                   }}
                   style={styles.closeButton}
                 >
@@ -461,7 +532,8 @@ export default function DepositScreen() {
               </View>
               <View style={styles.amountGrid}>
                 {withdrawAmounts.map((amount, index) => {
-                  const isDisabled = amount > walletState.balance;
+                  // Chỉ disable nếu số tiền lớn hơn số dư (không áp dụng cho Instructor để họ có thể chọn)
+                  const isDisabled = amount > walletState.balance && authState.userInfo?.role !== UserRole.Instructor;
                   return (
                     <TouchableOpacity
                       key={index}
@@ -509,47 +581,85 @@ export default function DepositScreen() {
                   />
                   <Text style={styles.customAmountSuffix}>đ</Text>
                 </View>
-                <Text style={styles.customAmountNote}>
-                  Số tiền tối thiểu: 10.000 đ | Tối đa: {formatCurrency(walletState.balance)} đ
-                </Text>
               </View>
             </View>
 
+            {/* Form nhập thông tin tài khoản ngân hàng */}
             {getTotalWithdrawAmount() > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Tóm tắt giao dịch</Text>
-                <View style={styles.summaryContent}>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Số tiền rút:</Text>
-                    <Text style={styles.summaryValue}>
-                      {formatCurrency(getTotalWithdrawAmount())} đ
-                    </Text>
-                  </View>
-                  <View style={styles.summaryDivider} />
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Số dư hiện tại:</Text>
-                    <Text style={styles.summaryValue}>
-                      {formatCurrency(walletState.balance)} đ
-                    </Text>
-                  </View>
-                  <View style={styles.summaryDivider} />
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryTotalLabel}>Số dư sau khi rút:</Text>
-                    <Text style={styles.summaryTotalValue}>
-                      {formatCurrency(walletState.balance - getTotalWithdrawAmount())} đ
-                    </Text>
-                  </View>
+                <Text style={styles.sectionTitle}>Thông tin tài khoản ngân hàng</Text>
+                <View style={styles.bankAccountSection}>
+                  <Text style={styles.bankAccountLabel}>
+                    Vui lòng nhập thông tin tài khoản ngân hàng để nhận tiền
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.bankAccountInput,
+                      bankAccount && styles.bankAccountInputActive,
+                    ]}
+                    placeholder="Ví dụ:\nSố tài khoản: 1234567890\nTên ngân hàng: Vietcombank\nTên chủ tài khoản: Nguyễn Văn A"
+                    value={bankAccount}
+                    onChangeText={setBankAccount}
+                    placeholderTextColor={AppColors.gray400}
+                    multiline={true}
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                  />
+                  <Text style={styles.bankAccountNote}>
+                    Thông tin này sẽ được sử dụng để chuyển tiền vào tài khoản của bạn
+                  </Text>
                 </View>
               </View>
             )}
+
+            {getTotalWithdrawAmount() > 0 && (() => {
+              const balanceAfterWithdraw = walletState.balance - getTotalWithdrawAmount();
+              const isInvalidBalance = balanceAfterWithdraw <= 0;
+
+              // Nếu số dư sau khi rút <= 0, chỉ hiển thị thông báo lỗi
+              if (isInvalidBalance) {
+                return (
+                  <View style={styles.section}>
+                    <View style={styles.errorMessageContainer}>
+                      <Text style={styles.errorMessageText}>
+                        Số dư sau khi rút phải lớn hơn 0. Vui lòng chọn số tiền nhỏ hơn.
+                      </Text>
+                    </View>
+                  </View>
+                );
+              }
+
+              // Nếu số dư sau khi rút > 0, hiển thị đầy đủ thông tin
+              return (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Tóm tắt giao dịch</Text>
+                  <View style={styles.summaryContent}>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Số tiền rút:</Text>
+                      <Text style={styles.summaryValue}>
+                        {formatCurrency(getTotalWithdrawAmount())} đ
+                      </Text>
+                    </View>
+                    <View style={styles.summaryDivider} />
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Số dư hiện tại:</Text>
+                      <Text style={styles.summaryValue}>
+                        {formatCurrency(walletState.balance)} đ
+                      </Text>
+                    </View>
+                    <View style={styles.summaryDivider} />
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryTotalLabel}>Số dư sau khi rút:</Text>
+                      <Text style={styles.summaryTotalValue}>
+                        {formatCurrency(balanceAfterWithdraw)} đ
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })()}
           </>
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              Chọn "Nạp tiền" hoặc "Rút tiền" để bắt đầu giao dịch
-            </Text>
-          </View>
-        )}
+        ) : null}
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
@@ -586,37 +696,41 @@ export default function DepositScreen() {
         </View>
       )}
 
-      {showWithdrawForm && getTotalWithdrawAmount() > 0 && (
-        <View style={styles.paymentButtonContainer}>
-          <TouchableOpacity
-            style={[
-              styles.paymentButton,
-              isProcessing && styles.paymentButtonDisabled,
-            ]}
-            onPress={handleWithdraw}
-            activeOpacity={0.8}
-            disabled={isProcessing}
-          >
-            <LinearGradient
-              colors={[AppColors.error, AppColors.error]}
-              style={styles.paymentButtonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
+      {showWithdrawForm && getTotalWithdrawAmount() > 0 && (() => {
+        const balanceAfterWithdraw = walletState.balance - getTotalWithdrawAmount();
+        const isDisabled = isProcessing || balanceAfterWithdraw <= 0 || !bankAccount || bankAccount.trim().length === 0;
+        return (
+          <View style={styles.paymentButtonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.paymentButton,
+                isDisabled && styles.paymentButtonDisabled,
+              ]}
+              onPress={handleWithdraw}
+              activeOpacity={0.8}
+              disabled={isDisabled}
             >
-              {isProcessing ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator color={AppColors.white} size="small" />
-                  <Text style={styles.paymentButtonText}>Đang xử lý...</Text>
-                </View>
-              ) : (
-                <Text style={styles.paymentButtonText}>
-                  Rút {formatCurrency(getTotalWithdrawAmount())} VNĐ
-                </Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      )}
+              <LinearGradient
+                colors={[AppColors.error, AppColors.error]}
+                style={styles.paymentButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                {isProcessing ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator color={AppColors.white} size="small" />
+                    <Text style={styles.paymentButtonText}>Đang xử lý...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.paymentButtonText}>
+                    Rút {formatCurrency(getTotalWithdrawAmount())} VNĐ
+                  </Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        );
+      })()}
 
       {/* Error Alert */}
       <AppAlert
@@ -632,13 +746,29 @@ export default function DepositScreen() {
       />
 
       <AppAlert
+        visible={showSuccessAlert}
+        title="Thành công"
+        message={successMessage}
+        variant={AlertVariant.Success}
+        primaryButton={{
+          label: "Đóng",
+          onPress: () => setShowSuccessAlert(false),
+        }}
+        onDismiss={() => setShowSuccessAlert(false)}
+      />
+
+      <AppAlert
         visible={showConfirmAlert}
-        title="Xác nhận thanh toán"
-        message={`Bạn sẽ nạp ${formatCurrency(confirmAmount)} đ vào tài khoản?`}
+        title={showWithdrawForm ? "Xác nhận rút tiền" : "Xác nhận thanh toán"}
+        message={
+          showWithdrawForm
+            ? `Bạn sẽ rút ${formatCurrency(confirmAmount)} đ từ tài khoản?\nSố tài khoản: ${bankAccount}`
+            : `Bạn sẽ nạp ${formatCurrency(confirmAmount)} đ vào tài khoản?`
+        }
         variant={AlertVariant.Info}
         primaryButton={{
           label: "Xác nhận",
-          onPress: handleConfirmPayment,
+          onPress: showWithdrawForm ? handleConfirmWithdraw : handleConfirmPayment,
         }}
         secondaryButton={{
           label: "Hủy",
@@ -763,6 +893,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: AppColors.textWhite,
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
   },
   balanceLabel: {
     fontSize: 12,
@@ -991,6 +1124,38 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 12,
   },
+  bankAccountSection: {
+    marginTop: 8,
+  },
+  bankAccountLabel: {
+    fontSize: 14,
+    color: AppColors.gray600,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  bankAccountInput: {
+    backgroundColor: AppColors.gray50,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: AppColors.gray200,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: AppColors.textPrimary,
+    fontWeight: "600",
+    minHeight: 100,
+    maxHeight: 200,
+  },
+  bankAccountInputActive: {
+    borderColor: AppColors.primary,
+    backgroundColor: `${AppColors.primary}05`,
+  },
+  bankAccountNote: {
+    fontSize: 12,
+    color: AppColors.gray500,
+    marginTop: 8,
+    fontStyle: "italic",
+  },
   paymentMethods: {
     gap: 12,
   },
@@ -1085,6 +1250,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     color: AppColors.primary,
+  },
+  summaryTotalValueError: {
+    color: AppColors.error,
+  },
+  errorMessageContainer: {
+    backgroundColor: `${AppColors.error}15`,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  errorMessageText: {
+    fontSize: 13,
+    color: AppColors.error,
+    fontWeight: "600",
+    textAlign: "center",
   },
   bottomSpacing: {
     height: 100,

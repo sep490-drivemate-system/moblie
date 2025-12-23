@@ -16,8 +16,6 @@ import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { AddCarViewModel } from "@/viewmodels/car/AddCarViewModel";
 import { RootState } from "@/lib/redux/store";
 import { AppColors } from "@/constants/Colors";
-import { useSelector } from "react-redux";
-import { updateCarRegistrationForm } from "@/features/car/carSlice";
 
 export default function CarPriceScreen() {
   const router = useRouter();
