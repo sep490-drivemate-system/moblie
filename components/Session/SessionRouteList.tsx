@@ -252,14 +252,20 @@ export default function SessionRouteList({
           </View>
         )}
 
-      <SessionActions
-        status={parsedStatus ?? SessionStatus.Planning}
-        sessionId={sessionId}
-        instructorId={instructorId as string}
-        displaySession={displaySession}
-        onCancelPress={onCancelPress}
-        isSimulating={isSimulating}
-      />
+
+      {/* Ẩn SessionActions khi status là Completed, Reschedule, hoặc Cancelled */}
+      {parsedStatus !== SessionStatus.Completed &&
+        parsedStatus !== SessionStatus.Reschedule &&
+        parsedStatus !== SessionStatus.Cancelled && (
+          <SessionActions
+            status={parsedStatus ?? SessionStatus.Planning}
+            sessionId={sessionId}
+            instructorId={instructorId as string}
+            displaySession={displaySession}
+            onCancelPress={onCancelPress}
+            isSimulating={isSimulating}
+          />
+        )}
     </View>
   );
 }

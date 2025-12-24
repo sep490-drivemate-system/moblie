@@ -447,7 +447,7 @@ export default function SessionMap({
             {!hideDirections && plannedPolylineCoords.length > 0 && (
               <Polyline
                 coordinates={plannedPolylineCoords}
-                strokeColor={AppColors.primary}
+                strokeColor="blue"
                 strokeWidth={4}
               />
             )}

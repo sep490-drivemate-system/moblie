@@ -31,6 +31,7 @@ import { clearSessionDetail } from "@/features/booking/bookingSlice";
 import { CarViewModel } from "@/viewmodels/car/CarViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { ICarDetail } from "@/models/car/car";
+import { BookingStatus } from "@/models/package/user-package";
 
 export default function PackageDetailScreen() {
   const router = useRouter();
@@ -65,6 +66,7 @@ export default function PackageDetailScreen() {
 
   const carIdFromParams = params.carId as string || "";
   const carPriceFromParams = params.carPrice ? parseFloat(params.carPrice as string) : 0;
+  const statusFromParams = params.status as unknown as BookingStatus;
 
 
   useEffect(() => {
@@ -598,32 +600,37 @@ export default function PackageDetailScreen() {
       </ScrollView>
 
 
-      {packageData?.remainingHours !== undefined && packageData.remainingHours > 0 && (
-        <View style={styles.bottomContainer}>
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <TouchableOpacity
-              style={[styles.bookButton, { flex: 1 }]}
-              onPress={handleBookNewSession}
-            >
-              <View style={styles.bookButtonGradient}>
-                <Text style={styles.bookButtonText}>Đặt buổi thuê mới</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.cancelButton, { flex: 1 }]}
-              onPress={() => {
-                setShowCancelModal(true);
-              }}
-            >
-              <Text style={styles.cancelButtonText}>Hủy gói</Text>
-            </TouchableOpacity>
+      {(() => {
+        // Ẩn các nút khi status là: Hủy có hoàn trả, Hủy không hoàn trả, hoặc Đã sử dụng
+        const shouldHideButtons = statusFromParams === BookingStatus.CancellationWithRefund ||
+          statusFromParams === BookingStatus.CancellationWithoutRefund ||
+          statusFromParams === BookingStatus.Used;
+
+        if (!shouldHideButtons) return null;
+
+        return (
+          <View style={styles.bottomContainer}>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <TouchableOpacity
+                style={[styles.bookButton, { flex: 1 }]}
+                onPress={handleBookNewSession}
+              >
+                <View style={styles.bookButtonGradient}>
+                  <Text style={styles.bookButtonText}>Đặt buổi thuê mới</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.cancelButton, { flex: 1 }]}
+                onPress={() => {
+                  setShowCancelModal(true);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Hủy gói</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      )}
-
-
-
-
+        );
+      })()}
       <CancelPackageModal
         visible={showCancelModal}
         packageData={packageData}

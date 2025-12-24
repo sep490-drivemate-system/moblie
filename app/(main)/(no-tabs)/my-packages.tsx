@@ -320,6 +320,7 @@ export default function MyPackagesScreen() {
                     params: {
                       packageData: JSON.stringify(pkg),
                       carId: pkg.carId,
+                      status: pkg.bookingStatus,
                       carName: pkg.carName,
                     },
                   })}
