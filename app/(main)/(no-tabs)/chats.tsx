@@ -161,9 +161,17 @@ export default function ChatsScreen() {
     });
   }, [sessions]);
 
+  // Determine return screen based on user role
+  const returnScreen = useMemo(() => {
+    if (userRole === UserRole.Instructor) {
+      return ROUTES.OVERVIEW;
+    }
+    return ROUTES.HOME;
+  }, [userRole]);
+
   return (
     <View style={styles.container}>
-      <HeaderList actionReturnScreen={ROUTES.HOME} title="Tin nhắn" />
+      <HeaderList actionReturnScreen={returnScreen} title="Tin nhắn" />
 
       <ScrollView
         style={styles.content}

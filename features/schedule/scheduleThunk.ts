@@ -17,6 +17,18 @@ export const getInstructorSchedule = createThunk<
     }
 );
 
+export const checkInstructorSchedule = createThunk<
+    boolean,
+    { instructorId: string }
+>(
+    HttpMethod.GET,
+    "checkInstructorSchedule",
+    `/${INSTRUCTOR_PATH}`,
+    {
+        buildUrl: (payload) => `/${INSTRUCTOR_PATH}/${payload.instructorId}/has-schedule`
+    }
+);
+
 export const getInstructorBookedSessions = createThunk<
     IInstructorBookedSession[],
     { instructorId: string }

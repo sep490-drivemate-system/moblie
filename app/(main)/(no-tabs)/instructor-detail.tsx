@@ -41,6 +41,7 @@ import { ICar } from "@/models/car/car";
 import { InstructorViewModel } from "@/viewmodels/instructor/InstructorViewModel";
 import { InstructorListCarViewModel } from "@/viewmodels/car/InstructorListCarViewModel";
 import { subtractWalletBalance } from "@/features/wallet/walletSlice";
+import { checkInstructorSchedule as checkInstructorScheduleThunk } from "@/features/schedule/scheduleThunk";
 
 const getGenderText = (gender: Gender): string => {
   return gender === Gender.Male ? "Nam" : "Nữ";
@@ -88,6 +89,8 @@ export default function InstructorDetailScreen() {
   );
   const [showLicenseAlert, setShowLicenseAlert] = useState(false);
   const [licenseAlertMessage, setLicenseAlertMessage] = useState("");
+  const [showScheduleAlert, setShowScheduleAlert] = useState(false);
+  const [pendingPackage, setPendingPackage] = useState<IInstructorPackages | null>(null);
 
 
   useEffect(() => {
@@ -141,21 +144,50 @@ export default function InstructorDetailScreen() {
       setShowBalanceAlert(true);
       return;
     }
-
-    const isLicenseValid = await noviceDriverViewModel.getLicenseValidity();
-    if (!isLicenseValid) {
-      setLicenseAlertMessage(
-        "Bạn chưa có giấy phép lái xe hoặc giấy phép lái xe đã hết hạn. Vui lòng đăng ký lái xe để tiếp tục."
-      );
-      setShowLicenseAlert(true);
-      return;
+    if (instructor?.id) {
+      try {
+        const hasSchedule = (await dispatch(
+          checkInstructorScheduleThunk({ instructorId: instructor.id })
+        ).unwrap()) as { value: boolean };
+        if (hasSchedule.value) {
+          // Lưu package đang chờ và hiển thị cảnh báo
+          setPendingPackage(pkg);
+          setShowScheduleAlert(true);
+          return; // Dừng lại, không hiển thị modal xác nhận ngay
+        }
+      } catch (error) {
+        console.log("Failed to check instructor schedule:", error);
+        // Continue with purchase if check fails
+      }
     }
 
+    // const isLicenseValid = await noviceDriverViewModel.getLicenseValidity();
+    // if (!isLicenseValid) {
+    //   setLicenseAlertMessage(
+    //     "Bạn chưa có giấy phép lái xe hoặc giấy phép lái xe đã hết hạn. Vui lòng đăng ký lái xe để tiếp tục."
+    //   );
+    //   setShowLicenseAlert(true);
+    //   return;
+    // }
+
+    // Nếu không có cảnh báo lịch, hiển thị modal xác nhận ngay
     setSelectedPackage(pkg);
     setSelectedVehicle(null);
     setShowConfirmModal(true);
     scaleAnim.setValue(0.9);
 
+  };
+
+  const handleScheduleAlertDismiss = () => {
+    setShowScheduleAlert(false);
+    // Sau khi đóng cảnh báo, hiển thị modal xác nhận với package đã lưu
+    if (pendingPackage) {
+      setSelectedPackage(pendingPackage);
+      setSelectedVehicle(null);
+      setPendingPackage(null);
+      setShowConfirmModal(true);
+      scaleAnim.setValue(0.9);
+    }
   };
 
   const handleConfirmPurchase = async () => {
@@ -256,7 +288,10 @@ export default function InstructorDetailScreen() {
                 variant={AlertVariant.Warning}
                 primaryButton={{
                   label: "Nạp tiền",
-                  onPress: () => router.push(ROUTES.MAIN_NO_TABS_WALLET),
+                  onPress: () => router.push({
+                    pathname: ROUTES.MAIN_NO_TABS_WALLET,
+                    params: { action: 'deposit' }
+                  }),
                 }}
                 onDismiss={() => setShowBalanceAlert(false)}
               />
@@ -269,6 +304,16 @@ export default function InstructorDetailScreen() {
                   onPress: () => router.push(ROUTES.HOME),
                 }}
                 onDismiss={() => setShowLicenseAlert(false)}
+              />
+              <AppAlert
+                visible={showScheduleAlert}
+                message="Người hướng dẫn này chưa có lịch, nên cẩn thận trước khi mua."
+                variant={AlertVariant.Warning}
+                primaryButton={{
+                  label: "Đã hiểu",
+                  onPress: handleScheduleAlertDismiss,
+                }}
+                onDismiss={handleScheduleAlertDismiss}
               />
               <View style={styles.heroNameContainer}>
                 <Text style={styles.heroName}>{instructor.fullName}</Text>

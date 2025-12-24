@@ -1,10 +1,11 @@
 import React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
-import { Award, Route, MessageSquare } from "lucide-react-native";
+import { Award, Route, MessageSquare, Car } from "lucide-react-native";
 import { AppColors } from "@/constants/Colors";
 import { IUserInfo } from "@/features/booking/bookingThunk";
 import { PackageDetailData } from "@/viewmodels/booking/PackageDetailViewModel";
 import { BookingStatus } from "@/models/package/user-package";
+import { ICarDetail } from "@/models/car/car";
 
 interface PackageDetailContentProps {
   packageData: PackageDetailData | null;
@@ -13,6 +14,7 @@ interface PackageDetailContentProps {
     date: string;
     time?: string;
   };
+  carInfo: ICarDetail | null;
   onOpenFeedback: () => void;
 }
 
@@ -21,6 +23,7 @@ export default function PackageDetailContent({
   packageData,
   instructorInfo,
   purchaseDateInfo,
+  carInfo,
   onOpenFeedback,
 }: PackageDetailContentProps) {
   return (
@@ -38,6 +41,30 @@ export default function PackageDetailContent({
                 {instructorInfo.fullName}
               </Text>
             </View>
+          </View>
+        </View>
+      )}
+
+      {carInfo && (
+        <View style={styles.carCard}>
+          <View style={styles.carSection}>
+            <Image
+              source={{ uri: carInfo.thumbnailUrl }}
+              style={styles.carImage}
+            />
+            <View style={styles.carInfo}>
+              <Text style={styles.carLabel}>Xe đã chọn</Text>
+              <Text style={styles.carName}>{carInfo.modelName}</Text>
+              <View style={styles.carDetails}>
+                <Text style={styles.carDetailText}>
+                  {carInfo.brand} • {carInfo.vehicleType} • {carInfo.seatCounts} chỗ
+                </Text>
+                <Text style={styles.carDetailText}>
+                  Biển số: {carInfo.license_plate}
+                </Text>
+              </View>
+            </View>
+            <Car size={24} color={AppColors.primary} strokeWidth={2} />
           </View>
         </View>
       )}
@@ -366,6 +393,56 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: AppColors.primary,
+  },
+  carCard: {
+    backgroundColor: AppColors.white,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  carSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  carImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: "#e2e8f0",
+    borderWidth: 2,
+    borderColor: "#f1f5f9",
+  },
+  carInfo: {
+    flex: 1,
+  },
+  carLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#94a3b8",
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  carName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 6,
+  },
+  carDetails: {
+    gap: 4,
+  },
+  carDetailText: {
+    fontSize: 13,
+    color: "#64748b",
+    fontWeight: "500",
   },
 });
 

@@ -17,6 +17,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
@@ -37,22 +38,12 @@ interface BookingItem {
   status: BookingStatus;
 }
 
-const BOOKINGS_DATA: BookingItem[] = [
-  { id: "BKG001", date: "2025-11-14", status: "routePlanning" },
-  { id: "BKG002", date: "2025-11-14", status: "pending" },
-  { id: "BKG003", date: "2025-10-15", status: "upcoming" },
-  { id: "BKG004", date: "2025-10-15", status: "ongoing" },
-  { id: "BKG005", date: "2025-11-16", status: "completed" },
-  { id: "BKG006", date: "2025-12-01", status: "rescheduled" },
-  { id: "BKG007", date: "2025-10-16", status: "ongoing" },
-  { id: "BKG008", date: "2025-11-17", status: "upcoming" },
-  { id: "BKG009", date: "2025-11-17", status: "cancelled" },
-  { id: "BKG010", date: "2025-11-18", status: "upcoming" },
-  { id: "BKG011", date: "2025-10-18", status: "ongoing" },
-  { id: "BKG012", date: "2025-12-18", status: "completed" },
-];
+
 
 const SAVED_AVAILABLE_DATES = ["2025-11-30"];
+
+// Mock booking data - should be replaced with actual API call
+const BOOKINGS_DATA: BookingItem[] = [];
 
 const bookingStatusToText: Record<BookingStatus, string> = {
   routePlanning: "Đang lên lộ trình",
@@ -167,8 +158,8 @@ function AvailabilityCalendar({
         const bookedStatusLabel =
           bookedStatuses && bookedStatuses.size > 0
             ? Array.from(bookedStatuses)
-                .map((status) => bookingStatusToText[status])
-                .join(", ")
+              .map((status) => bookingStatusToText[status])
+              .join(", ")
             : null;
         const isStartSelection = dateString === selectionStart;
 
@@ -191,7 +182,7 @@ function AvailabilityCalendar({
                 styles.calendarDayNumber,
                 !isCurrentMonth && styles.calendarDayNumberMuted,
                 (isSelected || isStartSelection) &&
-                  styles.calendarDayNumberSelected,
+                styles.calendarDayNumberSelected,
                 isDisabled && styles.calendarDayNumberDisabled,
               ]}
             >
@@ -435,19 +426,19 @@ export default function ScheduleDetailScreen() {
 
   const bookedDateStatusMap = useMemo(() => {
     return BOOKINGS_DATA.reduce<Map<string, Set<BookingStatus>>>(
-      (acc, booking) => {
+      (acc: Map<string, Set<BookingStatus>>, booking: BookingItem) => {
         if (!acc.has(booking.date)) {
-          acc.set(booking.date, new Set());
+          acc.set(booking.date, new Set<BookingStatus>());
         }
         acc.get(booking.date)!.add(booking.status);
         return acc;
       },
-      new Map()
+      new Map<string, Set<BookingStatus>>()
     );
   }, []);
 
   const bookedDates = useMemo(
-    () => new Set(Array.from(bookedDateStatusMap.keys())),
+    () => new Set<string>(Array.from(bookedDateStatusMap.keys())),
     [bookedDateStatusMap]
   );
 
@@ -488,34 +479,43 @@ export default function ScheduleDetailScreen() {
     setSuccessMessage(null);
 
     try {
-      // Gộp các ngày rảnh mới với các ngày đã lưu để cập nhật UI
-      setSavedAvailableDates((prev) => {
-        const combined = new Set([...prev, ...selectedDates]);
-        return Array.from(combined);
-      });
+      const userId = await getUserIdFromToken();
+      if (!userId) {
+        Alert.alert("Lỗi", "Không thể lấy thông tin người dùng. Vui lòng thử lại.");
+        return;
+      }
 
       // Tính from/to từ tập selectedDates (min và max)
       const sortedDates = Array.from(selectedDates).sort();
       const startDate = sortedDates[0];
       const endDate = sortedDates[sortedDates.length - 1];
 
-      const userId = await getUserIdFromToken();
       const payload = {
         instructorId: userId,
         startTime: startDate,
         endTime: endDate,
       };
-      console.log(payload);
+
       const res = await dispatch(updateInstructorSchedule(payload)).unwrap();
 
       if (res.isSuccess) {
-        router.back();
+        // Gộp các ngày rảnh mới với các ngày đã lưu để cập nhật UI
+        setSavedAvailableDates((prev) => {
+          const combined = new Set([...prev, ...selectedDates]);
+          return Array.from(combined);
+        });
+        setSelectedDates(new Set());
+        setSuccessMessage("Đã cập nhật lịch rảnh thành công.");
+        // Tự động quay lại sau 1.5 giây
+        setTimeout(() => {
+          router.back();
+        }, 1500);
+      } else {
+        Alert.alert("Lỗi", "Không thể cập nhật lịch rảnh. Vui lòng thử lại.");
       }
-
-      setSelectedDates(new Set());
-      setSuccessMessage("Đã cập nhật lịch rảnh thành công.");
     } catch (error) {
-      console.log("Failed to update instructor schedule:", error);
+      console.error("Failed to update instructor schedule:", error);
+      Alert.alert("Lỗi", "Không thể cập nhật lịch rảnh. Vui lòng thử lại.");
     } finally {
       setIsSaving(false);
     }
@@ -583,7 +583,7 @@ export default function ScheduleDetailScreen() {
               style={[
                 styles.actionButtonTextAlt,
                 (isSaving || selectedDates.size === 0) &&
-                  styles.actionButtonDisabledText,
+                styles.actionButtonDisabledText,
               ]}
             >
               Hủy
@@ -595,7 +595,7 @@ export default function ScheduleDetailScreen() {
               styles.actionButton,
               styles.actionButtonPrimary,
               (isSaving || selectedDates.size === 0) &&
-                styles.actionButtonPrimaryDisabled,
+              styles.actionButtonPrimaryDisabled,
             ]}
             activeOpacity={0.8}
             onPress={handleUpdate}

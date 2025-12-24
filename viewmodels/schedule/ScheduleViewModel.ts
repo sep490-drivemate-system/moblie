@@ -7,6 +7,7 @@ import {
 import {
     getInstructorSchedule,
     getInstructorBookedSessions,
+    checkInstructorSchedule as checkInstructorScheduleThunk,
 } from "@/features/schedule/scheduleThunk";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { AppDispatch } from "@/lib/redux/store";
@@ -320,7 +321,7 @@ export const useScheduleStep1ViewModel = (
         ).unwrap();
         const scheduleData = (scheduleResult as any).value || scheduleResult;
         setInstructorSchedule(scheduleData);
-        
+
         scheduleViewModel.setSchedule(scheduleData);
         const sessionsResult = await dispatch(
             getInstructorBookedSessions({ instructorId })
@@ -664,6 +665,18 @@ export const useScheduleStep1ViewModel = (
         },
         [expandedBusySlots, validateAndUpdateTimeRange]
     );
+
+    const checkInstructorSchedule = useCallback(async (instructorId: string): Promise<boolean> => {
+        try {
+            const response = (await dispatch(
+                checkInstructorScheduleThunk({ instructorId: instructorId })
+            ).unwrap()) as { value: boolean };
+            return response.value;
+        } catch (error) {
+            console.log("Failed to check instructor schedule:", error);
+            return false;
+        }
+    }, [dispatch]);
 
     const handleEndMinuteChange = useCallback(
         (minute: string) => {

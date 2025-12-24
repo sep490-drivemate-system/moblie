@@ -9,6 +9,8 @@ import { IInstructorPackages } from "@/models/instructor/instructor.type";
 import { ROUTES } from "@/constants/routes";
 import { BaseViewModel } from "../shared/BaseViewModel";
 import { PaginatedGeneric } from "@/models/generic/genericResponse";
+import { IEmergencyContact } from "@/models/address/emergency-contact";
+import { getEmergencyContact } from "@/features/emergency-contact/emergency-contactThunk";
 
 type RefundComputationInput = {
     status: string | BookingStatus;
@@ -43,6 +45,15 @@ export class BookingViewModel extends BaseViewModel<RootState["booking"]> {
         });
         const paged: PaginatedGeneric<IMyPackges> | null = (result as any)?.value || result || null;
         return paged;
+    }
+
+    async fetchEmergencyContact(payload: { id: string }): Promise<IEmergencyContact[] | null> {
+        const result = await this.executeAsync(async () => {
+            const response = await this.dispatch(getEmergencyContact(payload)).unwrap();
+            return (response as any).value || response;
+        });
+        const emergencyContact: IEmergencyContact[] | null = (result as any)?.value || result || null;
+        return emergencyContact;
     }
 
     getStatusOptions(): StatusOption[] {

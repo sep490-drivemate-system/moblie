@@ -230,6 +230,13 @@ export default function MyPackagesScreen() {
                 </View>
               </View>
 
+              {pkg.carName && (
+                <View style={styles.carNameRow}>
+                  <Text style={styles.carNameLabel}>Xe: </Text>
+                  <Text style={styles.carNameText}>{pkg.carName}</Text>
+                </View>
+              )}
+
               <View style={styles.purchaseDateRow}>
                 <Calendar
                   size={16}
@@ -312,6 +319,8 @@ export default function MyPackagesScreen() {
                     pathname: ROUTES.MY_PACKAGE_DETAIL,
                     params: {
                       packageData: JSON.stringify(pkg),
+                      carId: pkg.carId,
+                      carName: pkg.carName,
                     },
                   })}
                 >
@@ -519,6 +528,26 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#1e293b",
     lineHeight: 28,
+    flex: 1,
+  },
+  carNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 8,
+  },
+  carNameLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#64748b",
+  },
+  carNameText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: AppColors.primary,
     flex: 1,
   },
   purchaseDateRow: {

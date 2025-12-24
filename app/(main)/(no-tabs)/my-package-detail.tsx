@@ -28,6 +28,9 @@ import HeaderList from "@/components/Commons/HeaderList";
 import { ROUTES } from "@/constants/routes";
 import PackageDetailContent from "@/components/Package/PackageDetailContent";
 import { clearSessionDetail } from "@/features/booking/bookingSlice";
+import { CarViewModel } from "@/viewmodels/car/CarViewModel";
+import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
+import { ICarDetail } from "@/models/car/car";
 
 export default function PackageDetailScreen() {
   const router = useRouter();
@@ -36,6 +39,9 @@ export default function PackageDetailScreen() {
   const dispatch = useAppDispatch();
   const [instructorInfo, setInstructorInfo] = useState<IUserInfo | null>(null);
   const [isLoadingInstructor, setIsLoadingInstructor] = useState(false);
+  const [carInfo, setCarInfo] = useState<ICarDetail | null>(null);
+  const [isLoadingCar, setIsLoadingCar] = useState(false);
+  const [, carViewModel] = useViewModel(CarViewModel, (state) => state.car);
 
 
   // Feedback modal state
@@ -84,6 +90,28 @@ export default function PackageDetailScreen() {
     packageData?.instructorId,
     packageDetailViewModel,
   ]);
+
+  useEffect(() => {
+    const fetchCarInfo = async () => {
+      if (!carIdFromParams) {
+        setCarInfo(null);
+        return;
+      }
+
+      try {
+        setIsLoadingCar(true);
+        const car = await carViewModel.getCarById(carIdFromParams);
+        setCarInfo(car);
+      } catch (error) {
+        console.log("Failed to fetch car info:", error);
+        setCarInfo(null);
+      } finally {
+        setIsLoadingCar(false);
+      }
+    };
+
+    fetchCarInfo();
+  }, [carIdFromParams, carViewModel]);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [sessions, setSessions] = useState<IBookingSession[]>([]);
@@ -391,6 +419,7 @@ export default function PackageDetailScreen() {
           packageData={packageData}
           instructorInfo={instructorInfo}
           purchaseDateInfo={purchaseDateInfo}
+          carInfo={carInfo}
           onOpenFeedback={handleOpenFeedback}
         />
 

@@ -725,7 +725,7 @@ export function useSessionMap({
             longitude: startPos.longitude,
         });
 
-        const SIMULATION_DURATION = 120000;
+        const SIMULATION_DURATION = 60000; // 1 phút (60 giây)
         const SAVE_INTERVAL = 15000;
         const UPDATE_INTERVAL = 100;
 

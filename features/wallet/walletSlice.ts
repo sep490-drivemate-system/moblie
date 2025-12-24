@@ -29,10 +29,10 @@ const walletSlice = createSlice({
             state.balance = action.payload;
         },
         adjustWalletBalance: (state, action: PayloadAction<number>) => {
-            state.balance += action.payload;
+            state.balance = state.balance + action.payload;
         },
         subtractWalletBalance: (state, action: PayloadAction<number>) => {
-            state.balance -= action.payload;
+            state.balance = state.balance - action.payload;
         },
         resetWalletState: () => initialState,
         clearWalletError: (state) => {

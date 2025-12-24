@@ -35,6 +35,8 @@ export interface IMyPackges {
   bookingStatus: BookingStatus;
   duration: number;
   price: number;
+  carId: string;
+  carName: string;
   durationInUse: number;
   precentInUse: number;
   remainingTime: number;

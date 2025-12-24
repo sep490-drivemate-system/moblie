@@ -6,6 +6,8 @@ import {
   StatusBar,
   ScrollView,
   Alert,
+  TouchableOpacity,
+  Linking,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppColors } from "@/constants/Colors";
@@ -28,6 +30,10 @@ import { encodePolyline, parseCoordinateValue } from "@/lib/map/mapUtils";
 import { AlertVariant, AppAlert } from "@/components/Commons/AppAlert";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { SessionViewModel } from "@/viewmodels/session/SessionViewModel";
+import { BookingViewModel } from "@/viewmodels/booking/BookingViewModel";
+import { IEmergencyContact } from "@/models/address/emergency-contact";
+import { Phone, AlertCircle } from "lucide-react-native";
+import { getUserIdFromToken } from "@/lib/jwt/tokenUtils";
 
 export default function DrivingSessionDetailScreen() {
   const params = useLocalSearchParams();
@@ -37,7 +43,7 @@ export default function DrivingSessionDetailScreen() {
   const instructorId = params?.instructorId as string | undefined;
 
   const [sessionState, sessionViewModel] = useViewModel(SessionViewModel, (state) => state.session);
-
+  const [bookingState, bookingViewModel] = useViewModel<RootState["booking"], BookingViewModel>(BookingViewModel, (state) => state.booking);
 
   const allSessions = userPackagesData.flatMap((p) => p.sessions || []);
 
@@ -69,6 +75,18 @@ export default function DrivingSessionDetailScreen() {
   const [alertMessage, setAlertMessage] = useState<string>("");
   const [alertVariant, setAlertVariant] = useState<AlertVariant>(AlertVariant.Info);
   const [alertPrimaryButton, setAlertPrimaryButton] = useState<{ label: string; onPress?: () => void } | undefined>(undefined);
+  const [emergencyContacts, setEmergencyContacts] = useState<IEmergencyContact[]>([]);
+  const [isLoadingEmergencyContacts, setIsLoadingEmergencyContacts] = useState(false);
+  const [userId, setUserId] = useState<string>("");
+
+  // Get userId from token
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const id = await getUserIdFromToken();
+      setUserId(id);
+    };
+    fetchUserId();
+  }, []);
 
   const displaySession = useMemo(() => {
     if (session) {
@@ -109,7 +127,6 @@ export default function DrivingSessionDetailScreen() {
   useEffect(() => {
     sessionViewModel.getSessionDetail(sessionId as string);
   }, [sessionId, sessionViewModel]);
-
 
   const routesFromSessionDetail = useMemo(() => {
     if (sessionState.sessionDetail?.routeDetails !== undefined && sessionState.sessionDetail.routeDetails !== null) {
@@ -236,6 +253,32 @@ export default function DrivingSessionDetailScreen() {
   const isPlanningStatus = currentSessionStatus === SessionStatus.Planning;
   const isUpcomingStatus = currentSessionStatus === SessionStatus.Upcoming;
   const isInProgressStatus = currentSessionStatus === SessionStatus.InProgress;
+
+  // Fetch emergency contacts when status is InProgress
+  useEffect(() => {
+    const fetchEmergencyContacts = async () => {
+      if (isInProgressStatus && userId) {
+        setIsLoadingEmergencyContacts(true);
+        try {
+          const contacts = await bookingViewModel.fetchEmergencyContact({ id: userId });
+          if (contacts && contacts.length > 0) {
+            setEmergencyContacts(contacts);
+          } else {
+            setEmergencyContacts([]);
+          }
+        } catch (error) {
+          console.error("Error fetching emergency contacts:", error);
+          setEmergencyContacts([]);
+        } finally {
+          setIsLoadingEmergencyContacts(false);
+        }
+      } else {
+        setEmergencyContacts([]);
+      }
+    };
+
+    fetchEmergencyContacts();
+  }, [isInProgressStatus, userId, bookingViewModel]);
 
   const allowInstructorRoutePlanning =
     Boolean(isInstructor && isPlanningStatus);
@@ -420,13 +463,27 @@ export default function DrivingSessionDetailScreen() {
         ).unwrap();
 
         await sessionViewModel.getSessionDetail(sessionId);
+
+        // Fetch emergency contacts when starting simulation
+        if (userId) {
+          try {
+            const contacts = await bookingViewModel.fetchEmergencyContact({ id: userId });
+            if (contacts && contacts.length > 0) {
+              setEmergencyContacts(contacts);
+            } else {
+              setEmergencyContacts([]);
+            }
+          } catch (error) {
+            console.error("Error fetching emergency contacts:", error);
+          }
+        }
       } catch (error) {
         console.log("Error updating session status:", error);
       }
     }
 
     startSimulation();
-  }, [sessionId, currentSessionStatus, dispatch, startSimulation, sessionViewModel]);
+  }, [sessionId, currentSessionStatus, dispatch, startSimulation, sessionViewModel, userId, bookingViewModel]);
 
   const canShowRouteActions = useMemo(() => {
     return allowNoviceApproval && Boolean(routesData && routesData.length > 0);
@@ -460,7 +517,7 @@ export default function DrivingSessionDetailScreen() {
       // Không hiển thị alert thành công, chỉ cập nhật status và quay lại
       router.back();
     } catch (error) {
-      console.error("Error accepting route:", error);
+      console.log("Error accepting route:", error);
       const message =
         typeof error === "string" ? error : "Không thể chấp nhận lộ trình";
       setAlertTitle("Lỗi");
@@ -505,6 +562,49 @@ export default function DrivingSessionDetailScreen() {
     }
   }, [isRejectingRoute, sessionId, sessionViewModel]);
 
+  // Handle phone call
+  const handlePhoneCall = useCallback((phone: string) => {
+    const phoneNumber = phone.replace(/\s/g, "");
+    Linking.openURL(`tel:${phoneNumber}`).catch((err) => {
+      console.error("Error opening phone dialer:", err);
+      Alert.alert("Lỗi", "Không thể mở ứng dụng gọi điện");
+    });
+  }, []);
+
+  // Render emergency contacts section
+  const renderEmergencyContacts = () => {
+    // Show when status is InProgress OR when simulation is running
+    const shouldShow = (isInProgressStatus || isSimulating) && emergencyContacts.length > 0;
+
+    if (!shouldShow) {
+      return null;
+    }
+
+    return (
+      <View style={styles.emergencyContactsContainer}>
+        <View style={styles.emergencyContactsHeader}>
+          <AlertCircle size={20} color="#ef4444" strokeWidth={2} />
+          <Text style={styles.emergencyContactsTitle}>Cứu hộ khẩn cấp</Text>
+        </View>
+        {emergencyContacts.map((contact) => (
+          <TouchableOpacity
+            key={contact.id}
+            style={styles.emergencyContactItem}
+            onPress={() => handlePhoneCall(contact.phone)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.emergencyContactInfo}>
+              <Text style={styles.emergencyContactName}>{contact.name}</Text>
+              <Text style={styles.emergencyContactPhone}>{contact.phone}</Text>
+            </View>
+            <View style={styles.phoneButton}>
+              <Phone size={20} color={AppColors.primary} strokeWidth={2} />
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -552,6 +652,7 @@ export default function DrivingSessionDetailScreen() {
           isInstructorWaitingApproval={isInstructorWaitingApproval}
           hideDirections={hideDirectionsForNovice}
         />
+        {renderEmergencyContacts()}
         <View style={{ height: 24 }} />
       </ScrollView>
 
@@ -1436,5 +1537,66 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#1f2937",
+  },
+  emergencyContactsContainer: {
+    backgroundColor: "#ffffff",
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: "#fee2e2",
+  },
+  emergencyContactsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 16,
+  },
+  emergencyContactsTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#ef4444",
+  },
+  emergencyContactItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "#fef2f2",
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  emergencyContactInfo: {
+    flex: 1,
+  },
+  emergencyContactName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 4,
+  },
+  emergencyContactPhone: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: AppColors.primary,
+  },
+  phoneButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: AppColors.primary,
   },
 });

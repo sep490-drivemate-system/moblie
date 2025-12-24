@@ -79,7 +79,7 @@ export function ConfirmPurchaseModal({
                     {selectedPackage.isRentalCar ? (
                       <View style={styles.confirmBadgeWithVehicle}>
                         <Car size={14} color="#16a34a" />
-                        <Text style={styles.confirmBadgeText}>Có xe</Text>
+                        <Text style={styles.confirmBadgeText}>Có xe và người hướng dẫn</Text>
                       </View>
                     ) : (
                       <View style={styles.confirmBadgeInstructor}>
@@ -177,6 +177,14 @@ export function ConfirmPurchaseModal({
                   </Text>
                 </View>
               </View>
+
+              {selectedPackage.isRentalCar && cars.length > 0 && !selectedVehicle && (
+                <View style={styles.confirmWarningMessage}>
+                  <Text style={styles.confirmWarningText}>
+                    Vui lòng chọn xe để tiếp tục
+                  </Text>
+                </View>
+              )}
             </ScrollView>
           )}
 
@@ -187,9 +195,12 @@ export function ConfirmPurchaseModal({
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={[styles.confirmPurchaseButton, isProcessing && styles.confirmPurchaseButtonDisabled]}
+              style={[
+                styles.confirmPurchaseButton,
+                (isProcessing || (selectedPackage?.isRentalCar && cars.length > 0 && !selectedVehicle)) && styles.confirmPurchaseButtonDisabled
+              ]}
               onPress={onConfirmPurchase}
-              disabled={isProcessing}
+              disabled={isProcessing || (selectedPackage?.isRentalCar && cars.length > 0 && !selectedVehicle)}
             >
               {isProcessing ? (
                 <ActivityIndicator color="#fff" size="small" />
@@ -530,6 +541,21 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#ffffff",
     letterSpacing: 0.5,
+  },
+  confirmWarningMessage: {
+    backgroundColor: "#fef3c7",
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#fcd34d",
+  },
+  confirmWarningText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#92400e",
+    textAlign: "center",
   },
 });
 

@@ -1,13 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   StatusBar,
-  Animated,
   Dimensions,
-  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,10 +21,7 @@ const { width } = Dimensions.get('window');
 
 export default function PaymentSuccessScreen() {
   const router = useRouter();
-  const scaleAnim = useRef(new Animated.Value(0)).current;
   const params = useLocalSearchParams();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
 
   const walletSelector = (state: RootState) => state.wallet;
   const [walletState, walletViewModel] = useViewModel(
@@ -49,29 +44,14 @@ export default function PaymentSuccessScreen() {
         lastParamsStringRef.current = queryString;
         hasProcessedRef.current = true;
         const amount = await walletViewModel.handlePaymentCallback(queryString);
-        if (amount !== null) {
-          dispatch(adjustWalletBalance(amount));
-        }
+        // if (amount !== null) {
+        //   dispatch(adjustWalletBalance(amount));
+        // }
       }
     };
 
     processPayment();
   }, [params, dispatch, walletViewModel]);
-
-  useEffect(() => {
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
 
 
 
@@ -113,53 +93,32 @@ export default function PaymentSuccessScreen() {
         {/* Success Content */}
         <View style={styles.content}>
           {/* Success Icon */}
-          <Animated.View
-            style={[
-              styles.iconContainer,
-              { transform: [{ scale: scaleAnim }] }
-            ]}
-          >
+          <View style={styles.iconContainer}>
             <View style={styles.successIcon}>
               <CheckCircle size={60} color="#ffffff" strokeWidth={3} />
             </View>
-          </Animated.View>
+          </View>
 
           {/* Success Text */}
-          <Animated.View
-            style={[
-              styles.textContainer,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
-            ]}
-          >
+          <View style={styles.textContainer}>
             <Text style={styles.successTitle}>Thanh toán thành công</Text>
             <Text style={styles.successMessage}>
               Chúc mừng! Giao dịch của bạn đã được xử lý thành công. Bạn có thể xem chi tiết trong đơn đặt lịch thuê. Cảm ơn bạn đã đồng hành cùng chúng tôi!
             </Text>
-          </Animated.View>
+          </View>
 
           {/* Action Buttons */}
-          <Animated.View
-            style={[
-              styles.buttonContainer,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
-            ]}
-          >
+          <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => router.replace({
-                pathname: ROUTES.MY_PACKAGES,
+                pathname: ROUTES.PACKAGES,
               })}
               activeOpacity={0.8}
             >
               <View style={styles.buttonContent}>
                 <Calendar size={20} color="#ffffff" strokeWidth={2} />
-                <Text style={styles.primaryButtonText}>Xem lịch thuê</Text>
+                <Text style={styles.primaryButtonText}>Xem danh sách gói</Text>
               </View>
             </TouchableOpacity>
 
@@ -175,7 +134,7 @@ export default function PaymentSuccessScreen() {
                 <Text style={styles.secondaryButtonText}>Quay về trang chủ</Text>
               </View>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         </View>
       </LinearGradient>
     </View>

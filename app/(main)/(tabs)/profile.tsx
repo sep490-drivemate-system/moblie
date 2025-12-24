@@ -167,7 +167,7 @@ export default function ProfileScreen() {
                     </View>
                   </TouchableOpacity>
 
-                  <TouchableOpacity
+                  {/* <TouchableOpacity
                     style={styles.menuItem}
                     onPress={() =>
                       router.push(ROUTES.MAIN_NO_TABS_INSTRUCTOR_ROUTES)
@@ -177,7 +177,7 @@ export default function ProfileScreen() {
                       <Navigation size={20} color={AppColors.primary} />
                       <Text style={styles.menuItemText}>Quản lý tuyến đường</Text>
                     </View>
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </>
               )}
 
