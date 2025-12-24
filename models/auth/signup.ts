@@ -13,7 +13,7 @@ export interface ISignUpResponse {
 }
 
 export interface IRegisterInstructorRequest {
-  FullName: string;
+  Fullname: string;
   RawPassword: string;
   Email: string;
   PhoneNumber: string;

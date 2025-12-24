@@ -135,12 +135,6 @@ export default function HomeScreen() {
     getRecommendedCars();
   }, [carViewModel]);
 
-  const renderDrivingLicense = ({ item }: ListRenderItemInfo<LicenseType>) => (
-    <TouchableOpacity key={item.id} style={styles.drivingLicenseItem}>
-      <Text style={styles.drivingLicenseItemText}>{item.name}</Text>
-    </TouchableOpacity>
-  );
-
   return (
     <>
       <View style={[styles.header]}>
@@ -214,19 +208,6 @@ export default function HomeScreen() {
       >
 
         <View style={styles.body}>
-          <View style={styles.listItemContainer}>
-            <Text style={styles.listLabel}>
-              Loại giấy phép lái xe bạn quan tâm
-            </Text>
-            <FlatList
-              data={drivingLicenses}
-              keyExtractor={(item) => item.id}
-              horizontal
-              renderItem={renderDrivingLicense}
-              contentContainerStyle={styles.listItem}
-              showsHorizontalScrollIndicator={false}
-            />
-          </View>
           <View style={styles.heroCard}>
             <View style={{ flex: 1, gap: 8 }}>
               <View style={styles.heroBrandRow}>

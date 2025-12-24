@@ -627,7 +627,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
     const formData = new FormData();
 
     const textFields: Array<
-      | "FullName"
+      | "Fullname"
       | "RawPassword"
       | "Email"
       | "PhoneNumber"
@@ -636,7 +636,7 @@ export class AuthViewModel extends BaseViewModel<AuthState> {
       | "DrivingLicenseTier"
       | "TeachingTier"
     > = [
-      "FullName",
+      "Fullname",
       "RawPassword",
       "Email",
       "PhoneNumber",

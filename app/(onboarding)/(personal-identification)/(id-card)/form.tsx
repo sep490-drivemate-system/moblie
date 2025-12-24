@@ -132,7 +132,7 @@ export default function FormScreen() {
 
   const syncFormDataToViewModel = useCallback(
     (data: typeof formData) => {
-      authViewModel.updateRegisterInstructorFormData("FullName", data.fullname);
+      authViewModel.updateRegisterInstructorFormData("Fullname", data.fullname);
       authViewModel.updateRegisterInstructorFormData("Gender", data.gender);
       authViewModel.updateRegisterInstructorFormData(
         "BirthDate",
@@ -155,7 +155,7 @@ export default function FormScreen() {
       }
 
       return {
-        fullname: instructorData.FullName || "",
+        fullname: instructorData.Fullname || "",
         gender: instructorData.Gender || "",
         birthDate: formatDateForDisplay(instructorData.BirthDate || ""),
       };

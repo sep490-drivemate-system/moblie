@@ -107,7 +107,7 @@ export default function RoleSelectionScreen() {
       } else if (selectedRole.id === "instructor") {
         const registerFormData = authState.registerFormData;
         authViewModel.updateRegisterInstructorFormData(
-          "FullName",
+          "Fullname",
           registerFormData.fullname
         );
         authViewModel.updateRegisterInstructorFormData(

@@ -67,7 +67,7 @@ const initialState: AuthState = {
   },
 
   registerInstructorFormData: {
-    FullName: "",
+    Fullname: "",
     RawPassword: "",
     Email: "",
     PhoneNumber: "",
@@ -230,7 +230,7 @@ const authSlice = createSlice({
     },
     resetRegisterInstructorForm: (state) => {
       state.registerInstructorFormData = {
-        FullName: "",
+        Fullname: "",
         RawPassword: "",
         Email: "",
         PhoneNumber: "",
