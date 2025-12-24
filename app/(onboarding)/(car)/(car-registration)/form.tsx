@@ -44,6 +44,7 @@ export default function FormScreen() {
   const [showLicenseTierDropdown, setShowLicenseTierDropdown] = useState(false);
   const [showManufacturerDropdown, setShowManufacturerDropdown] =
     useState(false);
+  const [showSeatCountDropdown, setShowSeatCountDropdown] = useState(false);
   const [manufacturers, setManufacturers] = useState<
     Array<{ id: string; name: string }>
   >([]);
@@ -114,6 +115,7 @@ export default function FormScreen() {
     "D2E",
     "DE",
   ];
+  const seatCounts = [3, 5, 7, 9, 16, 29, 35, 45];
 
   // Sync form data to Redux (similar to syncFormDataToViewModel in id-card form)
   const syncFormDataToRedux = React.useCallback(
@@ -383,6 +385,26 @@ export default function FormScreen() {
     syncFormDataToRedux(newFormData);
   };
 
+  const handleSeatCountSelect = (seatCount: number) => {
+    const newFormData = {
+      ...formData,
+      seatCount: seatCount.toString(),
+    };
+    setFormData(newFormData);
+    setShowSeatCountDropdown(false);
+
+    // Clear error
+    if (formErrors.seatCount) {
+      setFormErrors((prev) => ({
+        ...prev,
+        seatCount: "",
+      }));
+    }
+
+    // Sync to Redux
+    syncFormDataToRedux(newFormData);
+  };
+
   const handleManufacturerSelect = (manufacturer: {
     id: string;
     name: string;
@@ -454,7 +476,7 @@ export default function FormScreen() {
 
     // Check seat count
     if (!formData.seatCount.trim()) {
-      newErrors.seatCount = "Vui lòng nhập số chỗ ngồi";
+      newErrors.seatCount = "Vui lòng chọn số chỗ ngồi";
       hasErrors = true;
     } else {
       const seats = parseInt(formData.seatCount);
@@ -603,7 +625,8 @@ export default function FormScreen() {
           !showManufacturerDropdown &&
           !showFuelTypeDropdown &&
           !showCarTypeDropdown &&
-          !showLicenseTierDropdown
+          !showLicenseTierDropdown &&
+          !showSeatCountDropdown
         }
       >
         <View style={styles.content}>
@@ -810,10 +833,7 @@ export default function FormScreen() {
                 Tên mẫu xe <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
-                style={[
-                  styles.input,
-                  formErrors.carModel && styles.inputError,
-                ]}
+                style={[styles.input, formErrors.carModel && styles.inputError]}
                 value={formData.carModel}
                 onChangeText={(value) => handleInputChange("carModel", value)}
                 placeholder="Nhập tên mẫu xe"
@@ -829,10 +849,7 @@ export default function FormScreen() {
                 Màu xe <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
-                style={[
-                  styles.input,
-                  formErrors.carColor && styles.inputError,
-                ]}
+                style={[styles.input, formErrors.carColor && styles.inputError]}
                 value={formData.carColor}
                 onChangeText={(value) => handleInputChange("carColor", value)}
                 placeholder="Nhập màu xe"
@@ -847,20 +864,54 @@ export default function FormScreen() {
               <Text style={styles.label}>
                 Số chỗ ngồi <Text style={styles.required}>*</Text>
               </Text>
-              <TextInput
+              <TouchableOpacity
+                activeOpacity={1}
                 style={[
-                  styles.input,
+                  styles.dropdownContainer,
                   formErrors.seatCount && styles.inputError,
                 ]}
-                value={formData.seatCount}
-                onChangeText={(value) => handleInputChange("seatCount", value)}
-                placeholder="Nhập số chỗ ngồi"
-                placeholderTextColor="#92929D"
-                keyboardType="numeric"
-              />
+                onPress={() => setShowSeatCountDropdown(!showSeatCountDropdown)}
+              >
+                <Text
+                  style={[
+                    styles.dropdownText,
+                    !formData.seatCount && styles.placeholderText,
+                  ]}
+                >
+                  {formData.seatCount || "Chọn số chỗ ngồi"}
+                </Text>
+                <ChevronDown
+                  color="#92929D"
+                  size={20}
+                  style={[
+                    styles.dropdownIcon,
+                    showSeatCountDropdown && styles.dropdownIconRotated,
+                  ]}
+                />
+              </TouchableOpacity>
               {formErrors.seatCount ? (
                 <Text style={styles.errorText}>{formErrors.seatCount}</Text>
               ) : null}
+              {showSeatCountDropdown && (
+                <View style={styles.dropdownList}>
+                  <ScrollView
+                    style={styles.dropdownScrollView}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                  >
+                    {seatCounts.map((seatCount) => (
+                      <TouchableOpacity
+                        key={seatCount}
+                        style={styles.dropdownItem}
+                        onPress={() => handleSeatCountSelect(seatCount)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.dropdownItemText}>{seatCount}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </View>
 
             <View style={styles.inputGroup}>
@@ -1032,10 +1083,7 @@ export default function FormScreen() {
                 Năm sản xuất <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
-                style={[
-                  styles.input,
-                  formErrors.year && styles.inputError,
-                ]}
+                style={[styles.input, formErrors.year && styles.inputError]}
                 value={formData.year}
                 onChangeText={(value) => handleInputChange("year", value)}
                 placeholder="Nhập năm sản xuất (VD: 2020)"
@@ -1059,7 +1107,9 @@ export default function FormScreen() {
                   formErrors.description && styles.inputError,
                 ]}
                 value={formData.description}
-                onChangeText={(value) => handleInputChange("description", value)}
+                onChangeText={(value) =>
+                  handleInputChange("description", value)
+                }
                 placeholder="Nhập mô tả về xe"
                 placeholderTextColor="#92929D"
                 multiline={true}
@@ -1074,10 +1124,11 @@ export default function FormScreen() {
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+            <TouchableOpacity activeOpacity={1} style={styles.backButton} onPress={handleGoBack}>
               <Text style={styles.backButtonText}>Quay lại</Text>
             </TouchableOpacity>
             <TouchableOpacity
+              activeOpacity={1}
               style={[
                 styles.nextButton,
                 isSubmittingFromRedux && styles.nextButtonDisabled,

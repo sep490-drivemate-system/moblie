@@ -16,6 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { getInstructorApplicant } from "@/features/instructor/instructorThunk";
 import { AppColors } from "@/constants/Colors";
+import { ROUTES } from "@/constants/routes";
 
 export default function WaitingConfirmScreen() {
   const router = useRouter();
@@ -374,7 +375,7 @@ export default function WaitingConfirmScreen() {
               <TouchableOpacity
                 onPress={() => {
                   resetOnboardingData();
-                  router.push("/(auth)/signin");
+                  router.replace(ROUTES.SIGNIN);
                 }}
               >
                 <Text style={styles.link}>

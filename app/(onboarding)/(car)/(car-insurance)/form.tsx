@@ -484,12 +484,13 @@ export default function FormScreen() {
             {/* Buttons */}
             <View style={styles.buttonContainer}>
               <TouchableOpacity
+                activeOpacity={1}
                 style={styles.backButton}
                 onPress={handleGoBack}
               >
                 <Text style={styles.backButtonText}>Quay lại</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+              <TouchableOpacity activeOpacity={1} style={styles.nextButton} onPress={handleNext}>
                 <Text style={styles.nextButtonText}>Kế tiếp</Text>
               </TouchableOpacity>
             </View>
