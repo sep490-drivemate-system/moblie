@@ -14,6 +14,7 @@ import {
 } from "@/viewmodels/booking/PackageDetailViewModel";
 import { useViewModel } from "@/viewmodels/shared/BaseViewModel";
 import { BookingViewModel } from "@/viewmodels/booking/BookingViewModel";
+import { BookingStatus } from "@/models/package/user-package";
 
 interface CancelPackageModalProps {
   visible: boolean;
@@ -22,6 +23,76 @@ interface CancelPackageModalProps {
   getStatusText: (status: string) => string;
   onCancelled?: () => void;
 }
+
+// Parse status to Vietnamese
+const parseStatusToVietnamese = (status: BookingStatus | string | number): string => {
+  // Handle enum BookingStatus (number)
+  if (typeof status === "number") {
+    switch (status) {
+      case BookingStatus.Purchased:
+        return "Đã mua";
+      case BookingStatus.InUse:
+        return "Đang sử dụng";
+      case BookingStatus.Used:
+        return "Đã sử dụng";
+      case BookingStatus.CancellationWithRefund:
+        return "Hủy có hoàn trả";
+      case BookingStatus.CancellationWithoutRefund:
+        return "Hủy không hoàn trả";
+      default:
+        return "Không xác định";
+    }
+  }
+
+  // Handle string status
+  const statusLower = String(status).toLowerCase().trim();
+  switch (statusLower) {
+    case "purchased":
+    case "1":
+      return "Đã mua";
+    case "inuse":
+    case "in_use":
+    case "in use":
+    case "2":
+      return "Đang sử dụng";
+    case "used":
+    case "3":
+      return "Đã sử dụng";
+    case "cancellationwithrefund":
+    case "cancellation_with_refund":
+    case "cancellation with refund":
+    case "4":
+      return "Hủy có hoàn trả";
+    case "cancellationwithoutrefund":
+    case "cancellation_without_refund":
+    case "cancellation without refund":
+    case "5":
+      return "Hủy không hoàn trả";
+    case "paid":
+      return "Đã thanh toán";
+    case "in_progress":
+      return "Đang diễn ra";
+    case "completed":
+      return "Đã hoàn thành";
+    case "refunded":
+      return "Đã hoàn tiền";
+    case "not_refund":
+    case "notrefund":
+      return "Không hoàn tiền";
+    case "planing":
+    case "planning":
+      return "Lên lộ trình";
+    case "upcoming":
+      return "Sắp diễn ra";
+    case "reschedule":
+      return "Đổi lịch";
+    case "cancelled":
+    case "canceled":
+      return "Đã hủy";
+    default:
+      return String(status);
+  }
+};
 
 export default function CancelPackageModal({
   visible,
@@ -42,7 +113,7 @@ export default function CancelPackageModal({
   const refundEvaluation = useMemo(() => {
     if (!packageData) return null;
     return packageDetailViewModel.computeRefund({
-      status: packageData.status,
+      status: String(packageData.status),
       purchaseDate: packageData.purchaseDate,
       price: packageData.price,
       totalHours: packageData.totalHours,
@@ -87,7 +158,7 @@ export default function CancelPackageModal({
               Gói: {packageData.packageName}
             </Text>
             <Text style={styles.modalText}>
-              Trạng thái: {getStatusText(packageData.status)}
+              Trạng thái: {parseStatusToVietnamese(packageData.status as BookingStatus | string | number)}
             </Text>
             <Text style={styles.modalText}>
               Ngày mua:{" "}
