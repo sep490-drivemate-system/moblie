@@ -152,6 +152,7 @@ export default function FormScreen() {
 
     try {
       const result = await authViewModel.submitRegisterInstructor();
+      console.log(result)
       if (result.isSuccess) {
         await AsyncStorage.setItem(
           "registered_instructor_id",
