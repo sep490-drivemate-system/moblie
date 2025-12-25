@@ -18,7 +18,8 @@
     },
     "apk": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "developmentClient": false
       }
     }
   },

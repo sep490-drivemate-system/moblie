@@ -600,37 +600,26 @@ export default function PackageDetailScreen() {
       </ScrollView>
 
 
-      {(() => {
-        // Ẩn các nút khi status là: Hủy có hoàn trả, Hủy không hoàn trả, hoặc Đã sử dụng
-        const shouldHideButtons = statusFromParams === BookingStatus.CancellationWithRefund ||
-          statusFromParams === BookingStatus.CancellationWithoutRefund ||
-          statusFromParams === BookingStatus.Used;
-
-        if (!shouldHideButtons) return null;
-
-        return (
-          <View style={styles.bottomContainer}>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <TouchableOpacity
-                style={[styles.bookButton, { flex: 1 }]}
-                onPress={handleBookNewSession}
-              >
-                <View style={styles.bookButtonGradient}>
-                  <Text style={styles.bookButtonText}>Đặt buổi thuê mới</Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.cancelButton, { flex: 1 }]}
-                onPress={() => {
-                  setShowCancelModal(true);
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Hủy gói</Text>
-              </TouchableOpacity>
+      <View style={styles.bottomContainer}>
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <TouchableOpacity
+            style={[styles.bookButton, { flex: 1 }]}
+            onPress={handleBookNewSession}
+          >
+            <View style={styles.bookButtonGradient}>
+              <Text style={styles.bookButtonText}>Đặt buổi thuê mới</Text>
             </View>
-          </View>
-        );
-      })()}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.cancelButton, { flex: 1 }]}
+            onPress={() => {
+              setShowCancelModal(true);
+            }}
+          >
+            <Text style={styles.cancelButtonText}>Hủy gói</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
       <CancelPackageModal
         visible={showCancelModal}
         packageData={packageData}
